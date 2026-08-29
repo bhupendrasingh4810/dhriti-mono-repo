@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds and outputs
+.next/
+out/
+build/
+dist/
+coverage/
+*.tsbuildinfo
+.turbo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test artifacts
+.playwright/
+**/playwright-report/
+**/test-results/
+
+# Temporary files
+.tmp/
+tmp/
+*.tmp
+
+# Local package manager caches
+.pnpm-debug.log*
+
+# Optional: compiled Storybook output if generated locally
+storybook-static/
