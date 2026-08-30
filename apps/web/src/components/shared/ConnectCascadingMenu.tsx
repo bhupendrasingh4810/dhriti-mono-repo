@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
+import type { ConnectCascadingMenuItem, SubmenuState } from "@/types/menu.types";
 
 import {
     CheckRounded,
@@ -22,31 +23,6 @@ import {
     Typography,
 } from "@mui/material";
 
-export type ConnectCascadingMenuItem = {
-    id: string;
-    label: string;
-    icon?: ReactNode;
-    danger?: boolean;
-    selected?: boolean;
-    sectionTitle?: string;
-    dividerAbove?: boolean;
-    endAdornment?: ReactNode;
-
-    /**
-    
-    * Only applies to leaf items.
-    * Parent items with children always open their submenu.
-      */
-    closeOnClick?: boolean;
-
-    onClick?: (
-        event: MouseEvent<HTMLElement>,
-        item?: ConnectCascadingMenuItem,
-    ) => void;
-
-    children?: ConnectCascadingMenuItem[];
-};
-
 type ConnectCascadingMenuProps = {
     anchorEl: HTMLElement | null;
     open: boolean;
@@ -55,12 +31,6 @@ type ConnectCascadingMenuProps = {
     minWidth?: number;
     heading?: string;
     maxDepth?: number;
-};
-
-type SubmenuState = {
-    itemId: string;
-    anchorEl: HTMLElement;
-    openLeft: boolean;
 };
 
 const PAPER_SX = {

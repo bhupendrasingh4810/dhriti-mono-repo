@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { WorkspaceShell } from "./WorkspaceShell";
+import OrganizationWorkspaceLayoutClient from "./organization-workspace-layout-client";
 
 export default async function OrganizationWorkspaceLayout({
   children,
@@ -10,5 +10,5 @@ export default async function OrganizationWorkspaceLayout({
 }) {
   const { organizationSlug } = await params;
 
-  return <WorkspaceShell organizationSlug={organizationSlug}>{children}</WorkspaceShell>;
+  return <OrganizationWorkspaceLayoutClient organizationSlug={organizationSlug}>{children}</OrganizationWorkspaceLayoutClient>;
 }

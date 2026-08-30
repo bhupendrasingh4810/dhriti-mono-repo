@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import {
@@ -29,14 +29,11 @@ import {
   VideocamRounded,
 } from "@mui/icons-material";
 import { Box, Button, Divider, IconButton, Popover, Stack, TextField, Typography } from "@mui/material";
-import { NonBlockingMenu, type NonBlockingMenuItem } from "./NonBlockingMenu";
+import { ConnectCascadingMenuItem } from "@/types/menu.types";
+import { ConnectCascadingMenu } from "@/components/shared/ConnectCascadingMenu";
+import { ConnectMentionUser, ConnectPendingAttachment } from "@/types/connect.types";
 
-export type ConnectMentionUser = {
-  id: string;
-  displayName: string;
-  avatar: string;
-  subtitle?: string;
-};
+
 
 type ConnectMessageInputProps = {
   conversationLabel: string;
@@ -47,10 +44,12 @@ type ConnectMessageInputProps = {
     senderName: string;
     content: string;
   } | null;
+  pendingAttachments?: ConnectPendingAttachment[];
   onChange: (value: string) => void;
   onSend: (payload: { content: string; mentionUserIds: string[] }) => void;
   onClearQuotedMessage: () => void;
   onAttachFiles: (files: FileList | null) => void;
+  onRemovePendingAttachment?: (attachmentId: string) => void;
 };
 
 function parseMentionQuery(text: string) {
@@ -126,47 +125,47 @@ function renderInlineMarkdown(text: string) {
   });
 }
 
-function renderMarkdownPreview(text: string) {
-  const blocks = text.split(/```([\s\S]*?)```/g);
+// function renderMarkdownPreview(text: string) {
+//   const blocks = text.split(/```([\s\S]*?)```/g);
 
-  return blocks.map((block, index) => {
-    if (index % 2 === 1) {
-      return (
-        <Box
-          key={`${index}-code-block`}
-          component="pre"
-          sx={{ my: 0.9, p: 1.2, borderRadius: 1.4, bgcolor: "#0f172a", color: "#e2e8f0", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12, overflowX: "auto" }}
-        >
-          {block.trim()}
-        </Box>
-      );
-    }
+//   return blocks.map((block, index) => {
+//     if (index % 2 === 1) {
+//       return (
+//         <Box
+//           key={`${index}-code-block`}
+//           component="pre"
+//           sx={{ my: 0.9, p: 1.2, borderRadius: 1.4, bgcolor: "#0f172a", color: "#e2e8f0", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12, overflowX: "auto" }}
+//         >
+//           {block.trim()}
+//         </Box>
+//       );
+//     }
 
-    return block.split("\n").map((line, lineIndex) => {
-      if (/^\s*>\s?/.test(line)) {
-        return (
-          <Box key={`${index}-${lineIndex}-quote`} sx={{ my: 0.35, pl: 1.1, borderLeft: "3px solid #cbd5e1", color: "#475569", fontStyle: "italic" }}>
-            {renderInlineMarkdown(line.replace(/^\s*>\s?/, ""))}
-          </Box>
-        );
-      }
+//     return block.split("\n").map((line, lineIndex) => {
+//       if (/^\s*>\s?/.test(line)) {
+//         return (
+//           <Box key={`${index}-${lineIndex}-quote`} sx={{ my: 0.35, pl: 1.1, borderLeft: "3px solid #cbd5e1", color: "#475569", fontStyle: "italic" }}>
+//             {renderInlineMarkdown(line.replace(/^\s*>\s?/, ""))}
+//           </Box>
+//         );
+//       }
 
-      if (/^\s*-\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
-        return (
-          <Typography key={`${index}-${lineIndex}-list`} sx={{ fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
-            {renderInlineMarkdown(line)}
-          </Typography>
-        );
-      }
+//       if (/^\s*-\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
+//         return (
+//           <Typography key={`${index}-${lineIndex}-list`} sx={{ fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
+//             {renderInlineMarkdown(line)}
+//           </Typography>
+//         );
+//       }
 
-      return (
-        <Typography key={`${index}-${lineIndex}-plain`} sx={{ fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
-          {renderInlineMarkdown(line || " ")}
-        </Typography>
-      );
-    });
-  });
-}
+//       return (
+//         <Typography key={`${index}-${lineIndex}-plain`} sx={{ fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
+//           {renderInlineMarkdown(line || " ")}
+//         </Typography>
+//       );
+//     });
+//   });
+// }
 
 export function ConnectMessageInput({
   conversationLabel,
@@ -174,21 +173,42 @@ export function ConnectMessageInput({
   users,
   currentUserId,
   quotedMessage,
+  pendingAttachments = [],
   onChange,
   onSend,
   onClearQuotedMessage,
   onAttachFiles,
+  onRemovePendingAttachment,
 }: ConnectMessageInputProps) {
+  const [draftValue, setDraftValue] = useState(value);
   const [composerEmojiAnchor, setComposerEmojiAnchor] = useState<HTMLElement | null>(null);
   const [composerAttachAnchor, setComposerAttachAnchor] = useState<HTMLElement | null>(null);
   const [priorityAnchor, setPriorityAnchor] = useState<HTMLElement | null>(null);
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [priorityFlag, setPriorityFlag] = useState<"normal" | "important" | "urgent">("normal");
+  const lastSyncedValueRef = useRef(value);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const mentionQuery = parseMentionQuery(value);
-  const slashQuery = parseSlashQuery(value);
+  useEffect(() => {
+    if (value === lastSyncedValueRef.current) return;
+
+    setDraftValue(value);
+  }, [value]);
+
+  useEffect(() => {
+    if (draftValue === value) return;
+
+    const syncTimer = window.setTimeout(() => {
+      lastSyncedValueRef.current = draftValue;
+      onChange(draftValue);
+    }, 120);
+
+    return () => window.clearTimeout(syncTimer);
+  }, [draftValue, onChange, value]);
+
+  const mentionQuery = parseMentionQuery(draftValue);
+  const slashQuery = parseSlashQuery(draftValue);
   const mentionSuggestions = useMemo(() => {
     if (mentionQuery === null) return [];
 
@@ -216,55 +236,61 @@ export function ConnectMessageInput({
     return slashCommands.filter((command) => command.label.toLowerCase().includes(`/${slashQuery}`)).slice(0, 6);
   }, [slashCommands, slashQuery]);
 
-  const composerAttachItems: NonBlockingMenuItem[] = [
-    {
-      id: "attach-file",
-      label: "Attach File",
-      icon: <DescriptionOutlined fontSize="small" />,
-      onClick: () => fileInputRef.current?.click(),
-    },
-    { id: "attach-link", label: "Attach cloud link", icon: <LinkRounded fontSize="small" /> },
-    { id: "gif", label: "Insert GIF", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
-    { id: "sticker", label: "Insert sticker", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
-    { id: "schedule", label: "Schedule message", icon: <NotificationsNoneRounded fontSize="small" /> },
-    { id: "delivery", label: "Set delivery options", icon: <MailOutlineRounded fontSize="small" /> },
-    { id: "video", label: "Record a video clip", icon: <VideocamRounded fontSize="small" /> },
-    { id: "voice", label: "Record a voice clip", icon: <VideocamRounded fontSize="small" /> },
-    { id: "loop", label: "Insert loop component", icon: <TableRowsRounded fontSize="small" /> },
-  ];
+  const composerAttachItems = useMemo<ConnectCascadingMenuItem[]>(
+    () => [
+      {
+        id: "attach-file",
+        label: "Attach File",
+        icon: <DescriptionOutlined fontSize="small" />,
+        onClick: () => fileInputRef.current?.click(),
+      },
+      { id: "attach-link", label: "Attach cloud link", icon: <LinkRounded fontSize="small" /> },
+      { id: "gif", label: "Insert GIF", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
+      { id: "sticker", label: "Insert sticker", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
+      { id: "schedule", label: "Schedule message", icon: <NotificationsNoneRounded fontSize="small" /> },
+      { id: "delivery", label: "Set delivery options", icon: <MailOutlineRounded fontSize="small" /> },
+      { id: "video", label: "Record a video clip", icon: <VideocamRounded fontSize="small" /> },
+      { id: "voice", label: "Record a voice clip", icon: <VideocamRounded fontSize="small" /> },
+      { id: "loop", label: "Insert loop component", icon: <TableRowsRounded fontSize="small" /> },
+    ],
+    []
+  );
 
-  const priorityItems: NonBlockingMenuItem[] = [
-    {
-      id: "normal",
-      label: "Normal",
-      icon: <PriorityHighRounded fontSize="small" />,
-      onClick: () => setPriorityFlag("normal"),
-    },
-    {
-      id: "important",
-      label: "Important",
-      icon: <PriorityHighRounded fontSize="small" />,
-      onClick: () => setPriorityFlag("important"),
-    },
-    {
-      id: "urgent",
-      label: "Urgent",
-      icon: <PriorityHighRounded fontSize="small" />,
-      onClick: () => setPriorityFlag("urgent"),
-    },
-  ];
+  const priorityItems = useMemo<ConnectCascadingMenuItem[]>(
+    () => [
+      {
+        id: "normal",
+        label: "Normal",
+        icon: <PriorityHighRounded fontSize="small" />,
+        onClick: () => setPriorityFlag("normal"),
+      },
+      {
+        id: "important",
+        label: "Important",
+        icon: <PriorityHighRounded sx={{ color: "#ff6f00" }} fontSize="small" />,
+        onClick: () => setPriorityFlag("important"),
+      },
+      {
+        id: "urgent",
+        label: "Urgent",
+        icon: <PriorityHighRounded sx={{ color: "#b91c1c" }} fontSize="small" />,
+        onClick: () => setPriorityFlag("urgent"),
+      },
+    ],
+    []
+  );
 
   function handleMentionPick(displayName: string) {
-    onChange(value.replace(/(?:^|\s)@[a-zA-Z0-9._-]*$/, (match) => `${match.startsWith(" ") ? " " : ""}@[${displayName}] `));
+    setDraftValue(draftValue.replace(/(?:^|\s)@[a-zA-Z0-9._-]*$/, (match) => `${match.startsWith(" ") ? " " : ""}@[${displayName}] `));
   }
 
   function handleSlashPick(insertText: string) {
-    const next = value.replace(/(?:^|\n)\/[a-zA-Z-]*$/, (match) => `${match.startsWith("\n") ? "\n" : ""}${insertText}`);
-    onChange(next);
+    const next = draftValue.replace(/(?:^|\n)\/[a-zA-Z-]*$/, (match) => `${match.startsWith("\n") ? "\n" : ""}${insertText}`);
+    setDraftValue(next);
   }
 
   function updateValueAndSelection(nextValue: string, selectionStart: number, selectionEnd: number) {
-    onChange(nextValue);
+    setDraftValue(nextValue);
     window.requestAnimationFrame(() => {
       composerInputRef.current?.focus();
       composerInputRef.current?.setSelectionRange(selectionStart, selectionEnd);
@@ -277,7 +303,7 @@ export function ConnectMessageInput({
 
     const selectionStart = input.selectionStart ?? 0;
     const selectionEnd = input.selectionEnd ?? selectionStart;
-    const result = wrapWithMarkdown(value, selectionStart, selectionEnd, prefix, suffix);
+    const result = wrapWithMarkdown(draftValue, selectionStart, selectionEnd, prefix, suffix);
     updateValueAndSelection(result.value, result.selectionStart, result.selectionEnd);
   }
 
@@ -287,13 +313,13 @@ export function ConnectMessageInput({
 
     const selectionStart = input.selectionStart ?? 0;
     const selectionEnd = input.selectionEnd ?? selectionStart;
-    const result = insertAtCursor(value, selectionStart, selectionEnd, snippet);
+    const result = insertAtCursor(draftValue, selectionStart, selectionEnd, snippet);
     updateValueAndSelection(result.value, result.selectionStart, result.selectionEnd);
   }
 
   function handleSend() {
-    const nextContent = value.trim();
-    if (!nextContent) {
+    const nextContent = draftValue.trim();
+    if (!nextContent && pendingAttachments.length === 0) {
       return;
     }
 
@@ -305,6 +331,9 @@ export function ConnectMessageInput({
     const priorityPrefix = priorityFlag === "normal" ? "" : priorityFlag === "important" ? "[IMPORTANT] " : "[URGENT] ";
 
     onSend({ content: `${priorityPrefix}${nextContent}`, mentionUserIds });
+    lastSyncedValueRef.current = "";
+    setDraftValue("");
+    onChange("");
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -430,6 +459,37 @@ export function ConnectMessageInput({
           </Stack>
         ) : null}
 
+        {pendingAttachments.length > 0 ? (
+          <Stack direction="row" spacing={1} sx={{ px: 1.5, pt: 1, flexWrap: "wrap", rowGap: 1 }}>
+            {pendingAttachments.map((attachment) => (
+              <Box
+                key={attachment.id}
+                sx={{ position: "relative", width: 100, height: 100, borderRadius: 1.25, overflow: "hidden", border: "1px solid #e5e7eb", bgcolor: "#f9fafb" }}
+              >
+                {attachment.type.startsWith("image/") ? (
+                  <Box component="img" src={attachment.url} alt={attachment.name} sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : attachment.type.startsWith("video/") ? (
+                  <Box component="video" src={attachment.url} muted sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                ) : (
+                  <Stack sx={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: "#3b82f6", px: 0.5 }}>
+                    <DescriptionOutlined sx={{ fontSize: 20 }} />
+                    <Typography sx={{ fontSize: 9, color: "#6b7280", mt: 0.3, textAlign: "center" }} noWrap>
+                      {attachment.name}
+                    </Typography>
+                  </Stack>
+                )}
+                <IconButton
+                  size="small"
+                  onClick={() => onRemovePendingAttachment?.(attachment.id)}
+                  sx={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, bgcolor: "rgba(15,23,42,0.6)", color: "#fff", "&:hover": { bgcolor: "rgba(15,23,42,0.8)" } }}
+                >
+                  <CloseRounded sx={{ fontSize: 12 }} />
+                </IconButton>
+              </Box>
+            ))}
+          </Stack>
+        ) : null}
+
         <TextField
           inputRef={composerInputRef}
           fullWidth
@@ -437,8 +497,8 @@ export function ConnectMessageInput({
           minRows={2}
           maxRows={6}
           placeholder={`Message ${conversationLabel}`}
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
+          value={draftValue}
+          onChange={(event) => setDraftValue(event.target.value)}
           onKeyDown={(event) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
               event.preventDefault();
@@ -448,16 +508,16 @@ export function ConnectMessageInput({
               const selectionStart = input.selectionStart ?? 0;
               const selectionEnd = input.selectionEnd ?? selectionStart;
               if (selectionStart === selectionEnd) {
-                const result = insertAtCursor(value, selectionStart, selectionEnd, "****");
+                const result = insertAtCursor(draftValue, selectionStart, selectionEnd, "****");
                 updateValueAndSelection(result.value, selectionStart + 2, selectionStart + 2);
               } else {
-                const selectedText = value.slice(selectionStart, selectionEnd);
+                const selectedText = draftValue.slice(selectionStart, selectionEnd);
                 const isAlreadyBold = selectedText.startsWith("**") && selectedText.endsWith("**") && selectedText.length >= 4;
                 if (isAlreadyBold) {
-                  const unwrapped = `${value.slice(0, selectionStart)}${selectedText.slice(2, -2)}${value.slice(selectionEnd)}`;
+                  const unwrapped = `${draftValue.slice(0, selectionStart)}${selectedText.slice(2, -2)}${draftValue.slice(selectionEnd)}`;
                   updateValueAndSelection(unwrapped, selectionStart, selectionEnd - 4);
                 } else {
-                  const wrapped = wrapWithMarkdown(value, selectionStart, selectionEnd, "**");
+                  const wrapped = wrapWithMarkdown(draftValue, selectionStart, selectionEnd, "**");
                   updateValueAndSelection(wrapped.value, wrapped.selectionStart, wrapped.selectionEnd);
                 }
               }
@@ -488,20 +548,20 @@ export function ConnectMessageInput({
 
         {formattingOpen ? (
           <Stack direction="row" spacing={0.45} sx={{ px: 1.5, py: 0.8, borderTop: "1px solid #f9fafb", borderBottom: "1px solid #f9fafb", flexWrap: "wrap", rowGap: 0.6 }}>
-            <IconButton size="small" onClick={() => applyMarkdown("**")}><FormatBoldRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("*")}><FormatItalicRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("<u>", "</u>")}><FormatUnderlinedRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("~~")}><FormatStrikethroughRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("==")}><FormatColorFillRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("`", "`")}><CodeRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("```\n", "\n```")}><MoreVertRounded sx={{ fontSize: 16, transform: "rotate(90deg)" }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("**")}><FormatBoldRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("*")}><FormatItalicRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("<u>", "</u>")}><FormatUnderlinedRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("~~")}><FormatStrikethroughRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("==")}><FormatColorFillRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("`", "`")}><CodeRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("```\n", "\n```")}><MoreVertRounded sx={{ fontSize: 20, transform: "rotate(90deg)" }} /></IconButton>
             <Divider orientation="vertical" flexItem />
-            <IconButton size="small" onClick={() => insertSnippet("- ")}><FormatListBulletedRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => insertSnippet("1. ")}><FormatListNumberedRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => insertSnippet("> ")}><FormatQuoteRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("[", "](https://)")}><LinkRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n")}><TableRowsRounded sx={{ fontSize: 16 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown('<span style="font-size:14px">', "</span>")}><FormatSizeRounded sx={{ fontSize: 16 }} /></IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("- ")}><FormatListBulletedRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("1. ")}><FormatListNumberedRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("> ")}><FormatQuoteRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("[", "](https://)")}><LinkRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n")}><TableRowsRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown('<span style="font-size:14px">', "</span>")}><FormatSizeRounded sx={{ fontSize: 20 }} /></IconButton>
           </Stack>
         ) : null}
 
@@ -522,21 +582,22 @@ export function ConnectMessageInput({
         <Stack direction="row" sx={{ px: 1.5, py: 1, borderTop: "1px solid #f9fafb", alignItems: "center", justifyContent: "space-between" }}>
           <Stack direction="row" spacing={0.5}>
             <IconButton size="small" onClick={() => setFormattingOpen((previous) => !previous)}>
-              <EditRounded sx={{ fontSize: 18, color: formattingOpen ? "#2563eb" : undefined }} />
+              <EditRounded sx={{ fontSize: 20 }} />
             </IconButton>
             <IconButton size="small" onClick={(event) => setComposerEmojiAnchor(event.currentTarget)}>
-              <SentimentSatisfiedAltRounded sx={{ fontSize: 18 }} />
+              <SentimentSatisfiedAltRounded sx={{ fontSize: 20 }} />
             </IconButton>
             <IconButton size="small" onClick={(event) => setComposerAttachAnchor(event.currentTarget)}>
-              <AddRounded sx={{ fontSize: 18 }} />
+              <AddRounded sx={{ fontSize: 20 }} />
             </IconButton>
             <IconButton size="small" onClick={(event) => setPriorityAnchor(event.currentTarget)}>
-              <PriorityHighRounded sx={{ fontSize: 18, color: priorityFlag === "normal" ? "#6b7280" : priorityFlag === "important" ? "#f59e0b" : "#ef4444" }} />
+              <PriorityHighRounded sx={{ fontSize: 20, color: priorityFlag === "normal" ? "#6b7280" : priorityFlag === "important" ? "#ff6f00" : "#b91c1c" }} />
             </IconButton>
           </Stack>
           <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
             {priorityFlag !== "normal" ? (
-              <Typography sx={{ fontSize: 11, fontWeight: 800, color: priorityFlag === "important" ? "#b45309" : "#b91c1c", bgcolor: priorityFlag === "important" ? "#fef3c7" : "#fee2e2", px: 0.8, py: 0.25, borderRadius: 1 }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 800, color: priorityFlag === "important" ? "#ff6f00" : "#b91c1c", px: 0.8, py: 0.25 }}>
+                <PriorityHighRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} />
                 {priorityFlag === "important" ? "Important" : "Urgent"}
               </Typography>
             ) : null}
@@ -564,20 +625,20 @@ export function ConnectMessageInput({
           width={320}
           height={380}
           onEmojiClick={(emojiData: EmojiClickData) => {
-            onChange(`${value}${emojiData.emoji}`);
+            setDraftValue(`${draftValue}${emojiData.emoji}`);
             setComposerEmojiAnchor(null);
           }}
         />
       </Popover>
 
-      <NonBlockingMenu
+      <ConnectCascadingMenu
         anchorEl={composerAttachAnchor}
         open={Boolean(composerAttachAnchor)}
         onClose={() => setComposerAttachAnchor(null)}
         items={composerAttachItems}
       />
 
-      <NonBlockingMenu
+      <ConnectCascadingMenu
         anchorEl={priorityAnchor}
         open={Boolean(priorityAnchor)}
         onClose={() => setPriorityAnchor(null)}

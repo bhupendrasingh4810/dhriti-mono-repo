@@ -81,22 +81,6 @@ export default function PulsePage() {
 
   return (
     <Box sx={{ bgcolor: "background.paper", color: "text.primary", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <Stack direction="row" sx={{ height: 64, borderBottom: 1, borderColor: "divider", px: 3, alignItems: "center", justifyContent: "space-between", bgcolor: "background.paper", zIndex: 20 }}>
-        <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-          <Box sx={{ width: 32, height: 32, borderRadius: 1.5, bgcolor: "primary.main", color: "primary.contrastText", display: "grid", placeItems: "center" }}>
-            <BoltRounded sx={{ fontSize: 18 }} />
-          </Box>
-          <Typography sx={{ fontSize: 22, fontWeight: 800 }}>Pulse</Typography>
-        </Stack>
-
-        <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
-          <IconButton size="small"><NotificationsNoneRounded /></IconButton>
-          <IconButton size="small"><HelpOutlineRounded /></IconButton>
-          <IconButton size="small"><SettingsRounded /></IconButton>
-          <Avatar sx={{ width: 34, height: 34 }}>RS</Avatar>
-        </Stack>
-      </Stack>
-
       <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
         <Box sx={{ width: 300, borderRight: 1, borderColor: "divider", bgcolor: "background.paper", overflowY: "auto" }}>
           <Box sx={{ p: 2.5 }}>
@@ -142,13 +126,6 @@ export default function PulsePage() {
               <IconButton size="small"><ChevronLeftRounded /></IconButton>
               <IconButton size="small"><ChevronRightRounded /></IconButton>
               <Typography sx={{ fontSize: 18, fontWeight: 800 }}>25 - 29 August 2025</Typography>
-            </Stack>
-
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 360, flex: 1, maxWidth: 500 }}>
-              {/* <Paper variant="outlined" sx={{ display: "flex", alignItems: "center", px: 1.25, py: 0.5, flex: 1, borderColor: "divider", bgcolor: "background.default" }}>
-                <SearchRounded sx={{ fontSize: 18, color: "text.secondary", mr: 1 }} />
-                <InputBase placeholder="Search meetings" sx={{ fontSize: 14, width: "100%" }} />
-              </Paper> */}
             </Stack>
 
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>

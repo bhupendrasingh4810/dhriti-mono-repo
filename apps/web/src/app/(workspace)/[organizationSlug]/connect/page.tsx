@@ -1,15 +1,9 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import {
-  Add,
-  AddRounded,
-  CheckRounded,
-  DeleteOutlineRounded,
-  EditRounded,
-  ExitToAppRounded,
   FlagOutlined,
   FormatListBulletedRounded,
   ForwardToInboxRounded,
@@ -19,40 +13,15 @@ import {
   MarkEmailUnreadRounded,
   MoreVertRounded,
   OpenInNewRounded,
-  PersonAddAlt1Rounded,
-  PersonRemoveRounded,
-  NotificationsNoneRounded,
   PaletteRounded,
   PeopleRounded,
   PushPinRounded,
-  ChevronRightRounded,
-  SettingsRounded,
   SaveAltRounded,
   TranslateRounded,
   VisibilityOffRounded,
-  WbSunnyOutlined,
   AlternateEmailRounded,
 } from "@mui/icons-material";
-import {
-  Avatar,
-  Box,
-  Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControlLabel,
-  IconButton,
-  InputLabel,
-  MenuItem,
-  Popover,
-  Radio,
-  RadioGroup,
-  Select,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Popover } from "@mui/material";
 import {
   connectChannels,
   connectMentionFeed,
@@ -71,21 +40,25 @@ import {
   type ConnectMessage,
 } from "@/mocks/connect";
 import {
-  ConnectMessageHoverActions,
   ConnectChannelDetailsPanel,
-  ConnectConversationWindow,
   ConnectMentionsView,
-  ConnectMessageInput,
-  ConnectSidebarNavigation,
   ConnectReactionUsersList,
-  ConnectCascadingMenu,
   type ConnectMentionsFilter,
   type ConnectSidebarMenuContext,
   type ConnectSidebarTeamGroup,
   ConnectUserDetailsCard,
   type ConnectConversationWindowMessage,
-  type ConnectCascadingMenuItem,
 } from "@dhriti/ui";
+import { ConnectSidebar } from "@/features/connect";
+import { getMenuItems } from "@/utils/connect-menu-item.util";
+import { CreateChannelDialog } from "@/features/connect/dialogs/create-channel.dialog";
+import { CreateTeamDialog } from "@/features/connect/dialogs/create-team.dialog";
+import { CreateSectionDialog } from "@/features/connect/dialogs/create-section.dialog";
+import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
+import { ConnectCascadingMenuItem } from "@/types/menu.types";
+import { ConnectCascadingMenu } from "@/components/shared/ConnectCascadingMenu";
+import { ConnectPendingAttachment } from "@/types/connect.types";
+import { ConnectMessageInput } from "@/features/connect/components/ConnectMessageInput";
 
 const quickViewsConfig = [
   { icon: AlternateEmailRounded, label: "Mentions" },
@@ -103,13 +76,6 @@ type ReactionHoverState = {
   emoji: string;
   userIds: string[];
 };
-
-function formatTime(isoDate: string) {
-  return new Date(isoDate).toLocaleTimeString("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function getConversationLabel(conversation: ConnectConversation) {
   if (conversation.type === "channel") {
@@ -132,28 +98,16 @@ export default function ConnectPage() {
   const [showDetails, setShowDetails] = useState(false);
   const [composerMessage, setComposerMessage] = useState("");
   const [mentionComposerMessage, setMentionComposerMessage] = useState("");
-  const [quickViewsOpen, setQuickViewsOpen] = useState(true);
-  const [favouritesOpen, setFavouritesOpen] = useState(true);
-  const [chatsOpen, setChatsOpen] = useState(true);
-  const [teamsOpen, setTeamsOpen] = useState(true);
+  const [pendingAttachments, setPendingAttachments] = useState<ConnectPendingAttachment[]>([]);
+  const [mentionPendingAttachments, setMentionPendingAttachments] = useState<ConnectPendingAttachment[]>([]);
+
   const [activeQuickViewId, setActiveQuickViewId] = useState<string | null>(null);
   const [expandedTeamIds, setExpandedTeamIds] = useState<Record<string, boolean>>({ team_001: true });
   const [sectionViewMode, setSectionViewMode] = useState({ favorites: "all", chats: "all", mentions: "always", threads: "always" });
-  const [participantSearch, setParticipantSearch] = useState("");
   const [quotedMessage, setQuotedMessage] = useState<ConnectMessage | null>(null);
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
-  const [sectionName, setSectionName] = useState("");
-  const [sectionEmoji, setSectionEmoji] = useState("");
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
-  const [channelName, setChannelName] = useState("");
-  const [channelDescription, setChannelDescription] = useState("");
-  const [channelType, setChannelType] = useState("standard");
-  const [channelLayout, setChannelLayout] = useState("threads");
-  const [teamName, setTeamName] = useState("");
-  const [teamDescription, setTeamDescription] = useState("");
-  const [teamVisibility, setTeamVisibility] = useState("public");
-  const [teamFirstChannelName, setTeamFirstChannelName] = useState("");
   const [mentionsFilter, setMentionsFilter] = useState<ConnectMentionsFilter>("unread");
   const [selectedMentionId, setSelectedMentionId] = useState<string | null>(null);
   const [mentionHover, setMentionHover] = useState<MentionHoverState | null>(null);
@@ -185,7 +139,6 @@ export default function ConnectPage() {
   const [messageEmojiAnchor, setMessageEmojiAnchor] = useState<HTMLElement | null>(null);
   const [activeMessageForEmoji, setActiveMessageForEmoji] = useState<string | null>(null);
 
-  const [participantsAnchor, setParticipantsAnchor] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     return () => {
@@ -207,22 +160,22 @@ export default function ConnectPage() {
 
       const withPersonal = currentUser
         ? [{
-            id: `personal_${currentUser.id}`,
-            type: "direct" as const,
-            organizationId: selectedConversation.organizationId,
-            name: `${currentUser.displayName} (You)`,
-            avatar: currentUser.avatar,
-            createdBy: currentUser.id,
-            createdAt: currentUser.createdAt,
-            participants: [currentUser.id],
-            lastMessageAt: new Date().toISOString(),
-            unreadCount: 0,
-            isFavorite: true,
-            muted: false,
-            pinned: true,
-            archived: false,
-            description: "Personal messages visible only to you.",
-          }, ...items]
+          id: `personal_${currentUser.id}`,
+          type: "direct" as const,
+          organizationId: selectedConversation.organizationId,
+          name: `${currentUser.displayName} (You)`,
+          avatar: currentUser.avatar,
+          createdBy: currentUser.id,
+          createdAt: currentUser.createdAt,
+          participants: [currentUser.id],
+          lastMessageAt: new Date().toISOString(),
+          unreadCount: 0,
+          isFavorite: true,
+          muted: false,
+          pinned: true,
+          archived: false,
+          description: "Personal messages visible only to you.",
+        }, ...items]
         : items;
 
       return sectionViewMode.favorites === "unread" ? withPersonal.filter((conversation) => conversation.unreadCount > 0) : withPersonal;
@@ -385,157 +338,20 @@ export default function ConnectPage() {
     { id: "audio-call", label: "Audio Call", icon: <PeopleRounded fontSize="small" /> },
   ];
 
-  const participants = useMemo(
-    () => selectedConversation.participants.map((id) => connectUsersById[id]).filter(Boolean),
-    [selectedConversation]
+
+
+  const sidebarMenuItems = useMemo<ConnectCascadingMenuItem[]>(
+    () => getMenuItems(
+      sidebarMenuContext,
+      sectionViewMode,
+      setSectionViewMode,
+      setCreateSectionOpen,
+      setCreateTeamOpen,
+      setCreateChannelOpen,
+      pushSystemMessage
+    ),
+    [sectionViewMode, sidebarMenuContext, setSectionViewMode, setCreateSectionOpen, setCreateTeamOpen, setCreateChannelOpen, pushSystemMessage]
   );
-
-  const addableUsers = useMemo(() => {
-    const set = new Set(selectedConversation.participants);
-    return connectUsers
-      .filter((user) => !set.has(user.id))
-      .filter((user) => user.displayName.toLowerCase().includes(participantSearch.toLowerCase()))
-      .slice(0, 8);
-  }, [selectedConversation, participantSearch]);
-
-  const sidebarMenuItems = useMemo<ConnectCascadingMenuItem[]>(() => {
-    if (!sidebarMenuContext) return [];
-
-    if (sidebarMenuContext.kind === "section" && sidebarMenuContext.sectionId === "quick-views") {
-      return [
-        { id: "show-always", label: "Always", selected: true, sectionTitle: "Show" },
-        { id: "show-unread", label: "When unread" },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "quick-view") {
-      if (sidebarMenuContext.id === "drafts") {
-        return [{ id: "hide-drafts", label: "Hide", icon: <VisibilityOffRounded fontSize="small" />, sectionTitle: "Options" }];
-      }
-
-      const key = sidebarMenuContext.id as "mentions" | "threads";
-      return [
-        {
-          id: "show-always",
-          label: "Always",
-          selected: sectionViewMode[key] === "always",
-          sectionTitle: "Show",
-          onClick: () => setSectionViewMode((previous) => ({ ...previous, [key]: "always" })),
-        },
-        {
-          id: "show-unread",
-          label: "When unread",
-          selected: sectionViewMode[key] === "unread",
-          onClick: () => setSectionViewMode((previous) => ({ ...previous, [key]: "unread" })),
-        },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "section" && (sidebarMenuContext.sectionId === "favorites" || sidebarMenuContext.sectionId === "chats")) {
-      const key = sidebarMenuContext.sectionId;
-      return [
-        {
-          id: "view-all",
-          label: "All",
-          selected: sectionViewMode[key] === "all",
-          sectionTitle: "View",
-          onClick: () => setSectionViewMode((previous) => ({ ...previous, [key]: "all" })),
-        },
-        {
-          id: "view-unread",
-          label: "Unread only",
-          selected: sectionViewMode[key] === "unread",
-          onClick: () => setSectionViewMode((previous) => ({ ...previous, [key]: "unread" })),
-        },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "section" && sidebarMenuContext.sectionId === "teams") {
-      return [
-        {
-          id: "create-team",
-          label: "Create Team",
-          icon: <AddRounded fontSize="small" />,
-          sectionTitle: "Options",
-          onClick: () => setCreateTeamOpen(true),
-        },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "personal") {
-      return [
-        { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
-        {
-          id: "move-section",
-          label: "Move to section",
-          closeOnClick: false,
-          children: [
-            { id: "move-favorites", label: "Favorites" },
-            { id: "move-new-section", label: "New Section", onClick: () => setCreateSectionOpen(true) },
-          ],
-        },
-        { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "user") {
-      return [
-        { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
-        { id: "mark-read", label: "Mark as read", icon: <CheckRounded fontSize="small" /> },
-        {
-          id: "move-section",
-          label: "Move to section",
-          closeOnClick: false,
-          children: [
-            { id: "move-favorites", label: "Favorites" },
-            { id: "move-new-section", label: "New Section", onClick: () => setCreateSectionOpen(true) },
-          ],
-        },
-        { id: "mute", label: "Mute", icon: <NotificationsNoneRounded fontSize="small" /> },
-        { id: "notify", label: "Notify when available", icon: <WbSunnyOutlined fontSize="small" /> },
-        { id: "workflows", label: "Workflows", icon: <SettingsRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
-        { id: "remove-history", label: "Remove Chat History", icon: <DeleteOutlineRounded fontSize="small" />, dividerAbove: true, danger: true },
-        { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "channel") {
-      return [
-        { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
-        { id: "channel-notifications", label: "Channel notifications", icon: <NotificationsNoneRounded fontSize="small" /> },
-        {
-          id: "move-section",
-          label: "Move to section",
-          closeOnClick: false,
-          children: [
-            { id: "move-new-section", label: "New Section", onClick: () => setCreateSectionOpen(true) },
-          ],
-        },
-        { id: "remove-section", label: "Remove from section", icon: <DeleteOutlineRounded fontSize="small" /> },
-        { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
-        { id: "manage-channel", label: "Manage channel", icon: <SettingsRounded fontSize="small" />, dividerAbove: true, onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label}.`) },
-        { id: "manage-tags", label: "Manage channel tags", icon: <EditRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
-        { id: "workflows", label: "Work flows", icon: <SettingsRounded fontSize="small" /> },
-        { id: "go-team", label: "Go to team", icon: <ChevronRightRounded fontSize="small" /> },
-      ];
-    }
-
-    if (sidebarMenuContext.kind === "team") {
-      return [
-        { id: "hide-channels", label: "Hide all Channels", icon: <VisibilityOffRounded fontSize="small" /> },
-        { id: "add-member", label: "Add member", icon: <PersonAddAlt1Rounded fontSize="small" /> },
-        { id: "add-channel", label: "Add channel", icon: <AddRounded fontSize="small" />, onClick: () => setCreateChannelOpen(true) },
-        { id: "manage-team", label: "Manage team", icon: <SettingsRounded fontSize="small" />, onClick: () => pushSystemMessage(`Manage team requested for ${sidebarMenuContext.label}.`) },
-        { id: "manage-tags", label: "Manage tags", icon: <EditRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
-        { id: "leave-team", label: "Leave team", icon: <ExitToAppRounded fontSize="small" /> },
-      ];
-    }
-
-    return [];
-  }, [sectionViewMode, sidebarMenuContext]);
 
   const messageMenuItems: ConnectCascadingMenuItem[] = [
     { id: "forward", label: "Forward", icon: <ForwardToInboxRounded fontSize="small" /> },
@@ -623,10 +439,10 @@ export default function ConnectPage() {
             reactions: reactions.map((reaction) =>
               reaction.emoji === emoji
                 ? {
-                    ...reaction,
-                    count: reaction.count + 1,
-                    userIds: hasUser ? reaction.userIds : [...reaction.userIds, currentUser.id],
-                  }
+                  ...reaction,
+                  count: reaction.count + 1,
+                  userIds: hasUser ? reaction.userIds : [...reaction.userIds, currentUser.id],
+                }
                 : reaction
             ),
           };
@@ -666,9 +482,10 @@ export default function ConnectPage() {
     }));
   }
 
-  function handleSendMessageToConversation(conversationId: string, payload: { content: string; mentionUserIds: string[] }) {
+  function handleSendMessageToConversation(conversationId: string, payload: { content: string; mentionUserIds: string[] }, attachments?: ConnectPendingAttachment[]) {
     const conversation = conversationsById[conversationId];
     if (!conversation || !currentUser) return;
+    if (!payload.content.trim() && !attachments?.length) return;
     const now = new Date().toISOString();
 
     const newMessage: ConnectMessage = {
@@ -677,11 +494,12 @@ export default function ConnectPage() {
       conversationId,
       senderId: currentUser.id,
       content: payload.content,
-      contentType: "text",
+      contentType: attachments?.length ? "file" : "text",
       createdAt: now,
       status: "sent",
       quotedMessageId: quotedMessage?.id,
       mentions: payload.mentionUserIds,
+      attachments,
     };
 
     setMessagesByConversation((previous) => ({
@@ -703,9 +521,10 @@ export default function ConnectPage() {
   function handleSendMessage(payload: { content: string; mentionUserIds: string[] }) {
     if (!selectedConversation) return;
 
-    handleSendMessageToConversation(selectedConversation.id, payload);
+    handleSendMessageToConversation(selectedConversation.id, payload, pendingAttachments.length ? pendingAttachments : undefined);
 
     setComposerMessage("");
+    setPendingAttachments([]);
     setQuotedMessage(null);
   }
 
@@ -738,318 +557,57 @@ export default function ConnectPage() {
     setActiveMessageForEmoji(messageId);
   }
 
-  function handleAttachFilesToConversation(conversationId: string, fileList: FileList | null) {
-    const conversation = conversationsById[conversationId];
-    if (!fileList || !conversation || !currentUser) return;
+  function createPendingAttachmentsFromFiles(fileList: FileList | null): ConnectPendingAttachment[] {
+    if (!fileList) return [];
 
-    const files = Array.from(fileList);
-    if (files.length === 0) return;
-
-    const now = new Date().toISOString();
-    const attachments = files.map((file, index) => ({
+    return Array.from(fileList).map((file, index) => ({
       id: `upload_${Date.now()}_${index}`,
       name: file.name,
       type: file.type || "application/octet-stream",
       size: file.size,
       url: URL.createObjectURL(file),
     }));
-
-    const newMessage: ConnectMessage = {
-      id: `msg_upload_${Date.now()}`,
-      conversationType: conversation.type,
-      conversationId,
-      senderId: currentUser.id,
-      content: `Shared ${files.length} attachment${files.length > 1 ? "s" : ""}`,
-      contentType: "file",
-      createdAt: now,
-      status: "sent",
-      attachments,
-    };
-
-    setMessagesByConversation((previous) => ({
-      ...previous,
-      [conversationId]: [...(previous[conversationId] ?? []), newMessage],
-    }));
-
-    setConversationsById((previous) => ({
-      ...previous,
-      [conversationId]: {
-        ...previous[conversationId],
-        lastMessageAt: now,
-      },
-    }));
-
-    return newMessage;
   }
 
   function handleAttachFiles(fileList: FileList | null) {
-    if (!selectedConversation) return;
+    const attachments = createPendingAttachmentsFromFiles(fileList);
+    if (attachments.length === 0) return;
 
-    handleAttachFilesToConversation(selectedConversation.id, fileList);
-
-    setComposerMessage("");
+    setPendingAttachments((previous) => [...previous, ...attachments]);
   }
 
-  function handleAddParticipant(userId: string) {
-    const user = connectUsersById[userId];
-
-    setConversationsById((previous) => {
-      const conversation = previous[selectedConversation.id];
-      if (!conversation || conversation.participants.includes(userId)) return previous;
-
-      return {
-        ...previous,
-        [selectedConversation.id]: {
-          ...conversation,
-          participants: [...conversation.participants, userId],
-        },
-      };
-    });
-
-    if (user) {
-      pushSystemMessage(`${user.displayName} was added to this conversation.`);
-    }
+  function handleRemovePendingAttachment(attachmentId: string) {
+    setPendingAttachments((previous) => previous.filter((attachment) => attachment.id !== attachmentId));
   }
 
-  function handleRemoveParticipant(userId: string) {
-    const user = connectUsersById[userId];
+  function handleAttachFilesForMention(fileList: FileList | null) {
+    const attachments = createPendingAttachmentsFromFiles(fileList);
+    if (attachments.length === 0) return;
 
-    setConversationsById((previous) => {
-      const conversation = previous[selectedConversation.id];
-      if (!conversation || !conversation.participants.includes(userId) || userId === currentUser.id) return previous;
-
-      return {
-        ...previous,
-        [selectedConversation.id]: {
-          ...conversation,
-          participants: conversation.participants.filter((id) => id !== userId),
-        },
-      };
-    });
-
-    if (user) {
-      pushSystemMessage(`${user.displayName} was removed from this conversation.`);
-    }
+    setMentionPendingAttachments((previous) => [...previous, ...attachments]);
   }
 
-  function renderMessageContent(message: ConnectMessage) {
-    const singleEmojiPattern = /^(?:\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*|[\u{1F1E6}-\u{1F1FF}]{2}|[#*0-9]\uFE0F?\u20E3)$/u;
-
-    function renderMentionToken(token: string, key: string) {
-      const displayName = token.slice(2, -1);
-      const user = connectUsers.find((candidate) => candidate.displayName.toLowerCase() === displayName.toLowerCase());
-
-      return (
-        <Box
-          key={key}
-          component="span"
-          onMouseEnter={(event: MouseEvent<HTMLElement>) => {
-            if (user) {
-              openMentionHover(event, user.id);
-            }
-          }}
-          sx={{ color: "#92400e", fontWeight: 700, cursor: user ? "pointer" : "default" }}
-        >
-          @{displayName}
-        </Box>
-      );
-    }
-
-    function renderInlineMarkdown(text: string, keyPrefix: string) {
-      const tokens = text.split(/(@\[[^\]]+\]|`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|==[^=]+==|\[[^\]]+\]\([^\)]+\))/g);
-
-      return tokens.map((token, index) => {
-        if (!token) return null;
-
-        if (/^@\[[^\]]+\]$/.test(token)) {
-          return renderMentionToken(token, `${keyPrefix}-mention-${index}`);
-        }
-
-        if (/^`[^`]+`$/.test(token)) {
-          return (
-            <Box
-              key={`${keyPrefix}-inline-code-${index}`}
-              component="span"
-              sx={{
-                px: 0.7,
-                py: 0.15,
-                mx: 0.2,
-                borderRadius: 0.8,
-                bgcolor: "#eef2f7",
-                border: "1px solid #e2e8f0",
-                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                fontSize: 12,
-              }}
-            >
-              {token.slice(1, -1)}
-            </Box>
-          );
-        }
-
-        if (/^\*\*[^*]+\*\*$/.test(token)) {
-          return (
-            <Box key={`${keyPrefix}-bold-${index}`} component="span" sx={{ fontWeight: 800 }}>
-              {token.slice(2, -2)}
-            </Box>
-          );
-        }
-
-        if (/^\*[^*]+\*$/.test(token)) {
-          return (
-            <Box key={`${keyPrefix}-italic-${index}`} component="span" sx={{ fontStyle: "italic" }}>
-              {token.slice(1, -1)}
-            </Box>
-          );
-        }
-
-        if (/^~~[^~]+~~$/.test(token)) {
-          return (
-            <Box key={`${keyPrefix}-strike-${index}`} component="span" sx={{ textDecoration: "line-through" }}>
-              {token.slice(2, -2)}
-            </Box>
-          );
-        }
-
-        if (/^==[^=]+==$/.test(token)) {
-          return (
-            <Box key={`${keyPrefix}-highlight-${index}`} component="span" sx={{ px: 0.45, borderRadius: 0.7, bgcolor: "#fef08a" }}>
-              {token.slice(2, -2)}
-            </Box>
-          );
-        }
-
-        const linkMatch = token.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
-        if (linkMatch) {
-          return (
-            <Box key={`${keyPrefix}-link-${index}`} component="span" sx={{ color: "#2563eb", textDecoration: "underline", cursor: "pointer" }}>
-              {linkMatch[1]}
-            </Box>
-          );
-        }
-
-        return <Fragment key={`${keyPrefix}-text-${index}`}>{token}</Fragment>;
-      });
-    }
-
-    let content = message.content;
-    const priorityMatch = content.match(/^\[(IMPORTANT|URGENT)\]\s*/i);
-    const priority = priorityMatch ? priorityMatch[1].toUpperCase() : null;
-    if (priorityMatch) {
-      content = content.slice(priorityMatch[0].length);
-    }
-
-    const trimmedContent = content.trim();
-    if (!priority && singleEmojiPattern.test(trimmedContent)) {
-      return (
-        <Typography
-          component="div"
-          sx={{
-            fontSize: 42,
-            lineHeight: 1.1,
-            letterSpacing: 0,
-          }}
-        >
-          {trimmedContent}
-        </Typography>
-      );
-    }
-
-    const blocks = content.split(/```([\s\S]*?)```/g);
-
-    return (
-      <Stack spacing={0.75}>
-        {priority ? (
-          <Box
-            sx={{
-              width: "fit-content",
-              px: 0.8,
-              py: 0.25,
-              borderRadius: 1,
-              fontSize: 10,
-              fontWeight: 800,
-              bgcolor: priority === "IMPORTANT" ? "#fef3c7" : "#fee2e2",
-              color: priority === "IMPORTANT" ? "#b45309" : "#b91c1c",
-            }}
-          >
-            {priority}
-          </Box>
-        ) : null}
-
-        {blocks.map((block, blockIndex) => {
-          if (blockIndex % 2 === 1) {
-            return (
-              <Box
-                key={`${message.id}-code-${blockIndex}`}
-                component="pre"
-                sx={{
-                  m: 0,
-                  p: 1.2,
-                  borderRadius: 1.3,
-                  bgcolor: "#0f172a",
-                  color: "#e2e8f0",
-                  fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                  fontSize: 12,
-                  overflowX: "auto",
-                }}
-              >
-                {block.trim()}
-              </Box>
-            );
-          }
-
-          const lines = block.split("\n");
-          return (
-            <Stack key={`${message.id}-block-${blockIndex}`} spacing={0.35}>
-              {lines.map((line, lineIndex) => {
-                const lineKey = `${message.id}-line-${blockIndex}-${lineIndex}`;
-
-                if (!line.trim()) {
-                  return <Box key={lineKey} sx={{ height: 6 }} />;
-                }
-
-                if (/^\s*>\s?/.test(line)) {
-                  return (
-                    <Box key={lineKey} sx={{ pl: 1, borderLeft: "3px solid #cbd5e1", color: "#475569", fontStyle: "italic" }}>
-                      {renderInlineMarkdown(line.replace(/^\s*>\s?/, ""), `${lineKey}-quote`)}
-                    </Box>
-                  );
-                }
-
-                if (/^\s*[-*]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
-                  return (
-                    <Typography key={lineKey} component="div" sx={{ fontSize: 14, lineHeight: 1.6, color: "#374151" }}>
-                      {renderInlineMarkdown(line, `${lineKey}-list`)}
-                    </Typography>
-                  );
-                }
-
-                return (
-                  <Typography key={lineKey} component="div" sx={{ fontSize: 14, lineHeight: 1.65, color: "#374151" }}>
-                    {renderInlineMarkdown(line, `${lineKey}-plain`)}
-                  </Typography>
-                );
-              })}
-            </Stack>
-          );
-        })}
-      </Stack>
-    );
+  function handleRemoveMentionPendingAttachment(attachmentId: string) {
+    setMentionPendingAttachments((previous) => previous.filter((attachment) => attachment.id !== attachmentId));
   }
+
+
+
 
   if (!selectedConversation || !currentUser) return null;
 
   const quotedPreview = quotedMessage
     ? {
-        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-        content: quotedMessage.content,
-      }
+      senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+      content: quotedMessage.content,
+    }
     : null;
 
   const mentionQuotedPreview = quotedMessage && selectedMention
     ? {
-        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-        content: quotedMessage.content,
-      }
+      senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+      content: quotedMessage.content,
+    }
     : null;
 
   const isMentionsView = activeQuickViewId === "mentions";
@@ -1057,7 +615,7 @@ export default function ConnectPage() {
   return (
     <Box className="bg-[#f9fafb] text-gray-900 h-full flex flex-col overflow-hidden">
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <ConnectSidebarNavigation
+        <ConnectSidebar
           quickViews={sidebarQuickViews}
           favoriteConversations={favoriteConversations.map((conversation) => ({
             id: conversation.id,
@@ -1068,23 +626,15 @@ export default function ConnectPage() {
             isSelfSpace: conversation.id.startsWith("personal_"),
           }))}
           chatConversations={visibleChatConversations.map((conversation) => ({
-              id: conversation.id,
-              name: conversation.name,
-              type: conversation.type,
-              avatar: conversation.avatar,
-              unreadCount: connectSidebarState.unread[conversation.id] ?? conversation.unreadCount,
-            }))}
+            id: conversation.id,
+            name: conversation.name,
+            type: conversation.type,
+            avatar: conversation.avatar,
+            unreadCount: connectSidebarState.unread[conversation.id] ?? conversation.unreadCount,
+          }))}
           teams={sidebarTeams}
           selectedConversationId={selectedConversation.id}
           activeQuickViewId={activeQuickViewId}
-          quickViewsOpen={quickViewsOpen}
-          favouritesOpen={favouritesOpen}
-          chatsOpen={chatsOpen}
-          teamsOpen={teamsOpen}
-          onToggleQuickViews={() => setQuickViewsOpen((prev) => !prev)}
-          onToggleFavourites={() => setFavouritesOpen((prev) => !prev)}
-          onToggleChats={() => setChatsOpen((prev) => !prev)}
-          onToggleTeams={() => setTeamsOpen((prev) => !prev)}
           onToggleTeam={handleToggleTeam}
           onSelectConversation={handleSelectConversation}
           onSelectQuickView={handleSelectQuickView}
@@ -1117,7 +667,6 @@ export default function ConnectPage() {
               setActiveQuickViewId(null);
               setShowDetails(false);
             }}
-            renderMessageContent={(message) => renderMessageContent(message as ConnectMessage)}
             composer={
               selectedMention ? (
                 <ConnectMessageInput
@@ -1131,64 +680,67 @@ export default function ConnectPage() {
                   }))}
                   currentUserId={currentUser.id}
                   quotedMessage={mentionQuotedPreview}
+                  pendingAttachments={mentionPendingAttachments}
                   onChange={setMentionComposerMessage}
                   onSend={(payload) => {
-                    handleSendMessageToConversation(selectedMention.conversationId, payload);
+                    handleSendMessageToConversation(selectedMention.conversationId, payload, mentionPendingAttachments.length ? mentionPendingAttachments : undefined);
                     setMentionComposerMessage("");
+                    setMentionPendingAttachments([]);
                     setQuotedMessage(null);
                   }}
                   onClearQuotedMessage={() => setQuotedMessage(null)}
-                  onAttachFiles={(files) => handleAttachFilesToConversation(selectedMention.conversationId, files)}
+                  onAttachFiles={handleAttachFilesForMention}
+                  onRemovePendingAttachment={handleRemoveMentionPendingAttachment}
                 />
               ) : null
             }
           />
         ) : (
-        <ConnectConversationWindow
-          conversation={{
-            id: selectedConversation.id,
-            name: selectedConversation.name,
-            type: selectedConversation.type,
-            isFavorite: selectedConversation.isFavorite,
-            participants: selectedConversation.participants,
-          }}
-          teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
-          currentUserId={currentUser.id}
-          usersById={connectUsersById}
-          messages={selectedMessages as ConnectConversationWindowMessage[]}
-          activeMessageMenuId={activeMessageId}
-          activeMessageEmojiId={activeMessageForEmoji}
-          getQuotedMessageById={(id) => (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as ConnectConversationWindowMessage | undefined}
-          renderMessageContent={(message) => renderMessageContent(message as ConnectMessage)}
-          onOpenDetails={() => setShowDetails(true)}
-          onOpenParticipantsMenu={(event) => setParticipantsAnchor(event.currentTarget)}
-          onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
-          onOpenMessageEmoji={openMessageEmojiMenu}
-          onOpenMessageMenu={openMessageMenu}
-          onQuoteMessage={(message) => setQuotedMessage(message as ConnectMessage)}
-          onOpenReactionHover={openReactionHover}
-          onCloseReactionHover={scheduleReactionHoverClose}
-          onOpenUserHover={openMentionHover}
-          onCloseUserHover={scheduleMentionHoverClose}
-          disableHoverActions={Boolean(mentionHover)}
-        >
-          <ConnectMessageInput
-            conversationLabel={getConversationLabel(selectedConversation)}
-            value={composerMessage}
-            users={connectUsers.map((user) => ({
-              id: user.id,
-              displayName: user.displayName,
-              avatar: user.avatar,
-              subtitle: user.jobTitle,
-            }))}
+          <ConnectConversations
+            conversation={{
+              id: selectedConversation.id,
+              name: selectedConversation.name,
+              type: selectedConversation.type,
+              isFavorite: selectedConversation.isFavorite,
+              participants: selectedConversation.participants,
+            }}
+            teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
             currentUserId={currentUser.id}
-            quotedMessage={quotedPreview}
-            onChange={setComposerMessage}
-            onSend={handleSendMessage}
-            onClearQuotedMessage={() => setQuotedMessage(null)}
-            onAttachFiles={handleAttachFiles}
-          />
-        </ConnectConversationWindow>
+            usersById={connectUsersById}
+            messages={selectedMessages as ConnectConversationWindowMessage[]}
+            activeMessageMenuId={activeMessageId}
+            activeMessageEmojiId={activeMessageForEmoji}
+            getQuotedMessageById={(id) => (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as ConnectConversationWindowMessage | undefined}
+            onOpenDetails={() => setShowDetails(true)}
+            onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
+            onOpenMessageEmoji={openMessageEmojiMenu}
+            onOpenMessageMenu={openMessageMenu}
+            onQuoteMessage={(message) => setQuotedMessage(message as ConnectMessage)}
+            onOpenReactionHover={openReactionHover}
+            onCloseReactionHover={scheduleReactionHoverClose}
+            onOpenUserHover={openMentionHover}
+            onCloseUserHover={scheduleMentionHoverClose}
+            disableHoverActions={Boolean(mentionHover)}
+          >
+            <ConnectMessageInput
+              conversationLabel={getConversationLabel(selectedConversation)}
+              value={composerMessage}
+              users={connectUsers.map((user) => ({
+                id: user.id,
+                displayName: user.displayName,
+                avatar: user.avatar,
+                subtitle: user.jobTitle,
+              }))}
+              currentUserId={currentUser.id}
+              quotedMessage={quotedPreview}
+              pendingAttachments={pendingAttachments}
+              onChange={setComposerMessage}
+              onSend={handleSendMessage}
+              onClearQuotedMessage={() => setQuotedMessage(null)}
+              onAttachFiles={handleAttachFiles}
+              onRemovePendingAttachment={handleRemovePendingAttachment}
+            />
+          </ConnectConversations>
         )}
 
         {!isMentionsView ? <ConnectChannelDetailsPanel
@@ -1206,11 +758,11 @@ export default function ConnectPage() {
         /> : null}
       </Box>
 
-      <ConnectCascadingMenu 
-        anchorEl={sidebarMenuAnchor} 
-        open={Boolean(sidebarMenuAnchor)} 
-        onClose={closeSidebarMenus} 
-        items={sidebarMenuItems} 
+      <ConnectCascadingMenu
+        anchorEl={sidebarMenuAnchor}
+        open={Boolean(sidebarMenuAnchor)}
+        onClose={closeSidebarMenus}
+        items={sidebarMenuItems}
       />
 
       <ConnectCascadingMenu
@@ -1236,16 +788,18 @@ export default function ConnectPage() {
         items={mentionCallMenuItems}
       />
 
-      <ConnectCascadingMenu 
-        anchorEl={messageMenuAnchor} 
-        open={Boolean(messageMenuAnchor) && Boolean(activeMessageId)} 
-        onClose={() => { setMessageMenuAnchor(null); setActiveMessageId(null); }} 
-        items={messageMenuItems.map((item) => ({ ...item, onClick: () => {
-        if (item.id === "copy-link" && activeMessageId) {
-          const link = `${window.location.origin}${window.location.pathname}?message=${activeMessageId}`;
-          void navigator.clipboard.writeText(link);
-        }
-      } }))} />
+      <ConnectCascadingMenu
+        anchorEl={messageMenuAnchor}
+        open={Boolean(messageMenuAnchor) && Boolean(activeMessageId)}
+        onClose={() => { setMessageMenuAnchor(null); setActiveMessageId(null); }}
+        items={messageMenuItems.map((item) => ({
+          ...item, onClick: () => {
+            if (item.id === "copy-link" && activeMessageId) {
+              const link = `${window.location.origin}${window.location.pathname}?message=${activeMessageId}`;
+              void navigator.clipboard.writeText(link);
+            }
+          }
+        }))} />
 
       <Popover open={Boolean(messageEmojiAnchor) && Boolean(activeMessageForEmoji)} anchorEl={messageEmojiAnchor} onClose={() => { setMessageEmojiAnchor(null); setActiveMessageForEmoji(null); }} disableScrollLock anchorOrigin={{ vertical: "bottom", horizontal: "left" }} transformOrigin={{ vertical: "top", horizontal: "left" }}>
         <EmojiPicker
@@ -1261,46 +815,7 @@ export default function ConnectPage() {
         />
       </Popover>
 
-      <Popover open={Boolean(participantsAnchor)} anchorEl={participantsAnchor} onClose={() => { setParticipantsAnchor(null); setParticipantSearch(""); }} disableScrollLock anchorOrigin={{ vertical: "bottom", horizontal: "left" }} transformOrigin={{ vertical: "top", horizontal: "left" }}>
-        <Box sx={{ width: 340, p: 1.5 }}>
-          <Typography sx={{ fontSize: 11, color: "#9ca3af", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", mb: 1 }}>Participants</Typography>
-          <TextField fullWidth size="small" placeholder="Search user to add" value={participantSearch} onChange={(event) => setParticipantSearch(event.target.value)} />
 
-          <Typography sx={{ mt: 1.25, mb: 0.6, fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>In this conversation</Typography>
-          <Stack spacing={0.4} sx={{ maxHeight: 160, overflowY: "auto" }}>
-            {participants.map((user) => (
-              <Stack key={user.id} direction="row" spacing={1} sx={{ px: 0.5, py: 0.6, alignItems: "center", justifyContent: "space-between" }}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                  <Avatar src={user.avatar} sx={{ width: 24, height: 24 }} />
-                  <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{user.displayName}</Typography>
-                    <Typography sx={{ fontSize: 11, color: "#6b7280" }}>{user.jobTitle}</Typography>
-                  </Box>
-                </Stack>
-                {user.id !== currentUser.id ? (
-                  <IconButton size="small" onClick={() => handleRemoveParticipant(user.id)}><PersonRemoveRounded sx={{ fontSize: 16 }} /></IconButton>
-                ) : null}
-              </Stack>
-            ))}
-          </Stack>
-
-          <Typography sx={{ mt: 1.2, mb: 0.6, fontSize: 11, color: "#9ca3af", fontWeight: 700 }}>Add more users</Typography>
-          <Stack spacing={0.4} sx={{ maxHeight: 160, overflowY: "auto" }}>
-            {addableUsers.map((user) => (
-              <Stack key={user.id} direction="row" spacing={1} onClick={() => handleAddParticipant(user.id)} sx={{ px: 0.5, py: 0.6, alignItems: "center", justifyContent: "space-between", cursor: "pointer", '&:hover': { bgcolor: "#f9fafb" } }}>
-                <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                  <Avatar src={user.avatar} sx={{ width: 24, height: 24 }} />
-                  <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{user.displayName}</Typography>
-                    <Typography sx={{ fontSize: 11, color: "#6b7280" }}>{user.jobTitle}</Typography>
-                  </Box>
-                </Stack>
-                <IconButton size="small" onClick={() => handleAddParticipant(user.id)}><Add sx={{ fontSize: 16 }} /></IconButton>
-              </Stack>
-            ))}
-          </Stack>
-        </Box>
-      </Popover>
 
       <Popover
         open={Boolean(reactionHover)}
@@ -1356,114 +871,26 @@ export default function ConnectPage() {
         </Box>
       </Popover>
 
-      <Dialog open={createSectionOpen} onClose={() => setCreateSectionOpen(false)} maxWidth="xs" fullWidth>
-        <DialogTitle>Create a new section</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField label="Emoji" placeholder="✨" value={sectionEmoji} onChange={(event) => setSectionEmoji(event.target.value)} />
-            <TextField label="Section name" placeholder="Type a section name" value={sectionName} onChange={(event) => setSectionName(event.target.value)} />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateSectionOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={() => {
-              pushSystemMessage(`Created section ${sectionEmoji ? `${sectionEmoji} ` : ""}${sectionName || "Untitled"}.`);
-              setCreateSectionOpen(false);
-              setSectionEmoji("");
-              setSectionName("");
-              closeSidebarMenus();
-            }}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateSectionDialog
+        createSectionOpen={createSectionOpen}
+        setCreateSectionOpen={setCreateSectionOpen}
+        pushSystemMessage={pushSystemMessage}
+        closeSidebarMenus={closeSidebarMenus}
+      />
 
-      <Dialog open={createChannelOpen} onClose={() => setCreateChannelOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Channel</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField label="Channel name" value={channelName} onChange={(event) => setChannelName(event.target.value)} required />
-            <TextField label="Description" value={channelDescription} onChange={(event) => setChannelDescription(event.target.value)} multiline minRows={3} />
-            <Box>
-              <InputLabel id="connect-channel-type-label" sx={{ mb: 0.75, position: "static", transform: "none", fontSize: 12, fontWeight: 700, color: "#6b7280" }}>
-                Choose a channel type
-              </InputLabel>
-              <Select labelId="connect-channel-type-label" fullWidth value={channelType} onChange={(event) => setChannelType(event.target.value)}>
-                <MenuItem value="standard">Standard</MenuItem>
-                <MenuItem value="private">Private</MenuItem>
-                <MenuItem value="announcement">Announcement</MenuItem>
-              </Select>
-            </Box>
-            <Box>
-              <Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.75 }}>Layouts</Typography>
-              <RadioGroup row value={channelLayout} onChange={(event) => setChannelLayout(event.target.value)}>
-                <FormControlLabel value="threads" control={<Radio />} label="Threads" />
-                <FormControlLabel value="posts" control={<Radio />} label="Posts" />
-              </RadioGroup>
-            </Box>
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateChannelOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            disabled={!channelName.trim()}
-            onClick={() => {
-              pushSystemMessage(`Created channel ${channelName.trim()} with ${channelLayout} layout.`);
-              setCreateChannelOpen(false);
-              setChannelName("");
-              setChannelDescription("");
-              setChannelType("standard");
-              setChannelLayout("threads");
-              closeSidebarMenus();
-            }}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateChannelDialog
+        open={createChannelOpen}
+        onClose={() => setCreateChannelOpen(false)}
+        pushSystemMessage={pushSystemMessage}
+        closeSidebarMenus={closeSidebarMenus}
+      />
 
-      <Dialog open={createTeamOpen} onClose={() => setCreateTeamOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Team</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ pt: 1 }}>
-            <TextField label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} required />
-            <TextField label="Description" value={teamDescription} onChange={(event) => setTeamDescription(event.target.value)} multiline minRows={3} />
-            <Box>
-              <InputLabel id="connect-team-type-label" sx={{ mb: 0.75, position: "static", transform: "none", fontSize: 12, fontWeight: 700, color: "#6b7280" }}>
-                Team type
-              </InputLabel>
-              <Select labelId="connect-team-type-label" fullWidth value={teamVisibility} onChange={(event) => setTeamVisibility(event.target.value)}>
-                <MenuItem value="public">Public</MenuItem>
-                <MenuItem value="private">Private</MenuItem>
-              </Select>
-            </Box>
-            <TextField label="First Channel name" value={teamFirstChannelName} onChange={(event) => setTeamFirstChannelName(event.target.value)} required />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateTeamOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            disabled={!teamName.trim() || !teamFirstChannelName.trim()}
-            onClick={() => {
-              pushSystemMessage(`Created ${teamVisibility} team ${teamName.trim()} with first channel ${teamFirstChannelName.trim()}.`);
-              setCreateTeamOpen(false);
-              setTeamName("");
-              setTeamDescription("");
-              setTeamVisibility("public");
-              setTeamFirstChannelName("");
-              closeSidebarMenus();
-            }}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
-
+      <CreateTeamDialog
+        createTeamOpen={createTeamOpen}
+        setCreateTeamOpen={setCreateTeamOpen}
+        pushSystemMessage={pushSystemMessage}
+        closeSidebarMenus={closeSidebarMenus}
+      />
     </Box>
   );
 }

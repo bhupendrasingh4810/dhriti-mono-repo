@@ -26,6 +26,8 @@ type ConversationAttachment = {
   id: string;
   name: string;
   size: number;
+  type: string;
+  url: string;
 };
 
 type ConversationReaction = {

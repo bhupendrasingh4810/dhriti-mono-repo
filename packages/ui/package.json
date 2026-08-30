@@ -4,6 +4,16 @@
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./dialog": {
+      "types": "./src/components/Dialog/index.tsx",
+      "default": "./src/components/Dialog/index.tsx"
+    }
+  },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",

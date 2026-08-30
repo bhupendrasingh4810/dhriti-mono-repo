@@ -60,7 +60,7 @@ type ConnectMentionsViewProps = {
   onOpenCallOptions: (event: MouseEvent<HTMLElement>, mentionId: string) => void;
   onOpenInNewWindow: (mentionId: string) => void;
   onGoToChannel: (conversationId: string) => void;
-  renderMessageContent: (message: ConnectMentionsViewMessage) => ReactNode;
+  // renderMessageContent: (message: ConnectMentionsViewMessage) => ReactNode;
   composer: ReactNode;
 };
 
@@ -83,7 +83,7 @@ export function ConnectMentionsView({
   onOpenCallOptions,
   onOpenInNewWindow,
   onGoToChannel,
-  renderMessageContent,
+  // renderMessageContent,
   composer,
 }: ConnectMentionsViewProps) {
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
@@ -182,7 +182,7 @@ export function ConnectMentionsView({
                           <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>{formatTime(message.createdAt)}</Typography>
                         </Stack>
                         <Box sx={{ p: 1.25, borderRadius: 1.25, bgcolor: "#f8fafc", border: isHighlighted ? "2px solid #ef4444" : "1px solid #e5e7eb", transition: "border-color 160ms ease" }}>
-                          {renderMessageContent(message)}
+                          {/* {renderMessageContent(message)} */}
                         </Box>
                         {isHighlighted ? (
                           <Box sx={{ position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)", width: 28, height: 28, borderRadius: 99, bgcolor: "#fee2e2", color: "#dc2626", display: "grid", placeItems: "center" }}>
