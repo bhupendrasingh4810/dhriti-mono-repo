@@ -1,5 +1,8 @@
-import React, { Fragment, MouseEvent } from "react";
-import { Box, Stack, Typography } from "@mui/material";
+import React, { Fragment, MouseEvent, useState } from "react";
+import { DownloadRounded, MoreVertRounded, OpenInNewRounded } from "@mui/icons-material";
+import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
+import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
+import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 
 // ==========================================
 // 📋 STRICT ENTIRE APPLICATION DATA INTERFACES
@@ -35,6 +38,7 @@ export function getMessagePriority(content: string): "IMPORTANT" | "URGENT" | nu
 }
 const MARKDOWN_TOKEN_SPLITTER = /(@\[[^\]]+\]|`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*|~~[^~]+~~|==[^=]+==|\[[^\]]+\]\([^\)]+\))/g;
 const LINK_PATTERN = /^\[([^\]]+)\]\(([^\)]+)\)$/;
+const URL_PATTERN = /https?:\/\/[^\s<>)]+/gi;
 
 // ==========================================
 // 🧩 ISOLATED UI SUB-COMPONENTS (MEMOIZED READY)
@@ -158,7 +162,7 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
                 const linkMatch = token.match(LINK_PATTERN);
                 if (linkMatch) {
                     return (
-                        <Box key={`${currentKey}-link`} component="span" sx={{ color: "#2563eb", textDecoration: "underline", cursor: "pointer" }}>
+                        <Box key={`${currentKey}-link`} component="a" href={linkMatch[2]} target="_blank" rel="noreferrer" sx={{ color: "#2563eb", textDecoration: "underline", cursor: "pointer" }}>
                             {linkMatch[1]}
                         </Box>
                     );
@@ -169,6 +173,112 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
         </>
     );
 };
+
+function getUrlMeta(url: string) {
+    try {
+        const parsed = new URL(url);
+        const domain = parsed.hostname.replace(/^www\./, "");
+        return {
+            domain,
+            href: parsed.href,
+            thumbnail: `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=128`,
+        };
+    } catch {
+        return null;
+    }
+}
+
+function extractLinks(text: string) {
+    const links: Array<{ url: string; label: string }> = [];
+    const seen = new Set<string>();
+
+    for (const match of text.matchAll(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g)) {
+        const url = match[2];
+        if (!seen.has(url)) {
+            links.push({ url, label: match[1] });
+            seen.add(url);
+        }
+    }
+
+    for (const match of text.matchAll(URL_PATTERN)) {
+        const url = match[0];
+        if (!seen.has(url)) {
+            links.push({ url, label: getUrlMeta(url)?.domain ?? url });
+            seen.add(url);
+        }
+    }
+
+    return links;
+}
+
+function LinkPreviewCard({ url, label }: { url: string; label: string }) {
+    const meta = getUrlMeta(url);
+    if (!meta) return null;
+
+    return (
+        <Stack direction="row" spacing={1.25} sx={{ mt: 0.75, p: 1, borderRadius: 1, bgcolor: "#fff", border: "1px solid #e5e7eb", alignItems: "center", maxWidth: 360 }}>
+            <Box component="img" src={meta.thumbnail} alt="" sx={{ width: 36, height: 36, borderRadius: 1, bgcolor: "#f9fafb", border: "1px solid #f3f4f6" }} />
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+                <Typography sx={{ fontSize: 12, fontWeight: 800, color: "#111827" }} noWrap>{label}</Typography>
+                <Typography sx={{ fontSize: 11, color: "#6b7280" }} noWrap>{meta.domain}</Typography>
+            </Box>
+            <IconButton size="small" component="a" href={meta.href} target="_blank" rel="noreferrer">
+                <OpenInNewRounded sx={{ fontSize: 17 }} />
+            </IconButton>
+        </Stack>
+    );
+}
+
+function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
+    const [expanded, setExpanded] = useState(false);
+    const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+
+    function downloadCode() {
+        const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${blockKey}.txt`;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    const menuItems: ConnectCascadingMenuItem[] = [
+        { id: "download-code", label: "Download", icon: <DownloadRounded sx={{ fontSize: 18 }} />, onClick: downloadCode },
+    ];
+
+    return (
+        <Box key={blockKey} sx={{ borderRadius: 1.3, overflow: "hidden", bgcolor: "#0f172a", border: "1px solid #1e293b" }}>
+            <Stack direction="row" sx={{ px: 1, py: 0.6, alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1e293b" }}>
+                <Typography sx={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase" }}>Code</Typography>
+                <IconButton size="small" onClick={(event) => setMenuAnchor(event.currentTarget)} sx={{ color: "#cbd5e1" }}>
+                    <MoreVertRounded sx={{ fontSize: 18 }} />
+                </IconButton>
+            </Stack>
+            <Box
+                component="pre"
+                sx={{
+                    m: 0,
+                    maxHeight: expanded ? "none" : 250,
+                    p: 1.2,
+                    color: "#e2e8f0",
+                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                    fontSize: 12,
+                    overflow: expanded ? "auto" : "hidden",
+                    whiteSpace: "pre-wrap",
+                }}
+            >
+                {code}
+            </Box>
+            {!expanded ? (
+                <Button size="small" onClick={() => setExpanded(true)} sx={{ m: 0, borderRadius: 0, backgroundColor: "#999b9e", color: "#bfdbfe", fontWeight: 800, width: "100%" }}>
+                    Show more
+                </Button>
+            ) : null}
+            <ConnectCascadingMenu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => setMenuAnchor(null)} items={menuItems} minWidth={210} />
+        </Box>
+    );
+}
 
 // ==========================================
 // 🚀 MAIN RENDER ENGINE EXPORT COMPONENT
@@ -199,6 +309,7 @@ export function RenderMessageContent({
 
     // 3️⃣ Break Content Down into Codeblocks and Standard Text Regions
     const blocks = content.split(/```([\s\S]*?)```/g);
+    const linkPreviews = extractLinks(content);
 
     return (
         <Stack spacing={0.75}>
@@ -207,24 +318,7 @@ export function RenderMessageContent({
 
                 // 💻 Render Even Indices as Code blocks
                 if (blockIndex % 2 === 1) {
-                    return (
-                        <Box
-                            key={blockKey}
-                            component="pre"
-                            sx={{
-                                m: 0,
-                                p: 1.2,
-                                borderRadius: 1.3,
-                                bgcolor: "#0f172a",
-                                color: "#e2e8f0",
-                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                fontSize: 12,
-                                overflowX: "auto",
-                            }}
-                        >
-                            {block.trim()}
-                        </Box>
-                    );
+                    return <CodeBlock key={blockKey} blockKey={blockKey} code={block.trim()} />;
                 }
 
                 // 📝 Render Odd Indices as Standard Lines (Quotes, Lists, Paragraphs)
@@ -282,6 +376,10 @@ export function RenderMessageContent({
                     </Stack>
                 );
             })}
+
+            {linkPreviews.map((preview) => (
+                <LinkPreviewCard key={preview.url} url={preview.url} label={preview.label} />
+            ))}
         </Stack>
     );
 }

@@ -20,8 +20,9 @@ import {
   TranslateRounded,
   VisibilityOffRounded,
   AlternateEmailRounded,
+  DeleteOutlineRounded,
 } from "@mui/icons-material";
-import { Box, Popover } from "@mui/material";
+import { Box, Button, Popover, Stack, Typography } from "@mui/material";
 import {
   connectChannels,
   connectMentionFeed,
@@ -56,7 +57,7 @@ import { CreateTeamDialog } from "@/features/connect/dialogs/create-team.dialog"
 import { CreateSectionDialog } from "@/features/connect/dialogs/create-section.dialog";
 import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
-import { ConnectCascadingMenu } from "@/components/shared/ConnectCascadingMenu";
+import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectPendingAttachment } from "@/types/connect.types";
 import { ConnectMessageInput } from "@/features/connect/components/ConnectMessageInput";
 
@@ -75,6 +76,12 @@ type ReactionHoverState = {
   anchorEl: HTMLElement;
   emoji: string;
   userIds: string[];
+};
+
+type DeletedMessageState = {
+  conversationId: string;
+  message: ConnectMessage;
+  index: number;
 };
 
 function getConversationLabel(conversation: ConnectConversation) {
@@ -112,6 +119,7 @@ export default function ConnectPage() {
   const [selectedMentionId, setSelectedMentionId] = useState<string | null>(null);
   const [mentionHover, setMentionHover] = useState<MentionHoverState | null>(null);
   const [reactionHover, setReactionHover] = useState<ReactionHoverState | null>(null);
+  const [deletedMessage, setDeletedMessage] = useState<DeletedMessageState | null>(null);
   const reactionHoverCloseTimerRef = useRef<number | null>(null);
 
   const [messagesByConversation, setMessagesByConversation] = useState<Record<string, ConnectMessage[]>>(() =>
@@ -360,6 +368,7 @@ export default function ConnectPage() {
     { id: "save", label: "Save this Message", icon: <SaveAltRounded fontSize="small" /> },
     { id: "mark-unread", label: "Mark as unread", icon: <MarkEmailUnreadRounded fontSize="small" /> },
     { id: "translate", label: "Translations", icon: <TranslateRounded fontSize="small" /> },
+    { id: "delete", label: "Delete Message", icon: <DeleteOutlineRounded fontSize="small" />, danger: true },
     { id: "report", label: "Report this Message", icon: <FlagOutlined fontSize="small" />, danger: true },
     { id: "more", label: "More actions", icon: <MoreVertRounded fontSize="small" /> },
   ];
@@ -555,6 +564,35 @@ export default function ConnectPage() {
     event.stopPropagation();
     setMessageEmojiAnchor(event.currentTarget);
     setActiveMessageForEmoji(messageId);
+  }
+
+  function deleteMessage(messageId: string) {
+    const conversationId = selectedConversation.id;
+    const currentMessages = messagesByConversation[conversationId] ?? [];
+    const index = currentMessages.findIndex((message) => message.id === messageId);
+    if (index === -1) return;
+
+    setDeletedMessage({ conversationId, message: currentMessages[index], index });
+    setMessagesByConversation((previous) => ({
+      ...previous,
+      [conversationId]: (previous[conversationId] ?? []).filter((message) => message.id !== messageId),
+    }));
+  }
+
+  function undoDeleteMessage() {
+    if (!deletedMessage) return;
+
+    setMessagesByConversation((previous) => {
+      const currentMessages = [...(previous[deletedMessage.conversationId] ?? [])];
+      const insertAt = Math.min(deletedMessage.index, currentMessages.length);
+      currentMessages.splice(insertAt, 0, deletedMessage.message);
+
+      return {
+        ...previous,
+        [deletedMessage.conversationId]: currentMessages,
+      };
+    });
+    setDeletedMessage(null);
   }
 
   function createPendingAttachmentsFromFiles(fileList: FileList | null): ConnectPendingAttachment[] {
@@ -798,8 +836,38 @@ export default function ConnectPage() {
               const link = `${window.location.origin}${window.location.pathname}?message=${activeMessageId}`;
               void navigator.clipboard.writeText(link);
             }
+
+            if (item.id === "delete" && activeMessageId) {
+              deleteMessage(activeMessageId);
+            }
           }
         }))} />
+
+      {deletedMessage ? (
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            position: "fixed",
+            left: "50%",
+            bottom: 24,
+            transform: "translateX(-50%)",
+            alignItems: "center",
+            px: 2,
+            py: 1.2,
+            bgcolor: "#111827",
+            color: "#fff",
+            borderRadius: 1,
+            boxShadow: "0 12px 32px rgba(15, 23, 42, 0.22)",
+            zIndex: 1400,
+          }}
+        >
+          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Message deleted</Typography>
+          <Button size="small" onClick={undoDeleteMessage} sx={{ color: "#fde68a", fontWeight: 800 }}>
+            UNDO
+          </Button>
+        </Stack>
+      ) : null}
 
       <Popover open={Boolean(messageEmojiAnchor) && Boolean(activeMessageForEmoji)} anchorEl={messageEmojiAnchor} onClose={() => { setMessageEmojiAnchor(null); setActiveMessageForEmoji(null); }} disableScrollLock anchorOrigin={{ vertical: "bottom", horizontal: "left" }} transformOrigin={{ vertical: "top", horizontal: "left" }}>
         <EmojiPicker

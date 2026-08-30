@@ -22,6 +22,7 @@ import {
   MailOutlineRounded,
   MoreVertRounded,
   NotificationsNoneRounded,
+  OpenInNewRounded,
   PriorityHighRounded,
   SendRounded,
   SentimentSatisfiedAltRounded,
@@ -30,7 +31,7 @@ import {
 } from "@mui/icons-material";
 import { Box, Button, Divider, IconButton, Popover, Stack, TextField, Typography } from "@mui/material";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
-import { ConnectCascadingMenu } from "@/components/shared/ConnectCascadingMenu";
+import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectMentionUser, ConnectPendingAttachment } from "@/types/connect.types";
 
 
@@ -76,6 +77,53 @@ function insertAtCursor(value: string, selectionStart: number, selectionEnd: num
   const nextValue = `${value.slice(0, selectionStart)}${text}${value.slice(selectionEnd)}`;
   const cursor = selectionStart + text.length;
   return { value: nextValue, selectionStart: cursor, selectionEnd: cursor };
+}
+
+const RAW_URL_PATTERN = /(^|\s)(https?:\/\/[^\s<>)]+)(?=$|\s)/g;
+const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
+
+function getUrlMeta(url: string) {
+  try {
+    const parsed = new URL(url);
+    const domain = parsed.hostname.replace(/^www\./, "");
+    return {
+      domain,
+      href: parsed.href,
+      thumbnail: `https://www.google.com/s2/favicons?domain=${parsed.hostname}&sz=128`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function normalizePastedLinks(text: string) {
+  return text.replace(RAW_URL_PATTERN, (match, prefix: string, url: string) => {
+    const meta = getUrlMeta(url);
+    return meta ? `${prefix}[${meta.domain}](${meta.href})` : match;
+  });
+}
+
+function extractDraftLinks(text: string) {
+  const links: Array<{ url: string; domain: string; thumbnail: string }> = [];
+  const seen = new Set<string>();
+
+  for (const match of text.matchAll(MARKDOWN_LINK_PATTERN)) {
+    const meta = getUrlMeta(match[2]);
+    if (meta && !seen.has(meta.href)) {
+      links.push({ url: meta.href, domain: meta.domain, thumbnail: meta.thumbnail });
+      seen.add(meta.href);
+    }
+  }
+
+  for (const match of text.matchAll(RAW_URL_PATTERN)) {
+    const meta = getUrlMeta(match[2]);
+    if (meta && !seen.has(meta.href)) {
+      links.push({ url: meta.href, domain: meta.domain, thumbnail: meta.thumbnail });
+      seen.add(meta.href);
+    }
+  }
+
+  return links;
 }
 
 function renderInlineMarkdown(text: string) {
@@ -235,6 +283,8 @@ export function ConnectMessageInput({
     if (slashQuery === null) return [];
     return slashCommands.filter((command) => command.label.toLowerCase().includes(`/${slashQuery}`)).slice(0, 6);
   }, [slashCommands, slashQuery]);
+
+  const draftLinks = useMemo(() => extractDraftLinks(draftValue), [draftValue]);
 
   const composerAttachItems = useMemo<ConnectCascadingMenuItem[]>(
     () => [
@@ -490,6 +540,23 @@ export function ConnectMessageInput({
           </Stack>
         ) : null}
 
+        {draftLinks.length > 0 ? (
+          <Stack direction="row" spacing={1} sx={{ px: 1.5, pt: 1, flexWrap: "wrap", rowGap: 1 }}>
+            {draftLinks.map((link) => (
+              <Stack key={link.url} direction="row" spacing={1} sx={{ width: 220, p: 1, borderRadius: 1, border: "1px solid #e5e7eb", bgcolor: "#f9fafb", alignItems: "center" }}>
+                <Box component="img" src={link.thumbnail} alt="" sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: "#fff", border: "1px solid #f3f4f6" }} />
+                <Box sx={{ minWidth: 0, flex: 1 }}>
+                  <Typography sx={{ fontSize: 12, fontWeight: 800 }} noWrap>{link.domain}</Typography>
+                  <Typography sx={{ fontSize: 10, color: "#6b7280" }} noWrap>{link.url}</Typography>
+                </Box>
+                <IconButton size="small" component="a" href={link.url} target="_blank" rel="noreferrer">
+                  <OpenInNewRounded sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Stack>
+            ))}
+          </Stack>
+        ) : null}
+
         <TextField
           inputRef={composerInputRef}
           fullWidth
@@ -498,7 +565,7 @@ export function ConnectMessageInput({
           maxRows={6}
           placeholder={`Message ${conversationLabel}`}
           value={draftValue}
-          onChange={(event) => setDraftValue(event.target.value)}
+          onChange={(event) => setDraftValue(normalizePastedLinks(event.target.value))}
           onKeyDown={(event) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
               event.preventDefault();

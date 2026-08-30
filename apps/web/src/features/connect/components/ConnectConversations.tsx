@@ -18,7 +18,7 @@ import { ConnectMessageHoverActions } from "./ConnectMessageHoverActions";
 import { RenderMessageContent, getMessagePriority } from "./RenderMessageContent";
 import { connectUsers } from "@/mocks/connect";
 import { ConversationHeader } from "./ConversationHeader";
-import { ConnectCascadingMenu } from "@/components/shared/ConnectCascadingMenu";
+import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
 import { AttachmentsMessage } from "./AttachmentsMessage";
