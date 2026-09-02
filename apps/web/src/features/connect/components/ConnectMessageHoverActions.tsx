@@ -47,7 +47,8 @@ export function ConnectMessageHoverActions({
         bgcolor: "#fff",
         border: "1px solid #e5e7eb",
         borderRadius: 0.5,
-        px: 0.5,
+        px: 3,
+        py: 1.5,
         boxShadow: "0 8px 20px rgba(15,23,42,0.08)",
         zIndex: 6,
       }}

@@ -269,7 +269,7 @@ export function ConnectConversations({
                                     })() : null}
 
                                     <Box
-                                        sx={{ width: "fit-content", maxWidth: "100%", p: 1.25, borderRadius: 1, bgcolor: isOwn ? "#fffef7" : "#f1f5f9", border: "1px solid #e5e7eb" }}
+                                        sx={{ width: "fit-content", maxWidth: "100%", p: 1.25, borderRadius: 1, bgcolor: isOwn ? "#e5e7f7" : "#f1f5f9" }}
                                         onMouseEnter={() => handleHoverStart(message.id)}
                                         onMouseLeave={() => handleHoverEnd(message.id)}
                                     >
@@ -291,6 +291,7 @@ export function ConnectConversations({
                                                 color: "#374151",
                                                 lineHeight: 1.65,
                                                 wordBreak: "break-word",
+                                                p: 1.5
                                             }}
                                         >
                                             <RenderMessageContent

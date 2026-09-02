@@ -53,67 +53,76 @@ export type SemanticPalette = {
 };
 
 export const lightPaletteTokens: SemanticPalette = {
-  brand: "#FDD835",
-  primary: "#FDD835",
-  secondary: "#1E293B",
-  success: "#2E7D32",
-  warning: "#ED6C02",
-  error: "#D32F2F",
-  info: "#0288D1",
+  brand: "#036c5f",
+  primary: "#025043",
+  secondary: "#475569", // Cool slate gray
+  success: "#15803d", // Soft emerald
+  warning: "#b45309", // Soft amber
+  error: "#be123c",   // Soft rose/red
+  info: "#0369a1",    // Cool sky blue
   surface: {
-    background: "#F6F7FB",
+    background: "#F4F7F6", // Muted mint-tinted gray
     surface: "#FFFFFF",
     surfaceElevated: "#FFFFFF",
-    surfaceHover: "#F4F6FA",
-    surfaceSelected: "#FFF8D1",
+    surfaceHover: "#EBF1F0",     // Cool teal-tinted hover
+    surfaceSelected: "#E0F2F1",  // Soft teal selection
   },
   text: {
-    primary: "#111827",
-    secondary: "#4B5563",
-    disabled: "#9CA3AF",
-    inverse: "#F9FAFB",
+    primary: "#0F172A",    // Deep slate blue-black
+    secondary: "#475569",  // Muted gray-blue
+    disabled: "#94A3B8",   // Clear disabled slate
+    inverse: "#F8FAFC",
   },
   border: {
-    border: "#D0D7E2",
-    borderSubtle: "#E5EAF1",
-    borderStrong: "#8A96AA",
+    border: "#CFDCDA",       // Soft cool gray border
+    borderSubtle: "#E5ECEB", // Very light divider
+    borderStrong: "#28a99e", // Accent brand border
   },
   interactive: {
-    interactive: "#1F2937",
-    interactiveHover: "#111827",
-    interactiveActive: "#0B1220",
-    interactiveFocus: "#FDD835",
-    interactiveDisabled: "#CBD5E1",
+    interactive: "#036c5f",
+    interactiveHover: "#037c6e",
+    interactiveActive: "#025043",
+    interactiveFocus: "#048c7f",
+    interactiveDisabled: "#94A3B8",
   },
   status: {
-    success: "#2E7D32",
-    warning: "#ED6C02",
-    error: "#D32F2F",
-    info: "#0288D1",
+    success: "#15803d",
+    warning: "#b45309",
+    error: "#be123c",
+    info: "#0369a1",
     neutral: "#64748B",
   },
 };
 
 export const darkPaletteTokens: SemanticPalette = {
   ...lightPaletteTokens,
-  secondary: "#CBD5E1",
+  brand: "#05998c",
+  primary: "#048c7f",
+  secondary: "#94A3B8",
   surface: {
-    background: "#0F1217",
-    surface: "#151A21",
-    surfaceElevated: "#1A2230",
-    surfaceHover: "#202938",
-    surfaceSelected: "#3A3215",
+    background: "#0B0F12",       // Rich dark teal-slate
+    surface: "#12181B",          // Balanced deep surface
+    surfaceElevated: "#1A2326",  // Elevated layer
+    surfaceHover: "#1D282C",
+    surfaceSelected: "#025043",  // Selected row deep variant
   },
   text: {
-    primary: "#E5E7EB",
-    secondary: "#B4BFCD",
-    disabled: "#7A8699",
-    inverse: "#090D14",
+    primary: "#E2E8F0",
+    secondary: "#94A3B8",
+    disabled: "#475569",
+    inverse: "#0B0F12",
   },
   border: {
-    border: "#2D3748",
-    borderSubtle: "#243042",
-    borderStrong: "#536078",
+    border: "#202E33",
+    borderSubtle: "#172226",
+    borderStrong: "#4fb9af",
+  },
+  interactive: {
+    interactive: "#05998c",
+    interactiveHover: "#28a99e",
+    interactiveActive: "#4fb9af",
+    interactiveFocus: "#b3e0dc",
+    interactiveDisabled: "#475569",
   },
 };
 
@@ -126,11 +135,11 @@ export function createMuiPalette(mode: PaletteMode, tokens: SemanticPalette): Pa
     mode,
     primary: {
       main: tokens.primary,
-      contrastText: "#111827",
+      contrastText: tokens.text.inverse,
     },
     secondary: {
       main: tokens.secondary,
-      contrastText: mode === "dark" ? "#0F1217" : "#F8FAFC",
+      contrastText: tokens.text.inverse,
     },
     success: { main: tokens.success },
     warning: { main: tokens.warning },
@@ -145,6 +154,6 @@ export function createMuiPalette(mode: PaletteMode, tokens: SemanticPalette): Pa
       secondary: tokens.text.secondary,
       disabled: tokens.text.disabled,
     },
-    divider: tokens.border.border,
+    divider: tokens.border.borderSubtle,
   };
 }
