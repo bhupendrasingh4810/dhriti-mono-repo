@@ -35,8 +35,8 @@ export function CreateSectionDialog({
             isSubmitting={!sectionName.trim()}
         >
             <Stack spacing={2} sx={{ pt: 1 }}>
-                <TextField label="Emoji" placeholder="✨" value={sectionEmoji} onChange={(event) => setSectionEmoji(event.target.value)} />
-                <TextField label="Section name" placeholder="Type a section name" value={sectionName} onChange={(event) => setSectionName(event.target.value)} />
+                <TextField label="Emoji" placeholder="✨" value={sectionEmoji} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSectionEmoji(event.target.value)} />
+                <TextField label="Section name" placeholder="Type a section name" value={sectionName} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setSectionName(event.target.value)} />
             </Stack>
         </Dialog>
     );

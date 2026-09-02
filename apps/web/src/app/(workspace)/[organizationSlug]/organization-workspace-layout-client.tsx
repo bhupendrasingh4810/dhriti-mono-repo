@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Box } from "@mui/material";
-import { AppRail, WorkspaceAppsHeader } from "@dhriti/ui";
 import { ConnectHeader } from "@/features/connect";
+import { AppRail } from "@/components/shared/AppRail";
+import { WorkspaceAppsHeader } from "@/components/shared/WorkspaceAppsHeader";
 import { connectSearchResults, connectUsers } from "@/mocks/connect";
 import { PageName, PageType } from "@/types/app.types";
 

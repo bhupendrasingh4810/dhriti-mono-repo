@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+import Emoji, { type EmojiClickData } from "emoji-picker-react";
 import {
   FlagOutlined,
   FormatListBulletedRounded,
@@ -45,10 +45,7 @@ import {
   ConnectMentionsView,
   ConnectReactionUsersList,
   type ConnectMentionsFilter,
-  type ConnectSidebarMenuContext,
-  type ConnectSidebarTeamGroup,
   ConnectUserDetailsCard,
-  type ConnectConversationWindowMessage,
 } from "@dhriti/ui";
 import { ConnectSidebar } from "@/features/connect";
 import { getMenuItems } from "@/utils/connect-menu-item.util";
@@ -58,7 +55,7 @@ import { CreateSectionDialog } from "@/features/connect/dialogs/create-section.d
 import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
-import { ConnectPendingAttachment } from "@/types/connect.types";
+import { ConnectConversationMessage, ConnectPendingAttachment, ConnectSidebarMenuContext, ConnectSidebarTeamGroup } from "@/types/connect.types";
 import { ConnectMessageInput } from "@/features/connect/components/ConnectMessageInput";
 
 const quickViewsConfig = [
@@ -745,10 +742,10 @@ export default function ConnectPage() {
             teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
             currentUserId={currentUser.id}
             usersById={connectUsersById}
-            messages={selectedMessages as ConnectConversationWindowMessage[]}
+            messages={selectedMessages as ConnectConversationMessage[]}
             activeMessageMenuId={activeMessageId}
             activeMessageEmojiId={activeMessageForEmoji}
-            getQuotedMessageById={(id) => (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as ConnectConversationWindowMessage | undefined}
+            getQuotedMessageById={(id) => (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as ConnectConversationMessage | undefined}
             onOpenDetails={() => setShowDetails(true)}
             onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
             onOpenMessageEmoji={openMessageEmojiMenu}
@@ -870,7 +867,7 @@ export default function ConnectPage() {
       ) : null}
 
       <Popover open={Boolean(messageEmojiAnchor) && Boolean(activeMessageForEmoji)} anchorEl={messageEmojiAnchor} onClose={() => { setMessageEmojiAnchor(null); setActiveMessageForEmoji(null); }} disableScrollLock anchorOrigin={{ vertical: "bottom", horizontal: "left" }} transformOrigin={{ vertical: "top", horizontal: "left" }}>
-        <EmojiPicker
+        <Emoji
           width={320}
           height={380}
           onEmojiClick={(emojiData: EmojiClickData) => {

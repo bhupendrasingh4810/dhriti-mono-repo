@@ -13,6 +13,7 @@
     "@dhriti/api-client": "workspace:*",
     "@dhriti/auth": "workspace:*",
     "@dhriti/config": "workspace:*",
+    "@dhriti/emoji-picker": "workspace:*",
     "@dhriti/types": "workspace:*",
     "@dhriti/ui": "workspace:*",
     "@dhriti/validation": "workspace:*",

@@ -65,7 +65,7 @@ export function CreateChannelDialog({
                 <TextField
                     label="Channel name"
                     value={channelName}
-                    onChange={(event) => setChannelName(event.target.value)}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setChannelName(event.target.value)}
                     required
                     fullWidth
                 />
@@ -73,7 +73,7 @@ export function CreateChannelDialog({
                 <TextField
                     label="Description"
                     value={channelDescription}
-                    onChange={(event) => setChannelDescription(event.target.value)}
+                    onChange={(event: React.ChangeEvent<HTMLInputElement>) => setChannelDescription(event.target.value)}
                     multiline
                     minRows={3}
                     fullWidth
@@ -90,7 +90,7 @@ export function CreateChannelDialog({
                         labelId="connect-channel-type-label"
                         fullWidth
                         value={channelType}
-                        onChange={(event) => setChannelType(event.target.value)}
+                        onChange={(event: React.ChangeEvent<{ value: string }>) => setChannelType(event.target.value)}
                     >
                         <MenuItem value="standard">Standard</MenuItem>
                         <MenuItem value="private">Private</MenuItem>
@@ -100,7 +100,7 @@ export function CreateChannelDialog({
 
                 <Box>
                     <Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.75 }}>Layouts</Typography>
-                    <RadioGroup row value={channelLayout} onChange={(event) => setChannelLayout(event.target.value)}>
+                    <RadioGroup row value={channelLayout} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setChannelLayout(event.target.value)}>
                         <FormControlLabel value="threads" control={<Radio />} label="Threads" />
                         <FormControlLabel value="posts" control={<Radio />} label="Posts" />
                     </RadioGroup>

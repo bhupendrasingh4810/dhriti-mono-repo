@@ -1,3 +1,9 @@
 packages:
   - "apps/*"
   - "packages/*"
+allowBuilds:
+  esbuild: true
+minimumReleaseAgeExclude:
+  - '@remotion/animated-emoji@4.0.520'
+  - '@remotion/player@4.0.520'
+  - remotion@4.0.520

@@ -565,8 +565,8 @@ export function ConnectMessageInput({
           maxRows={6}
           placeholder={`Message ${conversationLabel}`}
           value={draftValue}
-          onChange={(event) => setDraftValue(normalizePastedLinks(event.target.value))}
-          onKeyDown={(event) => {
+          onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraftValue(normalizePastedLinks(event.target.value))}
+          onKeyDown={(event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
               event.preventDefault();
               const input = composerInputRef.current;
@@ -651,13 +651,13 @@ export function ConnectMessageInput({
             <IconButton size="small" onClick={() => setFormattingOpen((previous) => !previous)}>
               <EditRounded sx={{ fontSize: 20 }} />
             </IconButton>
-            <IconButton size="small" onClick={(event) => setComposerEmojiAnchor(event.currentTarget)}>
+            <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerEmojiAnchor(event.currentTarget)}>
               <SentimentSatisfiedAltRounded sx={{ fontSize: 20 }} />
             </IconButton>
-            <IconButton size="small" onClick={(event) => setComposerAttachAnchor(event.currentTarget)}>
+            <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerAttachAnchor(event.currentTarget)}>
               <AddRounded sx={{ fontSize: 20 }} />
             </IconButton>
-            <IconButton size="small" onClick={(event) => setPriorityAnchor(event.currentTarget)}>
+            <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setPriorityAnchor(event.currentTarget)}>
               <PriorityHighRounded sx={{ fontSize: 20, color: priorityFlag === "normal" ? "#6b7280" : priorityFlag === "important" ? "#ff6f00" : "#b91c1c" }} />
             </IconButton>
           </Stack>
