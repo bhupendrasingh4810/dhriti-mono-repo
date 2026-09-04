@@ -1,4 +1,6 @@
-export { z } from "zod";
+import { z } from "zod";
+
+export { z };
 
 export const userSchema = z.object({
   id: z.string().uuid().optional(),

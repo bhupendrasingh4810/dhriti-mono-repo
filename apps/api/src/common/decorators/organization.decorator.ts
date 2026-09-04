@@ -1,0 +1,26 @@
+import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
+import type { Request } from "express";
+import type { OrganizationRole } from "@prisma/client";
+
+export interface OrganizationContext {
+  organizationId: string;
+  memberId: string;
+  role: OrganizationRole;
+}
+
+interface TenantRequest extends Request {
+  organization?: OrganizationContext;
+}
+
+export const CurrentOrganization = createParamDecorator(
+  (data: keyof OrganizationContext | undefined, ctx: ExecutionContext): OrganizationContext | string => {
+    const request = ctx.switchToHttp().getRequest<TenantRequest>();
+    const organization = request.organization;
+    if (!organization) {
+      throw new Error(
+        "CurrentOrganization used on a route without organization context; add TenantGuard",
+      );
+    }
+    return data ? organization[data] : organization;
+  },
+);

@@ -1,0 +1,20 @@
+export interface AuthTokensResponse {
+  accessToken: string;
+  accessTokenExpiresIn: number;
+  refreshToken: string;
+  refreshTokenExpiresIn: number;
+  sessionId: string;
+  organizationId: string | null;
+}
+
+export interface MfaChallengeResponse {
+  mfaRequired: true;
+  mfaToken: string;
+  mfaTokenExpiresIn: number;
+}
+
+export type LoginResponse = AuthTokensResponse | MfaChallengeResponse;
+
+export function isMfaChallenge(response: LoginResponse): response is MfaChallengeResponse {
+  return "mfaRequired" in response && response.mfaRequired === true;
+}

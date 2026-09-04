@@ -1,0 +1,55 @@
+import {
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import type { Request } from "express";
+import type { PlatformRole } from "@prisma/client";
+
+import { PrismaService } from "../../database/prisma.service";
+import { PLATFORM_ROLES_KEY } from "../decorators/platform-roles.decorator";
+import type { AuthenticatedUser } from "../decorators/current-user.decorator";
+
+interface PlatformRequest extends Request {
+  user?: AuthenticatedUser;
+}
+
+/** Enforces platform (internal staff) roles for Control platform-admin endpoints. */
+@Injectable()
+export class PlatformRolesGuard implements CanActivate {
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const required = this.reflector.getAllAndOverride<PlatformRole[] | undefined>(
+      PLATFORM_ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (!required || required.length === 0) {
+      return true;
+    }
+
+    const request = context.switchToHttp().getRequest<PlatformRequest>();
+    const user = request.user;
+    if (!user) {
+      throw new ForbiddenException({ code: "UNAUTHORIZED", message: "Authentication required" });
+    }
+
+    const record = await this.prisma.user.findUnique({
+      where: { id: user.userId },
+      select: { platformRole: true },
+    });
+
+    if (!record?.platformRole || !required.includes(record.platformRole)) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Platform staff access required",
+      });
+    }
+    return true;
+  }
+}
