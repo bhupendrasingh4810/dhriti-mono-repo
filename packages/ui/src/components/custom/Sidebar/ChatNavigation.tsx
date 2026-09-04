@@ -58,12 +58,12 @@ export function ChatNavigation({
             const Icon = row.icon;
 
             return (
-              <Stack key={row.label} direction="row" sx={{ px: 1.5, py: 1, borderRadius: 2, alignItems: "center", justifyContent: "space-between", '&:hover': { bgcolor: "#f9fafb" } }}>
+              <Stack key={row.label} direction="row" sx={{ px: 1.5, py: 1, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", '&:hover': { bgcolor: "#f9fafb" } }}>
                 <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", color: "#4b5563" }}>
                   <Icon sx={{ fontSize: 16, color: "#9ca3af" }} />
                   <Typography sx={{ fontSize: 14, fontWeight: row.count ? 700 : 400 }}>{row.label}</Typography>
                 </Stack>
-                <Box sx={{ px: 0.75, py: 0.2, borderRadius: 1, bgcolor: "#fffcf0", color: "#a16207", fontSize: 10, fontWeight: 700 }}>
+                <Box sx={{ px: 0.75, py: 0.2, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "#fffcf0", color: "#a16207", fontSize: 10, fontWeight: 700 }}>
                   {row.count}
                 </Box>
               </Stack>
@@ -84,7 +84,7 @@ export function ChatNavigation({
                 const isActive = activeFavourite === channel;
 
                 return (
-                  <Stack key={channel} direction="row" sx={{ px: 1.5, py: 0.8, borderRadius: 1.5, alignItems: "center", justifyContent: "space-between", bgcolor: isActive ? "#f9fafb" : "transparent", fontWeight: isActive ? 700 : 500 }}>
+                  <Stack key={channel} direction="row" sx={{ px: 1.5, py: 0.8, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", bgcolor: isActive ? "#f9fafb" : "transparent", fontWeight: isActive ? 700 : 500 }}>
                     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                       <Typography sx={{ fontSize: 12, color: isActive ? "#60a5fa" : "#818cf8", fontWeight: 700 }}>#</Typography>
                       <Typography sx={{ fontSize: 14, color: "#4b5563" }}>{channel}</Typography>
@@ -111,7 +111,7 @@ export function ChatNavigation({
                 const hasCount = typeof chat.unreadCount === "number";
 
                 return (
-                  <Stack key={chat.name} direction="row" sx={{ px: 1.5, py: 0.8, borderRadius: 1.5, alignItems: "center", justifyContent: "space-between", '&:hover': { bgcolor: "#f9fafb" } }}>
+                  <Stack key={chat.name} direction="row" sx={{ px: 1.5, py: 0.8, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", '&:hover': { bgcolor: "#f9fafb" } }}>
                     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
                       {hasAvatar ? <Avatar src={chat.avatar} sx={{ width: 16, height: 16 }} /> : <PeopleRounded sx={{ fontSize: 14, color: "#d1d5db" }} />}
                       <Typography sx={{ fontSize: 14, color: "#4b5563", fontWeight: hasCount ? 700 : 400 }}>{chat.name}</Typography>

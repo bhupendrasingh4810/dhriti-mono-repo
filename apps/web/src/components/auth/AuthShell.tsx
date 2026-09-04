@@ -1,17 +1,18 @@
 "use client";
 
-import Link from "next/link";
+import NextLink from "next/link";
 
 import {
   Box,
-  Button,
   Card,
   Container,
   Divider,
+  Link,
   Reveal,
   Stack,
   Typography,
 } from "@dhriti/ui";
+import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 
 interface AuthShellProps {
   title: string;
@@ -30,46 +31,35 @@ export function AuthShell({
   footerText,
   footerLink,
   footerHref,
-  primaryAction,
 }: AuthShellProps) {
   return (
     <Box
       sx={{
         minHeight: "100vh",
         display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background:
-          "radial-gradient(circle at top, rgba(253, 216, 53, 0.2), transparent 35%), linear-gradient(180deg, #fffdf3 0%, #f8fafc 100%)",
-        px: 2,
-        py: 6,
+        flexDirection: "column",
+        bgcolor: "background.default",
       }}
     >
-      <Container maxWidth="sm">
+      <MarketingSiteHeader
+        navItems={["Product", "Solutions", "Resources", "Pricing", "Company"]}
+        signInHref="/login"
+        ctaHref="/signup"
+        ctaLabel="Get Started"
+      />
+
+      <Container maxWidth="sm" sx={{ flex: 1, display: "flex", alignItems: "center", py: 6, px: 2 }}>
         <Reveal delay={0.08} duration={0.7}>
           <Card
             sx={{
-              borderRadius: 4,
+              borderRadius: (theme) => theme.tokens.radius.lg,
               p: { xs: 2.5, sm: 4 },
-              boxShadow: "0 25px 70px rgba(15, 23, 42, 0.08)",
-              border: "1px solid rgba(253, 216, 53, 0.14)",
-              background: "rgba(255,255,255,0.9)",
+              boxShadow: (theme) => theme.tokens.elevation.medium,
+              borderColor: "borders.borderSubtle",
+              bgcolor: "surfaces.surfaceElevated",
             }}
           >
             <Stack spacing={2.5}>
-              <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center" }}>
-                <Typography variant="h5" sx={{ fontWeight: 800, color: "text.primary" }}>
-                  Dhriti
-                </Typography>
-                {primaryAction ? (
-                  <Link href="/" style={{ textDecoration: "none" }}>
-                    <Button variant="text" size="small">
-                      {primaryAction}
-                    </Button>
-                  </Link>
-                ) : null}
-              </Stack>
-
               <Stack spacing={1}>
                 <Typography variant="h3" sx={{ fontWeight: 800 }}>
                   {title}
@@ -87,7 +77,7 @@ export function AuthShell({
                 <Typography variant="body2" sx={{ color: "text.secondary" }}>
                   {footerText}
                 </Typography>
-                <Link href={footerHref} style={{ color: "#fdd835", fontWeight: 700 }}>
+                <Link component={NextLink} href={footerHref}>
                   {footerLink}
                 </Link>
               </Stack>

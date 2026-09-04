@@ -13,7 +13,7 @@ export function EmptyState({ title = "No data", description, action }: EmptyStat
     <Box
       sx={{
         border: "1px dashed rgba(15,23,42,0.12)",
-        borderRadius: 3,
+        borderRadius: (theme) => theme.tokens.radius.lg,
         p: 4,
         textAlign: "center",
         background: "rgba(253,216,53,0.03)",

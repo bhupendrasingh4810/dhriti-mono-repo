@@ -3,15 +3,10 @@
 import { useMemo, useState } from "react";
 import {
   AddRounded,
-  BoltRounded,
   ChevronLeftRounded,
   ChevronRightRounded,
   FilterListRounded,
-  HelpOutlineRounded,
   MoreVertRounded,
-  NotificationsNoneRounded,
-  SearchRounded,
-  SettingsRounded,
 } from "@mui/icons-material";
 import {
   Avatar,
@@ -20,13 +15,11 @@ import {
   Checkbox,
   Divider,
   IconButton,
-  InputBase,
   Paper,
   Stack,
   Typography,
-} from "@mui/material";
+} from "@dhriti/ui";
 import { alpha } from "@mui/material/styles";
-import { MiniCalendar } from "@dhriti/ui";
 
 type EventTone = "info" | "success" | "warning" | "secondary" | "error";
 
@@ -69,6 +62,46 @@ function eventPalette(tone: EventTone) {
     return { border: "error.main", bg: (theme: any) => alpha(theme.palette.error.main, 0.12), text: "error.dark" };
   }
   return { border: "info.main", bg: (theme: any) => alpha(theme.palette.info.main, 0.12), text: "info.dark" };
+}
+
+function MiniCalendar({ value, onChange }: { value: Date; onChange: (date: Date) => void }) {
+  const monthStart = new Date(value.getFullYear(), value.getMonth(), 1);
+  const firstDayOffset = monthStart.getDay();
+  const daysInMonth = new Date(value.getFullYear(), value.getMonth() + 1, 0).getDate();
+  const cells = Array.from({ length: 42 }, (_, index) => {
+    const day = index - firstDayOffset + 1;
+    return day > 0 && day <= daysInMonth ? day : null;
+  });
+
+  return (
+    <Stack spacing={1.5}>
+      <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
+        {value.toLocaleString("default", { month: "long", year: "numeric" })}
+      </Typography>
+      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0.5 }}>
+        {["S", "M", "T", "W", "T", "F", "S"].map((label, index) => (
+          <Typography key={`${label}-${index}`} variant="caption" color="text.disabled" sx={{ textAlign: "center", fontWeight: 700 }}>
+            {label}
+          </Typography>
+        ))}
+        {cells.map((day, index) => {
+          const selected = day === value.getDate();
+          return (
+            <Button
+              key={`${day ?? "empty"}-${index}`}
+              size="small"
+              disabled={!day}
+              variant={selected ? "contained" : "text"}
+              onClick={() => day && onChange(new Date(value.getFullYear(), value.getMonth(), day))}
+              sx={{ minWidth: 0, width: 32, height: 32, p: 0, borderRadius: (theme) => theme.tokens.radius.pill }}
+            >
+              {day ?? ""}
+            </Button>
+          );
+        })}
+      </Box>
+    </Stack>
+  );
 }
 
 export default function PulsePage() {
@@ -196,7 +229,7 @@ export default function PulsePage() {
                       borderLeft: 4,
                       borderColor: palette.border,
                       bgcolor: palette.bg,
-                      borderRadius: 1.5,
+                      borderRadius: (theme) => theme.tokens.radius.md,
                       p: 1,
                       overflow: "hidden",
                       zIndex: 2,
@@ -226,7 +259,7 @@ export default function PulsePage() {
                   zIndex: 4,
                 }}
               >
-                <Box sx={{ position: "absolute", top: -4, left: -4, width: 8, height: 8, borderRadius: 99, bgcolor: "error.main" }} />
+                <Box sx={{ position: "absolute", top: -4, left: -4, width: 8, height: 8, borderRadius: (theme) => theme.tokens.radius.pill, bgcolor: "error.main" }} />
               </Box>
             </Box>
           </Box>

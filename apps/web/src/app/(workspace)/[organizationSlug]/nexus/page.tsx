@@ -1,11 +1,11 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography } from "@dhriti/ui";
 
 export default function NexusPage() {
   return (
-    <Box className="bg-[#f8fafc] min-h-screen">
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Box sx={{ p: 4 }}>
-        <Typography sx={{ fontSize: 30, fontWeight: 700 }}>Nexus</Typography>
-        <Typography sx={{ mt: 1, color: "#6b7280" }}>Nexus workspace</Typography>
+        <Typography variant="h4" sx={{ fontWeight: "fontWeightBold" }}>Nexus</Typography>
+        <Typography color="text.secondary" sx={{ mt: 1 }}>Nexus workspace</Typography>
       </Box>
     </Box>
   );

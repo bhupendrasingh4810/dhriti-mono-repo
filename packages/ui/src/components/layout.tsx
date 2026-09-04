@@ -19,7 +19,7 @@ export const Toolbar = MuiToolbar;
 export const IconButton = MuiIconButton;
 
 export const Panel = styled(MuiBox)(({ theme }) => ({
-  borderRadius: 16,
+  borderRadius: theme.tokens.radius.xl,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
   background: alpha(theme.palette.primary.main, 0.02),
   padding: theme.spacing(2),

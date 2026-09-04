@@ -9,19 +9,19 @@ import {
     ChevronLeftRounded,
     ChevronRightRounded,
 } from "@mui/icons-material";
+import { ListItemIcon, Popper } from "@mui/material";
+import type { Theme } from "@mui/material/styles";
 
 import {
     Divider,
-    ListItemIcon,
     ListItemText,
     Menu,
     MenuItem,
     MenuList,
     Paper,
-    Popper,
     Stack,
     Typography,
-} from "@mui/material";
+} from "@dhriti/ui";
 
 type ConnectCascadingMenuProps = {
     anchorEl: HTMLElement | null;
@@ -35,9 +35,10 @@ type ConnectCascadingMenuProps = {
 
 const PAPER_SX = {
     mt: 1,
-    border: "1px solid #eef2f7",
-    boxShadow: "0 10px 28px rgba(15, 23, 42, 0.08)",
-    borderRadius: 1,
+    border: 1,
+    borderColor: "borders.borderSubtle",
+    boxShadow: (theme: any) => theme.tokens.elevation.medium,
+    borderRadius: (theme: any) => theme.tokens.radius.sm,
 };
 
 export function ConnectCascadingMenu({
@@ -317,14 +318,9 @@ export function ConnectCascadingMenu({
                                         px: 1.75,
                                         pt: 1.5,
                                         pb: 0.75,
-                                        fontSize: 12,
-                                        fontWeight: 800,
-                                        letterSpacing:
-                                            "0.08em",
-                                        color: "#9ca3af",
-                                        textTransform:
-                                            "uppercase",
+                                        color: "text.disabled",
                                     }}
+                                    variant="overline"
                                 >
                                     {heading}
                                 </Typography>
@@ -395,7 +391,7 @@ export function ConnectCascadingMenu({
                             },
                         ]}
                         sx={{
-                            zIndex: (theme) =>
+                            zIndex: (theme: Theme) =>
                                 theme.zIndex.modal + level,
                         }}
                     >
@@ -468,7 +464,7 @@ export function ConnectCascadingMenu({
                     <ListItemIcon
                         sx={{
                             minWidth: 26,
-                            color: "#16a34a",
+                            color: "success.main",
                         }}
                     >
                         <CheckRounded
@@ -493,19 +489,26 @@ export function ConnectCascadingMenu({
 
                 <ListItemText
                     primary={item.label}
+                    secondary={item.description}
                     sx={{
                         "& .MuiListItemText-primary":
                         {
                             fontSize: 14,
 
                             color: item.danger
-                                ? "#dc2626"
-                                : "#374151",
+                                ? "error.main"
+                                : "text.primary",
 
                             fontWeight:
                                 item.selected
                                     ? 700
                                     : 500,
+                        },
+                        "& .MuiListItemText-secondary": {
+                            color: "text.secondary",
+                            fontSize: 12,
+                            lineHeight: 1.35,
+                            mt: 0.25,
                         },
                     }}
                 />
@@ -517,14 +520,14 @@ export function ConnectCascadingMenu({
                         <ChevronLeftRounded
                             sx={{
                                 fontSize: 16,
-                                color: "#9ca3af",
+                                color: "text.disabled",
                             }}
                         />
                     ) : (
                         <ChevronRightRounded
                             sx={{
                                 fontSize: 16,
-                                color: "#9ca3af",
+                                color: "text.disabled",
                             }}
                         />
                     )

@@ -1,12 +1,12 @@
 export const radius = {
-  none: 0,
-  small: 4,
-  medium: 8,
-  large: 12,
-  xl: 16,
-  pill: 999,
+  none: "0px",
+  sm: "4px",
+  md: "8px",
+  lg: "16px",
+  xl: "32px",
+  pill: "999px",
 } as const;
 
 export const shape = {
-  borderRadius: radius.medium,
+  borderRadius: 2,
 };

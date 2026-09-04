@@ -17,7 +17,7 @@ export default function ForgotPage() {
       <Reveal delay={0.12} duration={0.7}>
         <Stack spacing={2.5}>
           <TextField label="Email address" type="email" fullWidth />
-          <Button variant="contained" size="large" sx={{ bgcolor: "#fdd835", color: "#212121" }}>
+          <Button variant="contained" size="large">
             Send reset link
           </Button>
         </Stack>

@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 export type ConnectCascadingMenuItem = {
     id: string;
     label: string;
+    description?: string;
     icon?: ReactNode;
     danger?: boolean;
     selected?: boolean;

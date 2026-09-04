@@ -1,6 +1,6 @@
 import React, { Fragment, MouseEvent, useState } from "react";
 import { DownloadRounded, MoreVertRounded, OpenInNewRounded } from "@mui/icons-material";
-import { Box, Button, IconButton, Stack, Typography } from "@mui/material";
+import { Box, Button, IconButton, Stack, Typography } from "@dhriti/ui";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 
@@ -28,6 +28,10 @@ interface RenderMessageContentProps {
 // ==========================================
 const SINGLE_EMOJI_PATTERN = /^(?:\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*|[\u{1F1E6}-\u{1F1FF}]{2}|[#*0-9]\uFE0F?\u20E3)$/u;
 const PRIORITY_PATTERN = /^\[(IMPORTANT|URGENT)\]\s*/i;
+
+export function isSingleEmojiMessage(content: string) {
+    return SINGLE_EMOJI_PATTERN.test(content.trim());
+}
 
 /**
  * Extracts the priority tag (if any) from a message's raw content, for rendering outside the message bubble.
@@ -66,7 +70,7 @@ const MentionToken = ({ token, connectUsers, openMentionHover }: MentionTokenPro
                 if (matchedUser) openMentionHover(e, matchedUser.id);
             }}
             sx={{
-                color: "#92400e",
+                color: "primary.main",
                 fontWeight: 700,
                 cursor: matchedUser ? "pointer" : "default",
             }}
@@ -115,11 +119,12 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
                                 px: 0.7,
                                 py: 0.15,
                                 mx: 0.2,
-                                borderRadius: 0.8,
-                                bgcolor: "#eef2f7",
-                                border: "1px solid #e2e8f0",
-                                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                                fontSize: 12,
+                                borderRadius: (theme) => theme.tokens.radius.sm,
+                                bgcolor: "surfaces.surfaceHover",
+                                border: 1,
+                                borderColor: "borders.borderSubtle",
+                                fontFamily: "monospace",
+                                fontSize: "0.75rem",
                             }}
                         >
                             {token.slice(1, -1)}
@@ -153,7 +158,7 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
 
                 if (/^==[^=]+==$/.test(token)) {
                     return (
-                        <Box key={`${currentKey}-highlight`} component="span" sx={{ px: 0.45, borderRadius: 0.7, bgcolor: "#fef08a" }}>
+                        <Box key={`${currentKey}-highlight`} component="span" sx={{ px: 0.45, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "warning.light" }}>
                             {token.slice(2, -2)}
                         </Box>
                     );
@@ -162,7 +167,7 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
                 const linkMatch = token.match(LINK_PATTERN);
                 if (linkMatch) {
                     return (
-                        <Box key={`${currentKey}-link`} component="a" href={linkMatch[2]} target="_blank" rel="noreferrer" sx={{ color: "#2563eb", textDecoration: "underline", cursor: "pointer" }}>
+                        <Box key={`${currentKey}-link`} component="a" href={linkMatch[2]} target="_blank" rel="noreferrer" sx={{ color: "interactive.interactive", textDecoration: "underline", cursor: "pointer" }}>
                             {linkMatch[1]}
                         </Box>
                     );
@@ -216,11 +221,11 @@ function LinkPreviewCard({ url, label }: { url: string; label: string }) {
     if (!meta) return null;
 
     return (
-        <Stack direction="row" spacing={1.25} sx={{ mt: 0.75, p: 1, borderRadius: 1, bgcolor: "#fff", border: "1px solid #e5e7eb", alignItems: "center", maxWidth: 360 }}>
-            <Box component="img" src={meta.thumbnail} alt="" sx={{ width: 36, height: 36, borderRadius: 1, bgcolor: "#f9fafb", border: "1px solid #f3f4f6" }} />
+        <Stack direction="row" spacing={1.25} sx={{ mt: 0.75, p: 1, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "background.paper", border: 1, borderColor: "borders.border", alignItems: "center", maxWidth: 360 }}>
+            <Box component="img" src={meta.thumbnail} alt="" sx={{ width: 36, height: 36, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "surfaces.surfaceHover", border: 1, borderColor: "borders.borderSubtle" }} />
             <Box sx={{ minWidth: 0, flex: 1 }}>
-                <Typography sx={{ fontSize: 12, fontWeight: 800, color: "#111827" }} noWrap>{label}</Typography>
-                <Typography sx={{ fontSize: 11, color: "#6b7280" }} noWrap>{meta.domain}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>{label}</Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>{meta.domain}</Typography>
             </Box>
             <IconButton size="small" component="a" href={meta.href} target="_blank" rel="noreferrer">
                 <OpenInNewRounded sx={{ fontSize: 17 }} />
@@ -248,10 +253,10 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
     ];
 
     return (
-        <Box key={blockKey} sx={{ borderRadius: 1.3, overflow: "hidden", bgcolor: "#0f172a", border: "1px solid #1e293b" }}>
-            <Stack direction="row" sx={{ px: 1, py: 0.6, alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #1e293b" }}>
-                <Typography sx={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", textTransform: "uppercase" }}>Code</Typography>
-                <IconButton size="small" onClick={(event) => setMenuAnchor(event.currentTarget)} sx={{ color: "#cbd5e1" }}>
+        <Box key={blockKey} sx={{ borderRadius: (theme) => theme.tokens.radius.sm, overflow: "hidden", bgcolor: "grey.900", border: 1, borderColor: "grey.800" }}>
+            <Stack direction="row" sx={{ px: 1, py: 0.6, alignItems: "center", justifyContent: "space-between", borderBottom: 1, borderColor: "grey.800" }}>
+                <Typography variant="overline" sx={{ color: "grey.400" }}>Code</Typography>
+                <IconButton size="small" onClick={(event) => setMenuAnchor(event.currentTarget)} sx={{ color: "grey.300" }}>
                     <MoreVertRounded sx={{ fontSize: 18 }} />
                 </IconButton>
             </Stack>
@@ -261,9 +266,9 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
                     m: 0,
                     maxHeight: expanded ? "none" : 250,
                     p: 1.2,
-                    color: "#e2e8f0",
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                    fontSize: 12,
+                    color: "grey.200",
+                    fontFamily: "monospace",
+                    fontSize: "0.75rem",
                     overflow: expanded ? "auto" : "hidden",
                     whiteSpace: "pre-wrap",
                 }}
@@ -271,7 +276,7 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
                 {code}
             </Box>
             {!expanded ? (
-                <Button size="small" onClick={() => setExpanded(true)} sx={{ m: 0, borderRadius: 0, backgroundColor: "#999b9e", color: "#bfdbfe", fontWeight: 800, width: "100%" }}>
+                <Button size="small" onClick={() => setExpanded(true)} sx={{ m: 0, borderRadius: 0, bgcolor: "grey.800", color: "info.light", fontWeight: 800, width: "100%" }}>
                     Show more
                 </Button>
             ) : null}
@@ -299,7 +304,7 @@ export function RenderMessageContent({
 
     // 2️⃣ Handle Single Jumbo Emoji Layouts View
     const trimmedContent = content.trim();
-    if (!priority && SINGLE_EMOJI_PATTERN.test(trimmedContent)) {
+    if (!priority && isSingleEmojiMessage(trimmedContent)) {
         return (
             <Typography component="div" sx={{ fontSize: 52, lineHeight: 1.1, letterSpacing: 0 }}>
                 {trimmedContent}
@@ -336,7 +341,7 @@ export function RenderMessageContent({
                             // Handle Blockquote Elements
                             if (/^\s*>\s?/.test(line)) {
                                 return (
-                                    <Box key={lineKey} sx={{ pl: 1, borderLeft: "3px solid #cbd5e1", color: "#475569", fontStyle: "italic" }}>
+                                    <Box key={lineKey} sx={{ pl: 1, borderLeft: 3, borderColor: "borders.border", color: "text.secondary", fontStyle: "italic" }}>
                                         <InlineMarkdown
                                             text={line.replace(/^\s*>\s?/, "")}
                                             keyPrefix={`${lineKey}-q`}
@@ -350,7 +355,7 @@ export function RenderMessageContent({
                             // Handle List Elements (Fixed original unfinished cutoff bug layout)
                             if (/^\s*[-*]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
                                 return (
-                                    <Typography key={lineKey} component="div" sx={{ fontSize: 14, lineHeight: 1.6, color: "#374151" }}>
+                                    <Typography key={lineKey} component="div" variant="body2" sx={{ lineHeight: 1.6, color: "text.secondary" }}>
                                         <InlineMarkdown
                                             text={line}
                                             keyPrefix={`${lineKey}-lst`}
@@ -363,7 +368,7 @@ export function RenderMessageContent({
 
                             // Standard Paragraph Text Fallback Lines
                             return (
-                                <Typography key={lineKey} component="div" sx={{ fontSize: 14, lineHeight: 1.5, color: "#111827" }}>
+                                <Typography key={lineKey} component="div" variant="body2" sx={{ lineHeight: 1.5 }}>
                                     <InlineMarkdown
                                         text={line}
                                         keyPrefix={`${lineKey}-p`}

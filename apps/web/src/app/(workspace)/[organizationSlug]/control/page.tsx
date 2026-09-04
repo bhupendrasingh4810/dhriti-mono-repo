@@ -1,13 +1,10 @@
+import { Box, Typography } from "@dhriti/ui";
+
 export default function ControlPage() {
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold">
-        Control
-      </h1>
-
-      <p className="mt-2 text-muted-foreground">
-        Control workspace
-      </p>
-    </div>
+    <Box sx={{ p: 4 }}>
+      <Typography variant="h4" sx={{ fontWeight: "fontWeightBold" }}>Control</Typography>
+      <Typography color="text.secondary" sx={{ mt: 1 }}>Control workspace</Typography>
+    </Box>
   );
 }

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import type { SelectChangeEvent } from "@mui/material/Select";
 import {
     Stack,
     TextField,
@@ -82,7 +83,7 @@ export function CreateChannelDialog({
                 <Box>
                     <InputLabel
                         id="connect-channel-type-label"
-                        sx={{ mb: 0.75, position: "static", transform: "none", fontSize: 12, fontWeight: 700, color: "#6b7280" }}
+                        sx={{ mb: 0.75, position: "static", transform: "none", fontWeight: 700, color: "text.secondary" }}
                     >
                         Choose a channel type
                     </InputLabel>
@@ -90,7 +91,7 @@ export function CreateChannelDialog({
                         labelId="connect-channel-type-label"
                         fullWidth
                         value={channelType}
-                        onChange={(event: React.ChangeEvent<{ value: string }>) => setChannelType(event.target.value)}
+                        onChange={(event: SelectChangeEvent) => setChannelType(event.target.value)}
                     >
                         <MenuItem value="standard">Standard</MenuItem>
                         <MenuItem value="private">Private</MenuItem>
@@ -99,7 +100,7 @@ export function CreateChannelDialog({
                 </Box>
 
                 <Box>
-                    <Typography sx={{ fontSize: 12, fontWeight: 700, mb: 0.75 }}>Layouts</Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 700, mb: 0.75 }}>Layouts</Typography>
                     <RadioGroup row value={channelLayout} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setChannelLayout(event.target.value)}>
                         <FormControlLabel value="threads" control={<Radio />} label="Threads" />
                         <FormControlLabel value="posts" control={<Radio />} label="Posts" />

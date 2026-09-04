@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ElementType } from "react";
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@dhriti/ui";
 import { GamepadRounded, AutoAwesomeRounded, CalendarMonthRounded, ChatBubbleRounded, ChevronLeftRounded, ChevronRightRounded, HomeRounded, MenuBookRounded, SyncRounded } from "@mui/icons-material";
 
 export type AppRailItem = {
@@ -39,7 +39,7 @@ export function AppRail({
       { label: "Flow", icon: SyncRounded, href: `/${organizationSlug}/flow`, active: activeApp === "flow" },
       { label: "Atlas", icon: MenuBookRounded, href: `/${organizationSlug}/atlas`, active: activeApp === "atlas" },
       { label: "Pulse", icon: CalendarMonthRounded, href: `/${organizationSlug}/pulse`, active: activeApp === "pulse" },
-      { label: "Nexus", icon: AutoAwesomeRounded, href: `/${organizationSlug}/nexus`, active: activeApp === "nexus", iconColor: "#3b82f6" },
+      { label: "Nexus", icon: AutoAwesomeRounded, href: `/${organizationSlug}/nexus`, active: activeApp === "nexus", iconColor: "info.main" },
       { label: "Control", icon: GamepadRounded, href: `/${organizationSlug}/control`, active: activeApp === "control" },
     ] satisfies AppRailItem[];
   }, [activeApp, items, organizationSlug]);
@@ -57,7 +57,7 @@ export function AppRail({
   }, [initialActiveLabel]);
 
   return (
-    <Box sx={{ width: collapsed ? 56 : 80, px: 1, py: 1.5, bgcolor: "#fff", borderRight: "1px solid #f3f4f6", display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto", transition: "width 160ms ease" }}>
+    <Box sx={{ width: collapsed ? 56 : 80, px: 1, py: 1.5, bgcolor: "surfaces.surface", borderRight: 1, borderColor: "borders.borderSubtle", display: "flex", flexDirection: "column", flexShrink: 0, overflowY: "auto", transition: (theme) => theme.transitions.create("width", { duration: 160 }) }}>
       <Stack spacing={1}>
         {resolvedItems.map((item) => {
           const Icon = item.icon;
@@ -71,23 +71,23 @@ export function AppRail({
               sx={{ textDecoration: "none" }}
               onClick={() => setSelectedLabel(item.label)}
             >
-              <Stack spacing={0.5} sx={{ p: 1, borderRadius: 2.5, alignItems: "center", color: isActive ? "#a16207" : "#9ca3af", bgcolor: isActive ? "#fffcf0" : "transparent", '&:hover': { bgcolor: isActive ? "#fffcf0" : "#f9fafb" } }}>
+              <Stack spacing={0.5} sx={{ p: 1, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", color: isActive ? "primary.dark" : "text.secondary" }}>
                 <Box
-                  sx={{ width: 40, height: 40, borderRadius: 2.5, display: "grid", placeItems: "center", bgcolor: isActive ? "rgba(252,207,20,0.1)" : "#f9fafb", color: item.iconColor ?? "inherit" }}
+                  sx={{ width: 40, height: 40, borderRadius: (theme) => theme.tokens.radius.md, display: "grid", placeItems: "center", bgcolor: isActive ? "surfaces.surfaceSelected" : "surfaces.surfaceHover", color: item.iconColor ?? "inherit" }}
                 >
                   <Icon sx={{ fontSize: 16 }} />
                 </Box>
-                {!collapsed && <Typography sx={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>{item.label}</Typography>}
+                {!collapsed && <Typography variant="overline">{item.label}</Typography>}
               </Stack>
             </Box>
           );
         })}
       </Stack>
 
-      <Box sx={{ mt: "auto", pt: 1.5, borderTop: "1px solid #f9fafb" }}>
-        <Stack spacing={0.5} sx={{ p: 1, borderRadius: 2.5, alignItems: "center", color: "#9ca3af", cursor: "pointer", '&:hover': { bgcolor: "#f9fafb" } }} onClick={() => setCollapsed((prev) => !prev)}>
+      <Box sx={{ mt: "auto", pt: 1.5, borderTop: 1, borderColor: "borders.borderSubtle" }}>
+        <Stack spacing={0.5} sx={{ p: 1, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", color: "text.secondary", cursor: "pointer", '&:hover': { bgcolor: "surfaces.surfaceHover" } }} onClick={() => setCollapsed((prev) => !prev)}>
           {collapsed ? <ChevronRightRounded sx={{ fontSize: 14 }} /> : <ChevronLeftRounded sx={{ fontSize: 14 }} />}
-          {!collapsed && <Typography sx={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em" }}>{collapseLabel}</Typography>}
+          {!collapsed && <Typography variant="overline">{collapseLabel}</Typography>}
         </Stack>
       </Box>
     </Box>

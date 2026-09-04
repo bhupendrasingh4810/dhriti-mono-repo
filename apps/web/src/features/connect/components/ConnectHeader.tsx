@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Avatar, Badge, Box, Stack, TextField, Typography } from "@mui/material";
+import { Avatar, Badge, Box, IconButton, Stack, TextField, Typography } from "@dhriti/ui";
 import ExpandMoreRounded from "@mui/icons-material/ExpandMoreRounded";
 import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import NotificationsNoneRounded from "@mui/icons-material/NotificationsNoneRounded";
@@ -40,7 +40,7 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
   const shouldShowResults = searchOpen && normalizedQuery.length > 0;
 
   return (
-    <Box sx={{ height: 68, px: 2, bgcolor: "#fff", borderBottom: "1px solid #f3f4f6", display: "flex", alignItems: "center", flexShrink: 0 }}>
+    <Box sx={{ height: 68, px: 2, bgcolor: "background.paper", borderBottom: 1, borderColor: "borders.borderSubtle", display: "flex", alignItems: "center", flexShrink: 0 }}>
       <Box
         sx={{
           width: "100%",
@@ -51,8 +51,8 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: "fit-content" }}>
-          <Box sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: "#fccf14", display: "grid", placeItems: "center", color: "#fff", fontWeight: 900, fontStyle: "italic", fontSize: 14 }}>F</Box>
-          <Typography sx={{ fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em" }}>Flowrise</Typography>
+          <Box sx={{ width: 28, height: 28, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "primary.main", display: "grid", placeItems: "center", color: "primary.contrastText", fontWeight: "fontWeightBold", fontStyle: "italic" }}>F</Box>
+          <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>Flowrise</Typography>
         </Stack>
 
         <Box sx={{ gridColumn: "2 / 3", width: "100%", maxWidth: 760, justifySelf: "center", position: "relative" }}>
@@ -68,13 +68,13 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
             onChange={(event) => setSearchValue(event.target.value)}
             slotProps={{
               input: {
-                startAdornment: <SearchRounded sx={{ fontSize: 16, color: "#9ca3af", mr: 1 }} />,
+                startAdornment: <SearchRounded sx={{ fontSize: 16, color: "text.disabled", mr: 1 }} />,
               },
             }}
             sx={{
               "& .MuiOutlinedInput-root": {
-                bgcolor: "#f3f4f6",
-                borderRadius: 1,
+                bgcolor: "surfaces.surfaceHover",
+                borderRadius: (theme) => theme.tokens.radius.sm,
               },
             }}
           />
@@ -86,13 +86,14 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
                 top: "calc(100% + 8px)",
                 left: 0,
                 right: 0,
-                bgcolor: "#fff",
-                border: "1px solid #eef2f7",
-                borderRadius: 2,
-                boxShadow: "0 14px 32px rgba(15, 23, 42, 0.1)",
+                bgcolor: "background.paper",
+                border: 1,
+                borderColor: "borders.borderSubtle",
+                borderRadius: (theme) => theme.tokens.radius.md,
+                boxShadow: (theme) => theme.tokens.elevation.high,
                 maxHeight: 420,
                 overflowY: "auto",
-                zIndex: 40,
+                zIndex: "modal",
               }}
             >
               {[
@@ -100,20 +101,20 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
                 { title: "Messages", data: filteredMessages },
                 { title: "Files", data: filteredFiles },
               ].map((section) => (
-                <Box key={section.title} sx={{ p: 1.25, borderBottom: "1px solid #f8fafc", '&:last-of-type': { borderBottom: "none" } }}>
-                  <Typography sx={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#9ca3af", mb: 0.8 }}>
+                <Box key={section.title} sx={{ p: 1.25, borderBottom: 1, borderColor: "borders.borderSubtle", '&:last-of-type': { borderBottom: "none" } }}>
+                  <Typography variant="overline" color="text.disabled" sx={{ mb: 0.8 }}>
                     {section.title}
                   </Typography>
                   <Stack spacing={0.4}>
                     {section.data.length > 0 ? (
                       section.data.map((item) => (
-                        <Box key={item.id} sx={{ px: 1, py: 0.8, borderRadius: 1.5, cursor: "pointer", '&:hover': { bgcolor: "#f9fafb" } }}>
-                          <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#111827" }}>{item.title}</Typography>
-                          {item.description ? <Typography sx={{ fontSize: 11, color: "#6b7280" }}>{item.description}</Typography> : null}
+                        <Box key={item.id} sx={{ px: 1, py: 0.8, borderRadius: (theme) => theme.tokens.radius.sm, cursor: "pointer", '&:hover': { bgcolor: "surfaces.surfaceHover" } }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.title}</Typography>
+                          {item.description ? <Typography variant="caption" color="text.secondary">{item.description}</Typography> : null}
                         </Box>
                       ))
                     ) : (
-                      <Typography sx={{ px: 1, py: 0.8, fontSize: 12, color: "#9ca3af" }}>No results</Typography>
+                      <Typography variant="caption" color="text.disabled" sx={{ px: 1, py: 0.8 }}>No results</Typography>
                     )}
                   </Stack>
                 </Box>
@@ -124,20 +125,20 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
 
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifySelf: "end", gridColumn: { xs: "2 / 3", md: "3 / 4" } }}>
           <Badge badgeContent={3} color="warning" sx={{ "& .MuiBadge-badge": { fontSize: 9, minWidth: 14, height: 14, fontWeight: 700 } }}>
-            <Box sx={{ width: 36, height: 36, borderRadius: 99, display: "grid", placeItems: "center", color: "#6b7280", '&:hover': { bgcolor: "#f9fafb" } }}>
+            <IconButton>
               <NotificationsNoneRounded fontSize="small" />
-            </Box>
+            </IconButton>
           </Badge>
-          <Box sx={{ width: 36, height: 36, borderRadius: 99, display: "grid", placeItems: "center", color: "#6b7280", '&:hover': { bgcolor: "#f9fafb" } }}>
+          <IconButton>
             <HelpOutlineRounded fontSize="small" />
-          </Box>
-          <Stack direction="row" spacing={1} sx={{ alignItems: "center", pl: 1.5, ml: 0.5, borderLeft: "1px solid #f3f4f6" }}>
-            <Box className="hidden sm:block" sx={{ textAlign: "right" }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 700, lineHeight: 1.1 }}>Rahul Sharma</Typography>
-              <Typography sx={{ fontSize: 10, color: "#9ca3af", lineHeight: 1.1 }}>Acme Technologies</Typography>
-            </Box>
+          </IconButton>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", pl: 1.5, ml: 0.5 }}>
+            {/* <Box sx={{ display: { xs: "none", sm: "block" }, textAlign: "right" }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, lineHeight: 1.1 }}>Rahul Sharma</Typography>
+              <Typography variant="overline" color="text.disabled" sx={{ lineHeight: 1.1 }}>Acme Technologies</Typography>
+            </Box> */}
             <Avatar src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" sx={{ width: 32, height: 32 }} />
-            <ExpandMoreRounded sx={{ fontSize: 14, color: "#9ca3af" }} />
+            <ExpandMoreRounded sx={{ fontSize: 18, color: "text.disabled" }} />
           </Stack>
         </Stack>
       </Box>

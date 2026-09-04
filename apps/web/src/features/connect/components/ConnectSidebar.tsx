@@ -6,11 +6,21 @@ import {
   Inventory2Rounded,
   MoreHorizRounded,
 } from "@mui/icons-material";
-import { Avatar, Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
-import { Accordion, AccordionDetails, AccordionSummary } from "@dhriti/ui";
+import { Accordion, AccordionDetails, AccordionSummary, Avatar, Box, IconButton, Stack, Tooltip, Typography } from "@dhriti/ui";
 import { ConnectSidebarQuickView, ConnectSidebarConversation, ConnectSidebarTeamGroup, ConnectSidebarMenuContext, ConnectSidebarSectionId } from "@/types/connect.types";
 
-
+const sidebarMenuButtonSx = {
+  width: 28,
+  height: 28,
+  minWidth: 28,
+  p: 0,
+  display: "inline-grid",
+  placeItems: "center",
+  bgcolor: "transparent",
+  "&:hover": {
+    bgcolor: "transparent",
+  },
+};
 
 type ConnectSidebarProps = {
   quickViews: ConnectSidebarQuickView[];
@@ -57,7 +67,7 @@ function SidebarAccordionSection({
       elevation={0}
       onMouseEnter={() => onHoverSection(sectionId)}
       onMouseLeave={() => onHoverSection(null)}
-      sx={{ bgcolor: "transparent", boxShadow: "none", "&::before": { display: "none" } }}
+      sx={{ bgcolor: "transparent", border: 0, boxShadow: "none", "&::before": { display: "none" } }}
     >
       <AccordionSummary
         sx={{
@@ -69,7 +79,7 @@ function SidebarAccordionSection({
           "& .MuiAccordionSummary-content.Mui-expanded": { m: 0 },
         }}
       >
-        <Typography sx={{ fontSize: 10, fontWeight: 800, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+        <Typography variant="overline" color="text.disabled">
           {title}
         </Typography>
         <Stack direction="row" spacing={0.2} sx={{ alignItems: "center" }}>
@@ -81,13 +91,13 @@ function SidebarAccordionSection({
                   event.stopPropagation();
                   onOpenMenu(event);
                 }}
-                sx={{ opacity: hovered ? 1 : 0, pointerEvents: hovered ? "auto" : "none", transition: "opacity 120ms ease" }}
+                sx={{ ...sidebarMenuButtonSx, opacity: hovered ? 1 : 0, pointerEvents: hovered ? "auto" : "none", transition: (theme) => theme.transitions.create("opacity", { duration: 120 }) }}
               >
-                <MoreHorizRounded sx={{ fontSize: 17, color: "#9ca3af" }} />
+                <MoreHorizRounded sx={{ fontSize: 17, color: "text.disabled" }} />
               </IconButton>
             </Tooltip>
           </Box>
-          <ExpandMoreRounded sx={{ fontSize: 18, color: "#9ca3af", transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 140ms ease" }} />
+          <ExpandMoreRounded sx={{ fontSize: 18, color: "text.disabled", transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: (theme) => theme.transitions.create("transform", { duration: 140 }) }} />
         </Stack>
       </AccordionSummary>
       <AccordionDetails sx={{ p: 0 }}>{children}</AccordionDetails>
@@ -108,13 +118,13 @@ function SidebarTrailingSlot({
 }) {
   return (
     <Box sx={{ width: 28, height: 28, position: "relative", flexShrink: 0 }}>
-      <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", opacity: hovered ? 0 : 1, transition: "opacity 120ms ease", pointerEvents: "none" }}>
-        {(count ?? 0) > 0 ? <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#a16207" }}>{count}</Typography> : null}
+      <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", opacity: hovered ? 0 : 1, transition: (theme) => theme.transitions.create("opacity", { duration: 120 }), pointerEvents: "none" }}>
+        {(count ?? 0) > 0 ? <Typography variant="overline" color="primary.main">{count}</Typography> : null}
       </Box>
-      <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", opacity: hovered ? 1 : 0, transition: "opacity 120ms ease", pointerEvents: hovered ? "auto" : "none" }}>
+      <Box sx={{ position: "absolute", inset: 0, display: "grid", placeItems: "center", opacity: hovered ? 1 : 0, transition: (theme) => theme.transitions.create("opacity", { duration: 120 }), pointerEvents: hovered ? "auto" : "none" }}>
         <Tooltip title={tooltip}>
-          <IconButton size="small" onClick={onOpenMenu}>
-            <MoreHorizRounded sx={{ fontSize: 17, color: "#9ca3af" }} />
+          <IconButton size="small" onClick={onOpenMenu} sx={sidebarMenuButtonSx}>
+            <MoreHorizRounded sx={{ fontSize: 17, color: "text.disabled" }} />
           </IconButton>
         </Tooltip>
       </Box>
@@ -145,17 +155,16 @@ export function ConnectSidebar({
     <Box
       sx={{
         width: 312,
-        bgcolor: "#fff",
-        borderRight: "1px solid #f3f4f6",
+        bgcolor: "background.paper",
         display: { xs: "none", lg: "flex" },
         flexDirection: "column",
         flexShrink: 0,
         overflow: "hidden",
       }}
     >
-      <Stack direction="row" sx={{ p: 2, borderBottom: "1px solid #f9fafb", alignItems: "center", justifyContent: "space-between" }}>
-        <Typography sx={{ fontSize: 14, fontWeight: 700 }}>Connect</Typography>
-        <MoreHorizRounded sx={{ fontSize: 18, color: "#9ca3af" }} />
+      <Stack direction="row" sx={{ p: 2, alignItems: "center", justifyContent: "space-between" }}>
+        <Typography variant="body2" sx={{ fontWeight: 700 }}>Connect</Typography>
+        <MoreHorizRounded sx={{ fontSize: 18, color: "text.disabled" }} />
       </Stack>
 
       <Box sx={{ p: 1.5, overflowY: "auto" }}>
@@ -184,11 +193,11 @@ export function ConnectSidebar({
                       onMouseEnter={() => setHoveredRowId(rowId)}
                       onMouseLeave={() => setHoveredRowId((previous) => (previous === rowId ? null : previous))}
                       onClick={() => onSelectQuickView(view.id)}
-                      sx={{ px: 1.5, py: 0.9, borderRadius: 2, alignItems: "center", justifyContent: "space-between", cursor: "pointer", bgcolor: isActive ? "#f9fafb" : "transparent", "&:hover": { bgcolor: "#f9fafb" } }}
+                      sx={{ px: 1.5, py: 0.9, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", cursor: "pointer", bgcolor: isActive ? "surfaces.surfaceSelected" : "transparent", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
                     >
-                      <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", color: "#4b5563" }}>
-                        <Icon sx={{ fontSize: 16, color: isActive ? "#2563eb" : "#9ca3af" }} />
-                        <Typography sx={{ fontSize: 14, fontWeight: isActive ? 700 : 600 }}>{view.label}</Typography>
+                      <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", color: "text.secondary" }}>
+                        <Icon sx={{ fontSize: 16, color: isActive ? "primary.main" : "text.disabled" }} />
+                        <Typography variant="body2" sx={{ fontWeight: isActive ? 700 : 600 }}>{view.label}</Typography>
                       </Stack>
                       <SidebarTrailingSlot
                         hovered={isHovered}
@@ -226,15 +235,15 @@ export function ConnectSidebar({
                       onMouseEnter={() => setHoveredRowId(rowId)}
                       onMouseLeave={() => setHoveredRowId((previous) => (previous === rowId ? null : previous))}
                       onClick={() => onSelectConversation(conversation.id)}
-                      sx={{ px: 1.5, py: 0.8, borderRadius: 1.5, alignItems: "center", justifyContent: "space-between", cursor: "pointer", bgcolor: isSelected ? "#f9fafb" : "transparent", "&:hover": { bgcolor: "#f9fafb" } }}
+                      sx={{ px: 1.5, py: 0.8, borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", justifyContent: "space-between", cursor: "pointer", bgcolor: isSelected ? "surfaces.surfaceSelected" : "transparent", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
                     >
                       <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
                         {conversation.type === "channel" ? (
-                          <Typography sx={{ fontSize: 12, color: isSelected ? "#60a5fa" : "#818cf8", fontWeight: 700 }}>#</Typography>
+                          <Typography variant="body2" sx={{ color: isSelected ? "primary.main" : "text.disabled", fontWeight: 700 }}>#</Typography>
                         ) : (
                           <Avatar src={conversation.avatar} sx={{ width: 28, height: 28 }} />
                         )}
-                        <Typography sx={{ fontSize: 14, color: "#4b5563", fontWeight: isSelected ? 700 : 500 }} noWrap>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: isSelected ? 700 : 500 }} noWrap>
                           {conversation.name}
                         </Typography>
                       </Stack>
@@ -274,11 +283,11 @@ export function ConnectSidebar({
                       onMouseEnter={() => setHoveredRowId(rowId)}
                       onMouseLeave={() => setHoveredRowId((previous) => (previous === rowId ? null : previous))}
                       onClick={() => onSelectConversation(conversation.id)}
-                      sx={{ px: 1.5, py: 0.8, borderRadius: 1.5, alignItems: "center", justifyContent: "space-between", cursor: "pointer", bgcolor: isSelected ? "#f9fafb" : "transparent", "&:hover": { bgcolor: "#f9fafb" } }}
+                      sx={{ px: 1.5, py: 0.8, borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", justifyContent: "space-between", cursor: "pointer", bgcolor: isSelected ? "surfaces.surfaceSelected" : "transparent", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
                     >
                       <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
                         <Avatar src={conversation.avatar} sx={{ width: 28, height: 28 }} />
-                        <Typography sx={{ fontSize: 14, color: "#4b5563", fontWeight: unread > 0 ? 700 : 500 }} noWrap>
+                        <Typography variant="body2" color="text.secondary" sx={{ fontWeight: unread > 0 ? 700 : 500 }} noWrap>
                           {conversation.name}
                         </Typography>
                       </Stack>
@@ -320,13 +329,13 @@ export function ConnectSidebar({
                       >
                         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center", minWidth: 0, cursor: "pointer" }} onClick={() => onToggleTeam(team.id)}>
                           {team.isExpanded ? <ExpandMoreRounded sx={{ fontSize: 18 }} /> : <ChevronRightRounded sx={{ fontSize: 18 }} />}
-                          <TeamIcon sx={{ fontSize: 18, color: "#9ca3af" }} />
-                          <Typography sx={{ fontSize: 14, fontWeight: 700 }} noWrap>{team.label}</Typography>
+                          <TeamIcon sx={{ fontSize: 18, color: "text.disabled" }} />
+                          <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>{team.label}</Typography>
                         </Stack>
                         <Box sx={{ width: 28, height: 28, display: "grid", placeItems: "center", flexShrink: 0 }}>
                           <Tooltip title="More team options">
-                            <IconButton size="small" onClick={(event) => onOpenSidebarMenu(event, { kind: "team", id: team.id, label: team.label, sectionId: "teams" })} sx={{ opacity: teamHovered ? 1 : 0, pointerEvents: teamHovered ? "auto" : "none", transition: "opacity 120ms ease" }}>
-                              <MoreHorizRounded sx={{ fontSize: 17, color: "#9ca3af" }} />
+                            <IconButton size="small" onClick={(event) => onOpenSidebarMenu(event, { kind: "team", id: team.id, label: team.label, sectionId: "teams" })} sx={{ ...sidebarMenuButtonSx, opacity: teamHovered ? 1 : 0, pointerEvents: teamHovered ? "auto" : "none", transition: (theme) => theme.transitions.create("opacity", { duration: 120 }) }}>
+                              <MoreHorizRounded sx={{ fontSize: 17, color: "text.disabled" }} />
                             </IconButton>
                           </Tooltip>
                         </Box>
@@ -347,13 +356,13 @@ export function ConnectSidebar({
                                 onMouseLeave={() => setHoveredRowId((previous) => (previous === channelRowId ? null : previous))}
                                 sx={{ alignItems: "center", justifyContent: "space-between" }}
                               >
-                                <Typography onClick={() => onSelectConversation(channel.id)} sx={{ py: 0.45, px: 0.6, borderRadius: 1, fontSize: 14, color: isSelected ? "#2563eb" : "#6b7280", fontWeight: isSelected ? 700 : 500, cursor: "pointer", "&:hover": { bgcolor: "#f9fafb" } }}>
+                                <Typography onClick={() => onSelectConversation(channel.id)} variant="body2" sx={{ py: 0.45, px: 0.6, borderRadius: (theme) => theme.tokens.radius.sm, color: isSelected ? "primary.main" : "text.secondary", fontWeight: isSelected ? 700 : 500, cursor: "pointer", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}>
                                   {channel.isPrivate ? "lock " : "# "}{channel.slug}
                                 </Typography>
                                 <Box sx={{ width: 28, height: 28, display: "grid", placeItems: "center", flexShrink: 0 }}>
                                   <Tooltip title="More channel options">
-                                    <IconButton size="small" onClick={(event) => onOpenSidebarMenu(event, { kind: "channel", id: channel.id, label: channel.name, parentId: team.id, sectionId: "teams" })} sx={{ opacity: channelHovered ? 1 : 0, pointerEvents: channelHovered ? "auto" : "none", transition: "opacity 120ms ease" }}>
-                                      <MoreHorizRounded sx={{ fontSize: 17, color: "#9ca3af" }} />
+                                    <IconButton size="small" onClick={(event) => onOpenSidebarMenu(event, { kind: "channel", id: channel.id, label: channel.name, parentId: team.id, sectionId: "teams" })} sx={{ ...sidebarMenuButtonSx, opacity: channelHovered ? 1 : 0, pointerEvents: channelHovered ? "auto" : "none", transition: (theme) => theme.transitions.create("opacity", { duration: 120 }) }}>
+                                      <MoreHorizRounded sx={{ fontSize: 17, color: "text.disabled" }} />
                                     </IconButton>
                                   </Tooltip>
                                 </Box>

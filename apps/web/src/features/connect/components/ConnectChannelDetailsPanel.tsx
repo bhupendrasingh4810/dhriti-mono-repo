@@ -67,7 +67,7 @@ export function ConnectChannelDetailsPanel({
             sx={{
               width: 64,
               height: 64,
-              borderRadius: 1,
+              borderRadius: (theme) => theme.tokens.radius.sm,
               bgcolor: type === "channel" ? "#eff6ff" : "#f9fafb",
               color: "#3b82f6",
               display: "grid",
@@ -99,7 +99,7 @@ export function ConnectChannelDetailsPanel({
           ].map((row) => {
             const RowIcon = row.icon;
             return (
-              <Stack key={row.label} direction="row" sx={{ p: 1, borderRadius: 1, alignItems: "center", justifyContent: "space-between", "&:hover": { bgcolor: "#f9fafb" } }}>
+              <Stack key={row.label} direction="row" sx={{ p: 1, borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", justifyContent: "space-between", "&:hover": { bgcolor: "#f9fafb" } }}>
                 <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
                   <RowIcon sx={{ fontSize: 14, color: "#9ca3af" }} />
                   <Typography sx={{ fontSize: 14, color: "#374151" }}>{row.label}</Typography>
@@ -114,8 +114,8 @@ export function ConnectChannelDetailsPanel({
           <Typography sx={{ fontSize: 10, fontWeight: 900, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.09em", mb: 1.5 }}>Connected Work</Typography>
           <Stack spacing={1.25}>
             {files.slice(0, 2).map((file) => (
-              <Stack key={file.id} direction="row" spacing={1.25} sx={{ p: 1.25, border: "1px solid #f3f4f6", borderRadius: 1, alignItems: "center", "&:hover": { borderColor: "#e5e7eb" } }}>
-                <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: "#f0fdf4", color: "#16a34a", display: "grid", placeItems: "center" }}>
+              <Stack key={file.id} direction="row" spacing={1.25} sx={{ p: 1.25, border: "1px solid #f3f4f6", borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", "&:hover": { borderColor: "#e5e7eb" } }}>
+                <Box sx={{ width: 32, height: 32, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "#f0fdf4", color: "#16a34a", display: "grid", placeItems: "center" }}>
                   <DescriptionOutlined sx={{ fontSize: 14 }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -127,8 +127,8 @@ export function ConnectChannelDetailsPanel({
             ))}
 
             {meetings.map((meeting) => (
-              <Stack key={meeting.id} direction="row" spacing={1.25} sx={{ p: 1.25, border: "1px solid #f3f4f6", borderRadius: 1, alignItems: "center", "&:hover": { borderColor: "#e5e7eb" } }}>
-                <Box sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: "#fff7ed", color: "#ea580c", display: "grid", placeItems: "center" }}>
+              <Stack key={meeting.id} direction="row" spacing={1.25} sx={{ p: 1.25, border: "1px solid #f3f4f6", borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", "&:hover": { borderColor: "#e5e7eb" } }}>
+                <Box sx={{ width: 32, height: 32, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "#fff7ed", color: "#ea580c", display: "grid", placeItems: "center" }}>
                   <NotificationsNoneRounded sx={{ fontSize: 14 }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>

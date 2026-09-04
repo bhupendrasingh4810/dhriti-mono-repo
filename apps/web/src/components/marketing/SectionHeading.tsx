@@ -17,9 +17,8 @@ export function SectionHeading({
         <Typography
           variant="overline"
           sx={{
-            letterSpacing: 1.6,
             textTransform: "uppercase",
-            color: "#b7791f",
+            color: "primary.main",
             fontWeight: 800,
           }}
         >

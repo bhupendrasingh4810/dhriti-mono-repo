@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import NextLink from "next/link";
 import { useRouter } from "next/navigation";
-import { Button, Checkbox, FormControlLabel, Reveal, Stack, TextField, Typography } from "@dhriti/ui";
+import { Button, Checkbox, FormControlLabel, Link, Reveal, Stack, TextField, Typography } from "@dhriti/ui";
 
 import { AuthShell } from "@/components/auth/AuthShell";
 
@@ -38,16 +38,15 @@ export default function LoginPage() {
               control={<Checkbox />}
               label={<Typography variant="body2">Remember me</Typography>}
             />
-            <Link href="/forgot" style={{ color: "#1f2937", fontWeight: 700, fontSize: 14 }}>
+            <Link component={NextLink} href="/forgot" variant="body2">
               Forgot password?
             </Link>
           </Stack>
 
           <Button
-          variant="contained"
-          size="large"
-          sx={{ bgcolor: "#fdd835", color: "#212121" }}
-          onClick={onLoginClick}
+            variant="contained"
+            size="large"
+            onClick={onLoginClick}
           >
             Sign in
           </Button>

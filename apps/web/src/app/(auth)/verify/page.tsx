@@ -17,7 +17,7 @@ export default function EmailVerificationPage() {
       <Reveal delay={0.12} duration={0.75}>
         <Stack spacing={2.5}>
           <TextField label="Verification code" fullWidth />
-          <Button variant="contained" size="large" sx={{ bgcolor: "#fdd835", color: "#212121" }}>
+          <Button variant="contained" size="large">
             Verify email
           </Button>
         </Stack>

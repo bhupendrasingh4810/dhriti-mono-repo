@@ -26,7 +26,7 @@ export default function SignupPage() {
             control={<Checkbox />}
             label={<Typography variant="body2">I agree to the terms and privacy policy</Typography>}
           />
-          <Button variant="contained" size="large" sx={{ bgcolor: "#fdd835", color: "#212121" }}>
+          <Button variant="contained" size="large">
             Create account
           </Button>
         </Stack>

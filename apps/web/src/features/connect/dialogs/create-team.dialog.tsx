@@ -49,7 +49,7 @@ export function CreateTeamDialog({
                 <TextField label="Team name" value={teamName} onChange={(event) => setTeamName(event.target.value)} required />
                 <TextField label="Description" value={teamDescription} onChange={(event) => setTeamDescription(event.target.value)} multiline minRows={3} />
                 <Box>
-                    <InputLabel id="connect-team-type-label" sx={{ mb: 0.75, position: "static", transform: "none", fontSize: 12, fontWeight: 700, color: "#6b7280" }}>
+                    <InputLabel id="connect-team-type-label" sx={{ mb: 0.75, position: "static", transform: "none", fontWeight: 700, color: "text.secondary" }}>
                         Team type
                     </InputLabel>
                     <Select labelId="connect-team-type-label" fullWidth value={teamVisibility} onChange={(event) => setTeamVisibility(event.target.value)}>

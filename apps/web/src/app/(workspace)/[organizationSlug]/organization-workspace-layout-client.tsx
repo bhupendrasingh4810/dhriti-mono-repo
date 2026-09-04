@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Box } from "@mui/material";
+import { Box } from "@dhriti/ui";
 import { ConnectHeader } from "@/features/connect";
 import { AppRail } from "@/components/shared/AppRail";
 import { WorkspaceAppsHeader } from "@/components/shared/WorkspaceAppsHeader";
@@ -55,7 +55,7 @@ export default function OrganizationWorkspaceLayoutClient({
     .map((item) => ({ id: item.id, title: item.title, description: item.description }));
 
   return (
-    <Box className="h-screen flex flex-col bg-[#f9fafb]">
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
       <Box sx={{ width: "100%", flexShrink: 0 }}>
         {activeApp === "connect" ? (
           <ConnectHeader users={headerSearchUsers} messages={headerSearchMessages} files={headerSearchFiles} />

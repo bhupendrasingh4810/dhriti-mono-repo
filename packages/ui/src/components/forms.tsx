@@ -26,7 +26,6 @@ import { DateTimePicker as MuiDateTimePicker } from "@mui/x-date-pickers/DateTim
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
 export const Button = styled(MuiButton)(({ theme }) => ({
-  borderRadius: 12,
   textTransform: "none",
   fontWeight: 700,
   letterSpacing: 0.01,
@@ -45,7 +44,6 @@ export const Button = styled(MuiButton)(({ theme }) => ({
 
 export const TextField = styled(MuiTextField)(({ theme }) => ({
   "& .MuiOutlinedInput-root": {
-    borderRadius: 12,
     backgroundColor: alpha(theme.palette.primary.main, 0.04),
     transition: "border-color 120ms ease, box-shadow 120ms ease",
     "& fieldset": {
@@ -63,7 +61,6 @@ export const TextField = styled(MuiTextField)(({ theme }) => ({
 
 export const NumberField = styled(MuiTextField)(({ theme }) => ({
   "& .MuiOutlinedInput-root": {
-    borderRadius: 12,
     backgroundColor: alpha(theme.palette.primary.main, 0.03),
     "& fieldset": {
       borderColor: alpha(theme.palette.primary.main, 0.18),
@@ -79,7 +76,6 @@ export const NumberField = styled(MuiTextField)(({ theme }) => ({
 }));
 
 export const Select = styled(MuiSelect)(({ theme }) => ({
-  borderRadius: 12,
   backgroundColor: alpha(theme.palette.primary.main, 0.04),
   "& .MuiOutlinedInput-notchedOutline": {
     borderColor: alpha(theme.palette.primary.main, 0.18),
@@ -150,12 +146,10 @@ export const Rating = styled(MuiRating)(({ theme }) => ({
 }));
 
 export const ToggleButtonGroup = styled(MuiToggleButtonGroup)(({ theme }) => ({
-  borderRadius: 12,
   backgroundColor: alpha(theme.palette.primary.main, 0.04),
   border: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
   "& .MuiToggleButtonGroup-grouped": {
     border: "none",
-    borderRadius: 10,
     color: theme.palette.text.secondary,
     "&.Mui-selected": {
       backgroundColor: alpha(theme.palette.primary.main, 0.12),
@@ -172,7 +166,7 @@ export const TextAreaAutosize = styled(TextareaAutosize)(({ theme }) => ({
   width: "100%",
   minHeight: 110,
   padding: "0.88rem 0.95rem",
-  borderRadius: 12,
+  borderRadius: theme.tokens.radius.md,
   border: `1px solid ${alpha(theme.palette.primary.main, 0.18)}`,
   backgroundColor: alpha(theme.palette.primary.main, 0.03),
   color: theme.palette.text.primary,

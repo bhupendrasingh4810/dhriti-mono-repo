@@ -97,7 +97,7 @@ export function DataTable<T extends DataTableRow>({
   };
 
   return (
-    <Paper sx={{ p: 2.5, borderRadius: 4 }}>
+    <Paper sx={{ p: 2.5, borderRadius: (theme) => theme.tokens.radius.xl }}>
       <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2, justifyContent: "space-between", alignItems: { xs: "stretch", md: "center" } }}>
         <Typography variant="h6" sx={{ fontWeight: 700 }}>{title ?? "Records"}</Typography>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
@@ -122,12 +122,12 @@ export function DataTable<T extends DataTableRow>({
 
       {loading ? (
         <Stack spacing={1.5}>
-          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 2 }} />
-          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: 2 }} />
+          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: (theme) => theme.tokens.radius.md }} />
+          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: (theme) => theme.tokens.radius.md }} />
+          <Skeleton variant="rectangular" height={48} sx={{ borderRadius: (theme) => theme.tokens.radius.md }} />
         </Stack>
       ) : view === "table" ? (
-        <TableContainer sx={{ borderRadius: 2, border: "1px solid rgba(0,0,0,0.04)" }}>
+        <TableContainer sx={{ borderRadius: (theme) => theme.tokens.radius.md, border: "1px solid rgba(0,0,0,0.04)" }}>
           <StyledTable sx={tableSx}>
             <TableHead>
               <TableRow>

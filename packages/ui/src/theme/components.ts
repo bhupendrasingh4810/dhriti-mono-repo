@@ -10,6 +10,10 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 	const menuItemPadding = isCompact ? "4px 8px" : isSpacious ? "10px 14px" : "8px 12px";
 	const iconButtonSize = isCompact ? 32 : isSpacious ? 44 : 38;
 	const avatarSize = isCompact ? 24 : isSpacious ? 40 : 32;
+	const baseRadius = (theme: Omit<Theme, "components">) => theme.tokens.radius.md;
+	const smallRadius = (theme: Omit<Theme, "components">) => theme.tokens.radius.sm;
+	const largeRadius = (theme: Omit<Theme, "components">) => theme.tokens.radius.lg;
+	const pillRadius = (theme: Omit<Theme, "components">) => theme.tokens.radius.pill;
 
 	return {
 		MuiCssBaseline: {
@@ -45,7 +49,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 				},
 				"::-webkit-scrollbar-thumb": {
 					backgroundColor: theme.palette.borders.border,
-					borderRadius: theme.shape.borderRadius || 6,
+					borderRadius: pillRadius(theme),
 					"&:hover": {
 						backgroundColor: theme.palette.borders.borderStrong,
 					},
@@ -100,7 +104,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 				root: ({ theme }) => ({
 					backgroundColor: theme.palette.surfaces.surface,
 					borderColor: theme.palette.borders.border,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					padding: theme.spacing(theme.density.cardPadding / 4),
 					transition: theme.transitions.create(["box-shadow", "border-color"], { duration: 150 }),
 					"&:hover": {
@@ -131,7 +135,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 					backgroundColor: theme.palette.surfaces.surface,
 					backgroundImage: "none",
 					border: `1px solid ${theme.palette.borders.borderSubtle}`,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					"&::before": {
 						display: "none",
 					},
@@ -177,7 +181,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 					minHeight: theme.density.controlHeight,
 					textTransform: "none",
 					fontWeight: theme.typography.fontWeightMedium,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					padding: controlPadding,
 					lineHeight: 1.4,
 					transition: theme.transitions.create(["background-color", "border-color", "box-shadow", "color"], { duration: 120 }),
@@ -221,7 +225,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 				root: ({ theme }) => ({
 					width: iconButtonSize,
 					height: iconButtonSize,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					color: theme.palette.text.secondary,
 					transition: theme.transitions.create(["background-color", "color", "box-shadow"], { duration: 120 }),
 					"&:hover": {
@@ -253,7 +257,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				root: ({ theme }) => ({
 					minHeight: theme.density.controlHeight,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					fontSize: isCompact ? theme.typography.body2.fontSize : theme.typography.body1.fontSize,
 					backgroundColor: theme.palette.surfaces.surface,
 					transition: theme.transitions.create(["border-color", "box-shadow"], { duration: 120 }),
@@ -384,7 +388,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 				root: ({ theme }) => ({
 					padding: 2,
 					border: `1px solid ${theme.palette.borders.borderSubtle}`,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					backgroundColor: theme.palette.surfaces.surfaceHover,
 				}),
 			},
@@ -394,7 +398,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 				root: ({ theme }) => ({
 					minHeight: theme.density.controlHeight - 4,
 					border: 0,
-					borderRadius: theme.tokens.radius.small,
+					borderRadius: smallRadius(theme),
 					padding: controlPadding,
 					color: theme.palette.text.secondary,
 					textTransform: "none",
@@ -437,7 +441,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				root: ({ theme }) => ({
 					border: `1px solid ${theme.palette.borders.borderSubtle}`,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					backgroundColor: theme.palette.surfaces.surface,
 				}),
 			},
@@ -469,7 +473,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				root: ({ theme }) => ({
 					minHeight: theme.density.listItemMinHeight,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					color: theme.palette.text.primary,
 					"&:hover": {
 						backgroundColor: theme.palette.surfaces.surfaceHover,
@@ -506,7 +510,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 					backgroundColor: theme.palette.surfaces.surfaceElevated,
 					border: `1px solid ${theme.palette.borders.border}`,
 					boxShadow: theme.shadows[4],
-					borderRadius: 8,
+					borderRadius: baseRadius(theme),
 					padding: theme.spacing(0.5),
 				}),
 			},
@@ -520,7 +524,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 					backgroundColor: theme.palette.surfaces.surfaceElevated,
 					border: `1px solid ${theme.palette.borders.border}`,
 					boxShadow: theme.shadows[4],
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					padding: theme.spacing(0.5),
 				}),
 			},
@@ -536,7 +540,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				root: ({ theme }) => ({
 					minHeight: theme.density.menuItemMinHeight,
-					borderRadius: theme.tokens.radius.small,
+					borderRadius: smallRadius(theme),
 					padding: menuItemPadding,
 					fontSize: isCompact ? "0.8125rem" : "0.875rem",
 					gap: theme.spacing(1),
@@ -563,7 +567,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 				}),
 				indicator: ({ theme }) => ({
 					height: 2,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: pillRadius(theme),
 					backgroundColor: theme.palette.interactive.interactive,
 				}),
 			},
@@ -585,7 +589,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 		MuiPaginationItem: {
 			styleOverrides: {
 				root: ({ theme }) => ({
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					"&.Mui-selected": {
 						backgroundColor: theme.palette.interactive.interactive,
 						color: theme.tokens.color.text.inverse,
@@ -625,7 +629,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			},
 			styleOverrides: {
 				root: ({ theme }) => ({
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 					alignItems: "center",
 					"&.MuiAlert-outlinedSuccess": {
 						backgroundColor: alpha(theme.palette.success.main, 0.08),
@@ -648,7 +652,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			},
 			styleOverrides: {
 				root: ({ theme }) => ({
-					borderRadius: 4, // Sharp but subtly curved enterprise tag look
+					borderRadius: smallRadius(theme),
 					fontWeight: 600,
 					fontSize: "0.75rem",
 				}),
@@ -688,7 +692,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				tooltip: ({ theme }) => ({
 					backgroundColor: theme.palette.text.primary,
-					borderRadius: theme.tokens.radius.small,
+					borderRadius: smallRadius(theme),
 					color: theme.tokens.color.text.inverse,
 					fontSize: theme.typography.caption.fontSize,
 					fontWeight: theme.typography.fontWeightMedium,
@@ -708,7 +712,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 					backgroundColor: theme.palette.surfaces.surfaceElevated,
 					backgroundImage: "none",
 					border: `1px solid ${theme.palette.borders.border}`,
-					borderRadius: theme.tokens.radius.large,
+					borderRadius: largeRadius(theme),
 					boxShadow: theme.shadows[16],
 				}),
 			},
@@ -745,7 +749,7 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				root: ({ theme }) => ({
 					backgroundColor: alpha(theme.palette.interactive.interactive, 0.08),
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: baseRadius(theme),
 				}),
 			},
 		},
@@ -753,11 +757,11 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			styleOverrides: {
 				root: ({ theme }) => ({
 					height: isCompact ? 6 : 8,
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: pillRadius(theme),
 					backgroundColor: theme.palette.surfaces.surfaceHover,
 				}),
 				bar: ({ theme }) => ({
-					borderRadius: theme.shape.borderRadius,
+					borderRadius: pillRadius(theme),
 					backgroundColor: theme.palette.interactive.interactive,
 				}),
 			},

@@ -1,64 +1,102 @@
-import { Box, Stack, Typography } from "@mui/material";
+"use client";
+
 import {
   AIResponse,
-  AppSidebar,
-  AppShell,
-  ChannelHeader,
-  PageHeader,
-  TaskCard,
-  TopBar,
-  UIButton,
-  UIEmptyState,
-  UITextField,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  EmptyState,
+  Stack,
+  TextField,
+  Typography,
 } from "@dhriti/ui";
 
-const sidebarItems = [
-  { id: "home", label: "Home", active: true },
-  { id: "connect", label: "Connect" },
-  { id: "flow", label: "Flow" },
-  { id: "atlas", label: "Atlas" },
-  { id: "pulse", label: "Pulse" },
-  { id: "nexus", label: "Nexus" },
-  { id: "control", label: "Control" },
+const foundations = ["Theme tokens", "Form controls", "Data states", "AI responses"];
+
+const workItems = [
+  { title: "Finalize workspace roles", status: "In progress", priority: "High" },
+  { title: "Publish meeting notes", status: "Ready", priority: "Medium" },
 ];
 
 export default function DesignSystemPage() {
   return (
-    <AppShell
-      sidebar={<AppSidebar title="Dhriti" items={sidebarItems} />}
-      topbar={<TopBar title="Design System Preview" actions={<UIButton size="small">New</UIButton>} />}
-    >
-      <Stack spacing={3}>
-        <PageHeader
-          title="Dhriti Enterprise UI"
-          subtitle="Shared foundation across Home, Connect, Flow, Atlas, Pulse, Nexus, and Control"
-          actions={<UIButton variant="outlined">Action</UIButton>}
-        />
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: 4 }}>
+      <Container maxWidth="lg">
+        <Stack spacing={3}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", md: "center" } }}>
+            <Box>
+              <Typography variant="h3" sx={{ fontWeight: "fontWeightBold" }}>
+                Dhriti Enterprise UI
+              </Typography>
+              <Typography color="text.secondary" sx={{ mt: 1 }}>
+                Shared foundation across Home, Connect, Flow, Atlas, Pulse, Nexus, and Control.
+              </Typography>
+            </Box>
+            <Button variant="contained">New Component</Button>
+          </Stack>
 
-        <Box
-          sx={{
-            display: "grid",
-            gap: 2,
-            gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" },
-          }}
-        >
-          <TaskCard title="Finalize workspace roles" status="inProgress" priority="high" assignee="Priya" />
-          <AIResponse text="Dhriti AI summary: Sprint health is at 82% with 3 blocked tasks requiring review." />
-        </Box>
+          <Box sx={{ display: "grid", gap: 2, gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" } }}>
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
+                    Work Item Cards
+                  </Typography>
+                  {workItems.map((item) => (
+                    <Box key={item.title} sx={{ p: 2, border: 1, borderColor: "borders.borderSubtle", borderRadius: (theme) => theme.tokens.radius.md, bgcolor: "surfaces.surfaceHover" }}>
+                      <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.title}</Typography>
+                        <Chip label={item.priority} size="small" />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary">{item.status}</Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
 
-        <ChannelHeader title="Engineering" topic="Release planning" />
-        <UITextField fullWidth label="Meeting note" placeholder="Capture decision or action item" />
+            <Card>
+              <CardContent>
+                <Stack spacing={2}>
+                  <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
+                    AI Response
+                  </Typography>
+                  <AIResponse text="Dhriti AI summary: Sprint health is at 82% with 3 blocked tasks requiring review." />
+                </Stack>
+              </CardContent>
+            </Card>
+          </Box>
 
-        <UIEmptyState
-          title="No unresolved blockers"
-          description="Your teams are clear to continue."
-          action={<UIButton size="small">Create Risk Note</UIButton>}
-        />
+          <Card>
+            <CardContent>
+              <Stack spacing={2}>
+                <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
+                  Controls
+                </Typography>
+                <TextField fullWidth label="Meeting note" placeholder="Capture decision or action item" />
+                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", rowGap: 1 }}>
+                  {foundations.map((label) => (
+                    <Chip key={label} label={label} />
+                  ))}
+                </Stack>
+              </Stack>
+            </CardContent>
+          </Card>
 
-        <Typography variant="caption" color="text.secondary">
-          Preview route for Dhriti design system foundations.
-        </Typography>
-      </Stack>
-    </AppShell>
+          <EmptyState
+            title="No unresolved blockers"
+            description="Your teams are clear to continue."
+            action={<Button size="small">Create Risk Note</Button>}
+          />
+
+          <Typography variant="caption" color="text.secondary">
+            Preview route for Dhriti design system foundations.
+          </Typography>
+        </Stack>
+      </Container>
+    </Box>
   );
 }

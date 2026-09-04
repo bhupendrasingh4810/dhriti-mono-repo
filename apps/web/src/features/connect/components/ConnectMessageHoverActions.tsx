@@ -1,14 +1,16 @@
 "use client";
 
-import { AddReactionRounded, FormatQuoteRounded, MoreHorizRounded } from "@mui/icons-material";
-import { Box, Button, IconButton, Stack } from "@mui/material";
+import { AddReactionRounded, EditRounded, FormatQuoteRounded, MoreHorizRounded } from "@mui/icons-material";
+import { Box, IconButton, Stack, Tooltip } from "@dhriti/ui";
 
 type ConnectMessageHoverActionsProps = {
   open: boolean;
   align: "left" | "right";
   placement?: "above" | "below";
+  isOwn: boolean;
   onQuickReaction: (emoji: string) => void;
   onOpenEmoji: (event: React.MouseEvent<HTMLElement>) => void;
+  onEdit?: () => void;
   onQuote: () => void;
   onOpenMenu: (event: React.MouseEvent<HTMLElement>) => void;
   onHoverStart?: () => void;
@@ -19,8 +21,10 @@ export function ConnectMessageHoverActions({
   open,
   align,
   placement = "above",
+  isOwn,
   onQuickReaction,
   onOpenEmoji,
+  onEdit,
   onQuote,
   onOpenMenu,
   onHoverStart,
@@ -31,6 +35,20 @@ export function ConnectMessageHoverActions({
   }
 
   const isRight = align === "right";
+  const quickReactions = [
+    { emoji: "👍", name: "Thumbs up" },
+    { emoji: "❤️", name: "Heart" },
+    { emoji: "😂", name: "Laugh" },
+    { emoji: "😮", name: "Surprised" },
+  ];
+
+  function keepOpenAndRun(handler: (event: React.MouseEvent<HTMLElement>) => void) {
+    return (event: React.MouseEvent<HTMLElement>) => {
+      event.stopPropagation();
+      onHoverStart?.();
+      handler(event);
+    };
+  }
 
   return (
     <Stack
@@ -40,40 +58,66 @@ export function ConnectMessageHoverActions({
       onMouseLeave={onHoverEnd}
       sx={{
         position: "absolute",
+        alignItems: "center",
         top: placement === "above" ? 0 : "100%",
         transform: placement === "above" ? "translateY(calc(-100% - 6px))" : "translateY(6px)",
         right: isRight ? 0 : "auto",
         left: isRight ? "auto" : 0,
-        bgcolor: "#fff",
-        border: "1px solid #e5e7eb",
-        borderRadius: 0.5,
-        px: 3,
-        py: 1.5,
-        boxShadow: "0 8px 20px rgba(15,23,42,0.08)",
-        zIndex: 6,
+        bgcolor: "background.paper",
+        border: 1,
+        borderColor: "borders.border",
+        borderRadius: (theme) => theme.tokens.radius.md,
+        px: 0.5,
+        py: 0.35,
+        boxShadow: (theme) => theme.tokens.elevation.medium,
+        zIndex: "tooltip",
+        "& .MuiIconButton-root": {
+          width: 32,
+          height: 32,
+          minWidth: 32,
+          p: 0,
+          display: "inline-grid",
+          placeItems: "center",
+          lineHeight: 1,
+        },
       }}
     >
-      {["👍", "❤️", "😂", "😮"].map((emoji) => (
-        <Button
-          key={emoji}
-          size="small"
-          variant="outlined"
-          onClick={() => onQuickReaction(emoji)}
-          sx={{ minWidth: 34, px: 0.8, border: "none", fontSize: 20 }}
-        >
-          {emoji}
-        </Button>
+      {quickReactions.map((reaction) => (
+        <Tooltip key={reaction.emoji} title={reaction.name}>
+          <IconButton
+            size="small"
+            aria-label={`React with ${reaction.name}`}
+            onClick={() => onQuickReaction(reaction.emoji)}
+            sx={{ fontSize: 18 }}
+          >
+            {reaction.emoji}
+          </IconButton>
+        </Tooltip>
       ))}
-      <IconButton size="small" onClick={onOpenEmoji}>
-        <AddReactionRounded sx={{ fontSize: 20 }} />
-      </IconButton>
-      <IconButton size="small" onClick={onQuote}>
-        <FormatQuoteRounded sx={{ fontSize: 20 }} />
-      </IconButton>
-      <Box sx={{ display: "flex", alignItems: "center", fontSize: 20, color: "#9ca3af" }}>|</Box>
-      <IconButton size="small" onClick={onOpenMenu}>
-        <MoreHorizRounded sx={{ fontSize: 20 }} />
-      </IconButton>
+      <Tooltip title="More reactions">
+        <IconButton size="small" onClick={keepOpenAndRun(onOpenEmoji)}>
+          <AddReactionRounded sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Tooltip>
+      {isOwn ? (
+        <Tooltip title="Edit message">
+          <IconButton size="small" onClick={onEdit}>
+            <EditRounded sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Tooltip>
+      ) : (
+        <Tooltip title="Reply with quote">
+          <IconButton size="small" onClick={onQuote}>
+            <FormatQuoteRounded sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+      <Box sx={{ width: 1, height: 20, mx: 0.25, bgcolor: "divider" }} />
+      <Tooltip title="More Options">
+        <IconButton size="small" onClick={keepOpenAndRun(onOpenMenu)}>
+          <MoreHorizRounded sx={{ fontSize: 20 }} />
+        </IconButton>
+      </Tooltip>
     </Stack>
   );
 }

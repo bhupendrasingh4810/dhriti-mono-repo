@@ -15,7 +15,8 @@ import {
 } from "@mui/icons-material";
 import { Avatar, Box, IconButton, Stack, Typography } from "@mui/material";
 import { ConnectMessageHoverActions } from "./ConnectMessageHoverActions";
-import { RenderMessageContent, getMessagePriority } from "./RenderMessageContent";
+import { ConnectMessageInput } from "./ConnectMessageInput";
+import { RenderMessageContent, getMessagePriority, isSingleEmojiMessage } from "./RenderMessageContent";
 import { connectUsers } from "@/mocks/connect";
 import { ConversationHeader } from "./ConversationHeader";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
@@ -52,6 +53,12 @@ interface ConnectConversationProps {
     onCloseReactionHover: () => void;
     onOpenUserHover: (event: React.MouseEvent<HTMLElement>, userId: string) => void;
     onCloseUserHover: () => void;
+    editingMessageId?: string | null;
+    editingMessageValue?: string;
+    onStartEditMessage: (message: ConnectConversationMessage) => void;
+    onChangeEditMessage: (value: string) => void;
+    onSaveEditMessage: (payload: { content: string; mentionUserIds: string[] }) => void;
+    onCancelEditMessage: () => void;
     disableHoverActions?: boolean;
     children?: ReactNode;
 };
@@ -81,6 +88,12 @@ export function ConnectConversations({
     onCloseReactionHover,
     onOpenUserHover,
     onCloseUserHover,
+    editingMessageId,
+    editingMessageValue = "",
+    onStartEditMessage,
+    onChangeEditMessage,
+    onSaveEditMessage,
+    onCancelEditMessage,
     disableHoverActions = false,
     children,
 }: ConnectConversationProps) {
@@ -183,7 +196,7 @@ export function ConnectConversations({
     );
 
     return (
-        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", bgcolor: "#fff", overflow: "hidden" }}>
+        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", bgcolor: "background.paper", overflow: "hidden" }}>
             <ConversationHeader
                 conversation={conversation}
                 teamLabel={teamLabel}
@@ -193,7 +206,7 @@ export function ConnectConversations({
                 {sortedMessages.map((message, index) => {
                     const sender = usersById[message.senderId];
                     const isOwn = message.senderId === currentUserId;
-                    const showActions = !disableHoverActions && hoveredMessageId === message.id;
+                    const showActions = !disableHoverActions && (hoveredMessageId === message.id || activeMessageMenuId === message.id || activeMessageEmojiId === message.id);
                     const previousMessage = sortedMessages[index - 1];
                     const previousTime = previousMessage ? new Date(previousMessage.createdAt).getTime() : 0;
                     const currentTime = new Date(message.createdAt).getTime();
@@ -206,6 +219,8 @@ export function ConnectConversations({
                         !showTimeByGap;
 
                     const quoted = message.quotedMessageId ? getQuotedMessageById(message.quotedMessageId) : undefined;
+                    const singleEmojiOnly = isSingleEmojiMessage(message.content);
+                    const isEditingMessage = editingMessageId === message.id;
 
                     if (message.contentType === "system") {
                         return <SystemMessage key={message.id} message={message} />;
@@ -223,7 +238,7 @@ export function ConnectConversations({
                                     src={sender?.avatar}
                                     onMouseEnter={(event: MouseEvent<HTMLElement>) => onOpenUserHover(event, message.senderId)}
                                     onMouseLeave={onCloseUserHover}
-                                    sx={{ width: 34, height: 34, borderRadius: 2, flexShrink: 0, cursor: "pointer" }}
+                                    sx={{ width: 42, height: 42, borderRadius: (theme) => theme.tokens.radius.md, flexShrink: 0, cursor: "pointer" }}
                                 />
                             ) : (
                                 <Box sx={{ width: 34, flexShrink: 0 }} />
@@ -233,17 +248,17 @@ export function ConnectConversations({
                                 {!isOwn && !isContinuation ? (
                                     <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", mb: 0.4 }}>
                                         <Typography
-                                            sx={{ fontSize: 13, fontWeight: 700, color: "#1f2937", cursor: "pointer" }}
+                                            sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", cursor: "pointer" }}
                                             onClick={onOpenDetails}
                                         >
                                             {sender?.displayName ?? "Unknown User"}
                                         </Typography>
-                                        {showTimeByGap ? <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>{formatTime(message.createdAt)}</Typography> : null}
+                                        {showTimeByGap ? <Typography variant="overline" color="text.disabled">{formatTime(message.createdAt)}</Typography> : null}
                                     </Stack>
                                 ) : null}
 
                                 {isOwn && showTimeByGap ? (
-                                    <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", mb: 0.4 }}>
+                                    <Typography variant="overline" color="text.disabled" sx={{ mb: 0.4 }}>
                                         {formatTime(message.createdAt)}
                                     </Typography>
                                 ) : null}
@@ -259,7 +274,7 @@ export function ConnectConversations({
                                                     py: 0.25,
                                                     fontSize: 14,
                                                     fontWeight: 800,
-                                                    color: priority === "IMPORTANT" ? "#ff6f00" : "#b91c1c",
+                                                    color: priority === "IMPORTANT" ? "warning.dark" : "error.main",
                                                 }}
                                             >
                                                 <PriorityHighRounded sx={{ fontSize: 20, mr: 0.4, verticalAlign: "middle" }} />
@@ -268,17 +283,38 @@ export function ConnectConversations({
                                         ) : null;
                                     })() : null}
 
+                                    {isEditingMessage ? (
+                                        <Box sx={{ minWidth: { xs: 320, sm: 420 }, width: "min(560px, 100%)" }}>
+                                            <ConnectMessageInput
+                                                mode="edit"
+                                                conversationLabel={conversation.name}
+                                                value={editingMessageValue}
+                                                users={connectUsers.map((user) => ({
+                                                    id: user.id,
+                                                    displayName: user.displayName,
+                                                    avatar: user.avatar,
+                                                    subtitle: user.jobTitle,
+                                                }))}
+                                                currentUserId={currentUserId}
+                                                onChange={onChangeEditMessage}
+                                                onSend={onSaveEditMessage}
+                                                onCancelEdit={onCancelEditMessage}
+                                                onClearQuotedMessage={onCancelEditMessage}
+                                                onAttachFiles={() => undefined}
+                                            />
+                                        </Box>
+                                    ) : (
                                     <Box
-                                        sx={{ width: "fit-content", maxWidth: "100%", p: 1.25, borderRadius: 1, bgcolor: isOwn ? "#e5e7f7" : "#f1f5f9" }}
+                                        sx={{ width: "fit-content", maxWidth: "100%", p: singleEmojiOnly ? 0 : 1.25, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: singleEmojiOnly ? "transparent" : isOwn ? "surfaces.surfaceSelected" : "surfaces.surfaceHover" }}
                                         onMouseEnter={() => handleHoverStart(message.id)}
                                         onMouseLeave={() => handleHoverEnd(message.id)}
                                     >
                                         {quoted ? (
-                                            <Box sx={{ mb: 1, p: 0.9, borderRadius: 1, bgcolor: "#fffbeb", borderLeft: "3px solid #f59e0b" }}>
-                                                <Typography sx={{ fontSize: 11, color: "#92400e", fontWeight: 700, mb: 0.2 }}>
+                                            <Box sx={{ mb: 1, py: 3, px: 3, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "background.paper", borderLeft: 3, borderColor: "primary.main" }}>
+                                                <Typography variant="caption" sx={{ color: "primary.main", fontWeight: 700, mb: 0.2 }}>
                                                     {usersById[quoted.senderId]?.displayName ?? "Unknown"}
                                                 </Typography>
-                                                <Typography sx={{ fontSize: 12, color: "#78350f" }} noWrap>
+                                                <Typography variant="caption" color="text.secondary" noWrap>
                                                     {quoted.content}
                                                 </Typography>
                                             </Box>
@@ -288,7 +324,7 @@ export function ConnectConversations({
                                             component="div"
                                             sx={{
                                                 fontSize: 14,
-                                                color: "#374151",
+                                                color: "text.secondary",
                                                 lineHeight: 1.65,
                                                 wordBreak: "break-word",
                                                 p: 1.5
@@ -308,6 +344,7 @@ export function ConnectConversations({
                                             />
                                         ) : null}
                                     </Box>
+                                    )}
 
                                     {!isOwn ? (() => {
                                         const priority = getMessagePriority(message.content);
@@ -319,7 +356,7 @@ export function ConnectConversations({
                                                     py: 0.25,
                                                     fontSize: 14,
                                                     fontWeight: 800,
-                                                    color: priority === "IMPORTANT" ? "#ff6f00" : "#b91c1c",
+                                                    color: priority === "IMPORTANT" ? "warning.dark" : "error.main",
                                                 }}
                                             >
                                                 <PriorityHighRounded sx={{ fontSize: 20, mr: 0.4, verticalAlign: "middle" }} />
@@ -338,7 +375,7 @@ export function ConnectConversations({
                                                 onMouseEnter={(event: MouseEvent<HTMLElement>) => onOpenReactionHover(event, reaction.emoji, reaction.userIds)}
                                                 onMouseLeave={onCloseReactionHover}
                                                 onClick={() => onAddReaction(message.id, reaction.emoji)}
-                                                sx={{ px: 1, py: 0.45, borderRadius: 1, fontSize: 14, fontWeight: 700, bgcolor: "#f9fafb", border: "1px solid #f3f4f6", color: "#6b7280", cursor: "pointer" }}
+                                                sx={{ px: 1, py: 0.45, borderRadius: (theme) => theme.tokens.radius.sm, fontSize: 14, fontWeight: 700, bgcolor: "surfaces.surfaceHover", border: 1, borderColor: "borders.borderSubtle", color: "text.secondary", cursor: "pointer" }}
                                             >
                                                 {reaction.emoji} {reaction.count}
                                             </Box>
@@ -347,13 +384,23 @@ export function ConnectConversations({
                                 ) : null}
 
                                 <ConnectMessageHoverActions
-                                    open={showActions}
+                                    open={showActions && !isEditingMessage}
                                     align={isOwn ? "right" : "left"}
                                     placement={index < 2 ? "below" : "above"}
+                                    isOwn={isOwn}
                                     onQuickReaction={(emoji) => onAddReaction(message.id, emoji)}
-                                    onOpenEmoji={(event) => onOpenMessageEmoji(event, message.id)}
+                                    onOpenEmoji={(event) => {
+                                        clearHoverActionCloseTimer();
+                                        setHoveredMessageId(message.id);
+                                        onOpenMessageEmoji(event, message.id);
+                                    }}
+                                    onEdit={() => onStartEditMessage(message)}
                                     onQuote={() => onQuoteMessage(message)}
-                                    onOpenMenu={(event) => onOpenMessageMenu(event, message.id)}
+                                    onOpenMenu={(event) => {
+                                        clearHoverActionCloseTimer();
+                                        setHoveredMessageId(message.id);
+                                        onOpenMessageMenu(event, message.id);
+                                    }}
                                     onHoverStart={() => handleHoverStart(message.id)}
                                     onHoverEnd={() => handleHoverEnd(message.id)}
                                 />

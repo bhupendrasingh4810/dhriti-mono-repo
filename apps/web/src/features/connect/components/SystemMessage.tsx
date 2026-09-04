@@ -10,7 +10,7 @@ interface SystemMessageProps {
 
 export const SystemMessage = ({ message }: SystemMessageProps) => (
     <Stack key={message.id} sx={{ alignItems: "center", py: 0.5 }}>
-        <Typography sx={{ fontSize: 12, color: "#6b7280", bgcolor: "#f8fafc", px: 1.5, py: 0.6, borderRadius: 99 }}>
+        <Typography variant="caption" sx={{ color: "text.secondary", bgcolor: "surfaces.surfaceHover", px: 1.5, py: 0.6, borderRadius: (theme) => theme.tokens.radius.pill }}>
             {message.content}
         </Typography>
     </Stack>

@@ -5,6 +5,7 @@ import type { ChangeEvent } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import {
   AddRounded,
+  CheckRounded,
   CodeRounded,
   CloseRounded,
   DescriptionOutlined,
@@ -21,6 +22,7 @@ import {
   LinkRounded,
   MailOutlineRounded,
   MoreVertRounded,
+  NotificationsActiveRounded,
   NotificationsNoneRounded,
   OpenInNewRounded,
   PriorityHighRounded,
@@ -29,7 +31,7 @@ import {
   TableRowsRounded,
   VideocamRounded,
 } from "@mui/icons-material";
-import { Box, Button, Divider, IconButton, Popover, Stack, TextField, Typography } from "@mui/material";
+import { Box, Button, Divider, IconButton, Popover, Stack, TextField, Typography } from "@dhriti/ui";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectMentionUser, ConnectPendingAttachment } from "@/types/connect.types";
@@ -51,6 +53,8 @@ type ConnectMessageInputProps = {
   onClearQuotedMessage: () => void;
   onAttachFiles: (files: FileList | null) => void;
   onRemovePendingAttachment?: (attachmentId: string) => void;
+  mode?: "compose" | "edit";
+  onCancelEdit?: () => void;
 };
 
 function parseMentionQuery(text: string) {
@@ -137,7 +141,7 @@ function renderInlineMarkdown(text: string) {
         <Box
           key={`${index}-inline-code`}
           component="span"
-          sx={{ px: 0.7, py: 0.15, mx: 0.2, borderRadius: 0.8, bgcolor: "#f3f4f6", border: "1px solid #e5e7eb", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12 }}
+          sx={{ px: 0.7, py: 0.15, mx: 0.2, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "surfaces.surfaceHover", border: 1, borderColor: "borders.border", fontFamily: "monospace", fontSize: "0.75rem" }}
         >
           {token.slice(1, -1)}
         </Box>
@@ -157,13 +161,13 @@ function renderInlineMarkdown(text: string) {
     }
 
     if (/^==[^=]+==$/.test(token)) {
-      return <Box key={`${index}-highlight`} component="span" sx={{ px: 0.45, borderRadius: 0.7, bgcolor: "#fef08a" }}>{token.slice(2, -2)}</Box>;
+      return <Box key={`${index}-highlight`} component="span" sx={{ px: 0.45, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "warning.light" }}>{token.slice(2, -2)}</Box>;
     }
 
     const linkMatch = token.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
     if (linkMatch) {
       return (
-        <Box key={`${index}-link`} component="span" sx={{ color: "#2563eb", textDecoration: "underline" }}>
+        <Box key={`${index}-link`} component="span" sx={{ color: "interactive.interactive", textDecoration: "underline" }}>
           {linkMatch[1]}
         </Box>
       );
@@ -172,48 +176,6 @@ function renderInlineMarkdown(text: string) {
     return <Fragment key={`${index}-text`}>{token}</Fragment>;
   });
 }
-
-// function renderMarkdownPreview(text: string) {
-//   const blocks = text.split(/```([\s\S]*?)```/g);
-
-//   return blocks.map((block, index) => {
-//     if (index % 2 === 1) {
-//       return (
-//         <Box
-//           key={`${index}-code-block`}
-//           component="pre"
-//           sx={{ my: 0.9, p: 1.2, borderRadius: 1.4, bgcolor: "#0f172a", color: "#e2e8f0", fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace", fontSize: 12, overflowX: "auto" }}
-//         >
-//           {block.trim()}
-//         </Box>
-//       );
-//     }
-
-//     return block.split("\n").map((line, lineIndex) => {
-//       if (/^\s*>\s?/.test(line)) {
-//         return (
-//           <Box key={`${index}-${lineIndex}-quote`} sx={{ my: 0.35, pl: 1.1, borderLeft: "3px solid #cbd5e1", color: "#475569", fontStyle: "italic" }}>
-//             {renderInlineMarkdown(line.replace(/^\s*>\s?/, ""))}
-//           </Box>
-//         );
-//       }
-
-//       if (/^\s*-\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
-//         return (
-//           <Typography key={`${index}-${lineIndex}-list`} sx={{ fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
-//             {renderInlineMarkdown(line)}
-//           </Typography>
-//         );
-//       }
-
-//       return (
-//         <Typography key={`${index}-${lineIndex}-plain`} sx={{ fontSize: 12.5, color: "#374151", lineHeight: 1.65 }}>
-//           {renderInlineMarkdown(line || " ")}
-//         </Typography>
-//       );
-//     });
-//   });
-// }
 
 export function ConnectMessageInput({
   conversationLabel,
@@ -227,6 +189,8 @@ export function ConnectMessageInput({
   onClearQuotedMessage,
   onAttachFiles,
   onRemovePendingAttachment,
+  mode = "compose",
+  onCancelEdit,
 }: ConnectMessageInputProps) {
   const [draftValue, setDraftValue] = useState(value);
   const [composerEmojiAnchor, setComposerEmojiAnchor] = useState<HTMLElement | null>(null);
@@ -234,6 +198,7 @@ export function ConnectMessageInput({
   const [priorityAnchor, setPriorityAnchor] = useState<HTMLElement | null>(null);
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [priorityFlag, setPriorityFlag] = useState<"normal" | "important" | "urgent">("normal");
+  const isEditing = mode === "edit";
   const lastSyncedValueRef = useRef(value);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -286,6 +251,36 @@ export function ConnectMessageInput({
 
   const draftLinks = useMemo(() => extractDraftLinks(draftValue), [draftValue]);
 
+  const priorityItems = useMemo<ConnectCascadingMenuItem[]>(
+    () => [
+      {
+        id: "normal",
+        label: "Standard",
+        description: "Message will be sent as usual",
+        icon: <MailOutlineRounded fontSize="small" />,
+        selected: priorityFlag === "normal",
+        onClick: () => setPriorityFlag("normal"),
+      },
+      {
+        id: "important",
+        label: "Important",
+        description: "Message will be marked as important",
+        icon: <PriorityHighRounded sx={{ color: "warning.dark" }} fontSize="small" />,
+        selected: priorityFlag === "important",
+        onClick: () => setPriorityFlag("important"),
+      },
+      {
+        id: "urgent",
+        label: "Urgent",
+        description: "Recipient notified every 2 min for 20 min",
+        icon: <NotificationsActiveRounded sx={{ color: "error.main" }} fontSize="small" />,
+        selected: priorityFlag === "urgent",
+        onClick: () => setPriorityFlag("urgent"),
+      },
+    ],
+    [priorityFlag]
+  );
+
   const composerAttachItems = useMemo<ConnectCascadingMenuItem[]>(
     () => [
       {
@@ -298,36 +293,12 @@ export function ConnectMessageInput({
       { id: "gif", label: "Insert GIF", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
       { id: "sticker", label: "Insert sticker", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
       { id: "schedule", label: "Schedule message", icon: <NotificationsNoneRounded fontSize="small" /> },
-      { id: "delivery", label: "Set delivery options", icon: <MailOutlineRounded fontSize="small" /> },
+      { id: "delivery", label: "Message delivery", icon: <MailOutlineRounded fontSize="small" />, children: priorityItems },
       { id: "video", label: "Record a video clip", icon: <VideocamRounded fontSize="small" /> },
       { id: "voice", label: "Record a voice clip", icon: <VideocamRounded fontSize="small" /> },
       { id: "loop", label: "Insert loop component", icon: <TableRowsRounded fontSize="small" /> },
     ],
-    []
-  );
-
-  const priorityItems = useMemo<ConnectCascadingMenuItem[]>(
-    () => [
-      {
-        id: "normal",
-        label: "Normal",
-        icon: <PriorityHighRounded fontSize="small" />,
-        onClick: () => setPriorityFlag("normal"),
-      },
-      {
-        id: "important",
-        label: "Important",
-        icon: <PriorityHighRounded sx={{ color: "#ff6f00" }} fontSize="small" />,
-        onClick: () => setPriorityFlag("important"),
-      },
-      {
-        id: "urgent",
-        label: "Urgent",
-        icon: <PriorityHighRounded sx={{ color: "#b91c1c" }} fontSize="small" />,
-        onClick: () => setPriorityFlag("urgent"),
-      },
-    ],
-    []
+    [priorityItems]
   );
 
   function handleMentionPick(displayName: string) {
@@ -378,11 +349,12 @@ export function ConnectMessageInput({
       .filter((user) => mentionNameMatches.includes(user.displayName.toLowerCase()))
       .map((user) => user.id);
 
-    const priorityPrefix = priorityFlag === "normal" ? "" : priorityFlag === "important" ? "[IMPORTANT] " : "[URGENT] ";
+    const priorityPrefix = isEditing || priorityFlag === "normal" ? "" : priorityFlag === "important" ? "[IMPORTANT] " : "[URGENT] ";
 
     onSend({ content: `${priorityPrefix}${nextContent}`, mentionUserIds });
     lastSyncedValueRef.current = "";
     setDraftValue("");
+    setPriorityFlag("normal");
     onChange("");
   }
 
@@ -400,23 +372,21 @@ export function ConnectMessageInput({
             left: 24,
             right: 24,
             bottom: 138,
-            bgcolor: "#fff",
-            border: "1px solid #eef2f7",
-            borderRadius: 2,
-            boxShadow: "0 12px 24px rgba(15,23,42,0.1)",
-            zIndex: 31,
+            bgcolor: "background.paper",
+            border: 1,
+            borderColor: "borders.borderSubtle",
+            borderRadius: (theme) => theme.tokens.radius.md,
+            boxShadow: (theme) => theme.tokens.elevation.medium,
+            zIndex: "modal",
           }}
         >
           <Typography
             sx={{
               px: 1.5,
               py: 1,
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              color: "#9ca3af",
-              textTransform: "uppercase",
+              color: "text.disabled",
             }}
+            variant="overline"
           >
             Slash Commands
           </Typography>
@@ -427,10 +397,10 @@ export function ConnectMessageInput({
                 direction="row"
                 spacing={1}
                 onClick={() => handleSlashPick(command.insertText)}
-                sx={{ px: 1.5, py: 0.8, alignItems: "center", justifyContent: "space-between", cursor: "pointer", "&:hover": { bgcolor: "#f9fafb" } }}
+                sx={{ px: 1.5, py: 0.8, alignItems: "center", justifyContent: "space-between", cursor: "pointer", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
               >
-                <Typography sx={{ fontSize: 13, fontWeight: 700 }}>{command.label}</Typography>
-                <Typography sx={{ fontSize: 11, color: "#6b7280" }}>{command.description}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>{command.label}</Typography>
+                <Typography variant="caption" color="text.secondary">{command.description}</Typography>
               </Stack>
             ))}
           </Stack>
@@ -444,23 +414,21 @@ export function ConnectMessageInput({
             left: 24,
             right: 24,
             bottom: 138,
-            bgcolor: "#fff",
-            border: "1px solid #eef2f7",
-            borderRadius: 2,
-            boxShadow: "0 12px 24px rgba(15,23,42,0.1)",
-            zIndex: 30,
+            bgcolor: "background.paper",
+            border: 1,
+            borderColor: "borders.borderSubtle",
+            borderRadius: (theme) => theme.tokens.radius.md,
+            boxShadow: (theme) => theme.tokens.elevation.medium,
+            zIndex: "modal",
           }}
         >
           <Typography
             sx={{
               px: 1.5,
               py: 1,
-              fontSize: 11,
-              fontWeight: 800,
-              letterSpacing: "0.08em",
-              color: "#9ca3af",
-              textTransform: "uppercase",
+              color: "text.disabled",
             }}
+            variant="overline"
           >
             Mention People
           </Typography>
@@ -471,7 +439,7 @@ export function ConnectMessageInput({
                 direction="row"
                 spacing={1}
                 onClick={() => handleMentionPick(user.displayName)}
-                sx={{ px: 1.5, py: 0.8, alignItems: "center", cursor: "pointer", "&:hover": { bgcolor: "#f9fafb" } }}
+                sx={{ px: 1.5, py: 0.8, alignItems: "center", cursor: "pointer", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
               >
                 <Box
                   component="img"
@@ -480,8 +448,8 @@ export function ConnectMessageInput({
                   sx={{ width: 22, height: 22, borderRadius: "999px", objectFit: "cover" }}
                 />
                 <Box>
-                  <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{user.displayName}</Typography>
-                  <Typography sx={{ fontSize: 11, color: "#6b7280" }}>{user.subtitle}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.displayName}</Typography>
+                  <Typography variant="caption" color="text.secondary">{user.subtitle}</Typography>
                 </Box>
               </Stack>
             ))}
@@ -489,17 +457,17 @@ export function ConnectMessageInput({
         </Box>
       ) : null}
 
-      <Box sx={{ border: "2px solid #fccf14", borderRadius: 1, bgcolor: "#fff", p: 0.5, boxShadow: "0 8px 20px rgba(252, 207, 20, 0.08)" }}>
+      <Box sx={{ border: 1, borderColor: "borders.borderSubtle", borderRadius: (theme) => theme.tokens.radius.lg, bgcolor: "background.paper", p: 0.5, boxShadow: (theme) => theme.tokens.elevation.subtle, overflow: "hidden" }}>
         {quotedMessage ? (
           <Stack
             direction="row"
-            sx={{ px: 1.5, py: 0.8, borderBottom: "1px solid #f9fafb", alignItems: "center", justifyContent: "space-between", bgcolor: "#fffbeb", borderRadius: 1.5, mx: 1, mt: 1 }}
+            sx={{ mb: 1, py: 3, px: 3, alignItems: "center", justifyContent: "space-between", bgcolor: "background.paper", borderLeft: 3, borderColor: "primary.main", borderRadius: (theme) => theme.tokens.radius.sm, mx: 1, mt: 1 }}
           >
             <Box>
-              <Typography sx={{ fontSize: 11, color: "#92400e", fontWeight: 700 }}>
+              <Typography variant="caption" sx={{ color: "primary.main", fontWeight: 700 }}>
                 Replying to {quotedMessage.senderName}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: "#78350f" }} noWrap>
+              <Typography variant="caption" color="text.secondary" noWrap>
                 {quotedMessage.content}
               </Typography>
             </Box>
@@ -509,21 +477,21 @@ export function ConnectMessageInput({
           </Stack>
         ) : null}
 
-        {pendingAttachments.length > 0 ? (
+        {!isEditing && pendingAttachments.length > 0 ? (
           <Stack direction="row" spacing={1} sx={{ px: 1.5, pt: 1, flexWrap: "wrap", rowGap: 1 }}>
             {pendingAttachments.map((attachment) => (
               <Box
                 key={attachment.id}
-                sx={{ position: "relative", width: 100, height: 100, borderRadius: 1.25, overflow: "hidden", border: "1px solid #e5e7eb", bgcolor: "#f9fafb" }}
+                sx={{ position: "relative", width: 100, height: 100, borderRadius: (theme) => theme.tokens.radius.sm, overflow: "hidden", border: 1, borderColor: "borders.border", bgcolor: "surfaces.surfaceHover" }}
               >
                 {attachment.type.startsWith("image/") ? (
                   <Box component="img" src={attachment.url} alt={attachment.name} sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 ) : attachment.type.startsWith("video/") ? (
                   <Box component="video" src={attachment.url} muted sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
                 ) : (
-                  <Stack sx={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: "#3b82f6", px: 0.5 }}>
+                  <Stack sx={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: "info.main", px: 0.5 }}>
                     <DescriptionOutlined sx={{ fontSize: 20 }} />
-                    <Typography sx={{ fontSize: 9, color: "#6b7280", mt: 0.3, textAlign: "center" }} noWrap>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.3, textAlign: "center" }} noWrap>
                       {attachment.name}
                     </Typography>
                   </Stack>
@@ -531,7 +499,7 @@ export function ConnectMessageInput({
                 <IconButton
                   size="small"
                   onClick={() => onRemovePendingAttachment?.(attachment.id)}
-                  sx={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, bgcolor: "rgba(15,23,42,0.6)", color: "#fff", "&:hover": { bgcolor: "rgba(15,23,42,0.8)" } }}
+                  sx={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, bgcolor: "grey.900", color: "common.white", opacity: 0.78, "&:hover": { bgcolor: "grey.900", opacity: 0.9 } }}
                 >
                   <CloseRounded sx={{ fontSize: 12 }} />
                 </IconButton>
@@ -540,14 +508,14 @@ export function ConnectMessageInput({
           </Stack>
         ) : null}
 
-        {draftLinks.length > 0 ? (
+        {!isEditing && draftLinks.length > 0 ? (
           <Stack direction="row" spacing={1} sx={{ px: 1.5, pt: 1, flexWrap: "wrap", rowGap: 1 }}>
             {draftLinks.map((link) => (
-              <Stack key={link.url} direction="row" spacing={1} sx={{ width: 220, p: 1, borderRadius: 1, border: "1px solid #e5e7eb", bgcolor: "#f9fafb", alignItems: "center" }}>
-                <Box component="img" src={link.thumbnail} alt="" sx={{ width: 32, height: 32, borderRadius: 1, bgcolor: "#fff", border: "1px solid #f3f4f6" }} />
+              <Stack key={link.url} direction="row" spacing={1} sx={{ width: 220, p: 1, borderRadius: (theme) => theme.tokens.radius.sm, border: 1, borderColor: "borders.border", bgcolor: "surfaces.surfaceHover", alignItems: "center" }}>
+                <Box component="img" src={link.thumbnail} alt="" sx={{ width: 32, height: 32, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "background.paper", border: 1, borderColor: "borders.borderSubtle" }} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography sx={{ fontSize: 12, fontWeight: 800 }} noWrap>{link.domain}</Typography>
-                  <Typography sx={{ fontSize: 10, color: "#6b7280" }} noWrap>{link.url}</Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>{link.url}</Typography>
                 </Box>
                 <IconButton size="small" component="a" href={link.url} target="_blank" rel="noreferrer">
                   <OpenInNewRounded sx={{ fontSize: 16 }} />
@@ -563,10 +531,10 @@ export function ConnectMessageInput({
           multiline
           minRows={2}
           maxRows={6}
-          placeholder={`Message ${conversationLabel}`}
+          placeholder={isEditing ? "Edit message" : `Message ${conversationLabel}`}
           value={draftValue}
           onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraftValue(normalizePastedLinks(event.target.value))}
-          onKeyDown={(event: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+          onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
               event.preventDefault();
               const input = composerInputRef.current;
@@ -613,8 +581,8 @@ export function ConnectMessageInput({
           sx={{ px: 2, py: 1.5 }}
         />
 
-        {formattingOpen ? (
-          <Stack direction="row" spacing={0.45} sx={{ px: 1.5, py: 0.8, borderTop: "1px solid #f9fafb", borderBottom: "1px solid #f9fafb", flexWrap: "wrap", rowGap: 0.6 }}>
+        {!isEditing && formattingOpen ? (
+          <Stack direction="row" spacing={0.45} sx={{ px: 1.5, py: 0.8, borderTop: 1, borderBottom: 1, borderColor: "borders.borderSubtle", flexWrap: "wrap", rowGap: 0.6 }}>
             <IconButton size="small" onClick={() => applyMarkdown("**")}><FormatBoldRounded sx={{ fontSize: 20 }} /></IconButton>
             <IconButton size="small" onClick={() => applyMarkdown("*")}><FormatItalicRounded sx={{ fontSize: 20 }} /></IconButton>
             <IconButton size="small" onClick={() => applyMarkdown("<u>", "</u>")}><FormatUnderlinedRounded sx={{ fontSize: 20 }} /></IconButton>
@@ -632,50 +600,52 @@ export function ConnectMessageInput({
           </Stack>
         ) : null}
 
-        {/* <Box sx={{ mx: 1.5, mt: 1, mb: 0.5, p: 1.1, borderRadius: 1.25, bgcolor: "#f8fafc", border: "1px solid #e2e8f0" }}>
-          <Typography sx={{ fontSize: 10, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", mb: 0.4 }}>
-            Live Preview
-          </Typography>
-          <Box sx={{ minHeight: 26 }}>
-            {value.trim() ? renderMarkdownPreview(value) : <Typography sx={{ fontSize: 12, color: "#94a3b8" }}>Start typing to preview formatting and code blocks.</Typography>}
-          </Box>
-        </Box> */}
-
-        {/* <Box sx={{ mx: 1.5, mb: 0.6, p: 1, borderRadius: 1.1, bgcolor: "#fffbeb", border: "1px solid #fde68a" }}>
-          <Typography sx={{ fontSize: 11, color: "#92400e", fontWeight: 700 }}>Shortcuts: Ctrl/Cmd+B bold, Ctrl/Cmd+I italic, Ctrl/Cmd+U underline, Shift+Enter newline.</Typography>
-          <Typography sx={{ fontSize: 11, color: "#a16207", mt: 0.3 }}>Use `/` for commands, `@` mentions people/channels/teams, and markdown like `**bold**`, ``inline code``, or ```code blocks```.</Typography>
-        </Box> */}
-
-        <Stack direction="row" sx={{ px: 1.5, py: 1, borderTop: "1px solid #f9fafb", alignItems: "center", justifyContent: "space-between" }}>
+        <Stack direction="row" sx={{ px: 1.5, py: 1, borderTop: 1, borderColor: "borders.borderSubtle", alignItems: "center", justifyContent: "space-between" }}>
           <Stack direction="row" spacing={0.5}>
-            <IconButton size="small" onClick={() => setFormattingOpen((previous) => !previous)}>
-              <EditRounded sx={{ fontSize: 20 }} />
-            </IconButton>
-            <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerEmojiAnchor(event.currentTarget)}>
-              <SentimentSatisfiedAltRounded sx={{ fontSize: 20 }} />
-            </IconButton>
-            <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerAttachAnchor(event.currentTarget)}>
-              <AddRounded sx={{ fontSize: 20 }} />
-            </IconButton>
-            <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setPriorityAnchor(event.currentTarget)}>
-              <PriorityHighRounded sx={{ fontSize: 20, color: priorityFlag === "normal" ? "#6b7280" : priorityFlag === "important" ? "#ff6f00" : "#b91c1c" }} />
-            </IconButton>
+            {!isEditing ? (
+              <>
+                <IconButton size="small" onClick={() => setFormattingOpen((previous) => !previous)}>
+                  <EditRounded sx={{ fontSize: 20 }} />
+                </IconButton>
+                <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerEmojiAnchor(event.currentTarget)}>
+                  <SentimentSatisfiedAltRounded sx={{ fontSize: 20 }} />
+                </IconButton>
+                <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerAttachAnchor(event.currentTarget)}>
+                  <AddRounded sx={{ fontSize: 20 }} />
+                </IconButton>
+                <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setPriorityAnchor(event.currentTarget)}>
+                  {priorityFlag === "urgent" ? <NotificationsActiveRounded sx={{ fontSize: 20, color: "error.main" }} /> : <PriorityHighRounded sx={{ fontSize: 20, color: priorityFlag === "normal" ? "text.secondary" : "warning.dark" }} />}
+                </IconButton>
+              </>
+            ) : null}
           </Stack>
           <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
-            {priorityFlag !== "normal" ? (
-              <Typography sx={{ fontSize: 12, fontWeight: 800, color: priorityFlag === "important" ? "#ff6f00" : "#b91c1c", px: 0.8, py: 0.25 }}>
-                <PriorityHighRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} />
+            {!isEditing && priorityFlag !== "normal" ? (
+              <Typography variant="caption" sx={{ fontWeight: 800, color: priorityFlag === "important" ? "warning.dark" : "error.main", px: 0.8, py: 0.25 }}>
+                {priorityFlag === "urgent" ? <NotificationsActiveRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} /> : <PriorityHighRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} />}
                 {priorityFlag === "important" ? "Important" : "Urgent"}
               </Typography>
             ) : null}
-            <Button
-              size="small"
-              startIcon={<SendRounded sx={{ fontSize: 12 }} />}
-              onClick={handleSend}
-              sx={{ bgcolor: "#fccf14", color: "#111827", fontWeight: 700, "&:hover": { bgcolor: "#facc15" } }}
-            >
-              Send
-            </Button>
+            {isEditing ? (
+              <>
+                <IconButton size="small" aria-label="Cancel edit" onClick={onCancelEdit}>
+                  <CloseRounded sx={{ fontSize: 18 }} />
+                </IconButton>
+                <IconButton size="small" aria-label="Save edit" onClick={handleSend}>
+                  <CheckRounded sx={{ fontSize: 18 }} />
+                </IconButton>
+              </>
+            ) : (
+              <Button
+                size="small"
+                startIcon={<SendRounded sx={{ fontSize: 12 }} />}
+                onClick={handleSend}
+                variant="contained"
+                sx={{ fontWeight: 700 }}
+              >
+                Send
+              </Button>
+            )}
           </Stack>
         </Stack>
       </Box>
@@ -712,7 +682,7 @@ export function ConnectMessageInput({
         items={priorityItems}
       />
 
-      <input ref={fileInputRef} type="file" multiple style={{ display: "none" }} onChange={handleFileChange} />
+      <Box component="input" ref={fileInputRef} type="file" multiple sx={{ display: "none" }} onChange={handleFileChange} />
     </Box>
   );
 }

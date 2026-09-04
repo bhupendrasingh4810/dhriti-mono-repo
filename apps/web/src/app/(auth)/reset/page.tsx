@@ -18,7 +18,7 @@ export default function ResetPage() {
         <Stack spacing={2.5}>
           <TextField label="New password" type="password" fullWidth />
           <TextField label="Confirm password" type="password" fullWidth />
-          <Button variant="contained" size="large" sx={{ bgcolor: "#fdd835", color: "#212121" }}>
+          <Button variant="contained" size="large">
             Update password
           </Button>
         </Stack>

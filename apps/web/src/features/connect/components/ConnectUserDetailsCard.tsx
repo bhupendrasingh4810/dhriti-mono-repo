@@ -101,7 +101,7 @@ export function ConnectUserDetailsCard({
           ))}
         </Stack>
 
-        <Box sx={{ border: "1px solid #dcfce7", bgcolor: "#f0fdf4", borderRadius: 1.5, p: 1.25 }}>
+        <Box sx={{ border: "1px solid #dcfce7", bgcolor: "#f0fdf4", borderRadius: (theme) => theme.tokens.radius.md, p: 1.25 }}>
           <Stack spacing={0.85}>
             <Stack direction="row" spacing={0.8} sx={{ alignItems: "center" }}>
               <CheckCircleRounded sx={{ fontSize: 20, color: "#16a34a" }} />

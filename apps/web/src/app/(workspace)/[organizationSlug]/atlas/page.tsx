@@ -1,11 +1,11 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Typography } from "@dhriti/ui";
 
 export default function AtlasPage() {
   return (
-    <Box className="bg-[#f8fafc] min-h-screen">
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       <Box sx={{ p: 4 }}>
-        <Typography sx={{ fontSize: 30, fontWeight: 700 }}>Atlas</Typography>
-        <Typography sx={{ mt: 1, color: "#6b7280" }}>Knowledge management workspace</Typography>
+        <Typography variant="h4" sx={{ fontWeight: "fontWeightBold" }}>Atlas</Typography>
+        <Typography color="text.secondary" sx={{ mt: 1 }}>Knowledge management workspace</Typography>
       </Box>
     </Box>
   );

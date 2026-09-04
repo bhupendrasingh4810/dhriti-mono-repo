@@ -21,6 +21,7 @@ import {
   VisibilityOffRounded,
   AlternateEmailRounded,
   DeleteOutlineRounded,
+  EditRounded,
 } from "@mui/icons-material";
 import { Box, Button, Popover, Stack, Typography } from "@mui/material";
 import {
@@ -40,13 +41,6 @@ import {
   type ConnectConversation,
   type ConnectMessage,
 } from "@/mocks/connect";
-import {
-  ConnectChannelDetailsPanel,
-  ConnectMentionsView,
-  ConnectReactionUsersList,
-  type ConnectMentionsFilter,
-  ConnectUserDetailsCard,
-} from "@dhriti/ui";
 import { ConnectSidebar } from "@/features/connect";
 import { getMenuItems } from "@/utils/connect-menu-item.util";
 import { CreateChannelDialog } from "@/features/connect/dialogs/create-channel.dialog";
@@ -55,8 +49,13 @@ import { CreateSectionDialog } from "@/features/connect/dialogs/create-section.d
 import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
+import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { ConnectConversationMessage, ConnectPendingAttachment, ConnectSidebarMenuContext, ConnectSidebarTeamGroup } from "@/types/connect.types";
 import { ConnectMessageInput } from "@/features/connect/components/ConnectMessageInput";
+import { ConnectMentionsFilter, ConnectMentionsView } from "@/features/connect/components/ConnectMentionsView";
+import { ConnectChannelDetailsPanel } from "@/features/connect/components/ConnectChannelDetailsPanel";
+import { ConnectReactionUsersList } from "@/features/connect/components/ConnectReactionUsersList";
+import { ConnectUserDetailsCard } from "@/features/connect/components/ConnectUserDetailsCard";
 
 const quickViewsConfig = [
   { icon: AlternateEmailRounded, label: "Mentions" },
@@ -143,6 +142,9 @@ export default function ConnectPage() {
 
   const [messageEmojiAnchor, setMessageEmojiAnchor] = useState<HTMLElement | null>(null);
   const [activeMessageForEmoji, setActiveMessageForEmoji] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageDraft, setEditingMessageDraft] = useState("");
+  const [discardEditDialogOpen, setDiscardEditDialogOpen] = useState(false);
 
 
   useEffect(() => {
@@ -358,7 +360,11 @@ export default function ConnectPage() {
     [sectionViewMode, sidebarMenuContext, setSectionViewMode, setCreateSectionOpen, setCreateTeamOpen, setCreateChannelOpen, pushSystemMessage]
   );
 
+  const activeMenuMessage = activeMessageId ? selectedMessages.find((message) => message.id === activeMessageId) : undefined;
+  const canEditActiveMessage = Boolean(activeMenuMessage && activeMenuMessage.senderId === currentUser.id);
+
   const messageMenuItems: ConnectCascadingMenuItem[] = [
+    ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <EditRounded fontSize="small" /> }] : []),
     { id: "forward", label: "Forward", icon: <ForwardToInboxRounded fontSize="small" /> },
     { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
     { id: "pin", label: "Pin", icon: <PushPinRounded fontSize="small" /> },
@@ -553,14 +559,64 @@ export default function ConnectPage() {
 
   function openMessageMenu(event: MouseEvent<HTMLElement>, messageId: string) {
     event.stopPropagation();
+    setMessageEmojiAnchor(null);
+    setActiveMessageForEmoji(null);
     setMessageMenuAnchor(event.currentTarget);
     setActiveMessageId(messageId);
   }
 
   function openMessageEmojiMenu(event: MouseEvent<HTMLElement>, messageId: string) {
     event.stopPropagation();
+    setMessageMenuAnchor(null);
+    setActiveMessageId(null);
     setMessageEmojiAnchor(event.currentTarget);
     setActiveMessageForEmoji(messageId);
+  }
+
+  function startEditMessage(message: ConnectConversationMessage) {
+    if (message.senderId !== currentUser.id) return;
+
+    setMessageMenuAnchor(null);
+    setActiveMessageId(null);
+    setMessageEmojiAnchor(null);
+    setActiveMessageForEmoji(null);
+    setEditingMessageId(message.id);
+    setEditingMessageDraft(message.content.replace(/^\[(IMPORTANT|URGENT)\]\s*/i, ""));
+  }
+
+  function requestCancelEditMessage() {
+    setDiscardEditDialogOpen(true);
+  }
+
+  function keepEditingMessage() {
+    setDiscardEditDialogOpen(false);
+  }
+
+  function discardEditMessage() {
+    setDiscardEditDialogOpen(false);
+    setEditingMessageId(null);
+    setEditingMessageDraft("");
+  }
+
+  function saveEditMessage(payload: { content: string; mentionUserIds: string[] }) {
+    if (!editingMessageId) return;
+    const nextContent = payload.content.trim();
+    if (!nextContent) return;
+
+    setMessagesByConversation((previous) => ({
+      ...previous,
+      [selectedConversation.id]: (previous[selectedConversation.id] ?? []).map((message) =>
+        message.id === editingMessageId
+          ? {
+            ...message,
+            content: nextContent,
+            mentions: payload.mentionUserIds,
+          }
+          : message
+      ),
+    }));
+    setEditingMessageId(null);
+    setEditingMessageDraft("");
   }
 
   function deleteMessage(messageId: string) {
@@ -648,7 +704,7 @@ export default function ConnectPage() {
   const isMentionsView = activeQuickViewId === "mentions";
 
   return (
-    <Box className="bg-[#f9fafb] text-gray-900 h-full flex flex-col overflow-hidden">
+    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "background.default", color: "text.primary" }}>
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <ConnectSidebar
           quickViews={sidebarQuickViews}
@@ -755,6 +811,12 @@ export default function ConnectPage() {
             onCloseReactionHover={scheduleReactionHoverClose}
             onOpenUserHover={openMentionHover}
             onCloseUserHover={scheduleMentionHoverClose}
+            editingMessageId={editingMessageId}
+            editingMessageValue={editingMessageDraft}
+            onStartEditMessage={startEditMessage}
+            onChangeEditMessage={setEditingMessageDraft}
+            onSaveEditMessage={saveEditMessage}
+            onCancelEditMessage={requestCancelEditMessage}
             disableHoverActions={Boolean(mentionHover)}
           >
             <ConnectMessageInput
@@ -829,6 +891,12 @@ export default function ConnectPage() {
         onClose={() => { setMessageMenuAnchor(null); setActiveMessageId(null); }}
         items={messageMenuItems.map((item) => ({
           ...item, onClick: () => {
+            if (item.id === "edit" && activeMessageId) {
+              const message = selectedMessages.find((entry) => entry.id === activeMessageId);
+              if (message) startEditMessage(message as ConnectConversationMessage);
+              return;
+            }
+
             if (item.id === "copy-link" && activeMessageId) {
               const link = `${window.location.origin}${window.location.pathname}?message=${activeMessageId}`;
               void navigator.clipboard.writeText(link);
@@ -837,8 +905,22 @@ export default function ConnectPage() {
             if (item.id === "delete" && activeMessageId) {
               deleteMessage(activeMessageId);
             }
+
+            setMessageMenuAnchor(null);
+            setActiveMessageId(null);
           }
         }))} />
+
+      <ConfirmationDialog
+        open={discardEditDialogOpen}
+        title="Discard draft"
+        description="You can discard your draft or cancel to keep editing."
+        cancelLabel="Cancel"
+        confirmLabel="Discard"
+        confirmColor="error"
+        onCancel={keepEditingMessage}
+        onConfirm={discardEditMessage}
+      />
 
       {deletedMessage ? (
         <Stack
@@ -852,15 +934,15 @@ export default function ConnectPage() {
             alignItems: "center",
             px: 2,
             py: 1.2,
-            bgcolor: "#111827",
-            color: "#fff",
-            borderRadius: 1,
-            boxShadow: "0 12px 32px rgba(15, 23, 42, 0.22)",
-            zIndex: 1400,
+            bgcolor: "grey.900",
+            color: "common.white",
+            borderRadius: (theme) => theme.tokens.radius.sm,
+            boxShadow: (theme) => theme.tokens.elevation.high,
+            zIndex: "snackbar",
           }}
         >
           <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Message deleted</Typography>
-          <Button size="small" onClick={undoDeleteMessage} sx={{ color: "#fde68a", fontWeight: 800 }}>
+          <Button size="small" onClick={undoDeleteMessage} sx={{ color: "warning.light", fontWeight: 800 }}>
             UNDO
           </Button>
         </Stack>

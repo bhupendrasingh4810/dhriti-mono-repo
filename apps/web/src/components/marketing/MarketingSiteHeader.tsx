@@ -1,6 +1,7 @@
 "use client";
 
-import { AppBar, Box, Button, Container, Stack, Toolbar, Typography } from "@mui/material";
+import NextLink from "next/link";
+import { AppBar, Box, Button, Container, Link, Stack, Toolbar, Typography } from "@dhriti/ui";
 
 type MarketingSiteHeaderProps = {
   navItems: string[];
@@ -22,10 +23,10 @@ export function MarketingSiteHeader({
       position="sticky"
       elevation={0}
       sx={{
-        background: "rgba(255,255,255,0.8)",
-        backdropFilter: "blur(18px)",
-        borderBottom: "1px solid rgba(229,231,235,0.9)",
-        color: "#121212",
+        bgcolor: "background.paper",
+        color: "text.primary",
+        borderBottom: 1,
+        borderColor: "borders.borderSubtle",
       }}
     >
       <Container maxWidth={false} sx={{ maxWidth: 1440, px: { xs: 2, md: 3 } }}>
@@ -37,54 +38,38 @@ export function MarketingSiteHeader({
                   width: 32,
                   height: 32,
                   borderRadius: "50%",
-                  background: "#fdd835",
+                  bgcolor: "primary.main",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                 }}
               >
-                <Box sx={{ width: 16, height: 16, borderRadius: "50%", background: "#fff" }} />
+                <Box sx={{ width: 16, height: 16, borderRadius: "50%", bgcolor: "primary.contrastText" }} />
               </Box>
-              <Typography variant="h6" sx={{ fontWeight: 800, letterSpacing: -0.6, color: "#121212" }}>
+              <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
                 {brandName}
               </Typography>
             </Stack>
 
             <Stack direction="row" spacing={4} sx={{ display: { xs: "none", lg: "flex" }, alignItems: "center" }}>
               {navItems.map((item) => (
-                <Typography key={item} variant="body2" sx={{ fontWeight: 500, color: "#4b5563", cursor: "pointer" }}>
+                <Typography key={item} variant="body2" color="text.secondary" sx={{ fontWeight: 500, cursor: "pointer" }}>
                   {item}
                 </Typography>
               ))}
             </Stack>
 
             <Stack direction="row" spacing={2} sx={{ alignItems: "center" }}>
-              <Button
-                component="a"
-                href={signInHref}
-                variant="text"
-                sx={{ color: "#4b5563", fontWeight: 600, textTransform: "none" }}
-              >
-                Sign in
-              </Button>
-              <Button
-                component="a"
-                href={ctaHref}
-                variant="contained"
-                sx={{
-                  background: "#fdd835",
-                  color: "#121212",
-                  borderRadius: 2,
-                  px: 3,
-                  py: 1.5,
-                  textTransform: "none",
-                  fontWeight: 800,
-                  boxShadow: "none",
-                  "&:hover": { background: "#facc15", boxShadow: "0 10px 24px rgba(253,216,53,0.28)" },
-                }}
-              >
-                {ctaLabel}
-              </Button>
+              <Link component={NextLink} href={signInHref} underline="none">
+                <Button variant="text" sx={{ fontWeight: 600 }}>
+                  Sign in
+                </Button>
+              </Link>
+              <Link component={NextLink} href={ctaHref} underline="none">
+                <Button variant="contained" sx={{ px: 3, py: 1.5, fontWeight: "fontWeightBold" }}>
+                  {ctaLabel}
+                </Button>
+              </Link>
             </Stack>
           </Stack>
         </Toolbar>

@@ -23,28 +23,25 @@ export function AttachmentsMessage({
                 const isVideo = attachment.type?.startsWith("video/");
 
                 return (
-                    <Stack key={attachment.id} direction="row" spacing={1.5} sx={{ maxWidth: 380, p: 1.25, bgcolor: "#fff", border: "1px solid #f3f4f6", borderRadius: 1, alignItems: "center" }}>
-                        <Box sx={{ width: 300, height: 200, bgcolor: "#f9fafb", border: "1px solid #f3f4f6", borderRadius: 1, position: "relative", display: "grid", placeItems: "center", color: "#3b82f6", overflow: "hidden", flexShrink: 0 }}>
+                    <Stack key={attachment.id} direction="row" spacing={1.5} sx={{ maxWidth: 380, p: 1.25, bgcolor: "background.paper", border: 1, borderColor: "borders.borderSubtle", borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center" }}>
+                        <Box sx={{ width: 300, height: 200, bgcolor: "surfaces.surfaceHover", border: 1, borderColor: "borders.borderSubtle", borderRadius: (theme) => theme.tokens.radius.sm, position: "relative", display: "grid", placeItems: "center", color: "info.main", overflow: "hidden", flexShrink: 0 }}>
                             {isImage ? (
                                 <Box component="img" src={attachment.url} alt={attachment.name} sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
                             ) : isVideo ? (
                                 <>
                                     <Box component="video" src={attachment.url} muted preload="metadata" sx={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                    <PlayArrowRounded sx={{ position: "absolute", fontSize: 22, color: "#fff", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.6))" }} />
+                                    <PlayArrowRounded sx={{ position: "absolute", fontSize: 22, color: "common.white" }} />
                                 </>
                             ) : (
                                 <Stack sx={{ alignItems: "center", justifyContent: "center" }}>
                                     <DescriptionOutlined sx={{ fontSize: 18 }} />
-                                    <Typography sx={{ fontSize: 8, fontWeight: 800, color: "#3b82f6", mt: 0.2 }}>{getFileExtension(attachment.name)}</Typography>
+                                    <Typography variant="overline" sx={{ color: "info.main", mt: 0.2 }}>{getFileExtension(attachment.name)}</Typography>
                                 </Stack>
                             )}
                         </Box>
-                        <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }}>
-                            {/* <Typography sx={{ fontSize: 12, fontWeight: 700 }} noWrap>{attachment.name}</Typography> */}
-                            {/* <Typography sx={{ fontSize: 10, color: "#9ca3af" }}>{(attachment.size / 1024).toFixed(0)} KB</Typography> */}
-                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0, textAlign: "left" }} />
                         <IconButton size="small" onClick={(event) => openAttachmentMenu(event, attachment)}>
-                            <MoreVertRounded sx={{ fontSize: 22, color: "#d1d5db" }} />
+                            <MoreVertRounded sx={{ fontSize: 22, color: "text.disabled" }} />
                         </IconButton>
                     </Stack>
                 );
