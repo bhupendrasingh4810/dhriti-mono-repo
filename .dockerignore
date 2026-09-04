@@ -1,0 +1,32 @@
+# Docker build context for the Dhriti monorepo
+
+.git
+.gitignore
+.dockerignore
+
+# Dependencies and generated output
+**/node_modules
+**/.turbo
+**/dist
+**/.next
+**/coverage
+**/*.tsbuildinfo
+**/*.log
+
+# Local secrets and environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Editor/OS noise
+.vscode
+.idea
+**/.DS_Store
+
+# The API image only needs the API, shared packages, Prisma schema, and workspace manifests
+apps/web
+docs
+scripts
+apps/api/test
+apps/api/docs
+packages/emoji-picker/emojis

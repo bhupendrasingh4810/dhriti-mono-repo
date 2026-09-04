@@ -115,21 +115,8 @@ export class ApiConfigService {
     return this.oauthProviderConfig("GITHUB");
   }
 
-  get microsoftOAuth(): {
-    clientId: string;
-    clientSecret: string;
-    callbackUrl: string;
-    tenant: string;
-  } | null {
-    const base = this.oauthProviderConfig("MICROSOFT");
-    if (!base) {
-      return null;
-    }
-    return { ...base, tenant: this.config.get("MICROSOFT_TENANT", { infer: true }) };
-  }
-
   private oauthProviderConfig(
-    provider: "GOOGLE" | "GITHUB" | "MICROSOFT",
+    provider: "GOOGLE" | "GITHUB",
   ): { clientId: string; clientSecret: string; callbackUrl: string } | null {
     const clientId = this.config.get(`${provider}_CLIENT_ID`, { infer: true }) as string | undefined;
     const clientSecret = this.config.get(`${provider}_CLIENT_SECRET`, { infer: true }) as

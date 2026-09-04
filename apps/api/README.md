@@ -6,7 +6,7 @@ Enterprise multi-app SaaS API for Dhriti — NestJS 11, Prisma/PostgreSQL, Redis
 
 | Area | Path | Notes |
 | --- | --- | --- |
-| Auth | `src/modules/auth` | Register/login, JWT (15m) + refresh rotation (7d), OAuth (Google/GitHub/Microsoft), MFA (TOTP + recovery codes), password reset, account lockout |
+| Auth | `src/modules/auth` | Register/login, JWT (15m) + refresh rotation (7d), OAuth (Google/GitHub), MFA (TOTP + recovery codes), password reset, account lockout |
 | IAM | `src/modules/organization` | Orgs, members, teams, invitations lifecycle, groups (manual + dynamic rules) |
 | Audit | `src/modules/audit` | Global audit logging (fail-safe) |
 | Files | `src/modules/file` | S3-compatible upload, presigned download, quota/type validation |

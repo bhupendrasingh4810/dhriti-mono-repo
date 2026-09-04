@@ -327,9 +327,6 @@ importers:
       passport-google-oauth20:
         specifier: ^2.0.0
         version: 2.0.0
-      passport-microsoft:
-        specifier: ^2.1.0
-        version: 2.1.0
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -364,9 +361,6 @@ importers:
       '@types/passport-google-oauth20':
         specifier: ^2.0.16
         version: 2.0.17
-      '@types/passport-microsoft':
-        specifier: ^1.0.2
-        version: 1.0.3
       '@types/qrcode':
         specifier: ^1.5.6
         version: 1.5.6
@@ -3334,9 +3328,6 @@ packages:
   '@types/passport-google-oauth20@2.0.17':
     resolution: {integrity: sha512-MHNOd2l7gOTCn3iS+wInPQMiukliAUvMpODO3VlXxOiwNEMSyzV7UNvAdqxSN872o8OXx1SqPDVT6tLW74AtqQ==}
 
-  '@types/passport-microsoft@1.0.3':
-    resolution: {integrity: sha512-Mqm/iTWEhnlS7RcgVlQMyMcXoqt51NbHtXZFAqcjSCZj4iUBu1MTlpw65X3xZ974K2WrlLQhOm3UMmLoUkMaMA==}
-
   '@types/passport-oauth2@1.8.0':
     resolution: {integrity: sha512-6//z+4orIOy/g3zx17HyQ71GSRK4bs7Sb+zFasRoc2xzlv7ZCJ+vkDBYFci8U6HY+or6Zy7ajf4mz4rK7nsWJQ==}
 
@@ -6054,10 +6045,6 @@ packages:
 
   passport-google-oauth20@2.0.0:
     resolution: {integrity: sha512-KSk6IJ15RoxuGq7D1UKK/8qKhNfzbLeLrG3gkLZ7p4A6DBCcv7xpyQwuXtWdpyR0+E0mwkpjY1VfPOhxQrKzdQ==}
-    engines: {node: '>= 0.4.0'}
-
-  passport-microsoft@2.1.0:
-    resolution: {integrity: sha512-7bOcjEmZCHg5qD55iHaMD/mgBxPtXLbqAwmKox5IsqOSEU50WJk5nQKK4lxKdBHLZ0hf+gzrFgDsTybJP18/JA==}
     engines: {node: '>= 0.4.0'}
 
   passport-oauth2@1.8.0:
@@ -10181,10 +10168,6 @@ snapshots:
       '@types/passport': 1.0.17
       '@types/passport-oauth2': 1.8.0
 
-  '@types/passport-microsoft@1.0.3':
-    dependencies:
-      '@types/passport-oauth2': 1.8.0
-
   '@types/passport-oauth2@1.8.0':
     dependencies:
       '@types/express': 5.0.6
@@ -13376,10 +13359,6 @@ snapshots:
       passport-oauth2: 1.8.0
 
   passport-google-oauth20@2.0.0:
-    dependencies:
-      passport-oauth2: 1.8.0
-
-  passport-microsoft@2.1.0:
     dependencies:
       passport-oauth2: 1.8.0
 

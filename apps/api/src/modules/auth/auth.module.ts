@@ -11,7 +11,6 @@ import { SessionService } from "./session.service";
 import { MfaService } from "./mfa.service";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { GithubStrategy } from "./strategies/github.strategy";
-import { MicrosoftStrategy } from "./strategies/microsoft.strategy";
 
 /**
  * OAuth strategies are instantiated only when the provider's credentials are
@@ -28,12 +27,6 @@ const conditionalStrategyProviders: Provider[] = [
     provide: GithubStrategy,
     useFactory: (config: ApiConfigService) =>
       config.githubOAuth ? new GithubStrategy(config) : null,
-    inject: [ApiConfigService],
-  },
-  {
-    provide: MicrosoftStrategy,
-    useFactory: (config: ApiConfigService) =>
-      config.microsoftOAuth ? new MicrosoftStrategy(config) : null,
     inject: [ApiConfigService],
   },
 ];

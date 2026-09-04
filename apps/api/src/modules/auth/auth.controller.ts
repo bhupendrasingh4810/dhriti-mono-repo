@@ -287,25 +287,6 @@ export class AuthController {
     return this.finishOAuth(request, response, ip);
   }
 
-  @Public()
-  @Get("oauth/microsoft")
-  @UseGuards(PassportAuthGuard("microsoft"))
-  @ApiOperation({ summary: "Start Microsoft OAuth flow" })
-  microsoftLogin(): void {
-    // Redirect handled by passport.
-  }
-
-  @Public()
-  @Get("oauth/microsoft/callback")
-  @UseGuards(PassportAuthGuard("microsoft"))
-  async microsoftCallback(
-    @Req() request: PassportRequest,
-    @Res() response: Response,
-    @Ip() ip: string,
-  ): Promise<void> {
-    return this.finishOAuth(request, response, ip);
-  }
-
   // ---------------- Internals ----------------
 
   private async finishOAuth(

@@ -288,7 +288,7 @@ Generate the complete Auth module with:
 - User registration (email, password, name) with email verification
 - Login with JWT access tokens (15 min) + refresh tokens (7 days)
 - Session management with Redis (store, rotate, invalidate)
-- OAuth integration (Google, GitHub, Microsoft)
+- OAuth integration (Google, GitHub)
 - Password reset flow (request, token validation, update)
 - MFA (TOTP) setup, verification, and recovery codes
 - Email verification endpoint and token validation

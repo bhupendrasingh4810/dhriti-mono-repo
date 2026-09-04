@@ -52,7 +52,7 @@ status, platformRole). An `OrganizationMember` ties a user to an org with a role
 - `POST /v1/auth/mfa/disable` `{ password, code }`.
 
 ### OAuth
-`GET /v1/auth/oauth/{google|github|microsoft}` → redirect to provider; callback at
+`GET /v1/auth/oauth/{google|github}` → redirect to provider; callback at
 `.../callback` creates/links the account (verified emails auto-activate) and
 redirects to the web app with tokens in the query string.
 

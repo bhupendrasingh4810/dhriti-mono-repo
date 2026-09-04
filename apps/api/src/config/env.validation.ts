@@ -33,11 +33,6 @@ export const envSchema = z
     GITHUB_CLIENT_SECRET: z.string().optional(),
     GITHUB_CALLBACK_URL: z.string().url().optional(),
 
-    MICROSOFT_CLIENT_ID: z.string().optional(),
-    MICROSOFT_CLIENT_SECRET: z.string().optional(),
-    MICROSOFT_CALLBACK_URL: z.string().url().optional(),
-    MICROSOFT_TENANT: z.string().default("common"),
-
     S3_ENDPOINT: z.string().url().optional(),
     S3_REGION: z.string().min(1).default("us-east-1"),
     S3_BUCKET: z.string().min(1),
@@ -54,7 +49,6 @@ export const envSchema = z
     const providers: Array<[string, Array<string | undefined>]> = [
       ["GOOGLE", [env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_CALLBACK_URL]],
       ["GITHUB", [env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET, env.GITHUB_CALLBACK_URL]],
-      ["MICROSOFT", [env.MICROSOFT_CLIENT_ID, env.MICROSOFT_CLIENT_SECRET, env.MICROSOFT_CALLBACK_URL]],
     ];
 
     for (const [name, values] of providers) {
