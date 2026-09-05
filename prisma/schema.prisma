@@ -10,14 +10,27 @@ datasource db {
 enum UserStatus {
   PENDING_VERIFICATION
   ACTIVE
+  INACTIVE
   SUSPENDED
+  DEACTIVATED
   LOCKED
   DELETED
+  BANNED
 }
 
 enum OAuthProvider {
+  EMAIL
   GOOGLE
   GITHUB
+  MICROSOFT
+  LINKEDIN
+  APPLE
+  FACEBOOK
+  TWITTER
+  SLACK
+  SAML
+  OIDC
+  CUSTOM
 }
 
 enum VerificationTokenType {
@@ -33,62 +46,239 @@ enum OrganizationRole {
 }
 
 model User {
-  id                  String      @id @default(uuid()) @db.Uuid
-  email               String      @unique
-  name                String
-  passwordHash        String?
-  avatarUrl           String?
-  timezone            String      @default("UTC")
-  locale              String      @default("en")
-  status              UserStatus  @default(PENDING_VERIFICATION)
-  platformRole        PlatformRole?
-  emailVerifiedAt     DateTime?
-  mfaEnabled          Boolean     @default(false)
-  mfaSecret           String?
-  failedLoginAttempts Int         @default(0)
-  lockedUntil         DateTime?
-  lastLoginAt         DateTime?
-  createdAt           DateTime    @default(now())
-  updatedAt           DateTime    @updatedAt
-  deletedAt           DateTime?
+  // ==================== Core Identity ====================
+  id                    String      @id @default(uuid()) @db.Uuid
+  email                 String      @unique
+  phoneNumber           String?     @unique
+  name                  String
+  firstName             String?     @map("first_name")
+  lastName              String?     @map("last_name")
+  avatarUrl             String?     @map("avatar_url")
+  avatarThumbnailUrl    String?     @map("avatar_thumbnail_url")
 
-  identities     UserIdentity[]
-  sessions       UserSession[]
-  tokens         VerificationToken[]
-  recoveryCodes  MfaRecoveryCode[]
-  memberships    OrganizationMember[]
-  teamMemberships TeamMember[]
-  uploadedFiles  StoredFile[]
-  createdChannels Channel[]
-  atlasPages     AtlasPage[]
-  atlasComments  AtlasComment[]
-  eventAttendances EventAttendee[]
-  nexusTasks     NexusTask[]
-  nexusConversations NexusConversation[]
-  messages       Message[]
-  facilitatedSessions CadenceSession[]
-  supportTickets SupportTicket[]
-  notifications Notification[]
+  // =================== Authentication ====================
+  passwordHash            String?
+  emailVerificationToken  String?    @unique
+  emailVerificationSentAt DateTime?
+  passwordResetToken      String?     @unique
+  passwordResetExpires    DateTime?
+  phoneVerificationToken  String?    @unique
+  phoneVerificationSentAt DateTime?
+  phoneVerifiedAt         DateTime?
+  status                  UserStatus  @default(PENDING_VERIFICATION)
+  emailVerifiedAt         DateTime?
+
+  // ==================== Security =========================
+  mfaEnabled            Boolean     @default(false)
+  mfaSecret             String?
+  mfaBackupCodesUsed    Int         @default(0)
+  failedLoginAttempts   Int         @default(0)
+  lockedUntil           DateTime?
+  lastPasswordChange    DateTime?   @map("last_password_change")
+  passwordExpiresAt     DateTime?   @map("password_expires_at")
+
+  // =================== Preferences =======================
+  timezone              String      @default("UTC")
+  locale                String      @default("en")
+  theme                 String      @default("light")
+  language              String      @default("en")
+  notificationPreferencesJson Json?   @map("notification_preferences")
+
+  // ===================== Profile =========================
+  bio                 String?     @db.Text
+  jobTitle            String?
+  department          String?
+  managerId           String?     @db.Uuid
+
+  // ==================== HRMS Fields ====================
+  // Employment
+  employeeId            String?     @unique @map("employee_id")
+  employmentType        String?     @map("employment_type")  // full-time, part-time, contract, intern
+  employmentStartDate   DateTime?   @map("employment_start_date")
+  employmentEndDate     DateTime?   @map("employment_end_date")
+  officeLocation        String?     @map("office_location")
+  workSchedule          Json?       @map("work_schedule")  // {monday: "9-5", tuesday: "9-5"}
+  
+  // Compensation (encrypted at application level)
+  salary                String?     @map("salary")  // Encrypted
+  currency              String?     @default("USD")
+  payFrequency          String?     @map("pay_frequency")  // monthly, bi-weekly, weekly
+
+  // Personal Details
+  dateOfBirth           DateTime?   @map("date_of_birth")
+  dateOfBirthVerified   Boolean     @default(false) @map("dob_verified")
+  gender                String?     @map("gender")  // male, female, non-binary, prefer-not-to-say
+  pronouns              String?     @map("pronouns")  // he/him, she/her, they/them
+  maritalStatus         String?     @map("marital_status")
+  nationality           String?     @map("nationality")
+  location              String?     @map("location")  // City, Country
+  
+  // Emergency Contact
+  emergencyContactName      String?     @map("emergency_contact_name")
+  emergencyContactPhone     String?     @map("emergency_contact_phone")
+  emergencyContactEmail     String?     @map("emergency_contact_email")
+  emergencyContactRelation  String?     @map("emergency_contact_relation")
+  
+  // Skills & Qualifications
+  skills                String[]    @default([])
+  certifications        Json?       @db.JsonB  // [{name, issuer, date, expiry}]
+  education             Json?       @db.JsonB  // [{degree, institution, year}]
+  experience            Int?        @default(0) @map("experience_years")  // Years of experience
+
+  // ==================== Work OS Fields ====================
+  // Work Schedule
+  workingHoursStart     String?     @map("working_hours_start")  // "09:00"
+  workingHoursEnd       String?     @map("working_hours_end")    // "17:00"
+  workingDays           Int[]       @default([1,2,3,4,5]) @map("working_days")  // Mon-Fri
+  workingHoursPerWeek   Int?        @map("working_hours_per_week")
+  
+  // Availability
+  outOfOffice           Boolean     @default(false) @map("out_of_office")
+  outOfOfficeFrom       DateTime?   @map("out_of_office_from")
+  outOfOfficeTo         DateTime?   @map("out_of_office_to")
+  outOfOfficeMessage    String?     @map("out_of_office_message")
+  vacationBalance       Float?      @map("vacation_balance")  // Days remaining
+  sickLeaveBalance      Float?      @map("sick_leave_balance")
+  
+  // Focus Mode
+  focusModeEnabled      Boolean     @default(false) @map("focus_mode_enabled")
+  focusModeSchedule     Json?       @map("focus_mode_schedule")
+  doNotDisturbUntil     DateTime?   @map("do_not_disturb_until")
+
+  // ==================== Activity ====================
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  lastActiveAt          DateTime?
+  lastActiveChannel     String?     @map("last_active_channel")
+  loginCount            Int         @default(0)
+
+  // ==================== Compliance ====================
+  // Consent & Agreements
+  gdprConsent           Boolean     @default(false) @map("gdpr_consent")
+  gdprConsentDate       DateTime?   @map("gdpr_consent_date")
+  gdprConsentIp         String?     @map("gdpr_consent_ip")
+  dataProcessingConsent Boolean     @default(false) @map("data_processing_consent")
+  marketingConsent      Boolean     @default(false) @map("marketing_consent")
+  termsAcceptedAt       DateTime?   @map("terms_accepted_at")
+  termsVersion          String?     @map("terms_version")
+  privacyPolicyAcceptedAt DateTime? @map("privacy_policy_accepted_at")
+  ndaAcceptedAt         DateTime?   @map("nda_accepted_at")
+  codeOfConductAcceptedAt DateTime? @map("code_of_conduct_accepted_at")
+  
+  // Background Checks (for HRMS)
+  backgroundCheckStatus String?     @map("background_check_status")  // pending, completed, failed
+  backgroundCheckDate   DateTime?   @map("background_check_date")
+  referenceCheckStatus  String?     @map("reference_check_status")
+  
+  // Right to Work
+  rightToWorkStatus     String?     @map("right_to_work_status")  // citizen, visa, work_permit
+  rightToWorkDocument   String?     @map("right_to_work_document")
+  rightToWorkExpiry     DateTime?   @map("right_to_work_expiry")
+  visaType              String?     @map("visa_type")
+  visaExpiry            DateTime?   @map("visa_expiry")
+  
+  // Tax Information
+  taxId                 String?     @map("tax_id")  // SSN, PAN, etc. (encrypted)
+  taxFilingStatus       String?     @map("tax_filing_status")
+  
+  // ==================== Metadata ====================
+  platformRole          PlatformRole?
+  source                String      @default("email")
+  sourceMetadata        Json?       @db.JsonB  // OAuth provider details
+  externalId            String?     @unique @map("external_id")  // For SCIM/SSO
+  metadata              Json?       @db.JsonB
+  
+  // ==================== Timestamps ====================
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  deletedAt             DateTime?
+  lastModifiedBy        String?     @map("last_modified_by")
+
+  // Relations
+  identities              UserIdentity[]
+  sessions                UserSession[]
+  tokens                  VerificationToken[]
+  recoveryCodes           MfaRecoveryCode[]
+  memberships             OrganizationMember[]
+  teamMemberships         TeamMember[]
+  uploadedFiles           StoredFile[]
+  createdChannels         Channel[]
+  atlasPages              AtlasPage[]
+  atlasComments           AtlasComment[]
+  eventAttendances        EventAttendee[]
+  nexusTasks              NexusTask[]
+  nexusConversations      NexusConversation[]
+  messages                Message[]
+  facilitatedSessions     CadenceSession[]
+  supportTickets          SupportTicket[]
+  notifications           Notification[]
   notificationPreferences NotificationPreference[]
-  sentInvitations Invitation[]
-  groupMemberships GroupMember[]
+  sentInvitations         Invitation[]
+  groupMemberships        GroupMember[]
+  managedUsers        User[]      @relation("ManagerSubordinates")
+  manager             User?       @relation("ManagerSubordinates", fields: [managerId], references: [id])
 
+  // HRMS Relations
+  attendanceRecords     AttendanceRecord[]
+  leaveRequests         LeaveRequest[]
+  performanceReviews    PerformanceReview[]
+  payrollRecords        PayrollRecord[]
+  trainingEnrollments   TrainingEnrollment[]  // Changed from trainings
+  assignedAssets        Asset[]               // Changed from assets (for assigned assets)
+  reviewedPerformance   PerformanceReview[]   @relation("RevieweeReviewer")  // As reviewer
+
+  @@index([email])
+  @@index([phoneNumber])
   @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@index([managerId])
+  @@index([department])
+  @@index([jobTitle])
+  @@index([employeeId])
+  @@index([employmentType])
   @@map("users")
 }
 
 model UserIdentity {
-  id                String        @id @default(uuid()) @db.Uuid
-  userId            String        @db.Uuid
-  provider          OAuthProvider
-  providerAccountId String
-  email             String?
-  createdAt         DateTime      @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  id                    String        @id @default(uuid()) @db.Uuid
+  userId                String        @db.Uuid
+  provider              OAuthProvider
+  providerAccountId     String
+  providerUserId        String?       // External user ID from provider
+  email                 String?
+  emailVerified         Boolean       @default(false)
+  name                  String?
+  firstName             String?
+  lastName              String?
+  avatarUrl             String?
+  phoneNumber           String?
+  
+  // OAuth Tokens (encrypted at application level)
+  accessToken           String?       @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshToken          String?       @db.Text
+  refreshTokenExpiresAt DateTime?
+  idToken               String?       @db.Text
+  scope                 String[]
+  
+  // Provider-specific metadata
+  providerMetadata      Json?         @db.JsonB  // Raw provider response
+  
+  // Security
+  lastUsedAt            DateTime?
+  lastUsedIp            String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relation
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Indexes
   @@unique([provider, providerAccountId])
   @@index([userId])
+  @@index([provider])
+  @@index([email])
   @@map("user_identities")
 }
 
@@ -860,6 +1050,30 @@ enum SupportTicketPriority {
   URGENT
 }
 
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  FREELANCE
+}
+
+enum BackgroundCheckStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  NOT_REQUIRED
+}
+
+enum RightToWorkStatus {
+  CITIZEN
+  PERMANENT_RESIDENT
+  VISA_HOLDER
+  WORK_PERMIT
+  PENDING
+}
+
 model Product {
   id          String   @id @default(uuid()) @db.Uuid
   key         String   @unique
@@ -1125,4 +1339,335 @@ model UsageEvent {
   @@index([organizationId, createdAt])
   @@index([organizationId, app, createdAt])
   @@map("usage_events")
+}
+
+
+// ==================== HRMS Models ====================
+
+// Attendance Tracking
+model AttendanceRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  date            DateTime @db.Date
+  checkIn         DateTime?
+  checkOut        DateTime?
+  status          AttendanceStatus @default(PRESENT)
+  workHours       Float?
+  breakTime       Int?
+  location        String?
+  ipAddress       String?
+  deviceInfo      String?
+  notes           String?  @db.Text
+  approvedBy      String?  @db.Uuid
+  approvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  WORK_FROM_HOME
+  ON_LEAVE
+  HOLIDAY
+}
+
+// Leave Management
+model LeaveRequest {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  leaveType       LeaveType
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+  totalDays       Float
+  reason          String?  @db.Text
+  status          LeaveStatus @default(PENDING)
+  approvedBy      String?  @db.Uuid
+  approvedAt      DateTime?
+  rejectedBy      String?  @db.Uuid
+  rejectedAt      DateTime?
+  rejectionReason String?  @db.Text
+  attachmentUrls  String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([leaveType])
+  @@map("leave_requests")
+}
+
+enum LeaveType {
+  VACATION
+  SICK_LEAVE
+  PERSONAL_LEAVE
+  MATERNITY_LEAVE
+  PATERNITY_LEAVE
+  BEREAVEMENT_LEAVE
+  JURY_DUTY
+  UNPAID_LEAVE
+  WORK_FROM_HOME
+  HALF_DAY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  WITHDRAWN
+}
+
+// Performance Reviews
+model PerformanceReview {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  reviewerId      String   @db.Uuid
+  reviewType      ReviewType
+  cycle           String
+  startDate       DateTime @db.Date
+  dueDate         DateTime @db.Date
+  completedAt     DateTime?
+  status          ReviewStatus @default(PENDING)
+  
+  overallRating   Int?
+  performanceRating Int?
+  behaviorRating  Int?
+  leadershipRating Int?
+  
+  strengths       String?  @db.Text
+  areasForImprovement String? @db.Text
+  goals           Json?    @db.JsonB
+  comments        String?  @db.Text
+  employeeComments String? @db.Text
+  
+  calibrationStatus String?
+  finalRating     Int?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer        User     @relation("RevieweeReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([reviewerId])
+  @@index([status])
+  @@map("performance_reviews")
+}
+
+enum ReviewType {
+  SELF_REVIEW
+  MANAGER_REVIEW
+  PEER_REVIEW
+  PROBATION_REVIEW
+  ANNUAL_REVIEW
+  QUARTERLY_REVIEW
+}
+
+enum ReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CALIBRATING
+  APPROVED
+}
+
+// Payroll
+model PayrollRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  period          String
+  periodStart     DateTime @db.Date
+  periodEnd       DateTime @db.Date
+  payDate         DateTime @db.Date
+  
+  basicSalary     Float
+  allowances      Json?    @db.JsonB
+  overtime        Float    @default(0)
+  bonus           Float    @default(0)
+  commission      Float    @default(0)
+  otherEarnings   Float    @default(0)
+  grossSalary     Float
+  
+  tax             Float    @default(0)
+  socialSecurity  Float    @default(0)
+  healthInsurance Float    @default(0)
+  retirement      Float    @default(0)
+  otherDeductions Float    @default(0)
+  totalDeductions Float
+  
+  netPay          Float
+  currency        String   @default("USD")
+  
+  status          PayrollStatus @default(DRAFT)
+  paidAt          DateTime?
+  paymentMethod   String?
+  bankAccount     String?
+  
+  notes           String?
+  metadata        Json?    @db.JsonB
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([period])
+  @@index([status])
+  @@map("payroll_records")
+}
+
+enum PayrollStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  FAILED
+  CANCELLED
+}
+
+// Training & Development
+model Training {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?  @db.Text
+  type            TrainingType
+  provider        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  duration        Int?
+  location        String?
+  url             String?
+  status          TrainingStatus @default(SCHEDULED)
+  maxParticipants Int?
+  
+  enrollments     TrainingEnrollment[]
+  
+  cost            Float?
+  currency        String?  @default("USD")
+  
+  certificationOffered Boolean @default(false)
+  certificationUrl  String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@map("trainings")
+}
+
+enum TrainingType {
+  ONBOARDING
+  TECHNICAL
+  SOFT_SKILLS
+  COMPLIANCE
+  LEADERSHIP
+  SAFETY
+  PRODUCT
+  OTHER
+}
+
+enum TrainingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+model TrainingEnrollment {
+  id              String   @id @default(uuid()) @db.Uuid
+  trainingId      String   @db.Uuid
+  userId          String   @db.Uuid
+  enrolledAt      DateTime @default(now())
+  completedAt     DateTime?
+  status          TrainingEnrollmentStatus @default(ENROLLED)
+  score           Float?
+  feedback        String?  @db.Text
+  certificateUrl  String?
+  
+  training        Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([trainingId, userId])
+  @@index([trainingId])
+  @@index([userId])
+  @@map("training_enrollments")
+}
+
+enum TrainingEnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  DROPPED_OUT
+}
+
+// Asset Management
+model Asset {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  type            AssetType
+  serialNumber    String?  @unique
+  model           String?
+  manufacturer    String?
+  purchaseDate    DateTime?
+  purchasePrice   Float?
+  warrantyExpiry  DateTime?
+  status          AssetStatus @default(AVAILABLE)
+  assignedTo      String?  @db.Uuid
+  assignedAt      DateTime?
+  assignedBy      String?  @db.Uuid
+  condition       String?
+  location        String?
+  notes           String?  @db.Text
+  metadata        Json?    @db.JsonB
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User?    @relation(fields: [assignedTo], references: [id])
+  
+  @@index([type])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("assets")
+}
+
+enum AssetType {
+  LAPTOP
+  DESKTOP
+  MONITOR
+  KEYBOARD
+  MOUSE
+  HEADPHONES
+  PHONE
+  TABLET
+  FURNITURE
+  ACCESS_CARD
+  OTHER
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  IN_REPAIR
+  LOST
+  STOLEN
+  RETIRED
+  DISPOSABLE
 }
