@@ -1,0 +1,213 @@
+model AttendanceRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  date            DateTime @db.Date
+  checkIn         DateTime?
+  checkOut        DateTime?
+  status          AttendanceStatus @default(PRESENT)
+  workHours       Float?
+  breakTime       Int?
+  location        String?
+  ipAddress       String?
+  deviceInfo      String?
+  notes           String?  @db.Text
+  approvedBy      String?  @db.Uuid
+  approvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+model LeaveRequest {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  leaveType       LeaveType
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+  totalDays       Float
+  reason          String?  @db.Text
+  status          LeaveStatus @default(PENDING)
+  approvedBy      String?  @db.Uuid
+  approvedAt      DateTime?
+  rejectedBy      String?  @db.Uuid
+  rejectedAt      DateTime?
+  rejectionReason String?  @db.Text
+  attachmentUrls  String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([leaveType])
+  @@map("leave_requests")
+}
+
+model PerformanceReview {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  reviewerId      String   @db.Uuid
+  reviewType      ReviewType
+  cycle           String
+  startDate       DateTime @db.Date
+  dueDate         DateTime @db.Date
+  completedAt     DateTime?
+  status          ReviewStatus @default(PENDING)
+  
+  overallRating   Int?
+  performanceRating Int?
+  behaviorRating  Int?
+  leadershipRating Int?
+  
+  strengths       String?  @db.Text
+  areasForImprovement String? @db.Text
+  goals           Json?    @db.JsonB
+  comments        String?  @db.Text
+  employeeComments String? @db.Text
+  
+  calibrationStatus String?
+  finalRating     Int?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer        UserHRMSProfile     @relation("RevieweeReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([reviewerId])
+  @@index([status])
+  @@map("performance_reviews")
+}
+
+model PayrollRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  period          String
+  periodStart     DateTime @db.Date
+  periodEnd       DateTime @db.Date
+  payDate         DateTime @db.Date
+  
+  basicSalary     Float
+  allowances      Json?    @db.JsonB
+  overtime        Float    @default(0)
+  bonus           Float    @default(0)
+  commission      Float    @default(0)
+  otherEarnings   Float    @default(0)
+  grossSalary     Float
+  
+  tax             Float    @default(0)
+  socialSecurity  Float    @default(0)
+  healthInsurance Float    @default(0)
+  retirement      Float    @default(0)
+  otherDeductions Float    @default(0)
+  totalDeductions Float
+  
+  netPay          Float
+  currency        String   @default("USD")
+  
+  status          PayrollStatus @default(DRAFT)
+  paidAt          DateTime?
+  paymentMethod   String?
+  bankAccount     String?
+  
+  notes           String?
+  metadata        Json?    @db.JsonB
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([period])
+  @@index([status])
+  @@map("payroll_records")
+}
+
+model Training {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?  @db.Text
+  type            TrainingType
+  provider        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  duration        Int?
+  location        String?
+  url             String?
+  status          TrainingStatus @default(SCHEDULED)
+  maxParticipants Int?
+  
+  enrollments     TrainingEnrollment[]
+  
+  cost            Float?
+  currency        String?  @default("USD")
+  
+  certificationOffered Boolean @default(false)
+  certificationUrl  String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@map("trainings")
+}
+
+model TrainingEnrollment {
+  id              String   @id @default(uuid()) @db.Uuid
+  trainingId      String   @db.Uuid
+  userId          String   @db.Uuid
+  enrolledAt      DateTime @default(now())
+  completedAt     DateTime?
+  status          TrainingEnrollmentStatus @default(ENROLLED)
+  score           Float?
+  feedback        String?  @db.Text
+  certificateUrl  String?
+  
+  training        Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([trainingId, userId])
+  @@index([trainingId])
+  @@index([userId])
+  @@map("training_enrollments")
+}
+
+model Asset {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  type            AssetType
+  serialNumber    String?  @unique
+  model           String?
+  manufacturer    String?
+  purchaseDate    DateTime?
+  purchasePrice   Float?
+  warrantyExpiry  DateTime?
+  status          AssetStatus @default(AVAILABLE)
+  assignedTo      String?  @db.Uuid
+  assignedAt      DateTime?
+  assignedBy      String?  @db.Uuid
+  condition       String?
+  location        String?
+  notes           String?  @db.Text
+  metadata        Json?    @db.JsonB
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile?    @relation(fields: [assignedTo], references: [id])
+  
+  @@index([type])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("assets")
+}

@@ -13,7 +13,7 @@ import {
   IS_PUBLIC_KEY,
 } from "../decorators/public.decorator";
 import type { AuthenticatedUser } from "../decorators/current-user.decorator";
-import { SessionService } from "../../modules/auth/session.service";
+import { SessionService } from "../../modules/auth/services/session.service";
 
 export interface AccessTokenPayload {
   sub: string;

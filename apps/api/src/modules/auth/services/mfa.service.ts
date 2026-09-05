@@ -4,13 +4,13 @@ import { HttpStatus, Injectable } from "@nestjs/common";
 import { authenticator } from "otplib";
 import * as QRCode from "qrcode";
 
-import { PrismaService } from "../../database/prisma.service";
-import { RedisService } from "../../redis/redis.service";
-import { ApiConfigService } from "../../config/config.service";
+import { PrismaService } from "../../../database/prisma.service";
+import { RedisService } from "../../../redis/redis.service";
+import { ApiConfigService } from "../../../config/config.service";
 import { TokenService } from "./token.service";
-import { AppError } from "../../common/errors/app-error";
-import { ErrorCode } from "../../common/errors/error-codes";
-import type { MfaConfirmResponse, MfaSetupResponse } from "./dto/mfa.dto";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
+import type { MfaConfirmResponse, MfaSetupResponse } from "../dto/mfa.dto";
 
 const PENDING_SECRET_TTL_SECONDS = 600;
 const pendingSecretKey = (userId: string): string => `auth:mfa:pending:${userId}`;
@@ -26,11 +26,14 @@ export class MfaService {
   ) {}
 
   async beginSetup(userId: string, email: string): Promise<MfaSetupResponse> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { auth: true },
+    });
     if (!user) {
       throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
     }
-    if (user.mfaEnabled) {
+    if (user.auth?.mfaEnabled) {
       throw new AppError(
         ErrorCode.MFA_ALREADY_ENABLED,
         "MFA is already enabled on this account",
@@ -63,9 +66,10 @@ export class MfaService {
 
     const recoveryCodes = this.generateRecoveryCodes();
     await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { mfaEnabled: true, mfaSecret: pending.secret },
+      this.prisma.userAuth.upsert({
+        where: { userId },
+        create: { userId, mfaEnabled: true, mfaSecret: pending.secret },
+        update: { mfaEnabled: true, mfaSecret: pending.secret },
       }),
       this.prisma.mfaRecoveryCode.deleteMany({ where: { userId, usedAt: null } }),
       this.prisma.mfaRecoveryCode.createMany({
@@ -81,14 +85,14 @@ export class MfaService {
   }
 
   async verifyTotpForUser(userId: string, code: string): Promise<boolean> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+    const auth = await this.prisma.userAuth.findUnique({
+      where: { userId },
       select: { mfaEnabled: true, mfaSecret: true },
     });
-    if (!user?.mfaEnabled || !user.mfaSecret) {
+    if (!auth?.mfaEnabled || !auth.mfaSecret) {
       return false;
     }
-    return this.verifyTotp(user.mfaSecret, code);
+    return this.verifyTotp(auth.mfaSecret, code);
   }
 
   async consumeRecoveryCode(userId: string, recoveryCode: string): Promise<boolean> {
@@ -101,20 +105,17 @@ export class MfaService {
   }
 
   async disable(userId: string, code: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
-    }
-    if (!user.mfaEnabled || !user.mfaSecret) {
+    const auth = await this.prisma.userAuth.findUnique({ where: { userId } });
+    if (!auth || !auth.mfaEnabled || !auth.mfaSecret) {
       throw new AppError(ErrorCode.MFA_NOT_ENABLED, "MFA is not enabled", HttpStatus.BAD_REQUEST);
     }
-    if (!this.verifyTotp(user.mfaSecret, code)) {
+    if (!this.verifyTotp(auth.mfaSecret, code)) {
       throw new AppError(ErrorCode.MFA_CODE_INVALID, "Invalid authenticator code", HttpStatus.BAD_REQUEST);
     }
 
     await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: userId },
+      this.prisma.userAuth.update({
+        where: { userId },
         data: { mfaEnabled: false, mfaSecret: null },
       }),
       this.prisma.mfaRecoveryCode.deleteMany({ where: { userId } }),

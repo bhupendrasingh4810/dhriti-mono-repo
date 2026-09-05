@@ -1,16 +1,21 @@
 import { Module, type Provider } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
+import { AuthLoginController } from "./controllers/login.controller";
+import { AuthOAuthController } from "./controllers/oauth.controller";
+import { AuthPasswordController } from "./controllers/password.controller";
+import { AuthProfileController } from "./controllers/profile.controller";
+import { AuthMfaController } from "./controllers/mfa.controller";
 
 import { ApiConfigService } from "../../config/config.service";
 
-import { AuthController } from "./auth.controller";
-import { AuthService } from "./auth.service";
-import { TokenService } from "./token.service";
-import { SessionService } from "./session.service";
-import { MfaService } from "./mfa.service";
+import { AuthService } from "./services/auth.service";
+import { TokenService } from "./services/token.service";
+import { SessionService } from "./services/session.service";
+import { MfaService } from "./services/mfa.service";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { GithubStrategy } from "./strategies/github.strategy";
+import { AuthRegistrationController } from "./controllers/registration.controller";
 
 /**
  * OAuth strategies are instantiated only when the provider's credentials are
@@ -36,7 +41,14 @@ const conditionalStrategyProviders: Provider[] = [
     PassportModule.register({}),
     JwtModule.register({}),
   ],
-  controllers: [AuthController],
+  controllers: [
+    AuthRegistrationController,
+    AuthLoginController,
+    AuthOAuthController,
+    AuthPasswordController,
+    AuthProfileController,
+    AuthMfaController,
+  ],
   providers: [
     AuthService,
     TokenService,

@@ -3,7 +3,7 @@ import { JwtService } from "@nestjs/jwt";
 import type { Socket } from "socket.io";
 
 import { ApiConfigService } from "../config/config.service";
-import { SessionService } from "../modules/auth/session.service";
+import { SessionService } from "../modules/auth/services/session.service";
 import type { AccessTokenPayload } from "../common/guards/auth.guard";
 
 export interface WsPrincipal {

@@ -1,0 +1,350 @@
+// prisma/parts/20-work-os.prisma
+
+// ==================== Connect ====================
+
+model Channel {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
+  teamId         String?           @db.Uuid
+  name           String
+  slug           String?
+  type           ChannelType       @default(CHANNEL)
+  visibility     ChannelVisibility @default(PUBLIC)
+  topic          String?
+  description    String?
+  isArchived     Boolean           @default(false)
+  createdById    String            @db.Uuid
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?          @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  createdBy    User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  members      ChannelMember[]
+  messages     Message[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@index([teamId])
+  @@map("channels")
+}
+
+model Message {
+  id               String    @id @default(uuid()) @db.Uuid
+  organizationId   String    @db.Uuid
+  channelId        String    @db.Uuid
+  authorId         String    @db.Uuid
+  parentId         String?   @db.Uuid
+  content          String    @db.Text
+  contentHtml      String?   @db.Text
+  isEdited         Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  editedAt         DateTime?
+  deletedAt        DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channel      Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  parent       Message?     @relation("ThreadReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies      Message[]    @relation("ThreadReplies")
+  mentions     MessageMention[]
+  reactions    MessageReaction[]
+
+  @@index([channelId, createdAt])
+  @@index([parentId])
+  @@index([organizationId, channelId])
+  @@map("messages")
+}
+
+// ==================== Flow ====================
+
+model Project {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  teamId         String?   @db.Uuid
+  key            String
+  name           String
+  description    String?
+  leadId         String?   @db.Uuid
+  isArchived     Boolean   @default(false)
+  issueCounter   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  issues       Issue[]
+  sprints      Sprint[]
+  boards       Board[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("projects")
+}
+
+model Board {
+  id             String    @id @default(uuid()) @db.Uuid
+  projectId      String    @db.Uuid
+  name           String
+  position       Int       @default(0)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  columns BoardColumn[]
+
+  @@index([projectId])
+  @@map("boards")
+}
+
+model BoardColumn {
+  id        String   @id @default(uuid()) @db.Uuid
+  boardId   String   @db.Uuid
+  name      String
+  status    IssueStatus
+  position  Int
+  wipLimit  Int?
+  createdAt DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@index([boardId, position])
+  @@map("board_columns")
+}
+
+model Sprint {
+  id          String    @id @default(uuid()) @db.Uuid
+  projectId   String    @db.Uuid
+  name        String
+  goal        String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean   @default(false)
+  isCompleted Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues  Issue[]
+
+  @@index([projectId])
+  @@map("sprints")
+}
+
+model Issue {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  projectId      String        @db.Uuid
+  sprintId       String?       @db.Uuid
+  number         Int
+  title          String
+  description    String?       @db.Text
+  status         IssueStatus   @default(BACKLOG)
+  priority       IssuePriority @default(NONE)
+  assigneeId     String?       @db.Uuid
+  reporterId     String        @db.Uuid
+  estimate       Int?
+  position       Int           @default(0)
+  dueDate        DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sprint       Sprint?      @relation(fields: [sprintId], references: [id], onDelete: SetNull)
+
+  @@unique([projectId, number])
+  @@index([organizationId, projectId])
+  @@index([status])
+  @@index([assigneeId])
+  @@index([sprintId])
+  @@map("issues")
+}
+
+// ==================== Atlas ====================
+
+model AtlasSpace {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  key            String
+  name           String
+  description    String?
+  icon           String?
+  createdById    String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  pages        AtlasPage[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
+  @@map("atlas_spaces")
+}
+
+model AtlasPage {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  spaceId        String    @db.Uuid
+  parentId       String?   @db.Uuid
+  title          String
+  content        String    @default("") @db.Text
+  position       Int       @default(0)
+  isPublished    Boolean   @default(false)
+  version        Int       @default(1)
+  createdById    String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  space        AtlasSpace   @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  parent       AtlasPage?   @relation("PageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     AtlasPage[]  @relation("PageTree")
+  comments     AtlasComment[]
+
+  @@index([spaceId, position])
+  @@index([parentId])
+  @@index([organizationId, spaceId])
+  @@map("atlas_pages")
+}
+
+model AtlasComment {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  pageId         String    @db.Uuid
+  authorId       String    @db.Uuid
+  content        String    @db.Text
+  isResolved     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  page         AtlasPage    @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+
+  @@index([pageId, createdAt])
+  @@map("atlas_comments")
+}
+
+// ==================== Pulse ====================
+
+model Calendar {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  ownerId        String    @db.Uuid
+  name           String
+  color          String?
+  isDefault      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events       CalendarEvent[]
+
+  @@index([organizationId])
+  @@map("calendars")
+}
+
+model CalendarEvent {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  calendarId     String    @db.Uuid
+  title          String
+  description    String?   @db.Text
+  location       String?
+  meetingUrl     String?
+  startsAt       DateTime
+  endsAt         DateTime
+  isAllDay       Boolean   @default(false)
+  recurrenceRule String?
+  createdById    String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  calendar     Calendar     @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  attendees    EventAttendee[]
+
+  @@index([calendarId, startsAt])
+  @@index([organizationId, startsAt])
+  @@map("calendar_events")
+}
+
+model EventAttendee {
+  id        String     @id @default(uuid()) @db.Uuid
+  eventId   String     @db.Uuid
+  userId    String     @db.Uuid
+  status    RsvpStatus @default(PENDING)
+  isOrganizer Boolean  @default(false)
+  createdAt DateTime   @default(now())
+
+  event CalendarEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@index([userId])
+  @@map("event_attendees")
+}
+
+// ==================== Cadence ====================
+
+model CadenceSession {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  teamId         String?            @db.Uuid
+  type           CadenceSessionType
+  title          String
+  phase          CadencePhase       @default(COLLECT)
+  facilitatorId  String             @db.Uuid
+  isAnonymous    Boolean            @default(true)
+  createdAt      DateTime           @default(now())
+  startedAt      DateTime?
+  endedAt        DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  team         Team?        @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  facilitator  User         @relation(fields: [facilitatorId], references: [id], onDelete: Restrict)
+  cards        CadenceCard[]
+
+  @@index([organizationId, createdAt])
+  @@index([teamId])
+  @@map("cadence_sessions")
+}
+
+model CadenceCard {
+  id          String    @id @default(uuid()) @db.Uuid
+  sessionId   String    @db.Uuid
+  authorId    String    @db.Uuid
+  content     String    @db.Text
+  column      String
+  groupId     String?   @db.Uuid
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  deletedAt   DateTime?
+
+  session CadenceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  votes   CadenceVote[]
+
+  @@index([sessionId, column])
+  @@index([groupId])
+  @@map("cadence_cards")
+}
+
+model CadenceVote {
+  id        String   @id @default(uuid()) @db.Uuid
+  cardId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  card CadenceCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, userId])
+  @@index([userId])
+  @@map("cadence_votes")
+}

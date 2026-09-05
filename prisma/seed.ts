@@ -202,10 +202,14 @@ async function upsertUser(
     create: {
       email,
       name,
-      passwordHash,
       status: "ACTIVE",
-      emailVerifiedAt: new Date(),
-      ...(platformRole ? { platformRole } : {}),
+      auth: {
+        create: {
+          passwordHash,
+          emailVerifiedAt: new Date(),
+          ...(platformRole ? { platformRole } : {}),
+        },
+      },
     },
   });
 }

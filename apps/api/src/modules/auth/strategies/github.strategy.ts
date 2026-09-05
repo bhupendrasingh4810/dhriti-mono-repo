@@ -3,7 +3,7 @@ import { PassportStrategy } from "@nestjs/passport";
 import { Strategy, type Profile } from "passport-github2";
 
 import { ApiConfigService } from "../../../config/config.service";
-import type { OAuthProfile } from "../auth.service";
+import type { OAuthProfile } from "../services/auth.service";
 
 type GithubVerifyCallback = (error: Error | null, profile?: OAuthProfile) => void;
 

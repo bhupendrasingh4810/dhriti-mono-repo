@@ -3,8 +3,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 
-import { ApiConfigService } from "../../config/config.service";
-import type { AccessTokenPayload } from "../../common/guards/auth.guard";
+import { ApiConfigService } from "../../../config/config.service";
+import type { AccessTokenPayload } from "../../../common/guards/auth.guard";
 
 export interface MfaTokenPayload {
   sub: string;
@@ -18,7 +18,7 @@ export class TokenService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ApiConfigService,
-  ) {}
+  ) { }
 
   async signAccessToken(params: {
     userId: string;

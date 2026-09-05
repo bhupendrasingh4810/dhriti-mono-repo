@@ -39,8 +39,8 @@ export class PlatformRolesGuard implements CanActivate {
       throw new ForbiddenException({ code: "UNAUTHORIZED", message: "Authentication required" });
     }
 
-    const record = await this.prisma.user.findUnique({
-      where: { id: user.userId },
+    const record = await this.prisma.userAuth.findUnique({
+      where: { userId: user.userId },
       select: { platformRole: true },
     });
 

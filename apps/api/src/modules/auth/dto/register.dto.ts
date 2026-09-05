@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsString, Matches, MaxLength, MinLength } from "class-validator";
+import { IsEmail, IsString, IsBoolean, Matches, MaxLength, MinLength, Equals } from "class-validator";
 
 export class RegisterDto {
   @ApiProperty({ example: "jane@acme.com" })
@@ -25,4 +25,12 @@ export class RegisterDto {
     message: "Password must include uppercase, lowercase, number and symbol",
   })
   password!: string;
+
+  @ApiProperty({ 
+    example: true,
+    description: "Must be true to accept the terms",
+  })
+  @IsBoolean()
+  @Equals(true, { message: "You must accept the terms to register" })
+  isTermsAccepted!: boolean;
 }

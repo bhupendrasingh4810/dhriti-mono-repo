@@ -1,0 +1,307 @@
+// prisma/parts/00-enums.prisma
+
+enum UserStatus {
+  PENDING_VERIFICATION
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  DEACTIVATED
+  LOCKED
+  DELETED
+  BANNED
+}
+
+enum OAuthProvider {
+  EMAIL
+  GOOGLE
+  GITHUB
+  MICROSOFT
+  LINKEDIN
+  APPLE
+  FACEBOOK
+  TWITTER
+  SLACK
+  SAML
+  OIDC
+  CUSTOM
+}
+
+enum VerificationTokenType {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum ChannelType {
+  CHANNEL
+  DIRECT
+  GROUP
+}
+
+enum ChannelVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum IssueStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+enum IssuePriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+  NONE
+}
+
+enum RsvpStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum NexusTaskStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum NexusTaskType {
+  SUMMARIZE_CONVERSATION
+  SUMMARIZE_PAGE
+  EXTRACT_TASKS
+  MEETING_NOTES
+  ASK
+}
+
+enum CadencePhase {
+  COLLECT
+  GROUP
+  VOTE
+  DISCUSS
+  DONE
+}
+
+enum CadenceSessionType {
+  RETROSPECTIVE
+  ESTIMATION
+  CHECKIN
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
+  SUPPORT
+  BILLING
+  SECURITY
+  ENGINEERING
+}
+
+enum SubscriptionPlan {
+  FREE
+  STARTER
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  ESCALATED
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+  FREELANCE
+}
+
+enum BackgroundCheckStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  NOT_REQUIRED
+}
+
+enum RightToWorkStatus {
+  CITIZEN
+  PERMANENT_RESIDENT
+  VISA_HOLDER
+  WORK_PERMIT
+  PENDING
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  WORK_FROM_HOME
+  ON_LEAVE
+  HOLIDAY
+}
+
+enum LeaveType {
+  VACATION
+  SICK_LEAVE
+  PERSONAL_LEAVE
+  MATERNITY_LEAVE
+  PATERNITY_LEAVE
+  BEREAVEMENT_LEAVE
+  JURY_DUTY
+  UNPAID_LEAVE
+  WORK_FROM_HOME
+  HALF_DAY
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  WITHDRAWN
+}
+
+enum ReviewType {
+  SELF_REVIEW
+  MANAGER_REVIEW
+  PEER_REVIEW
+  PROBATION_REVIEW
+  ANNUAL_REVIEW
+  QUARTERLY_REVIEW
+}
+
+enum ReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CALIBRATING
+  APPROVED
+}
+
+enum PayrollStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  PAID
+  FAILED
+  CANCELLED
+}
+
+enum TrainingType {
+  ONBOARDING
+  TECHNICAL
+  SOFT_SKILLS
+  COMPLIANCE
+  LEADERSHIP
+  SAFETY
+  PRODUCT
+  OTHER
+}
+
+enum TrainingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  ARCHIVED
+}
+
+enum TrainingEnrollmentStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  DROPPED_OUT
+}
+
+enum AssetType {
+  LAPTOP
+  DESKTOP
+  MONITOR
+  KEYBOARD
+  MOUSE
+  HEADPHONES
+  PHONE
+  TABLET
+  FURNITURE
+  ACCESS_CARD
+  OTHER
+}
+
+enum AssetStatus {
+  AVAILABLE
+  ASSIGNED
+  IN_REPAIR
+  LOST
+  STOLEN
+  RETIRED
+  DISPOSABLE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum NotificationType {
+  MENTION
+  ASSIGNMENT
+  DUE_DATE
+  MEETING_REMINDER
+  COMMENT
+  SYSTEM
+}
+
+enum DhritiUsageType {
+  WORK
+  EDUCATION
+  OTHER
+}
+
+enum DhritiExperience {
+  NEW
+  RETURNING
+}
+
+enum DhritiUseCase {
+  CHAT_COLLABORATION
+  PROJECT_MANAGEMENT
+  HRMS
+  CALENDAR_MEETINGS
+}

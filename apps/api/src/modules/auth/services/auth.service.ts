@@ -1,21 +1,21 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
-import type { OAuthProvider, User } from "@prisma/client";
+import type { OAuthProvider, User, UserAuth, UserProfile } from "@prisma/client";
 
-import { PrismaService } from "../../database/prisma.service";
-import { ApiConfigService } from "../../config/config.service";
-import { EmailService } from "../notification/email.service";
-import { AppError } from "../../common/errors/app-error";
-import { ErrorCode } from "../../common/errors/error-codes";
-import type { AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { PrismaService } from "../../../database/prisma.service";
+import { ApiConfigService } from "../../../config/config.service";
+import { EmailService } from "../../notification/email.service";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
+import type { AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
 
 import { TokenService } from "./token.service";
 import { SessionService, type SessionContext } from "./session.service";
 import { MfaService } from "./mfa.service";
-import type { RegisterDto } from "./dto/register.dto";
-import type { LoginDto } from "./dto/login.dto";
-import type { UpdateProfileDto, UserProfileResponse } from "./dto/profile.dto";
-import type { AuthTokensResponse, LoginResponse } from "./dto/auth-response.dto";
+import type { RegisterDto } from "../dto/register.dto";
+import type { LoginDto } from "../dto/login.dto";
+import type { UpdateProfileDto, UserProfileResponse } from "../dto/profile.dto";
+import type { AuthTokensResponse, LoginResponse } from "../dto/auth-response.dto";
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -29,6 +29,14 @@ export interface OAuthProfile {
   emailVerified: boolean;
 }
 
+// Auth/security fields live on UserAuth, preferences on UserProfile in the
+// current schema, so most queries include those relations.
+type UserWithAuth = User & { auth: UserAuth | null };
+type UserWithRelations = User & { auth: UserAuth | null; profile: UserProfile | null };
+
+const withAuth = { auth: true } as const;
+const withAuthAndProfile = { auth: true, profile: true } as const;
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -40,7 +48,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly mfa: MfaService,
     private readonly email: EmailService,
-  ) {}
+  ) { }
 
   // ------------------------------------------------------------------
   // Registration
@@ -59,7 +67,25 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, this.config.bcryptRounds);
     const user = await this.prisma.user.create({
-      data: { email, name: dto.name.trim(), passwordHash },
+      data: {
+        email,
+        name: dto.name.trim(),
+        onboardingProfile: {
+          usageType: "",
+          experience: "",
+          useCases: [],
+          legal: {
+            termsAccepted: true,
+            privacyPolicyAccepted: true,
+            termsVersion: "2026-09-01",
+            privacyPolicyVersion: "2026-09-01",
+            acceptedAt: new Date()
+          }
+        },
+        auth: {
+          create: { passwordHash }
+        },
+      },
     });
 
     await this.issueVerificationToken(user);
@@ -69,18 +95,24 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<void> {
     const record = await this.consumeToken(token, "EMAIL_VERIFICATION");
+    await this.prisma.userAuth.upsert({
+      where: { userId: record.userId },
+      create: { userId: record.userId, emailVerifiedAt: new Date() },
+      update: { emailVerifiedAt: new Date() },
+    });
     await this.prisma.user.update({
       where: { id: record.userId },
-      data: { emailVerifiedAt: new Date(), status: "ACTIVE" },
+      data: { status: "ACTIVE" },
     });
   }
 
   async resendVerification(emailAddress: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { email: emailAddress.toLowerCase() },
+      include: withAuth,
     });
     // Deliberately no error when the account is missing/verified (no enumeration).
-    if (!user || user.emailVerifiedAt) {
+    if (!user || user.auth?.emailVerifiedAt) {
       return;
     }
     await this.issueVerificationToken(user);
@@ -93,9 +125,11 @@ export class AuthService {
   async login(dto: LoginDto, context: SessionContext = {}): Promise<LoginResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
+      include: withAuth,
     });
+    const auth = user?.auth;
 
-    if (!user || user.deletedAt || !user.passwordHash) {
+    if (!user || user.deletedAt || !auth?.passwordHash) {
       throw this.invalidCredentials();
     }
 
@@ -109,18 +143,18 @@ export class AuthService {
       );
     }
 
-    const passwordOk = await bcrypt.compare(dto.password, user.passwordHash);
+    const passwordOk = await bcrypt.compare(dto.password, auth.passwordHash);
     if (!passwordOk) {
       await this.registerFailedAttempt(user);
       throw this.invalidCredentials();
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
+    await this.prisma.userAuth.update({
+      where: { userId: user.id },
       data: { failedLoginAttempts: 0, lockedUntil: null, lastLoginAt: new Date() },
     });
 
-    if (!user.emailVerifiedAt) {
+    if (!auth.emailVerifiedAt) {
       throw new AppError(
         ErrorCode.EMAIL_NOT_VERIFIED,
         "Verify your email before signing in",
@@ -128,7 +162,7 @@ export class AuthService {
       );
     }
 
-    if (user.mfaEnabled) {
+    if (auth.mfaEnabled) {
       const mfaToken = await this.tokens.signMfaToken(user.id);
       return {
         mfaRequired: true,
@@ -215,14 +249,14 @@ export class AuthService {
     const record = await this.consumeToken(token, "PASSWORD_RESET");
     const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
 
+    await this.prisma.userAuth.upsert({
+      where: { userId: record.userId },
+      create: { userId: record.userId, passwordHash },
+      update: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+    });
     await this.prisma.user.update({
       where: { id: record.userId },
-      data: {
-        passwordHash,
-        failedLoginAttempts: 0,
-        lockedUntil: null,
-        status: "ACTIVE",
-      },
+      data: { status: "ACTIVE" },
     });
     await this.sessions.revokeAllUserSessions(record.userId);
   }
@@ -233,7 +267,7 @@ export class AuthService {
     newPassword: string,
   ): Promise<void> {
     const user = await this.requireUser(current.userId);
-    if (!user.passwordHash) {
+    if (!user.auth?.passwordHash) {
       throw new AppError(
         ErrorCode.OAUTH_ACCOUNT_EXISTS,
         "This account uses social sign-in and has no password",
@@ -241,7 +275,7 @@ export class AuthService {
       );
     }
 
-    const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+    const matches = await bcrypt.compare(currentPassword, user.auth.passwordHash);
     if (!matches) {
       throw new AppError(
         ErrorCode.PASSWORD_INCORRECT,
@@ -251,21 +285,21 @@ export class AuthService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
-    await this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+    await this.prisma.userAuth.update({ where: { userId: user.id }, data: { passwordHash } });
     await this.sessions.revokeAllUserSessions(user.id, current.sessionId);
   }
 
   /** Verifies the user's current password without mutating anything (e.g. before MFA disable). */
   async verifyUserPassword(userId: string, password: string): Promise<void> {
     const user = await this.requireUser(userId);
-    if (!user.passwordHash) {
+    if (!user.auth?.passwordHash) {
       throw new AppError(
         ErrorCode.OAUTH_ACCOUNT_EXISTS,
         "This account uses social sign-in and has no password",
         HttpStatus.BAD_REQUEST,
       );
     }
-    const matches = await bcrypt.compare(password, user.passwordHash);
+    const matches = await bcrypt.compare(password, user.auth.passwordHash);
     if (!matches) {
       throw new AppError(
         ErrorCode.PASSWORD_INCORRECT,
@@ -285,15 +319,28 @@ export class AuthService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<UserProfileResponse> {
-    const user = await this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id: userId },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
-        ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
-        ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
       },
     });
+    if (dto.timezone !== undefined || dto.locale !== undefined) {
+      await this.prisma.userProfile.upsert({
+        where: { userId },
+        create: {
+          userId,
+          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
+          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
+        },
+        update: {
+          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
+          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
+        },
+      });
+    }
+    const user = await this.requireUser(userId);
     return this.toProfile(user);
   }
 
@@ -311,16 +358,19 @@ export class AuthService {
           providerAccountId: profile.providerAccountId,
         },
       },
-      include: { user: true },
+      include: { user: { include: withAuth } },
     });
 
-    let user: User;
+    let user: UserWithAuth;
     if (identity) {
       user = identity.user;
     } else {
-      const existing = await this.prisma.user.findUnique({ where: { email } });
+      const existing = await this.prisma.user.findUnique({
+        where: { email },
+        include: withAuth,
+      });
       if (existing) {
-        if (existing.passwordHash && !profile.emailVerified) {
+        if (existing.auth?.passwordHash && !profile.emailVerified) {
           throw new AppError(
             ErrorCode.OAUTH_ACCOUNT_EXISTS,
             "An account with this email exists; sign in with password and link the provider",
@@ -329,6 +379,7 @@ export class AuthService {
         }
         user = await this.prisma.user.update({
           where: { id: existing.id },
+          include: withAuth,
           data: {
             identities: {
               create: {
@@ -337,18 +388,28 @@ export class AuthService {
                 email,
               },
             },
-            emailVerifiedAt: existing.emailVerifiedAt ?? (profile.emailVerified ? new Date() : null),
             status: existing.status === "PENDING_VERIFICATION" && profile.emailVerified ? "ACTIVE" : existing.status,
+            auth: {
+              upsert: {
+                create: { emailVerifiedAt: profile.emailVerified ? new Date() : null },
+                update: {
+                  emailVerifiedAt: existing.auth?.emailVerifiedAt ?? (profile.emailVerified ? new Date() : null),
+                },
+              },
+            },
           },
         });
       } else {
         user = await this.prisma.user.create({
+          include: withAuth,
           data: {
             email,
             name: profile.name.trim() || email,
             avatarUrl: profile.avatarUrl,
             status: profile.emailVerified ? "ACTIVE" : "PENDING_VERIFICATION",
-            emailVerifiedAt: profile.emailVerified ? new Date() : null,
+            auth: {
+              create: { emailVerifiedAt: profile.emailVerified ? new Date() : null },
+            },
             identities: {
               create: {
                 provider: profile.provider,
@@ -361,9 +422,10 @@ export class AuthService {
       }
     }
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: null },
+    await this.prisma.userAuth.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, lastLoginAt: new Date() },
+      update: { lastLoginAt: new Date(), failedLoginAttempts: 0, lockedUntil: null },
     });
 
     return this.issueTokens(user.id, user.email, context);
@@ -464,27 +526,29 @@ export class AuthService {
     await this.email.sendVerificationEmail(user.email, user.name, verificationUrl);
   }
 
-  private assertNotLocked(user: User): void {
-    if (user.lockedUntil && user.lockedUntil > new Date()) {
+  private assertNotLocked(user: UserWithAuth): void {
+    const lockedUntil = user.auth?.lockedUntil;
+    if (lockedUntil && lockedUntil > new Date()) {
       throw new AppError(
         ErrorCode.ACCOUNT_LOCKED,
         "Account is temporarily locked after too many failed attempts",
         HttpStatus.TOO_MANY_REQUESTS,
-        { unlockAt: user.lockedUntil.toISOString() },
+        { unlockAt: lockedUntil.toISOString() },
       );
     }
   }
 
-  private async registerFailedAttempt(user: User): Promise<void> {
-    const attempts = user.failedLoginAttempts + 1;
+  private async registerFailedAttempt(user: UserWithAuth): Promise<void> {
+    const attempts = (user.auth?.failedLoginAttempts ?? 0) + 1;
     const shouldLock = attempts >= this.config.lockoutThreshold;
     const lockedUntil = shouldLock
       ? new Date(Date.now() + this.config.lockoutDurationMinutes * 60 * 1000)
       : null;
 
-    await this.prisma.user.update({
-      where: { id: user.id },
-      data: { failedLoginAttempts: attempts, lockedUntil },
+    await this.prisma.userAuth.upsert({
+      where: { userId: user.id },
+      create: { userId: user.id, failedLoginAttempts: attempts, lockedUntil },
+      update: { failedLoginAttempts: attempts, lockedUntil },
     });
 
     if (shouldLock && lockedUntil) {
@@ -501,15 +565,18 @@ export class AuthService {
     );
   }
 
-  private async requireUser(userId: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  private async requireUser(userId: string): Promise<UserWithRelations> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: withAuthAndProfile,
+    });
     if (!user || user.deletedAt) {
       throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
     }
     return user;
   }
 
-  private async requireUserBySession(sessionId: string): Promise<User> {
+  private async requireUserBySession(sessionId: string): Promise<UserWithRelations> {
     const session = await this.prisma.userSession.findUnique({
       where: { id: sessionId },
       select: { userId: true },
@@ -520,18 +587,18 @@ export class AuthService {
     return this.requireUser(session.userId);
   }
 
-  private toProfile(user: User): UserProfileResponse {
+  private toProfile(user: UserWithRelations): UserProfileResponse {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
-      timezone: user.timezone,
-      locale: user.locale,
+      timezone: user.profile?.timezone ?? "UTC",
+      locale: user.profile?.locale ?? "en",
       status: user.status,
-      emailVerified: user.emailVerifiedAt !== null,
-      mfaEnabled: user.mfaEnabled,
-      lastLoginAt: user.lastLoginAt ? user.lastLoginAt.toISOString() : null,
+      emailVerified: user.auth?.emailVerifiedAt != null,
+      mfaEnabled: user.auth?.mfaEnabled ?? false,
+      lastLoginAt: user.auth?.lastLoginAt ? user.auth.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
     };
   }

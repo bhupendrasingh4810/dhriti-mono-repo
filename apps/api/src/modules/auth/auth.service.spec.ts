@@ -1,7 +1,40 @@
 import * as bcrypt from "bcryptjs";
-import type { User } from "@prisma/client";
+import type { User, UserAuth } from "@prisma/client";
 
-import { AuthService } from "./auth.service";
+type UserWithRelations = User & { auth: UserAuth | null; profile: unknown };
+
+function makeAuth(overrides: Partial<UserAuth> = {}): UserAuth {
+  return {
+    id: "auth-1",
+    userId: "user-1",
+    passwordHash: "hashed:old",
+    emailVerificationToken: null,
+    emailVerificationSentAt: null,
+    passwordResetToken: null,
+    passwordResetExpires: null,
+    phoneVerificationToken: null,
+    phoneVerificationSentAt: null,
+    phoneVerifiedAt: null,
+    emailVerifiedAt: NOW,
+    mfaEnabled: false,
+    mfaSecret: null,
+    mfaBackupCodesUsed: 0,
+    failedLoginAttempts: 0,
+    lockedUntil: null,
+    lastPasswordChange: null,
+    passwordExpiresAt: null,
+    lastLoginAt: null,
+    lastLoginIp: null,
+    loginCount: 0,
+    source: "email",
+    sourceMetadata: null,
+    externalId: null,
+    platformRole: null,
+    ...overrides,
+  } as UserAuth;
+}
+
+import { AuthService } from "./services/auth.service";
 import { ErrorCode } from "../../common/errors/error-codes";
 
 jest.mock("bcryptjs", () => ({
@@ -11,27 +44,20 @@ jest.mock("bcryptjs", () => ({
 
 const NOW = new Date("2026-01-01T00:00:00.000Z");
 
-function makeUser(overrides: Partial<User> = {}): User {
+function makeUser(overrides: Partial<UserAuth & User> = {}): UserWithRelations {
   return {
     id: "user-1",
     email: "jane@acme.com",
     name: "Jane Doe",
-    passwordHash: "hashed:old",
     avatarUrl: null,
-    timezone: "UTC",
-    locale: "en",
     status: "ACTIVE",
-    emailVerifiedAt: NOW,
-    mfaEnabled: false,
-    mfaSecret: null,
-    failedLoginAttempts: 0,
-    lockedUntil: null,
-    lastLoginAt: null,
+    managerId: null,
     createdAt: NOW,
     updatedAt: NOW,
     deletedAt: null,
-    ...overrides,
-  } as User;
+    auth: makeAuth(overrides),
+    profile: null,
+  } as UserWithRelations;
 }
 
 function makePrismaMock() {
@@ -40,6 +66,14 @@ function makePrismaMock() {
       findUnique: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+    },
+    userAuth: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      upsert: jest.fn(),
+    },
+    userProfile: {
+      upsert: jest.fn(),
     },
     userIdentity: { findUnique: jest.fn() },
     userSession: { create: jest.fn(), findUnique: jest.fn(), updateMany: jest.fn() },
@@ -127,7 +161,7 @@ describe("AuthService.register", () => {
         data: expect.objectContaining({
           email: "jane@acme.com",
           name: "Jane Doe",
-          passwordHash: "hashed:Sup3rSecure!",
+          auth: { create: { passwordHash: "hashed:Sup3rSecure!" } },
         }),
       }),
     );
@@ -190,9 +224,9 @@ describe("AuthService.login", () => {
     await expect(service.login(loginDto, {})).rejects.toMatchObject({
       code: ErrorCode.INVALID_CREDENTIALS,
     });
-    expect(prisma.user.update).toHaveBeenCalledWith(
+    expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: { failedLoginAttempts: 4, lockedUntil: null },
+        update: { failedLoginAttempts: 4, lockedUntil: null },
       }),
     );
   });
@@ -207,9 +241,9 @@ describe("AuthService.login", () => {
     await expect(service.login(loginDto, {})).rejects.toMatchObject({
       code: ErrorCode.INVALID_CREDENTIALS,
     });
-    expect(prisma.user.update).toHaveBeenCalledWith(
+    expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
+        update: expect.objectContaining({
           failedLoginAttempts: 10,
           lockedUntil: expect.any(Date),
         }),
@@ -346,9 +380,9 @@ describe("AuthService password flows", () => {
 
     await service.resetPassword("raw-token", "N3wSup3rSecure!");
 
-    expect(prisma.user.update).toHaveBeenCalledWith(
+    expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({
+        update: expect.objectContaining({
           passwordHash: "hashed:N3wSup3rSecure!",
           failedLoginAttempts: 0,
           lockedUntil: null,
@@ -421,9 +455,14 @@ describe("AuthService email verification", () => {
 
     await service.verifyEmail("raw-token");
 
+    expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        update: { emailVerifiedAt: expect.any(Date) },
+      }),
+    );
     expect(prisma.user.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "ACTIVE", emailVerifiedAt: expect.any(Date) }),
+        data: expect.objectContaining({ status: "ACTIVE" }),
       }),
     );
   });

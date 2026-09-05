@@ -27,9 +27,9 @@ import {
   type AuthenticatedUser,
 } from "../../common/decorators/current-user.decorator";
 
-import { AuthService, type OAuthProfile } from "./auth.service";
-import { MfaService } from "./mfa.service";
-import type { SessionContext } from "./session.service";
+import { AuthService, type OAuthProfile } from "./services/auth.service";
+import { MfaService } from "./services/mfa.service";
+import type { SessionContext } from "./services/session.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import {

@@ -1,0 +1,55 @@
+// prisma/parts/30-nexus.prisma
+
+model NexusTask {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @db.Uuid
+  requestedById  String          @db.Uuid
+  type           NexusTaskType
+  status         NexusTaskStatus @default(PENDING)
+  input          Json
+  result         Json?
+  error          String?
+  sourceType     String?
+  sourceId       String?
+  createdAt      DateTime        @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedBy  User         @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([requestedById, createdAt])
+  @@index([status])
+  @@map("nexus_tasks")
+}
+
+model NexusConversation {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  userId         String    @db.Uuid
+  title          String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     NexusMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("nexus_conversations")
+}
+
+model NexusMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @db.Uuid
+  role           String
+  content        String   @db.Text
+  tokens         Int?
+  createdAt      DateTime @default(now())
+
+  conversation NexusConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("nexus_messages")
+}

@@ -1,0 +1,799 @@
+// prisma/parts/10-platform.prisma
+
+// ==================== Core User Model ====================
+model User {
+  // ==================== Core Identity ====================
+  id                    String      @id @default(uuid()) @db.Uuid
+  email                 String      @unique
+  name                  String
+  avatarUrl             String?     @map("avatar_url")
+  status                UserStatus  @default(PENDING_VERIFICATION)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  deletedAt             DateTime?
+  
+  onboardingProfile     Json?
+
+  // Relations
+  identities            UserIdentity[]
+  sessions              UserSession[]
+  tokens                VerificationToken[]
+  recoveryCodes         MfaRecoveryCode[]
+  memberships           OrganizationMember[]
+  teamMemberships       TeamMember[]
+  uploadedFiles         StoredFile[]
+  createdChannels       Channel[]
+  atlasPages            AtlasPage[]
+  atlasComments         AtlasComment[]
+  eventAttendances      EventAttendee[]
+  nexusTasks            NexusTask[]
+  nexusConversations    NexusConversation[]
+  messages              Message[]
+  facilitatedSessions   CadenceSession[]
+  supportTickets        SupportTicket[]
+  notifications         Notification[]
+  notificationPrefs     NotificationPreference[]
+  sentInvitations       Invitation[]
+  groupMemberships      GroupMember[]
+  
+  // Extensions
+  auth                  UserAuth?
+  profile               UserProfile?
+  hrmsProfile           UserHRMSProfile?
+  workosProfile         UserWorkOSProfile?
+  complianceProfile     UserComplianceProfile?
+  
+  // Manager relation
+  managedUsers          User[]      @relation("ManagerSubordinates")
+  managerId             String?     @db.Uuid
+  manager               User?       @relation("ManagerSubordinates", fields: [managerId], references: [id])
+  
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+// ==================== User Auth Extension ====================
+model UserAuth {
+  id                    String      @id @default(uuid()) @db.Uuid
+  userId                String      @unique @db.Uuid
+  
+  // Authentication
+  passwordHash          String?
+  emailVerificationToken String?    @unique
+  emailVerificationSentAt DateTime?
+  passwordResetToken    String?     @unique
+  passwordResetExpires  DateTime?
+  phoneVerificationToken String?    @unique
+  phoneVerificationSentAt DateTime?
+  phoneVerifiedAt       DateTime?
+  emailVerifiedAt       DateTime?
+  
+  // Security
+  mfaEnabled            Boolean     @default(false)
+  mfaSecret             String?
+  mfaBackupCodesUsed    Int         @default(0)
+  failedLoginAttempts   Int         @default(0)
+  lockedUntil           DateTime?
+  lastPasswordChange    DateTime?   @map("last_password_change")
+  passwordExpiresAt     DateTime?   @map("password_expires_at")
+  
+  // Activity
+  lastLoginAt           DateTime?
+  lastLoginIp           String?
+  loginCount            Int         @default(0)
+  
+  // Metadata
+  source                String      @default("email")
+  sourceMetadata        Json?       @db.JsonB
+  externalId            String?     @unique @map("external_id")
+  
+  platformRole        PlatformRole?
+
+  // Relation
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("user_auth")
+}
+
+// ==================== User Profile Extension ====================
+model UserProfile {
+  id                    String      @id @default(uuid()) @db.Uuid
+  userId                String      @unique @db.Uuid
+  
+  // Personal
+  phoneNumber           String?     @unique
+  firstName             String?     @map("first_name")
+  lastName              String?     @map("last_name")
+  avatarThumbnailUrl    String?     @map("avatar_thumbnail_url")
+  bio                   String?     @db.Text
+  
+  // Work
+  jobTitle              String?
+  department            String?
+  
+  // Preferences
+  timezone              String      @default("UTC")
+  locale                String      @default("en")
+  theme                 String      @default("light")
+  language              String      @default("en")
+  notificationPreferencesJson Json? @map("notification_preferences") @db.JsonB
+  
+  // Relation
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([phoneNumber])
+  @@index([department])
+  @@map("user_profiles")
+}
+
+// ==================== User HRMS Profile Extension ====================
+model UserHRMSProfile {
+  id                    String      @id @default(uuid()) @db.Uuid
+  userId                String      @unique @db.Uuid
+  
+  // Employment
+  employeeId            String?     @unique @map("employee_id")
+  employmentType        String?     @map("employment_type")
+  employmentStartDate   DateTime?   @map("employment_start_date")
+  employmentEndDate     DateTime?   @map("employment_end_date")
+  officeLocation        String?     @map("office_location")
+  workSchedule          Json?       @map("work_schedule")
+  
+  // Compensation
+  salary                String?     @map("salary")
+  currency              String?     @default("USD")
+  payFrequency          String?     @map("pay_frequency")
+  
+  // Personal Details
+  dateOfBirth           DateTime?   @map("date_of_birth")
+  dateOfBirthVerified   Boolean     @default(false) @map("dob_verified")
+  gender                String?     @map("gender")
+  pronouns              String?     @map("pronouns")
+  maritalStatus         String?     @map("marital_status")
+  nationality           String?     @map("nationality")
+  location              String?     @map("location")
+  
+  // Emergency Contact
+  emergencyContactName      String? @map("emergency_contact_name")
+  emergencyContactPhone     String? @map("emergency_contact_phone")
+  emergencyContactEmail     String? @map("emergency_contact_email")
+  emergencyContactRelation  String? @map("emergency_contact_relation")
+  
+  // Skills & Qualifications
+  skills                String[]    @default([])
+  certifications        Json?       @db.JsonB
+  education             Json?       @db.JsonB
+  experience            Int?        @default(0) @map("experience_years")
+  
+  // Relations
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attendanceRecords     AttendanceRecord[]
+  leaveRequests         LeaveRequest[]
+  performanceReviews    PerformanceReview[]
+  payrollRecords        PayrollRecord[]
+  trainingEnrollments   TrainingEnrollment[]
+  assignedAssets        Asset[]
+  reviewedPerformance   PerformanceReview[] @relation("RevieweeReviewer")
+  
+  @@index([userId])
+  @@index([employeeId])
+  @@index([employmentType])
+  @@map("user_hrms_profiles")
+}
+
+// ==================== User WorkOS Profile Extension ====================
+model UserWorkOSProfile {
+  id                    String      @id @default(uuid()) @db.Uuid
+  userId                String      @unique @db.Uuid
+  
+  // Work Schedule
+  workingHoursStart     String?     @map("working_hours_start")
+  workingHoursEnd       String?     @map("working_hours_end")
+  workingDays           Int[]       @default([1,2,3,4,5]) @map("working_days")
+  workingHoursPerWeek   Int?        @map("working_hours_per_week")
+  
+  // Availability
+  outOfOffice           Boolean     @default(false) @map("out_of_office")
+  outOfOfficeFrom       DateTime?   @map("out_of_office_from")
+  outOfOfficeTo         DateTime?   @map("out_of_office_to")
+  outOfOfficeMessage    String?     @map("out_of_office_message")
+  vacationBalance       Float?      @map("vacation_balance")
+  sickLeaveBalance      Float?      @map("sick_leave_balance")
+  
+  // Focus Mode
+  focusModeEnabled      Boolean     @default(false) @map("focus_mode_enabled")
+  focusModeSchedule     Json?       @map("focus_mode_schedule")
+  doNotDisturbUntil     DateTime?   @map("do_not_disturb_until")
+  
+  // Activity
+  lastActiveChannel     String?     @map("last_active_channel")
+  lastActiveAt          DateTime?   @map("last_active_at")
+  
+  // Relation
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("user_workos_profiles")
+}
+
+// ==================== User Compliance Profile Extension ====================
+model UserComplianceProfile {
+  id                    String      @id @default(uuid()) @db.Uuid
+  userId                String      @unique @db.Uuid
+  
+  // Consent & Agreements
+  gdprConsent           Boolean     @default(false) @map("gdpr_consent")
+  gdprConsentDate       DateTime?   @map("gdpr_consent_date")
+  gdprConsentIp         String?     @map("gdpr_consent_ip")
+  dataProcessingConsent Boolean     @default(false) @map("data_processing_consent")
+  marketingConsent      Boolean     @default(false) @map("marketing_consent")
+  termsAcceptedAt       DateTime?   @map("terms_accepted_at")
+  termsVersion          String?     @map("terms_version")
+  privacyPolicyAcceptedAt DateTime? @map("privacy_policy_accepted_at")
+  ndaAcceptedAt         DateTime?   @map("nda_accepted_at")
+  codeOfConductAcceptedAt DateTime? @map("code_of_conduct_accepted_at")
+  
+  // Background Checks
+  backgroundCheckStatus String?     @map("background_check_status")
+  backgroundCheckDate   DateTime?   @map("background_check_date")
+  referenceCheckStatus  String?     @map("reference_check_status")
+  
+  // Right to Work
+  rightToWorkStatus     String?     @map("right_to_work_status")
+  rightToWorkDocument   String?     @map("right_to_work_document")
+  rightToWorkExpiry     DateTime?   @map("right_to_work_expiry")
+  visaType              String?     @map("visa_type")
+  visaExpiry            DateTime?   @map("visa_expiry")
+  
+  // Tax Information
+  taxId                 String?     @map("tax_id")
+  taxFilingStatus       String?     @map("tax_filing_status")
+  
+  // Audit
+  lastModifiedBy        String?     @map("last_modified_by")
+  
+  // Relation
+  user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@map("user_compliance_profiles")
+}
+
+model UserIdentity {
+  id                    String        @id @default(uuid()) @db.Uuid
+  userId                String        @db.Uuid
+  provider              OAuthProvider
+  providerAccountId     String
+  providerUserId        String?
+  email                 String?
+  emailVerified         Boolean       @default(false)
+  name                  String?
+  firstName             String?
+  lastName              String?
+  avatarUrl             String?
+  phoneNumber           String?
+  
+  accessToken           String?       @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshToken          String?       @db.Text
+  refreshTokenExpiresAt DateTime?
+  idToken               String?       @db.Text
+  scope                 String[]
+  
+  providerMetadata      Json?         @db.JsonB
+  
+  lastUsedAt            DateTime?
+  lastUsedIp            String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@index([provider])
+  @@index([email])
+  @@map("user_identities")
+}
+
+model UserSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  organizationId   String?   @db.Uuid
+  refreshTokenHash String    @unique
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  rotatedAt        DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model VerificationToken {
+  id        String                 @id @default(uuid()) @db.Uuid
+  userId    String                 @db.Uuid
+  tokenHash String                 @unique
+  type      VerificationTokenType
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime               @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("verification_tokens")
+}
+
+model MfaRecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  codeHash  String    @unique
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("mfa_recovery_codes")
+}
+
+model Organization {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  members  OrganizationMember[]
+  teams    Team[]
+  auditLogs AuditLog[]
+  files     StoredFile[]
+  channels  Channel[]
+  messages  Message[]
+  projects  Project[]
+  issues    Issue[]
+  atlasSpaces   AtlasSpace[]
+  atlasPages    AtlasPage[]
+  atlasComments AtlasComment[]
+  calendars     Calendar[]
+  calendarEvents CalendarEvent[]
+  nexusTasks    NexusTask[]
+  nexusConversations NexusConversation[]
+  cadenceSessions CadenceSession[]
+  webhooks      Webhook[]
+  subscription  Subscription?
+  entitlements  ProductEntitlement[]
+  featureFlags  FeatureFlag[]
+  supportTickets SupportTicket[]
+  settings      OrganizationSettings?
+  notifications Notification[]
+  notificationPreferences NotificationPreference[]
+  searchIndex   SearchIndex[]
+  searchHistory SearchHistory[]
+  invitations   Invitation[]
+  groups        Group[]
+  usageEvents   UsageEvent[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  role           OrganizationRole @default(MEMBER)
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Team {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      TeamMember[]
+  channels     Channel[]
+  cadenceSessions CadenceSession[]
+  projects     Project[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("teams")
+}
+
+model TeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("team_members")
+}
+
+model AuditLog {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String?   @db.Uuid
+  actorUserId    String?   @db.Uuid
+  action         String
+  resourceType   String?
+  resourceId     String?
+  metadata       Json?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId])
+  @@map("audit_logs")
+}
+
+model StoredFile {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  uploadedById   String    @db.Uuid
+  bucket         String
+  objectKey      String
+  originalName   String
+  contentType    String
+  sizeBytes      Int
+  checksumSha256 String
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, createdAt])
+  @@index([uploadedById])
+  @@map("stored_files")
+}
+
+model ChannelMember {
+  id        String    @id @default(uuid()) @db.Uuid
+  channelId String    @db.Uuid
+  userId    String    @db.Uuid
+  lastReadAt DateTime?
+  createdAt DateTime  @default(now())
+
+  channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+
+  @@unique([channelId, userId])
+  @@index([userId])
+  @@map("channel_members")
+}
+
+model MessageMention {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("message_mentions")
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+  @@map("message_reactions")
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  priceMonthly Int     @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  entitlements ProductEntitlement[]
+
+  @@map("products")
+}
+
+model Subscription {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @unique @db.Uuid
+  plan           SubscriptionPlan   @default(FREE)
+  status         SubscriptionStatus @default(TRIALING)
+  seats          Int                @default(5)
+  currentPeriodEnd DateTime?
+  cancelAtPeriodEnd Boolean         @default(false)
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model ProductEntitlement {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  productId      String   @db.Uuid
+  isEnabled      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product      Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, productId])
+  @@map("product_entitlements")
+}
+
+model FeatureFlag {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  key            String
+  isEnabled      Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+  @@map("feature_flags")
+}
+
+model SupportTicket {
+  id             String               @id @default(uuid()) @db.Uuid
+  organizationId String?              @db.Uuid
+  userId         String               @db.Uuid
+  subject        String
+  body           String               @db.Text
+  status         SupportTicketStatus  @default(OPEN)
+  priority       SupportTicketPriority @default(NORMAL)
+  assignedToId   String?
+  notes          String?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, priority])
+  @@index([organizationId])
+  @@map("support_tickets")
+}
+
+model OrganizationSettings {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @unique @db.Uuid
+  domain         String?
+  brandingLogoUrl String?
+  timezone       String   @default("UTC")
+  locale         String   @default("en")
+  mfaEnforced    Boolean  @default(false)
+  passwordMinLength Int   @default(10)
+  sessionTimeoutMinutes Int @default(10080)
+  dataRetentionDays Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("organization_settings")
+}
+
+model Notification {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  type           NotificationType
+  title          String
+  body           String?
+  linkUrl        String?
+  metadata       Json?
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  type           NotificationType
+  inApp          Boolean  @default(true)
+  email          Boolean  @default(true)
+  push           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, type])
+  @@map("notification_preferences")
+}
+
+model SearchIndex {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  entityType     String
+  entityId       String
+  title          String
+  content        String   @db.Text
+  authorId       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, entityType, entityId])
+  @@index([organizationId, entityType])
+  @@map("search_index")
+}
+
+model SearchHistory {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  query          String
+  resultsCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("search_history")
+}
+
+model Invitation {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  email          String
+  role           OrganizationRole @default(MEMBER)
+  tokenHash      String           @unique
+  status         InvitationStatus @default(PENDING)
+  invitedById    String           @db.Uuid
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([email])
+  @@map("invitations")
+}
+
+model Group {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  description    String?
+  rule           Json?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      GroupMember[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("groups")
+}
+
+model GroupMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+  @@index([userId])
+  @@map("group_members")
+}
+
+model UsageEvent {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String?  @db.Uuid
+  event          String
+  app            String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, app, createdAt])
+  @@map("usage_events")
+}
+
+model Webhook {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  url            String
+  secret         String
+  events         String[]
+  isActive       Boolean   @default(true)
+  description    String?
+  createdById    String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id          String    @id @default(uuid()) @db.Uuid
+  webhookId   String    @db.Uuid
+  event       String
+  payload     Json
+  statusCode  Int?
+  success     Boolean   @default(false)
+  attempt     Int       @default(1)
+  durationMs  Int?
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@map("webhook_deliveries")
+}
