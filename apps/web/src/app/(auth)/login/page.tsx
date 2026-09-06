@@ -4,7 +4,7 @@ import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, Checkbox, FormControlLabel, Link, Reveal, Stack, TextField, Typography } from "@dhriti/ui";
 
-import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthLayout } from "@/components/auth/AuthLayout";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,12 +14,12 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthShell
+    <AuthLayout
       title="Welcome back"
       subtitle="Log in to continue managing work, priorities, and momentum."
       footerText="Need an account?"
       footerLink="Create one"
-      footerHref="/signup"
+      footerHref="/get-started"
       primaryAction="Back home"
     >
       <Reveal delay={0.14} duration={0.7}>
@@ -52,6 +52,6 @@ export default function LoginPage() {
           </Button>
         </Stack>
       </Reveal>
-    </AuthShell>
+    </AuthLayout>
   );
 }

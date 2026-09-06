@@ -35,7 +35,7 @@ datasource db {
 EOF
 
   # Append all parts in a stable, readable order.
-  for part in enums platform work-os nexus hrms; do
+  for part in enums platform work-os nexus hrms content; do
     file="$PARTS_DIR/$part.prisma"
     if [ ! -f "$file" ]; then
       echo "❌ Missing schema part: $file" >&2

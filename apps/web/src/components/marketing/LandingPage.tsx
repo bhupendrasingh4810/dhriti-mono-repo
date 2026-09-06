@@ -110,7 +110,7 @@ function IconBox({ children, bg, color }: { children: ReactNode; bg: string; col
 export default function LandingPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.paper", color: "text.primary" }}>
-      <MarketingSiteHeader navItems={navItems} brandName="Dhriti" signInHref="/login" ctaHref="/signup" ctaLabel="Get Started" />
+      <MarketingSiteHeader navItems={navItems} brandName="Dhriti" signInHref="/login" ctaHref="/get-started" ctaLabel="Get Started" />
 
       <Box sx={{ bgcolor: "surfaces.surfaceSelected", pt: { xs: 8, md: 12 }, pb: { xs: 8, md: 12 }, px: 2 }}>
         <Container maxWidth={false} sx={{ maxWidth: 1440 }}>
@@ -149,7 +149,7 @@ export default function LandingPage() {
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 6 }}>
                 <GlowButtonWrap>
-                  <Link component={NextLink} href="/signup" underline="none">
+                  <Link component={NextLink} href="/get-started" underline="none">
                     <Button variant="contained" sx={{ px: 4, py: 1.8, fontWeight: 800 }}>
                       Get Started for Free
                     </Button>
@@ -473,9 +473,9 @@ export default function LandingPage() {
             <Typography variant="body2" color="text.disabled">
               © 2025 Dhriti. All rights reserved.
             </Typography>
-            <Typography variant="body2" color="text.disabled">
+            {/* <Typography variant="body2" color="text.disabled">
               Made with <Box component="span" sx={{ color: "primary.main" }}>💛</Box> for modern teams
-            </Typography>
+            </Typography> */}
           </Stack>
         </Container>
       </Box>

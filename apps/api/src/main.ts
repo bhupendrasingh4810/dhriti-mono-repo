@@ -48,6 +48,8 @@ async function bootstrap(): Promise<void> {
   }
 
   await app.listen(config.port);
+
+  console.log(`Application is running on: http://localhost:${config.port}`);
 }
 
 void bootstrap();

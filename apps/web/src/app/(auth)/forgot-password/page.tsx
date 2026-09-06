@@ -2,7 +2,7 @@
 
 import { Button, Reveal, Stack, TextField } from "@dhriti/ui";
 
-import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthShell } from "@/components/auth/AuthLayout";
 
 export default function ForgotPage() {
   return (

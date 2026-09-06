@@ -305,3 +305,8 @@ enum DhritiUseCase {
   HRMS
   CALENDAR_MEETINGS
 }
+
+enum LegalDocumentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+}

@@ -15,7 +15,7 @@ export function MarketingSiteHeader({
   navItems,
   brandName = "Dhriti",
   signInHref = "/login",
-  ctaHref = "/signup",
+  ctaHref = "/get-started",
   ctaLabel = "Get Started",
 }: MarketingSiteHeaderProps) {
   return (

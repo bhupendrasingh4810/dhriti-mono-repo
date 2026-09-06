@@ -14,7 +14,7 @@ import {
 } from "@dhriti/ui";
 import { MarketingSiteHeader } from "@/components/marketing/MarketingSiteHeader";
 
-interface AuthShellProps {
+interface AuthLayoutProps {
   title: string;
   subtitle: string;
   children: React.ReactNode;
@@ -24,14 +24,14 @@ interface AuthShellProps {
   primaryAction?: string;
 }
 
-export function AuthShell({
+export function AuthLayout({
   title,
   subtitle,
   children,
   footerText,
   footerLink,
   footerHref,
-}: AuthShellProps) {
+}: AuthLayoutProps) {
   return (
     <Box
       sx={{
@@ -41,12 +41,12 @@ export function AuthShell({
         bgcolor: "background.default",
       }}
     >
-      <MarketingSiteHeader
+      {/* <MarketingSiteHeader
         navItems={["Product", "Solutions", "Resources", "Pricing", "Company"]}
         signInHref="/login"
-        ctaHref="/signup"
+        ctaHref="/get-started"
         ctaLabel="Get Started"
-      />
+      /> */}
 
       <Container maxWidth="sm" sx={{ flex: 1, display: "flex", alignItems: "center", py: 6, px: 2 }}>
         <Reveal delay={0.08} duration={0.7}>
