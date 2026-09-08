@@ -10,7 +10,7 @@ import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import FolderIcon from "@mui/icons-material/Folder";
 
 const meta = {
-  title: "Components/TextField",
+  title: "Form Elements/TextField",
   component: TextField,
 
   parameters: {

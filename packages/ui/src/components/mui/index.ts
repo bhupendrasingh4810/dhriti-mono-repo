@@ -1,8 +1,10 @@
 export * from "./Avatar";
 export * from "./Alert";
+export * from "./Autocomplete";
 export * from "./Badge";
 export * from "./Button";
 export * from "./Card";
+export * from "./Chip";
 export * from "./DataTable";
 export * from "./Dialog";
 export * from "./Drawer";
@@ -10,4 +12,3 @@ export * from "./EmptyState";
 export * from "./Menu";
 export * from "./Tabs";
 export * from "./Tooltip";
-export * from "./Chip";
