@@ -4,6 +4,10 @@
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "scripts": {
+    "storybook": "storybook dev -p 6007",
+    "build-storybook": "storybook build"
+  },
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -30,7 +34,11 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@storybook/addon-a11y": "^10.6.0",
+    "@storybook/react-vite": "^10.6.0",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.4"
+    "@types/react-dom": "^19.2.4",
+    "storybook": "^10.6.0",
+    "vite": "^8.2.2"
   }
 }

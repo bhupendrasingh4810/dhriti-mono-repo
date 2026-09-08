@@ -178,41 +178,26 @@ export function createComponentOverrides(density: DensityMode): Components<Omit<
 			},
 			styleOverrides: {
 				root: ({ theme }) => ({
-					minHeight: theme.density.controlHeight,
 					textTransform: "none",
 					fontWeight: theme.typography.fontWeightMedium,
 					borderRadius: baseRadius(theme),
-					padding: controlPadding,
 					lineHeight: 1.4,
 					transition: theme.transitions.create(["background-color", "border-color", "box-shadow", "color"], { duration: 120 }),
 					"&.Mui-focusVisible": {
 						boxShadow: `0 0 0 3px ${alpha(theme.palette.interactive.interactiveFocus, 0.22)}`,
 					},
 				}),
-				contained: ({ theme }) => ({
-					backgroundColor: theme.palette.interactive.interactive,
-					color: theme.tokens.color.text.inverse,
-					"&:hover": {
-						backgroundColor: theme.palette.interactive.interactiveHover,
-					},
-					"&:active": {
-						backgroundColor: theme.palette.interactive.interactiveActive,
-					},
+				sizeSmall: ({ theme }) => ({
+					minHeight: theme.density.buttonHeight.small,
+					padding: `${theme.tokens.spacing.xs}px ${theme.tokens.spacing.sm}px`,
 				}),
-				outlined: ({ theme }) => ({
-					borderColor: theme.palette.borders.border,
-					color: theme.palette.text.primary,
-					backgroundColor: theme.palette.surfaces.surface,
-					"&:hover": {
-						borderColor: theme.palette.borders.borderStrong,
-						backgroundColor: theme.palette.surfaces.surfaceHover,
-					},
+				sizeMedium: ({ theme }) => ({
+					minHeight: theme.density.buttonHeight.medium,
+					padding: `${theme.tokens.spacing.sm}px ${theme.tokens.spacing.md}px`,
 				}),
-				text: ({ theme }) => ({
-					color: theme.palette.interactive.interactive,
-					"&:hover": {
-						backgroundColor: alpha(theme.palette.interactive.interactive, 0.08),
-					},
+				sizeLarge: ({ theme }) => ({
+					minHeight: theme.density.buttonHeight.large,
+					padding: `${theme.tokens.spacing.sm}px ${theme.tokens.spacing.lg}px`,
 				}),
 			},
 		},

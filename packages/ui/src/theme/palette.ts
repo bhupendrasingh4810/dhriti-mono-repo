@@ -54,12 +54,12 @@ export type SemanticPalette = {
 
 export const lightPaletteTokens: SemanticPalette = {
   brand: "#036c5f",
-  primary: "#025043",
+  primary: "#036c5f",
   secondary: "#475569", // Cool slate gray
-  success: "#15803d", // Soft emerald
-  warning: "#b45309", // Soft amber
-  error: "#be123c",   // Soft rose/red
-  info: "#0369a1",    // Cool sky blue
+  success: "#70C748", // Soft emerald
+  warning: "#F6B51E", // Soft amber
+  error: "#EF4444",   // Soft rose/red
+  info: "#539BFF",    // Cool sky blue
   surface: {
     background: "#F4F7F6", // Muted mint-tinted gray
     surface: "#FFFFFF",

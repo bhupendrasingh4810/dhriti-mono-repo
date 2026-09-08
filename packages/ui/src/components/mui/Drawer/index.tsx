@@ -1,4 +1,4 @@
 "use client";
 
-export { UIDrawer as Drawer, UIDrawer } from "../foundation";
+export { Drawer } from "@mui/material";
 export type { DrawerProps } from "@mui/material/Drawer";

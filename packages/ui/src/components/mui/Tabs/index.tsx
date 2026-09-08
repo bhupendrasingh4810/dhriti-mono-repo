@@ -1,4 +1,4 @@
 "use client";
 
-export { UITabs as Tabs, UITab as Tab, UITabs, UITab } from "../foundation";
+export { Tab, Tabs } from "@mui/material";
 export type { TabsProps } from "@mui/material/Tabs";
