@@ -53,7 +53,7 @@ export function AuthLayout({
           <Card
             sx={{
               borderRadius: (theme) => theme.tokens.radius.lg,
-              p: { xs: 2.5, sm: 4 },
+              p: { xs: 2.5, sm: 4, md: 6 },
               boxShadow: (theme) => theme.tokens.elevation.medium,
               borderColor: "borders.borderSubtle",
               bgcolor: "surfaces.surfaceElevated",

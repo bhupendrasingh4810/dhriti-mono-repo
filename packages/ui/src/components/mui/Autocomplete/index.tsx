@@ -17,7 +17,7 @@
 
 "use client";
 
-import { forwardRef, useState, useCallback, type ReactNode, type HTMLAttributes } from "react";
+import { forwardRef, type ReactNode, type HTMLAttributes } from "react";
 import MuiAutocomplete, {
   AutocompleteRenderInputParams,
   AutocompleteRenderOptionState,
@@ -27,13 +27,11 @@ import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
-import Paper from "@mui/material/Paper";
 import CircularProgress from "@mui/material/CircularProgress";
 import {
   Check as CheckIcon,
   Clear as ClearIcon,
   ExpandMore as ExpandMoreIcon,
-  Search as SearchIcon,
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 
@@ -58,7 +56,7 @@ export interface AutoCompleteProps<
   FreeSolo extends boolean = false,
 > extends Omit<
     HTMLAttributes<HTMLDivElement>,
-    "onChange" | "onSelect"
+  "onChange" | "onSelect" | "defaultValue"
   > {
   /**
    * Options to display.
@@ -212,7 +210,8 @@ export interface AutoCompleteProps<
 // STYLED COMPONENTS
 // ============================================================================
 
-const StyledAutocomplete = styled(MuiAutocomplete)(({ theme }) => ({
+const StyledAutocomplete = styled(MuiAutocomplete<AutoCompleteOption, boolean, boolean, boolean>)(
+  ({ theme }) => ({
   width: "100%",
   "& .MuiAutocomplete-clearIndicator": {
     marginRight: theme.spacing(0.5),
@@ -226,19 +225,20 @@ const StyledAutocomplete = styled(MuiAutocomplete)(({ theme }) => ({
     "&[aria-selected='true']": {
       backgroundColor: theme.palette.action.selected,
       "&.Mui-focused": {
-        backgroundColor: theme.palette.action.selectedHover,
+        backgroundColor: theme.palette.action.hover,
       },
     },
   },
   "& .MuiAutocomplete-paper": {
-    borderRadius: theme.tokens.radius.lg,
+    borderRadius: theme.shape.borderRadius,
     boxShadow: theme.shadows[4],
     marginTop: theme.spacing(0.5),
   },
   "& .MuiChip-root": {
     margin: theme.spacing(0.25),
   },
-}));
+  }),
+);
 
 // ============================================================================
 // OPTION RENDERER
@@ -328,7 +328,7 @@ const renderOptionContent = ({
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
           variant="body2"
-          fontWeight={selected ? 600 : 400}
+          sx={{ fontWeight: selected ? "fontWeightMedium" : "fontWeightRegular" }}
           noWrap
         >
           {option.label}
@@ -397,6 +397,7 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
   ref,
 ) {
   const isError = Boolean(errorText);
+  const hasValue = multiple ? Array.isArray(value) && value.length > 0 : Boolean(value);
 
   // Handle option rendering
   const handleRenderOption = (
@@ -421,35 +422,35 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
 
   // Handle input rendering
   const handleRenderInput = (params: AutocompleteRenderInputParams) => {
-    const { InputProps = {}, inputProps: autocompleteInputProps, ...otherParams } = params;
-
     return (
       <TextField
-        {...otherParams}
-        label={label}
-        placeholder={placeholder}
+        id={params.id}
+        placeholder={hasValue ? undefined : placeholder}
         helperText={errorText || helperText}
         error={isError}
-        InputProps={{
-          ...InputProps,
-          startAdornment: (
-            <>
-              {loading ? (
-                <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />
-              ) : (
-                <SearchIcon color="action" fontSize="small" sx={{ mr: 1, ml: 0.5 }} />
-              )}
-              {InputProps.startAdornment}
-            </>
-          ),
-          ...inputProps,
-        }}
-        inputProps={{
-          ...autocompleteInputProps,
-          ...inputProps,
+        slotProps={{
+          inputLabel: {
+            ...params.slotProps.inputLabel,
+            shrink: false,
+          },
+          input: {
+            ...params.slotProps.input,
+            startAdornment: (
+              <>
+                {loading ? (
+                  <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />
+                ) : null}
+                {params.slotProps.input.startAdornment}
+              </>
+            ),
+          },
+          htmlInput: {
+            ...params.slotProps.htmlInput,
+            ...inputProps,
+            readOnly,
+          },
         }}
         disabled={disabled}
-        readOnly={readOnly}
         fullWidth={fullWidth}
       />
     );
@@ -463,11 +464,11 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
           key={option.value}
           label={option.label}
           size="small"
-          {...(multiple && !disableClearable && {
+          {...(!disableClearable ? {
             onDelete: () => {
               // Handled by Autocomplete
             },
-          })}
+          } : {})}
         />
       ));
     }
@@ -490,20 +491,20 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
       ref={ref}
       options={options}
       getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
-      getOptionKey={(option) => String(option.value)}
+      getOptionKey={(option) => (typeof option === "string" ? option : String(option.value))}
       value={value}
-      onChange={onChange as any}
+      onChange={(_, nextValue) => onChange?.(nextValue as never, nextValue as never)}
       multiple={multiple}
       freeSolo={freeSolo}
       disableClearable={disableClearable}
       loading={loading}
       loadingText={loadingText}
       noOptionsText={noOptionsText}
-      groupBy={groupBy}
+      groupBy={groupBy ? (option) => String(option[groupBy as keyof AutoCompleteOption] ?? "") : undefined}
       filterOptions={filterOptions}
       renderInput={handleRenderInput}
       renderOption={handleRenderOption as any}
-      renderTags={multiple ? handleRenderTags : undefined}
+      renderValue={multiple ? handleRenderTags as never : undefined}
       clearIcon={<ClearIcon fontSize="small" />}
       popupIcon={<ExpandMoreIcon />}
       disabled={disabled}
@@ -511,7 +512,11 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
       sx={[
         {
           "& .MuiOutlinedInput-root": {
-            borderRadius: 2,
+            borderRadius: 1,
+            boxShadow: "none",
+            "&.Mui-focused": {
+              boxShadow: "none",
+            },
           },
         },
         ...(Array.isArray(sx) ? sx : [sx]),
