@@ -50,30 +50,43 @@ export interface CountryOption extends AutoCompleteOption {
   flag: string;
 }
 
-export interface AutoCompleteProps<
-  Multiple extends boolean = false,
-  DisableClearable extends boolean = false,
-  FreeSolo extends boolean = false,
-> extends Omit<
+export interface AutoCompleteProps
+  extends Omit<
     HTMLAttributes<HTMLDivElement>,
-  "onChange" | "onSelect" | "defaultValue"
+    "onChange" | "onSelect" | "defaultValue"
   > {
   /**
    * Options to display.
    */
-  options: AutoCompleteOption[] | CountryOption[];
+  options?: Array<AutoCompleteOption | CountryOption | string>;
 
   /**
    * Selected value(s).
    */
-  value?: Multiple extends true ? AutoCompleteOption[] : AutoCompleteOption | string | null;
+  value?: any;
+
+  /**
+   * Default value.
+   */
+  defaultValue?: any;
 
   /**
    * Change handler.
    */
   onChange?: (
-    value: Multiple extends true ? AutoCompleteOption[] : AutoCompleteOption | string | null,
-    option: Multiple extends true ? AutoCompleteOption[] : AutoCompleteOption | null
+    event: any,
+    value: any,
+    reason?: string,
+    details?: any,
+  ) => void;
+
+  /**
+   * Input value change handler.
+   */
+  onInputChange?: (
+    event: any,
+    value: string,
+    reason?: string,
   ) => void;
 
   /**
@@ -100,7 +113,7 @@ export interface AutoCompleteProps<
    * Enable multiple selection.
    * @default false
    */
-  multiple?: Multiple;
+  multiple?: boolean;
 
   /**
    * Show checkboxes in dropdown.
@@ -112,13 +125,13 @@ export interface AutoCompleteProps<
    * Allow custom values (free solo).
    * @default false
    */
-  freeSolo?: FreeSolo;
+  freeSolo?: boolean;
 
   /**
    * Disable clear button.
    * @default false
    */
-  disableClearable?: DisableClearable;
+  disableClearable?: boolean;
 
   /**
    * Show loading state.
@@ -141,17 +154,21 @@ export interface AutoCompleteProps<
   /**
    * Group options by key.
    */
-  groupBy?: string;
+  groupBy?: string | ((option: any) => string);
 
   /**
    * Custom option renderer.
    */
-  renderOption?: (option: AutoCompleteOption, state: AutocompleteRenderOptionState) => ReactNode;
+  renderOption?: (
+    props: any,
+    option: any,
+    state: AutocompleteRenderOptionState,
+  ) => ReactNode;
 
   /**
    * Filter options function.
    */
-  filterOptions?: (options: AutoCompleteOption[], state: { inputValue: string }) => AutoCompleteOption[];
+  filterOptions?: (options: any[], state: { inputValue: string }) => any[];
 
   /**
    * Show country flags (for CountryOption type).
@@ -203,14 +220,14 @@ export interface AutoCompleteProps<
   /**
    * Custom CSS.
    */
-  sx?: React.CSSProperties;
+  sx?: any;
 }
 
 // ============================================================================
 // STYLED COMPONENTS
 // ============================================================================
 
-const StyledAutocomplete = styled(MuiAutocomplete<AutoCompleteOption, boolean, boolean, boolean>)(
+const StyledAutocomplete = styled(MuiAutocomplete<any, boolean, boolean, boolean>)(
   ({ theme }) => ({
   width: "100%",
   "& .MuiAutocomplete-clearIndicator": {
@@ -366,9 +383,10 @@ const renderOptionContent = ({
 
 export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(function AutoComplete(
   {
-    options,
+    options = [],
     value,
     onChange,
+    onInputChange,
     label,
     placeholder,
     helperText,
@@ -402,18 +420,21 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
   // Handle option rendering
   const handleRenderOption = (
     props: any,
-    option: AutoCompleteOption | CountryOption,
+    option: any,
     state: AutocompleteRenderOptionState,
   ) => {
     if (customRenderOption) {
-      return customRenderOption(option, state);
+      if (customRenderOption.length >= 3) {
+        return (customRenderOption as any)(props, option, state);
+      }
+      return (customRenderOption as any)(option, state);
     }
 
     return renderOptionContent({
       props,
-      option,
+      option: typeof option === "string" ? { value: option, label: option } : option,
       state,
-      withCheckboxes: multiple && withCheckboxes,
+      withCheckboxes: Boolean(multiple && withCheckboxes),
       showFlags,
       showDescriptions,
       showIcons,
@@ -425,27 +446,28 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
     return (
       <TextField
         id={params.id}
+        label={label}
         placeholder={hasValue ? undefined : placeholder}
         helperText={errorText || helperText}
         error={isError}
         slotProps={{
           inputLabel: {
-            ...params.slotProps.inputLabel,
+            ...params.slotProps?.inputLabel,
             shrink: false,
           },
           input: {
-            ...params.slotProps.input,
+            ...params.slotProps?.input,
             startAdornment: (
               <>
                 {loading ? (
                   <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />
                 ) : null}
-                {params.slotProps.input.startAdornment}
+                {params.slotProps?.input?.startAdornment}
               </>
             ),
           },
           htmlInput: {
-            ...params.slotProps.htmlInput,
+            ...params.slotProps?.htmlInput,
             ...inputProps,
             readOnly,
           },
@@ -457,12 +479,15 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
   };
 
   // Handle tag rendering for multi-select
-  const handleRenderTags = (selectedOptions: AutoCompleteOption[]) => {
-    if (selectedOptions.length <= maxDisplayedTags) {
-      return selectedOptions.map((option) => (
+  const handleRenderTags = (selectedOptions: any[]) => {
+    const formattedOptions = selectedOptions.map((opt) =>
+      typeof opt === "string" ? { value: opt, label: opt } : opt
+    );
+    if (formattedOptions.length <= maxDisplayedTags) {
+      return formattedOptions.map((option) => (
         <Chip
-          key={option.value}
-          label={option.label}
+          key={option.value ?? option.label ?? String(option)}
+          label={option.label ?? String(option)}
           size="small"
           {...(!disableClearable ? {
             onDelete: () => {
@@ -474,12 +499,12 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
     }
 
     return [
-      ...selectedOptions.slice(0, maxDisplayedTags).map((option) => (
-        <Chip key={option.value} label={option.label} size="small" />
+      ...formattedOptions.slice(0, maxDisplayedTags).map((option) => (
+        <Chip key={option.value ?? option.label ?? String(option)} label={option.label ?? String(option)} size="small" />
       )),
       <Chip
         key="more"
-        label={`+${selectedOptions.length - maxDisplayedTags}`}
+        label={`+${formattedOptions.length - maxDisplayedTags}`}
         size="small"
         color="default"
       />,
@@ -490,21 +515,22 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
     <StyledAutocomplete
       ref={ref}
       options={options}
-      getOptionLabel={(option) => (typeof option === "string" ? option : option.label)}
-      getOptionKey={(option) => (typeof option === "string" ? option : String(option.value))}
+      getOptionLabel={(option: any) => (typeof option === "string" ? option : option?.label ?? String(option ?? ""))}
+      getOptionKey={(option: any) => (typeof option === "string" ? option : String(option?.value ?? option?.label ?? option))}
       value={value}
-      onChange={(_, nextValue) => onChange?.(nextValue as never, nextValue as never)}
+      onChange={(event, nextValue, reason, details) => onChange?.(event, nextValue, reason, details)}
+      onInputChange={onInputChange}
       multiple={multiple}
       freeSolo={freeSolo}
       disableClearable={disableClearable}
       loading={loading}
       loadingText={loadingText}
       noOptionsText={noOptionsText}
-      groupBy={groupBy ? (option) => String(option[groupBy as keyof AutoCompleteOption] ?? "") : undefined}
-      filterOptions={filterOptions}
+      groupBy={typeof groupBy === "function" ? groupBy : groupBy ? (option: any) => String(option?.[groupBy] ?? "") : undefined}
+      filterOptions={filterOptions as any}
       renderInput={handleRenderInput}
       renderOption={handleRenderOption as any}
-      renderValue={multiple ? handleRenderTags as never : undefined}
+      renderValue={multiple ? (handleRenderTags as never) : undefined}
       clearIcon={<ClearIcon fontSize="small" />}
       popupIcon={<ExpandMoreIcon />}
       disabled={disabled}

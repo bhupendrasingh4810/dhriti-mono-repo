@@ -49,6 +49,10 @@ const meta = {
       },
     },
   },
+  args: {
+    columns: [],
+    items: [],
+  },
   decorators: [
     (Story) => (
       <div style={{ width: 1080, maxWidth: "100%", padding: "16px 0" }}>
@@ -257,7 +261,7 @@ export const Default: Story = {
     const [selectedIds, setSelectedIds] = useState<Array<string | number>>(["TSK-101"]);
 
     return (
-      <DTable<TaskRecord>
+      <DTable
         headerIcon={<TableChartRounded />}
         headerIconColor="#0284C7"
         headerIconBg="#E0F2FE"
@@ -481,7 +485,7 @@ const sampleUserRecords: UserRecord[] = [
 export const UserDirectory: Story = {
   name: "Team Members Directory",
   render: () => (
-    <DTable<UserRecord>
+    <DTable
       headerIcon={<GroupRounded />}
       headerIconColor="#8B5CF6"
       headerIconBg="#F3E8FF"
@@ -662,7 +666,7 @@ const sampleOrderRecords: OrderRecord[] = [
 export const OrdersTable: Story = {
   name: "Orders & Billing Table",
   render: () => (
-    <DTable<OrderRecord>
+    <DTable
       headerIcon={<ShoppingCartRounded />}
       headerIconColor="#10B981"
       headerIconBg="#D1FAE5"
@@ -805,7 +809,7 @@ const sampleMediaRecords: MediaRecord[] = [
 export const MediaCardView: Story = {
   name: "Media Library (Card Grid Default)",
   render: () => (
-    <DTable<MediaRecord>
+    <DTable
       headerIcon={<PermMediaRounded />}
       headerIconColor="#F59E0B"
       headerIconBg="#FEF3C7"
@@ -948,7 +952,7 @@ const sampleTicketRecords: TicketRecord[] = [
 export const SupportTickets: Story = {
   name: "Support Tickets & SLAs",
   render: () => (
-    <DTable<TicketRecord>
+    <DTable
       headerIcon={<ConfirmationNumberRounded />}
       headerIconColor="#EF4444"
       headerIconBg="#FEE2E2"

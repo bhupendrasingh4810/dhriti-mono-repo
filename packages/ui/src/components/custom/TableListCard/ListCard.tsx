@@ -22,7 +22,6 @@ import Typography from "@mui/material/Typography";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
 import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
 import Chip from "@mui/material/Chip";
 import Button from "@mui/material/Button";
 import Link from "@mui/material/Link";
@@ -52,6 +51,7 @@ import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRou
 import HubRounded from "@mui/icons-material/HubRounded";
 
 import { Avatar } from "../../mui/Avatar";
+import { Tooltip } from "../../mui/Tooltip";
 
 // ============================================================================
 // TYPES & INTERFACES

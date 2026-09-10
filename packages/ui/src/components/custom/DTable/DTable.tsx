@@ -21,7 +21,6 @@ import TextField from "@mui/material/TextField";
 import InputAdornment from "@mui/material/InputAdornment";
 import IconButton from "@mui/material/IconButton";
 import Button from "@mui/material/Button";
-import Tooltip, { TooltipProps, tooltipClasses } from "@mui/material/Tooltip";
 import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import Menu from "@mui/material/Menu";
@@ -69,6 +68,7 @@ import ExploreRounded from "@mui/icons-material/ExploreRounded";
 import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRounded";
 
 import { Avatar } from "../../mui/Avatar";
+import { Tooltip, WhiteTooltip } from "../../mui/Tooltip";
 import type {
   DTableProps,
   DTableColumn,
@@ -130,27 +130,6 @@ const SearchInput = styled(TextField)(({ theme }) => ({
     padding: "8px 14px",
     height: "22px",
     boxSizing: "content-box",
-  },
-}));
-
-const WhiteTooltip = styled(({ className, ...props }: TooltipProps) => (
-  <Tooltip {...props} classes={{ popper: className }} arrow />
-))(({ theme }) => ({
-  [`& .${tooltipClasses.tooltip}`]: {
-    backgroundColor: theme.palette.background.paper,
-    color: theme.palette.text.primary,
-    boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
-    border: `1px solid ${theme.palette.divider}`,
-    fontSize: "0.75rem",
-    fontWeight: 600,
-    padding: "6px 10px",
-    borderRadius: "6px",
-  },
-  [`& .${tooltipClasses.arrow}`]: {
-    color: theme.palette.background.paper,
-    "&:before": {
-      border: `1px solid ${theme.palette.divider}`,
-    },
   },
 }));
 

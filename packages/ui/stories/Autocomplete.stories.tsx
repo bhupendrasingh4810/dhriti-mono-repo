@@ -6,12 +6,15 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
 import { AutoComplete } from "../src/components/mui";
 import {
   Business as BusinessIcon,
   Person as PersonIcon,
   School as SchoolIcon,
   Work as WorkIcon,
+  Check as CheckIcon,
 } from "@mui/icons-material";
 
 // Sample options
@@ -518,7 +521,7 @@ export const CustomRendering: Story = {
               {option.label.charAt(0)}
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography variant="body2" fontWeight={state.selected ? 600 : 400}>
+              <Typography variant="body2" sx={{ fontWeight: state.selected ? 600 : 400 }}>
                 {option.label}
               </Typography>
               <Typography variant="caption" color="text.secondary">

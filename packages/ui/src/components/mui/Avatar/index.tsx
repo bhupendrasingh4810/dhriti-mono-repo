@@ -145,10 +145,10 @@ const StyledAvatar = styled(AvatarMui, {
       variant === "circular"
         ? "50%"
         : variant === "rounded"
-          ? theme.tokens.radius.md
-          : theme.tokens.radius.none,
+          ? (theme.shape?.borderRadius ?? 8)
+          : 0,
     transition: theme.transitions.create(["transform", "box-shadow"], {
-      duration: theme.transitions.duration.normal,
+      duration: theme.transitions.duration.standard,
     }),
     "&:hover": {
       transform: "scale(1.05)",
@@ -258,6 +258,11 @@ Avatar.displayName = "Avatar";
 
 export interface AvatarGroupCustomProps extends Omit<AvatarGroupProps, "children"> {
   /**
+   * Avatars to display.
+   */
+  children?: ReactNode;
+
+  /**
    * Maximum avatars to show.
    * @default 3
    */
@@ -300,7 +305,7 @@ export const AvatarGroupCustom = forwardRef<HTMLDivElement, AvatarGroupCustomPro
 
     return (
       <AvatarGroupWrapper max={max} total={total || avatarArray.length} ref={ref}>
-        <AvatarMui.Group
+        <AvatarGroup
           max={max}
           sx={[
             {
@@ -328,16 +333,10 @@ export const AvatarGroupCustom = forwardRef<HTMLDivElement, AvatarGroupCustomPro
               +{remainingCount}
             </AvatarMui>
           )}
-        </AvatarMui.Group>
+        </AvatarGroup>
       </AvatarGroupWrapper>
     );
   }
 );
 
 AvatarGroupCustom.displayName = "AvatarGroupCustom";
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export type { AvatarVariant, AvatarSize };

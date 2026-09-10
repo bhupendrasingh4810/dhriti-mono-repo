@@ -14,7 +14,7 @@
 
 "use client";
 
-import { forwardRef, type ReactNode, type HTMLAttributes } from "react";
+import { forwardRef, type ReactNode, type ReactElement, type HTMLAttributes } from "react";
 import MuiChip, { type ChipProps as MuiChipProps } from "@mui/material/Chip";
 import { styled } from "@mui/material/styles";
 import { Check as CheckIcon, Close as CloseIcon } from "@mui/icons-material";
@@ -23,7 +23,7 @@ export type ChipVariant = "filled" | "outlined";
 export type ChipSize = "small" | "medium" | "large";
 export type ChipColor = "default" | "primary" | "secondary" | "error" | "info" | "success" | "warning";
 
-export interface ChipProps extends Omit<MuiChipProps, "variant" | "size" | "color"> {
+export interface ChipProps extends Omit<MuiChipProps, "variant" | "size" | "color" | "deleteIcon" | "icon"> {
   /**
    * Chip label.
    */
@@ -50,12 +50,17 @@ export interface ChipProps extends Omit<MuiChipProps, "variant" | "size" | "colo
   /**
    * Custom icon at the start.
    */
-  startIcon?: ReactNode;
+  startIcon?: ReactElement<any, any>;
 
   /**
    * Custom icon at the end.
    */
-  endIcon?: ReactNode;
+  endIcon?: ReactElement<any, any>;
+
+  /**
+   * Custom icon.
+   */
+  icon?: ReactElement<any, any>;
 
   /**
    * Show check icon (for selected state).
@@ -66,7 +71,7 @@ export interface ChipProps extends Omit<MuiChipProps, "variant" | "size" | "colo
   /**
    * Custom delete icon.
    */
-  deleteIcon?: ReactNode;
+  deleteIcon?: ReactElement<any, any>;
 
   /**
    * Delete icon position.
@@ -218,7 +223,7 @@ const StyledChip = styled(MuiChip, {
     fontSize: sizeConfig.fontSize,
     padding: sizeConfig.padding,
     fontWeight: 500,
-    borderRadius: theme.tokens.radius.pill,
+    borderRadius: 9999,
     borderWidth: chipvariant === "outlined" ? 1.5 : 0,
     borderStyle: "solid",
     borderColor: colorStyles.borderColor,
@@ -228,7 +233,7 @@ const StyledChip = styled(MuiChip, {
     opacity: chipdisabled ? 0.5 : 1,
     cursor: chipdisabled ? "not-allowed" : "pointer",
     transition: theme.transitions.create(["all"], {
-      duration: theme.transitions.duration.fast,
+      duration: theme.transitions.duration.shorter,
     }),
 
     // Icon styles
@@ -295,18 +300,17 @@ export const Chip = forwardRef<HTMLDivElement, ChipProps>(function Chip(
   ref,
 ) {
   // Determine icons
-  const iconToShow = checked ? <CheckIcon /> : startIcon || icon;
-  const endIconToShow = endIcon;
+  const iconToShow = (checked ? <CheckIcon /> : startIcon || icon) as ReactElement<any, any> | undefined;
 
   // Delete icon
-  const deleteIcon = customDeleteIcon || <CloseIcon fontSize="small" />;
+  const deleteIcon = (customDeleteIcon || <CloseIcon fontSize="small" />) as ReactElement<any, any>;
 
   return (
     <StyledChip
       ref={ref}
       label={label}
       variant="outlined" // Use outlined as base, we handle styling ourselves
-      size={size}
+      size={size === "small" ? "small" : "medium"}
       chipvariant={variant}
       chipsize={size}
       chipcolor={color}
