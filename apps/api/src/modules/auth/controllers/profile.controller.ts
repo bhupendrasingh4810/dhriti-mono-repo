@@ -2,10 +2,16 @@ import {
     Body,
     Controller,
     Get,
+    HttpStatus,
     Patch,
+    Post,
+    UploadedFile,
+    UseInterceptors,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import {
     ApiBearerAuth,
+    ApiConsumes,
     ApiOperation,
     ApiTags,
 } from "@nestjs/swagger";
@@ -13,10 +19,20 @@ import {
     CurrentUser,
     type AuthenticatedUser,
 } from "../../../common/decorators/current-user.decorator";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
 
 import { AuthService } from "../services/auth.service";
 import { UpdateProfileDto, type UserProfileResponse } from "../dto/profile.dto";
 
+interface UploadedProfilePhoto {
+    buffer: Buffer;
+    mimetype: string;
+    size: number;
+}
+
+const PROFILE_PHOTO_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024;
 
 @ApiTags("auth")
 @Controller("auth")
@@ -42,5 +58,25 @@ export class AuthProfileController {
         @Body() dto: UpdateProfileDto,
     ): Promise<UserProfileResponse> {
         return this.auth.updateProfile(user.userId, dto);
+    }
+
+    @Post("me/avatar")
+    @ApiBearerAuth()
+    @ApiOperation({ summary: "Upload a profile photo" })
+    @ApiConsumes("multipart/form-data")
+    @UseInterceptors(FileInterceptor("file", { limits: { files: 1, fileSize: MAX_PROFILE_PHOTO_BYTES } }))
+    async uploadAvatar(
+        @CurrentUser() user: AuthenticatedUser,
+        @UploadedFile() file: UploadedProfilePhoto | undefined,
+    ): Promise<UserProfileResponse> {
+        if (!file || file.size === 0) {
+            throw new AppError(ErrorCode.FILE_EMPTY, "No profile photo provided in the \"file\" field", HttpStatus.BAD_REQUEST);
+        }
+        if (!PROFILE_PHOTO_CONTENT_TYPES.has(file.mimetype)) {
+            throw new AppError(ErrorCode.FILE_TYPE_NOT_ALLOWED, "Profile photo must be a JPEG, PNG, WebP, or GIF image", HttpStatus.UNSUPPORTED_MEDIA_TYPE);
+        }
+
+        const avatarUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
+        return this.auth.updateProfile(user.userId, { avatarUrl });
     }
 }

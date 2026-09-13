@@ -25,6 +25,7 @@ import { TenantGuard } from "../../common/guards/tenant.guard";
 import { OrgRolesGuard } from "../../common/guards/org-roles.guard";
 
 import { OrganizationService, type MemberWithUser } from "./organization.service";
+import { SessionService } from "../auth/services/session.service";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "./dto/organization.dto";
 import { InviteMemberDto, UpdateMemberRoleDto } from "./dto/member.dto";
 import { CreateTeamDto, UpdateTeamDto } from "./dto/team.dto";
@@ -39,7 +40,10 @@ import {
 @ApiBearerAuth()
 @Controller()
 export class OrganizationController {
-  constructor(private readonly organizations: OrganizationService) {}
+  constructor(
+    private readonly organizations: OrganizationService,
+    private readonly sessions: SessionService,
+  ) {}
 
   // ---------------- My organizations ----------------
 
@@ -54,7 +58,9 @@ export class OrganizationController {
   @ApiResponse({ status: 201 })
   @ApiResponse({ status: 409, description: "Slug already taken" })
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateOrganizationDto) {
-    return this.organizations.createOrganization(user.userId, dto);
+    const organization = await this.organizations.createOrganization(user.userId, dto);
+    await this.sessions.setSessionOrganization(user.sessionId, organization.id);
+    return organization;
   }
 
   // ---------------- Active organization (tenant-scoped) ----------------

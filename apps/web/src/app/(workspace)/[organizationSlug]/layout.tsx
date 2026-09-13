@@ -20,6 +20,7 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get('access_token')?.value;
   const refreshToken = cookieStore.get('refresh_token')?.value;
+  const organizationCookie = cookieStore.get('organization')?.value;
 
   // No tokens at all - redirect to login
   if (!accessToken && !refreshToken) {
@@ -32,15 +33,13 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
 
   // If no valid user from access token, they'll be handled by client-side refresh
   // For now, just let them through and let the client handle token refresh
-  if (!user?.userId) {
+  if (!user?.sub) {
     // Don't redirect here - let the client-side auth handle refresh
     return <>{children}</>;
   }
 
-  // Verify org membership
-  const isMember = user.organizations?.some(
-    (org: { name: string }) => org.name === org_name
-  );
+  const organization = organizationCookie ? JSON.parse(organizationCookie) as { id?: string; slug?: string } : null;
+  const isMember = organization?.id === user.org && organization.slug === org_name;
 
   if (!isMember) {
     redirect(`/unauthorized?org_name=${org_name}`);

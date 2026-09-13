@@ -231,7 +231,8 @@ export class AuthService {
     const rotated = await this.sessions.rotateSession(refreshToken, context);
     const user = await this.requireUserBySession(rotated.sessionId);
     const organizationId = await this.sessions.getSessionOrganization(rotated.sessionId);
-    return this.buildTokenResponse(user, rotated, organizationId, null);
+    const organization = organizationId ? await this.resolveDefaultOrganization(user.id) : null;
+    return this.buildTokenResponse(user, rotated, organizationId, organization);
   }
 
   // ------------------------------------------------------------------

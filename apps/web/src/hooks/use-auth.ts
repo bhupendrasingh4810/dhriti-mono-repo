@@ -27,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Track refresh in progress to avoid multiple simultaneous refreshes
 let refreshPromise: Promise<void> | null = null;
+let handlingUnauthorized = false;
 
 interface AuthProviderProps {
     children: ReactNode;
@@ -125,28 +126,40 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return () => clearInterval(refreshInterval);
     }, [user, silentRefresh]);
 
-    // Handle 401 responses globally
     useEffect(() => {
-        const handleApiError = async (event: CustomEvent<{ status: number }>) => {
-            const { status } = event.detail;
+        const originalFetch = window.fetch.bind(window);
 
-            if (status === 401) {
-                const refreshed = await silentRefresh();
+        const handleUnauthorized = async () => {
+            if (handlingUnauthorized) {
+                return;
+            }
+            handlingUnauthorized = true;
 
-                if (!refreshed) {
-                    const lastUrl = encodeURIComponent(pathname);
-                    router.push(`/login?callbackUrl=${lastUrl}`);
-                }
+            const callbackUrl = `${window.location.pathname}${window.location.search}`;
+            try {
+                await originalFetch("/api/auth/logout", {
+                    method: "POST",
+                    credentials: "include",
+                });
+            } finally {
+                setUser(null);
+                window.location.assign(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
             }
         };
 
-        const apiErrorListener = (event: Event) => {
-            void handleApiError(event as CustomEvent<{ status: number }>);
+        window.fetch = async (...args) => {
+            const response = await originalFetch(...args);
+            const requestUrl = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].pathname : args[0].url;
+            if (response.status === 401 && !requestUrl.includes("/api/auth/logout")) {
+                void handleUnauthorized();
+            }
+            return response;
         };
 
-        window.addEventListener('api-error', apiErrorListener);
-        return () => window.removeEventListener('api-error', apiErrorListener);
-    }, [pathname, router, silentRefresh]);
+        return () => {
+            window.fetch = originalFetch;
+        };
+    }, []);
 
     const logout = async () => {
         try {

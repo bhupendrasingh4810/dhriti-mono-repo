@@ -3,15 +3,10 @@
  */
 
 export interface JWTPayload {
-    userId: string;
+    sub: string;
+    sid: string;
+    org: string | null;
     email: string;
-    name: string;
-    organizations: Array<{
-        id: string;
-        name: string;
-        role: string;
-    }>;
-    type: 'access' | 'refresh';
     iat: number;
     exp: number;
 }

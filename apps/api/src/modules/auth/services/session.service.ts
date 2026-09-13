@@ -160,6 +160,14 @@ export class SessionService {
     return session?.organizationId ?? null;
   }
 
+  async setSessionOrganization(sessionId: string, organizationId: string): Promise<void> {
+    const session = await this.prisma.userSession.update({
+      where: { id: sessionId },
+      data: { organizationId },
+    });
+    await this.cacheSession(session);
+  }
+
   private async cacheSession(session: UserSession): Promise<void> {
     const ttlSeconds = Math.max(1, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
     const payload: SessionCachePayload = {

@@ -15,6 +15,18 @@ const getSessionUser = (token?: string): JWTPayload | null => {
   return decodeJWT(token);
 };
 
+const getActiveOrganization = (value?: string): { id: string; slug: string } | null => {
+  if (!value) {
+    return null;
+  }
+  try {
+    const organization = JSON.parse(value) as { id?: string; slug?: string };
+    return organization.id && organization.slug ? { id: organization.id, slug: organization.slug } : null;
+  } catch {
+    return null;
+  }
+};
+
 const isRouteMatch = (pathname: string, route: string) => (
   route === '/' ? pathname === '/' : pathname === route || pathname.startsWith(`${route}/`)
 );
@@ -25,7 +37,7 @@ export function middleware(request: NextRequest) {
   // Get session
   const accessToken = request.cookies.get('access_token')?.value;
   const user = getSessionUser(accessToken);
-  const organization = request.cookies.get('organization')?.value;
+  const organization = getActiveOrganization(request.cookies.get('organization')?.value);
 
   // Skip public and auth routes
   if (PUBLIC_ROUTES.some(route => isRouteMatch(pathname, route))) {
@@ -34,10 +46,9 @@ export function middleware(request: NextRequest) {
 
   if (AUTH_ROUTES.some(route => pathname.startsWith(route))) {
     // If already logged in, redirect to default org
-    const defaultOrg = user?.organizations?.[0];
-    if (defaultOrg) {
+    if (user?.org && organization?.id === user.org) {
       return NextResponse.redirect(
-        new URL(`/${defaultOrg.name}/home`, request.url)
+        new URL(`/${organization.slug}/home`, request.url)
       );
     }
     return NextResponse.next();
@@ -68,12 +79,7 @@ export function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL(ONBOARDING_ROUTE, request.url));
     }
 
-    // Check org membership
-    const isMember = user.organizations.some(
-      (org: { name: string }) => org.name === orgName
-    );
-
-    if (!isMember) {
+    if (organization?.id !== user.org || organization.slug !== orgName) {
       return NextResponse.redirect(
         new URL(`/unauthorized?org_name=${orgName}`, request.url)
       );
@@ -82,15 +88,14 @@ export function middleware(request: NextRequest) {
     // Valid - add org context to headers
     const response = NextResponse.next();
     response.headers.set('x-org-name', orgName);
-    response.headers.set('x-user-id', user.userId);
+    response.headers.set('x-user-id', user.sub);
     return response;
   }
 
   // Non-org authenticated routes - redirect to default org
-  const defaultOrg = user?.organizations?.[0];
-  if (defaultOrg) {
+  if (user?.org && organization?.id === user.org) {
     return NextResponse.redirect(
-      new URL(`/${defaultOrg.name}/home`, request.url)
+      new URL(`/${organization.slug}/home`, request.url)
     );
   }
 

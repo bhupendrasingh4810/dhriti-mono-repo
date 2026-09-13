@@ -157,3 +157,21 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
   const fieldMessages = responseBody.error?.details?.fields;
   throw new Error(fieldMessages?.join(' ') || responseBody.error?.message || 'Unable to reset your password.');
 }
+
+export async function uploadProfilePhoto(file: File): Promise<AuthUserResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/auth/avatar", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (response.ok) {
+    return response.json() as Promise<AuthUserResponse>;
+  }
+
+  const responseBody = await response.json().catch(() => ({})) as ApiErrorResponse;
+  const fieldMessages = responseBody.error?.details?.fields;
+  throw new Error(fieldMessages?.join(" ") || responseBody.error?.message || "Unable to upload profile photo.");
+}
