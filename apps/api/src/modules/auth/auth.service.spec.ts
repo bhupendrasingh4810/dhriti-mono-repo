@@ -126,6 +126,7 @@ function makeSut(prisma: PrismaMock) {
     sendWelcomeEmail: jest.fn(async () => undefined),
     sendVerificationEmail: jest.fn(async () => undefined),
     sendPasswordResetEmail: jest.fn(async () => undefined),
+    sendResetPasswordConfirmationEmail: jest.fn(async () => undefined),
     sendAccountLockedEmail: jest.fn(async () => undefined),
   };
 
@@ -386,11 +387,14 @@ describe("AuthService password flows", () => {
       usedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
     });
-    prisma.verificationToken.update.mockResolvedValue({ userId: "user-1" });
+    prisma.verificationToken.update.mockResolvedValue({
+      userId: "user-1",
+      user: { email: "jane@acme.com", name: "Jane Doe" },
+    });
     prisma.user.update.mockResolvedValue(makeUser());
-    const { service, sessions } = makeSut(prisma);
+    const { service, sessions, emailSender } = makeSut(prisma);
 
-    await service.resetPassword("raw-token", "N3wSup3rSecure!");
+    await service.resetPassword("raw-token", "N3wSup3rSecure!", "203.0.113.42", "Test browser");
 
     expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -400,6 +404,14 @@ describe("AuthService password flows", () => {
           lockedUntil: null,
         }),
       }),
+    );
+    expect(emailSender.sendResetPasswordConfirmationEmail).toHaveBeenCalledWith(
+      "jane@acme.com",
+      "Jane Doe",
+      expect.any(String),
+      expect.any(String),
+      "203.0.113.42",
+      "Test browser",
     );
     expect(sessions.revokeAllUserSessions).toHaveBeenCalledWith("user-1");
   });

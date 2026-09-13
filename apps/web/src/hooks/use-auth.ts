@@ -3,7 +3,6 @@
 
 import { createContext, createElement, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { isTokenExpiringSoon } from '@/lib/auth/tokens';
 
 interface User {
     id: string;
@@ -86,10 +85,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 if (data.user) {
                     setUser(data.user);
                 }
+                return Boolean(data.user);
             })();
 
-            await refreshPromise;
-            return user !== null;
+            return await refreshPromise;
         } catch (error) {
             console.error('Silent refresh failed:', error);
             return false;
@@ -115,23 +114,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         loadUser();
     }, [loadUser]);
 
-    // Auto-refresh token before expiry
+    // Access tokens are HTTP-only, so refresh active sessions on an interval.
     useEffect(() => {
         if (!user) return;
 
-        const checkExpiry = setInterval(async () => {
-            // Get access token from cookie
-            const accessToken = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('access_token='))
-                ?.split('=')[1];
+        const refreshInterval = setInterval(() => {
+            void silentRefresh();
+        }, 10 * 60 * 1000);
 
-            if (accessToken && isTokenExpiringSoon(accessToken)) {
-                await silentRefresh();
-            }
-        }, 60 * 1000); // Check every minute
-
-        return () => clearInterval(checkExpiry);
+        return () => clearInterval(refreshInterval);
     }, [user, silentRefresh]);
 
     // Handle 401 responses globally

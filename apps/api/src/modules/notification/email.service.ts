@@ -2,9 +2,13 @@ import { Injectable, Logger } from "@nestjs/common";
 import SibApiV3Sdk from "sib-api-v3-sdk";
 
 import { ApiConfigService } from "../../config/config.service";
-import { getWelcomeTemplate } from "../../mail/templates/welcome.template";
-import { getVerificationTemplate } from "../../mail/templates/verification.template";
-import { getResendOtpTemplate } from "../../mail/templates/resend-otp.template";
+import {
+  getWelcomeTemplate,
+  getResetPasswordTemplate,
+  getResendOtpTemplate,
+  getVerificationTemplate,
+  getResetPasswordConfirmationTemplate,
+} from "../../mail/templates";
 
 export interface EmailMessage {
   to: string;
@@ -35,7 +39,6 @@ export class EmailService {
         sender: { email: brevo.senderEmail, name: brevo.senderName },
         to: [{ email: message.to }],
         subject: message.subject,
-        // textContent: message.text,
         htmlContent: message.html,
       });
       this.logger.log(`Email sent to=${message.to} subject="${message.subject}"`);
@@ -76,6 +79,18 @@ export class EmailService {
     });
   }
 
+  async sendResetPasswordEmail(
+    email: string,
+    resetToken: string,
+    expiryMinutes: number
+  ) {
+    await this.send({
+      to: email,
+      subject: '🔐 Reset Your Dhriti Password',
+      html: getResetPasswordTemplate(email, resetToken, expiryMinutes),
+    });
+  }
+
   async sendWelcomeEmail(to: string, name: string, onboardingUrl: string): Promise<void> {
     await this.send({
       to,
@@ -85,19 +100,20 @@ export class EmailService {
     });
   }
 
-  async sendPasswordResetEmail(to: string, name: string, resetUrl: string): Promise<void> {
-    this.logger.log(`Sending password reset email to=${to}`);
-    this.logger.debug(`Password reset email details: name=${name} resetUrl=${resetUrl}`);
-    try {
-      await this.send({
-        to,
-        subject: "Reset your Dhriti password",
-        text: `Hi ${name}, reset your password using this link: ${resetUrl}`,
-      });
-    } catch (error) {
-      this.logger.error(`Failed to send password reset email to=${to}`, error instanceof Error ? error.stack : undefined);
-      throw error;
-    }
+  async sendResetPasswordConfirmationEmail(
+    email: string,
+    name: string,
+    resetDate: string,
+    resetTime: string,
+    ipAddress: string,
+    deviceInfo: string
+  ) {
+    const loginUrl = 'https://app.dhriti.com/auth/login';
+    await this.send({
+      to: email,
+      subject: '✅ Password Reset Successful - Dhriti',
+      html: getResetPasswordConfirmationTemplate(name, email, loginUrl, resetDate, resetTime, ipAddress, deviceInfo),
+    });
   }
 
   async sendAccountLockedEmail(to: string, name: string, unlockAt: Date): Promise<void> {

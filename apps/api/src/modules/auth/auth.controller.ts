@@ -182,8 +182,12 @@ export class AuthController {
   @Post("reset-password")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Reset password with the emailed token; revokes all sessions" })
-  async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
-    return this.auth.resetPassword(dto.token, dto.newPassword);
+  async resetPassword(
+    @Body() dto: ResetPasswordDto,
+    @Ip() ipAddress: string,
+    @Req() request: Request,
+  ): Promise<void> {
+    return this.auth.resetPassword(dto.token, dto.newPassword, ipAddress, request.get("user-agent") ?? "Unknown device");
   }
 
   @Post("change-password")

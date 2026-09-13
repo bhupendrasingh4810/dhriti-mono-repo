@@ -14,9 +14,9 @@ export class ResetPasswordDto {
   @MaxLength(256)
   token!: string;
 
-  @ApiProperty({ minLength: 10 })
+  @ApiProperty({ minLength: 8 })
   @IsString()
-  @MinLength(10, { message: "Password must be at least 10 characters" })
+  @MinLength(8, { message: "Password must be at least 8 characters" })
   @MaxLength(128)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/, {
     message: "Password must include uppercase, lowercase, number and symbol",
@@ -30,9 +30,9 @@ export class ChangePasswordDto {
   @MaxLength(128)
   currentPassword!: string;
 
-  @ApiProperty({ minLength: 10 })
+  @ApiProperty({ minLength: 8 })
   @IsString()
-  @MinLength(10, { message: "Password must be at least 10 characters" })
+  @MinLength(8, { message: "Password must be at least 8 characters" })
   @MaxLength(128)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/, {
     message: "Password must include uppercase, lowercase, number and symbol",

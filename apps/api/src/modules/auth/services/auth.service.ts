@@ -257,11 +257,16 @@ export class AuthService {
       },
     });
 
-    const resetUrl = `${this.config.webAppUrl}/reset?token=${encodeURIComponent(token)}`;
-    await this.email.sendPasswordResetEmail(user.email, user.name, resetUrl);
+    const resetUrl = `${this.config.webAppUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    await this.email.sendResetPasswordEmail(user.email, resetUrl, PASSWORD_RESET_TOKEN_TTL_MS);
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<void> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    ipAddress = "Unknown",
+    deviceInfo = "Unknown device",
+  ): Promise<void> {
     const record = await this.consumeToken(token, "PASSWORD_RESET");
     const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
 
@@ -275,6 +280,23 @@ export class AuthService {
       data: { status: "ACTIVE" },
     });
     await this.sessions.revokeAllUserSessions(record.userId);
+
+    const resetAt = new Date();
+    try {
+      await this.email.sendResetPasswordConfirmationEmail(
+        record.user.email,
+        record.user.name,
+        resetAt.toLocaleDateString("en-US"),
+        resetAt.toLocaleTimeString("en-US"),
+        ipAddress,
+        deviceInfo,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Password reset confirmation email failed for user=${record.userId}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
   }
 
   async changePassword(

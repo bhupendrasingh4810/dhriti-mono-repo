@@ -44,6 +44,15 @@ export interface ResendVerificationInput {
   token: string;
 }
 
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  newPassword: string;
+}
+
 interface ApiErrorResponse {
   error?: {
     message?: string;
@@ -115,4 +124,36 @@ export async function resendVerification(input: ResendVerificationInput): Promis
   const responseBody = await response.json().catch(() => ({})) as ApiErrorResponse;
   const fieldMessages = responseBody.error?.details?.fields;
   throw new Error(fieldMessages?.join(' ') || responseBody.error?.message || 'Unable to resend the verification email.');
+}
+
+export async function forgotPassword(input: ForgotPasswordInput): Promise<void> {
+  const response = await fetch('/api/auth/forgot-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  const responseBody = await response.json().catch(() => ({})) as ApiErrorResponse;
+  const fieldMessages = responseBody.error?.details?.fields;
+  throw new Error(fieldMessages?.join(' ') || responseBody.error?.message || 'Unable to request a password reset.');
+}
+
+export async function resetPassword(input: ResetPasswordInput): Promise<void> {
+  const response = await fetch('/api/auth/reset-password', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (response.ok) {
+    return;
+  }
+
+  const responseBody = await response.json().catch(() => ({})) as ApiErrorResponse;
+  const fieldMessages = responseBody.error?.details?.fields;
+  throw new Error(fieldMessages?.join(' ') || responseBody.error?.message || 'Unable to reset your password.');
 }

@@ -15,11 +15,11 @@ export class RegisterDto {
 
   @ApiProperty({
     example: "Sup3rSecure!",
-    minLength: 10,
+    minLength: 8,
     description: "At least 10 chars with upper, lower, digit and symbol",
   })
   @IsString()
-  @MinLength(10, { message: "Password must be at least 10 characters" })
+  @MinLength(8, { message: "Password must be at least 8 characters" })
   @MaxLength(128)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/, {
     message: "Password must include uppercase, lowercase, number and symbol",

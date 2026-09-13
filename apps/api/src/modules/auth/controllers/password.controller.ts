@@ -3,13 +3,16 @@ import {
     Controller,
     HttpCode,
     HttpStatus,
+    Ip,
     Post,
+    Req,
 } from "@nestjs/common";
 import {
     ApiBearerAuth,
     ApiOperation,
     ApiTags,
 } from "@nestjs/swagger";
+import type { Request } from "express";
 
 import { Public } from "../../../common/decorators/public.decorator";
 import {
@@ -45,8 +48,13 @@ export class AuthPasswordController {
     @Post("reset-password")
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: "Reset password with the emailed token; revokes all sessions" })
-    async resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
-        return this.auth.resetPassword(dto.token, dto.newPassword);
+        async resetPassword(
+            @Body() dto: ResetPasswordDto,
+            @Ip() ipAddress: string,
+            @Req() request: Request,
+        ): Promise<void> {
+            console.log(dto, ipAddress, request);
+            return this.auth.resetPassword(dto.token, dto.newPassword, ipAddress, request.get("user-agent") ?? "Unknown device");
     }
 
     @Post("change-password")
