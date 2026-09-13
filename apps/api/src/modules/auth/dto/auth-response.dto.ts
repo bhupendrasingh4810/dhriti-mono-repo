@@ -1,10 +1,23 @@
+export interface OrganizationResponse {
+  id: string;
+  name: string;
+}
+
+export interface AuthUserResponse {
+  id: string;
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
 export interface AuthTokensResponse {
   accessToken: string;
   accessTokenExpiresIn: number;
   refreshToken: string;
   refreshTokenExpiresIn: number;
   sessionId: string;
-  organizationId: string | null;
+  user: AuthUserResponse;
+  organization: OrganizationResponse | null;
 }
 
 export interface MfaChallengeResponse {

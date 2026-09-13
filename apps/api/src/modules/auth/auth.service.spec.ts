@@ -103,6 +103,7 @@ function makeSut(prisma: PrismaMock) {
     signMfaToken: jest.fn(async () => "mfa-token"),
     verifyMfaToken: jest.fn(async () => ({ sub: "user-1", purpose: "mfa" as const })),
     generateOpaqueToken: jest.fn(() => "opaque-token"),
+    generateSixDigitOtp: jest.fn(() => "123456"),
     hashToken: jest.fn((t: string) => `hash:${t}`),
   };
   const sessions = {
@@ -122,6 +123,7 @@ function makeSut(prisma: PrismaMock) {
     consumeRecoveryCode: jest.fn(async () => true),
   };
   const emailSender = {
+    sendWelcomeEmail: jest.fn(async () => undefined),
     sendVerificationEmail: jest.fn(async () => undefined),
     sendPasswordResetEmail: jest.fn(async () => undefined),
     sendAccountLockedEmail: jest.fn(async () => undefined),
@@ -153,9 +155,10 @@ describe("AuthService.register", () => {
       email: "Jane@Acme.com",
       name: " Jane Doe ",
       password: "Sup3rSecure!",
+      isTermsAccepted: true,
     });
 
-    expect(result).toEqual({ userId: "user-1", email: "jane@acme.com" });
+    expect(result).toEqual({ userId: "user-1", email: "jane@acme.com", token: "opaque-token" });
     expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -170,7 +173,12 @@ describe("AuthService.register", () => {
         data: expect.objectContaining({ type: "EMAIL_VERIFICATION" }),
       }),
     );
-    expect(emailSender.sendVerificationEmail).toHaveBeenCalledTimes(1);
+    expect(emailSender.sendVerificationEmail).toHaveBeenCalledWith(
+      "jane@acme.com",
+      "Jane Doe",
+      "123456",
+      "http://localhost:3000/verify?email=jane%40acme.com&token=opaque-token",
+    );
   });
 
   it("rejects duplicate emails with EMAIL_ALREADY_REGISTERED", async () => {
@@ -179,7 +187,7 @@ describe("AuthService.register", () => {
     const { service } = makeSut(prisma);
 
     await expect(
-      service.register({ email: "jane@acme.com", name: "Jane", password: "Sup3rSecure!" }),
+      service.register({ email: "jane@acme.com", name: "Jane", password: "Sup3rSecure!", isTermsAccepted: true }),
     ).rejects.toMatchObject({ code: ErrorCode.EMAIL_ALREADY_REGISTERED });
   });
 });
@@ -198,7 +206,11 @@ describe("AuthService.login", () => {
       accessToken: "access-token",
       refreshToken: "refresh-token",
       sessionId: "session-1",
-      organizationId: "org-1",
+      user: {
+        id: "user-1",
+        email: "jane@acme.com",
+        name: "Jane Doe",
+      },
     });
     expect(sessions.createSession).toHaveBeenCalledWith("user-1", "org-1", {});
   });
@@ -445,15 +457,18 @@ describe("AuthService email verification", () => {
     prisma.verificationToken.findUnique.mockResolvedValue({
       id: "tok-1",
       userId: "user-1",
+      user: { email: "jane@acme.com", name: "Jane Doe" },
       type: "EMAIL_VERIFICATION",
+      otpHash: "hash:123456",
       usedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
     });
     prisma.verificationToken.update.mockResolvedValue({ userId: "user-1" });
     prisma.user.update.mockResolvedValue(makeUser());
-    const { service } = makeSut(prisma);
+    prisma.user.findUnique.mockResolvedValue(makeUser());
+    const { service, emailSender } = makeSut(prisma);
 
-    await service.verifyEmail("raw-token");
+    await service.verifyEmail("jane@acme.com", "raw-token", "123456");
 
     expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -465,6 +480,11 @@ describe("AuthService email verification", () => {
         data: expect.objectContaining({ status: "ACTIVE" }),
       }),
     );
+    expect(emailSender.sendWelcomeEmail).toHaveBeenCalledWith(
+      "jane@acme.com",
+      "Jane Doe",
+      undefined,
+    );
   });
 
   it("verifyEmail rejects already-used tokens", async () => {
@@ -472,13 +492,15 @@ describe("AuthService email verification", () => {
     prisma.verificationToken.findUnique.mockResolvedValue({
       id: "tok-1",
       userId: "user-1",
+      user: { email: "jane@acme.com", name: "Jane Doe" },
       type: "EMAIL_VERIFICATION",
+      otpHash: "hash:123456",
       usedAt: NOW,
       expiresAt: new Date(Date.now() + 60_000),
     });
     const { service } = makeSut(prisma);
 
-    await expect(service.verifyEmail("raw-token")).rejects.toMatchObject({
+    await expect(service.verifyEmail("jane@acme.com", "raw-token", "123456")).rejects.toMatchObject({
       code: ErrorCode.TOKEN_ALREADY_USED,
     });
   });

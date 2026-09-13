@@ -9,6 +9,7 @@ export const envSchema = z
     PORT: z.coerce.number().int().positive().default(3001),
     API_PREFIX: z.string().min(1).default("v1"),
     WEB_APP_URL: z.string().url(),
+    ONBOARDING_URL: z.string().url(),
     CORS_ORIGINS: z.string().min(1),
 
     DATABASE_URL: z.string().min(1),
@@ -44,6 +45,10 @@ export const envSchema = z
 
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().min(1).default("gpt-4o-mini"),
+
+    BREVO_API_KEY: z.string().optional(),
+    BREVO_SENDER_EMAIL: z.string().email().optional(),
+    BREVO_SENDER_NAME: z.string().min(1).optional(),
   })
   .superRefine((env, ctx) => {
     const providers: Array<[string, Array<string | undefined>]> = [
@@ -59,6 +64,13 @@ export const envSchema = z
           message: `${name} OAuth requires CLIENT_ID, CLIENT_SECRET and CALLBACK_URL together`,
         });
       }
+    }
+
+    if (env.BREVO_API_KEY && (!env.BREVO_SENDER_EMAIL || !env.BREVO_SENDER_NAME)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "BREVO_API_KEY requires BREVO_SENDER_EMAIL and BREVO_SENDER_NAME",
+      });
     }
   });
 

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider } from "@dhriti/ui";
+import { AlertProvider } from '@/components/alerts/alert-provider';
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <AppRouterCacheProvider>
-          <ThemeProvider mode="system" density="comfortable">{children}</ThemeProvider>
+          <ThemeProvider mode="system" density="comfortable">
+            <AlertProvider>{children}</AlertProvider>
+          </ThemeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>

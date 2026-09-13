@@ -172,9 +172,24 @@ interface StyledTooltipOwnerProps {
   custommaxwidth?: number | string;
 }
 
-const StyledMuiTooltip = styled(MuiTooltip, {
-  shouldForwardProp: (prop) => prop !== "ownerState",
-})<{ ownerState: StyledTooltipOwnerProps }>(({ theme, ownerState }) => {
+const StyledMuiTooltip = styled(
+  ({
+    className,
+    ownerState,
+    ...props
+  }: MuiTooltipProps & { ownerState: StyledTooltipOwnerProps }) => (
+    <MuiTooltip
+      {...props}
+      classes={{
+        ...props.classes,
+        popper: [props.classes?.popper, className].filter(Boolean).join(" "),
+      }}
+    />
+  ),
+  {
+    shouldForwardProp: (prop) => prop !== "ownerState",
+  },
+)<{ ownerState: StyledTooltipOwnerProps }>(({ theme, ownerState }) => {
   const { customvariant, customsize, custommaxwidth } = ownerState;
   const token = sizeTokens[customsize];
   const isLight = customvariant === "light" || customvariant === "white";
@@ -261,8 +276,8 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
   {
     title,
     description,
-    variant,
-    color = "dark",
+    variant = "light",
+    color,
     size = "medium",
     maxWidth,
     shortcut,
@@ -277,7 +292,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
   ref,
 ) {
   const theme = useTheme();
-  const resolvedVariant = variant ?? color;
+  const resolvedVariant = color ?? variant;
   const resolvedSize = normalizeSize(size);
   const isLight = resolvedVariant === "light" || resolvedVariant === "white";
 

@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
@@ -58,6 +58,10 @@ export class TokenService {
 
   generateOpaqueToken(): string {
     return randomBytes(48).toString("base64url");
+  }
+
+  generateSixDigitOtp(): string {
+    return randomInt(100_000, 1_000_000).toString();
   }
 
   hashToken(token: string): string {

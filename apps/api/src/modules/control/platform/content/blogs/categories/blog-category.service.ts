@@ -1,9 +1,9 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import type { BlogCategory } from "@prisma/client";
 
-import { PrismaService } from "../../../../../../../database/prisma.service";
-import { AppError } from "../../../../../../../common/errors/app-error";
-import { ErrorCode } from "../../../../../../../common/errors/error-codes";
+import { PrismaService } from "../../../../../../database/prisma.service";
+import { AppError } from "../../../../../../common/errors/app-error";
+import { ErrorCode } from "../../../../../../common/errors/error-codes";
 
 import type { CreateBlogCategoryDto, UpdateBlogCategoryDto } from "./dto/blog-category.dto";
 

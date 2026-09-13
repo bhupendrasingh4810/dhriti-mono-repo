@@ -19,7 +19,7 @@ import Typography from "@mui/material/Typography";
 import IconButton from "@mui/material/IconButton";
 import Collapse from "@mui/material/Collapse";
 import Paper from "@mui/material/Paper";
-import { styled } from "@mui/material/styles";
+import { styled, type SxProps, type Theme } from "@mui/material/styles";
 import {
   CheckCircleOutlineRounded as CheckCircleOutlineIcon,
   Close as CloseIcon,
@@ -31,7 +31,7 @@ import {
 export type AlertVariant = "filled" | "outlined";
 export type AlertSeverity = "success" | "error" | "warning" | "info";
 
-export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
+export interface AlertProps extends Omit<HTMLAttributes<HTMLDivElement>, "color"> {
   /**
    * Alert content (title).
    */
@@ -103,6 +103,11 @@ export interface AlertProps extends HTMLAttributes<HTMLDivElement> {
    * @default true
    */
   fullWidth?: boolean;
+
+  /**
+   * Custom styles.
+   */
+  sx?: SxProps<Theme> | any;
 }
 
 // ============================================================================
@@ -121,8 +126,8 @@ const severityIcons: Record<AlertSeverity, ReactNode> = {
 // ============================================================================
 
 interface StyledAlertProps {
-  severity: AlertSeverity;
-  variant: AlertVariant;
+  customseverity: AlertSeverity;
+  customvariant: AlertVariant;
   showIcon: boolean;
   fullWidth: boolean;
 }
@@ -256,11 +261,11 @@ const getSeverityColors = (severity: AlertSeverity, mode: "light" | "dark" = "li
 
 const AlertRoot = styled(Paper, {
   shouldForwardProp: (prop) =>
-    prop !== "severity" && prop !== "variant" && prop !== "showIcon" && prop !== "fullWidth",
-})<StyledAlertProps>(({ theme, severity, variant, showIcon, fullWidth }) => {
+    prop !== "customseverity" && prop !== "customvariant" && prop !== "showIcon" && prop !== "fullWidth",
+})<StyledAlertProps>(({ theme, customseverity, customvariant, showIcon, fullWidth }) => {
   const mode = theme.palette.mode;
-  const colors = getSeverityColors(severity, mode as "light" | "dark");
-  const colorSet = variant === "filled" ? colors.filled : colors.outlined;
+  const colors = getSeverityColors(customseverity, mode as "light" | "dark");
+  const colorSet = customvariant === "filled" ? colors.filled : colors.outlined;
 
   return {
     display: "flex",
@@ -271,14 +276,14 @@ const AlertRoot = styled(Paper, {
     minWidth: fullWidth ? undefined : 320,
     maxWidth: "100%",
     backgroundColor: colorSet.bg,
-    border: variant === "outlined" ? `2px solid ${colorSet.border}` : "none",
-    borderLeft: variant === "filled" ? `4px solid ${colorSet.border}` : undefined,
-    borderRadius: theme.tokens.radius.md,
-    boxShadow: variant === "filled" ? theme.shadows[1] : "none",
+    border: customvariant === "outlined" ? `2px solid ${colorSet.border}` : "none",
+    borderLeft: customvariant === "filled" ? `4px solid ${colorSet.border}` : undefined,
+    borderRadius: theme.shape?.borderRadius ?? 8,
+    boxShadow: customvariant === "filled" ? theme.shadows[1] : "none",
     color: colorSet.text,
     position: "relative",
     transition: theme.transitions.create(["opacity", "transform", "max-height"], {
-      duration: theme.transitions.duration.normal,
+      duration: theme.transitions.duration.standard,
       easing: theme.transitions.easing.easeInOut,
     }),
 
@@ -390,11 +395,11 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
   const displayIcon = icon !== undefined ? icon : severityIcons[severity];
 
   return (
-    <Collapse in={isOpen} timeout="normal">
+    <Collapse in={isOpen} timeout="auto">
       <AlertRoot
         ref={ref}
-        severity={severity}
-        variant={variant}
+        customseverity={severity}
+        customvariant={variant}
         showIcon={showIcon}
         fullWidth={fullWidth}
         role={getRole()}
@@ -456,9 +461,3 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
 });
 
 Alert.displayName = "Alert";
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export type { AlertVariant, AlertSeverity };

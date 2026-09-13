@@ -13,6 +13,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./mui": {
+      "types": "./src/components/mui/index.ts",
+      "default": "./src/components/mui/index.ts"
+    },
     "./dialog": {
       "types": "./src/components/mui/Dialog/index.tsx",
       "default": "./src/components/mui/Dialog/index.tsx"

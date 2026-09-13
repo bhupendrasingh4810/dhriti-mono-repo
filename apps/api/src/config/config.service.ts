@@ -27,6 +27,10 @@ export class ApiConfigService {
     return this.config.get("WEB_APP_URL", { infer: true });
   }
 
+  get onboardingUrl(): string {
+    return this.config.get("ONBOARDING_URL", { infer: true });
+  }
+
   get corsOrigins(): string[] {
     return this.config
       .get("CORS_ORIGINS", { infer: true })
@@ -105,6 +109,17 @@ export class ApiConfigService {
 
   get openAiModel(): string {
     return this.config.get("OPENAI_MODEL", { infer: true });
+  }
+
+  get brevo(): { apiKey: string; senderEmail: string; senderName: string } | null {
+    const apiKey = this.config.get("BREVO_API_KEY", { infer: true });
+    const senderEmail = this.config.get("BREVO_SENDER_EMAIL", { infer: true });
+    const senderName = this.config.get("BREVO_SENDER_NAME", { infer: true });
+
+    if (!apiKey || !senderEmail || !senderName) {
+      return null;
+    }
+    return { apiKey, senderEmail, senderName };
   }
 
   get googleOAuth(): { clientId: string; clientSecret: string; callbackUrl: string } | null {

@@ -3,7 +3,7 @@
 import NextLink from "next/link";
 import { AppBar, Box, Button, Container, Link, Stack, Toolbar, Typography } from "@dhriti/ui";
 
-type MarketingSiteHeaderProps = {
+type NavbarProps = {
   navItems: string[];
   brandName?: string;
   signInHref?: string;
@@ -11,13 +11,13 @@ type MarketingSiteHeaderProps = {
   ctaLabel?: string;
 };
 
-export function MarketingSiteHeader({
+export function Navbar({
   navItems,
   brandName = "Dhriti",
   signInHref = "/login",
   ctaHref = "/get-started",
   ctaLabel = "Get Started",
-}: MarketingSiteHeaderProps) {
+}: NavbarProps) {
   return (
     <AppBar
       position="sticky"

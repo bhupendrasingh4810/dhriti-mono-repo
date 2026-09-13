@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsJWT, IsString, MaxLength } from "class-validator";
+import { IsEmail, IsJWT, IsString, Matches, MaxLength } from "class-validator";
 
 export class RefreshTokenDto {
   @ApiProperty({ description: "Opaque refresh token returned at login" })
@@ -8,17 +8,32 @@ export class RefreshTokenDto {
 }
 
 export class VerifyEmailDto {
-  @ApiProperty({ description: "Token from the verification email link" })
+  @ApiProperty({ example: "jane@acme.com" })
+  @IsEmail()
+  @MaxLength(320)
+  email!: string;
+
+  @ApiProperty({ description: "Verification token returned after registration", maxLength: 256 })
   @IsString()
   @MaxLength(256)
   token!: string;
+
+  @ApiProperty({ description: "6-digit code from the verification email", example: "123456" })
+  @IsString()
+  @Matches(/^\d{6}$/, { message: "OTP must be exactly 6 digits" })
+  otp!: string;
 }
 
 export class ResendVerificationDto {
   @ApiProperty({ example: "jane@acme.com" })
-  @IsString()
+  @IsEmail()
   @MaxLength(320)
   email!: string;
+
+  @ApiProperty({ description: "Verification token returned after registration", maxLength: 256 })
+  @IsString()
+  @MaxLength(256)
+  token!: string;
 }
 
 export class MfaVerifyLoginDto {

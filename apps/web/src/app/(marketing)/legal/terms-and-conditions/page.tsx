@@ -26,7 +26,7 @@ import GavelIcon from '@mui/icons-material/Gavel';
 import EmailIcon from '@mui/icons-material/Email';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
-import { MarketingSiteHeader } from '@/components/marketing/MarketingSiteHeader';
+import { MarketingSiteHeader } from '@/components/layout/marketing/navbar';
 
 export default function TermsAndConditions() {
   const [expanded, setExpanded] = useState<string | false>('panel1');

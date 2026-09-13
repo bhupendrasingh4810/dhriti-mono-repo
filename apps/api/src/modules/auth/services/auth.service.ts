@@ -15,9 +15,9 @@ import { MfaService } from "./mfa.service";
 import type { RegisterDto } from "../dto/register.dto";
 import type { LoginDto } from "../dto/login.dto";
 import type { UpdateProfileDto, UserProfileResponse } from "../dto/profile.dto";
-import type { AuthTokensResponse, LoginResponse } from "../dto/auth-response.dto";
+import type { AuthTokensResponse, LoginResponse, OrganizationResponse } from "../dto/auth-response.dto";
 
-const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
+const VERIFICATION_TOKEN_TTL_MS = 20 * 60 * 1000;
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export interface OAuthProfile {
@@ -54,7 +54,7 @@ export class AuthService {
   // Registration
   // ------------------------------------------------------------------
 
-  async register(dto: RegisterDto): Promise<{ userId: string; email: string }> {
+  async register(dto: RegisterDto): Promise<{ email: string; token: string }> {
     const email = dto.email.toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -88,13 +88,13 @@ export class AuthService {
       },
     });
 
-    await this.issueVerificationToken(user);
+    const token = await this.issueVerificationToken(user);
     this.logger.log(`Registered user=${user.id}`);
-    return { userId: user.id, email: user.email };
+    return { email: user.email, token };
   }
 
-  async verifyEmail(token: string): Promise<void> {
-    const record = await this.consumeToken(token, "EMAIL_VERIFICATION");
+  async verifyEmail(emailAddress: string, token: string, otp: string): Promise<AuthTokensResponse> {
+    const record = await this.consumeToken(token, "EMAIL_VERIFICATION", otp, emailAddress);
     await this.prisma.userAuth.upsert({
       where: { userId: record.userId },
       create: { userId: record.userId, emailVerifiedAt: new Date() },
@@ -104,18 +104,34 @@ export class AuthService {
       where: { id: record.userId },
       data: { status: "ACTIVE" },
     });
+    await this.email.sendWelcomeEmail(record.user.email, record.user.name, this.config.onboardingUrl);
+    return this.issueTokens(record.userId, emailAddress.toLowerCase(), {});
   }
 
-  async resendVerification(emailAddress: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: emailAddress.toLowerCase() },
-      include: withAuth,
+  async resendVerification(emailAddress: string, token: string): Promise<void> {
+    const record = await this.prisma.verificationToken.findUnique({
+      where: { tokenHash: this.tokens.hashToken(token) },
+      include: { user: { select: { email: true, name: true } } },
     });
-    // Deliberately no error when the account is missing/verified (no enumeration).
-    if (!user || user.auth?.emailVerifiedAt) {
-      return;
+
+    if (
+      !record ||
+      record.type !== "EMAIL_VERIFICATION" ||
+      record.usedAt ||
+      record.user.email !== emailAddress.trim().toLowerCase()
+    ) {
+      throw new AppError(ErrorCode.TOKEN_INVALID, "Verification request is invalid", HttpStatus.BAD_REQUEST);
     }
-    await this.issueVerificationToken(user);
+
+    const otp = this.tokens.generateSixDigitOtp();
+    const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
+    await this.prisma.verificationToken.update({
+      where: { id: record.id },
+      data: { otpHash: this.tokens.hashToken(otp), expiresAt },
+    });
+
+    const verificationUrl = `${this.config.webAppUrl}/verify?email=${encodeURIComponent(record.user.email)}&token=${encodeURIComponent(token)}`;
+    await this.email.sendResendOtpEmail(record.user.email, record.user.name, otp, 20, verificationUrl);
   }
 
   // ------------------------------------------------------------------
@@ -215,7 +231,7 @@ export class AuthService {
     const rotated = await this.sessions.rotateSession(refreshToken, context);
     const user = await this.requireUserBySession(rotated.sessionId);
     const organizationId = await this.sessions.getSessionOrganization(rotated.sessionId);
-    return this.buildTokenResponse(user, rotated, organizationId);
+    return this.buildTokenResponse(user, rotated, organizationId, null);
   }
 
   // ------------------------------------------------------------------
@@ -440,16 +456,17 @@ export class AuthService {
     emailAddress: string,
     context: SessionContext,
   ): Promise<AuthTokensResponse> {
-    const organizationId = await this.resolveDefaultOrganization(userId);
-    const session = await this.sessions.createSession(userId, organizationId, context);
+    const organization = await this.resolveDefaultOrganization(userId);
+    const session = await this.sessions.createSession(userId, organization?.id ?? null, context);
     const user = await this.requireUser(userId);
-    return this.buildTokenResponse(user, session, organizationId);
+    return this.buildTokenResponse(user, session, organization?.id ?? null, organization);
   }
 
   private async buildTokenResponse(
     user: User,
     session: { sessionId: string; refreshToken: string; expiresAt: Date },
     organizationId: string | null,
+    organization: OrganizationResponse | null,
   ): Promise<AuthTokensResponse> {
     const accessToken = await this.tokens.signAccessToken({
       userId: user.id,
@@ -464,17 +481,23 @@ export class AuthService {
       refreshToken: session.refreshToken,
       refreshTokenExpiresIn: Math.floor((session.expiresAt.getTime() - Date.now()) / 1000),
       sessionId: session.sessionId,
-      organizationId,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      },
+      organization,
     };
   }
 
-  private async resolveDefaultOrganization(userId: string): Promise<string | null> {
+  private async resolveDefaultOrganization(userId: string): Promise<OrganizationResponse | null> {
     const membership = await this.prisma.organizationMember.findFirst({
       where: { userId, organization: { deletedAt: null } },
       orderBy: { createdAt: "asc" },
-      select: { organizationId: true },
+      select: { organization: { select: { id: true, name: true } } },
     });
-    return membership?.organizationId ?? null;
+    return membership?.organization ?? null;
   }
 
   private async userIdFromMfaToken(mfaToken: string): Promise<string> {
@@ -490,13 +513,26 @@ export class AuthService {
     }
   }
 
-  private async consumeToken(token: string, type: "EMAIL_VERIFICATION" | "PASSWORD_RESET") {
+  private async consumeToken(
+    token: string,
+    type: "EMAIL_VERIFICATION" | "PASSWORD_RESET",
+    otp?: string,
+    emailAddress?: string,
+  ) {
     const record = await this.prisma.verificationToken.findUnique({
       where: { tokenHash: this.tokens.hashToken(token) },
+      include: { user: { select: { email: true, name: true } } },
     });
 
     if (!record || record.type !== type) {
       throw new AppError(ErrorCode.TOKEN_INVALID, "Token is invalid", HttpStatus.BAD_REQUEST);
+    }
+    const otpHash = (record as typeof record & { otpHash: string | null }).otpHash;
+    if (type === "EMAIL_VERIFICATION" && (!otp || otpHash !== this.tokens.hashToken(otp))) {
+      throw new AppError(ErrorCode.TOKEN_INVALID, "Verification code is invalid", HttpStatus.BAD_REQUEST);
+    }
+    if (type === "EMAIL_VERIFICATION" && record.user.email !== emailAddress?.trim().toLowerCase()) {
+      throw new AppError(ErrorCode.TOKEN_INVALID, "Verification email is invalid", HttpStatus.BAD_REQUEST);
     }
     if (record.usedAt) {
       throw new AppError(ErrorCode.TOKEN_ALREADY_USED, "Token was already used", HttpStatus.BAD_REQUEST);
@@ -508,22 +544,26 @@ export class AuthService {
     return this.prisma.verificationToken.update({
       where: { id: record.id },
       data: { usedAt: new Date() },
+      include: { user: { select: { email: true, name: true } } },
     });
   }
 
-  private async issueVerificationToken(user: User): Promise<void> {
+  private async issueVerificationToken(user: User): Promise<string> {
+    const otp = this.tokens.generateSixDigitOtp();
     const token = this.tokens.generateOpaqueToken();
     await this.prisma.verificationToken.create({
       data: {
         userId: user.id,
         tokenHash: this.tokens.hashToken(token),
+        otpHash: this.tokens.hashToken(otp),
         type: "EMAIL_VERIFICATION",
         expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
       },
     });
 
-    const verificationUrl = `${this.config.webAppUrl}/verify?token=${encodeURIComponent(token)}`;
-    await this.email.sendVerificationEmail(user.email, user.name, verificationUrl);
+    const verificationUrl = `${this.config.webAppUrl}/verify?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(token)}`;
+    await this.email.sendVerificationEmail(user.email, user.name, otp, verificationUrl);
+    return token;
   }
 
   private assertNotLocked(user: UserWithAuth): void {

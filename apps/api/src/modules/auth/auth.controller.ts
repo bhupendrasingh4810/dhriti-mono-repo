@@ -73,7 +73,7 @@ export class AuthController {
   @ApiOperation({ summary: "Register a new user and send verification email" })
   @ApiResponse({ status: 201, description: "User created; verification email sent" })
   @ApiResponse({ status: 409, description: "Email already registered" })
-  async register(@Body() dto: RegisterDto): Promise<{ userId: string; email: string }> {
+  async register(@Body() dto: RegisterDto): Promise<{ email: string; token: string }> {
     return this.auth.register(dto);
   }
 
@@ -82,8 +82,8 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Verify email address with the emailed token" })
   @ApiResponse({ status: 204 })
-  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<void> {
-    return this.auth.verifyEmail(dto.token);
+  async verifyEmail(@Body() dto: VerifyEmailDto): Promise<AuthTokensResponse> {
+    return this.auth.verifyEmail(dto.email, dto.token, dto.otp);
   }
 
   @Public()
@@ -92,7 +92,7 @@ export class AuthController {
   @ApiOperation({ summary: "Resend the verification email (no account enumeration)" })
   @ApiResponse({ status: 204 })
   async resendVerification(@Body() dto: ResendVerificationDto): Promise<void> {
-    return this.auth.resendVerification(dto.email);
+    return this.auth.resendVerification(dto.email, dto.token);
   }
 
   // ---------------- Login / tokens / logout ----------------

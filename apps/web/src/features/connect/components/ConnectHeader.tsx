@@ -51,7 +51,7 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: "fit-content" }}>
-          <Box sx={{ width: 28, height: 28, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "primary.main", display: "grid", placeItems: "center", color: "primary.contrastText", fontWeight: "fontWeightBold", fontStyle: "italic" }}>F</Box>
+          <Box sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: "primary.main", display: "grid", placeItems: "center", color: "primary.contrastText", fontWeight: "fontWeightBold", fontStyle: "italic" }}>F</Box>
           <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>Flowrise</Typography>
         </Stack>
 
@@ -74,7 +74,7 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
             sx={{
               "& .MuiOutlinedInput-root": {
                 bgcolor: "surfaces.surfaceHover",
-                borderRadius: (theme) => theme.tokens.radius.sm,
+                borderRadius: 2,
               },
             }}
           />

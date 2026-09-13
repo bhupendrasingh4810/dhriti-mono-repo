@@ -6,7 +6,6 @@ import {
   useMemo,
   type ReactNode,
   type MouseEvent,
-  type KeyboardEvent,
   type ChangeEvent,
 } from "react";
 import Box from "@mui/material/Box";
@@ -52,13 +51,7 @@ import FilterListRounded from "@mui/icons-material/FilterListRounded";
 import MoreVertRounded from "@mui/icons-material/MoreVertRounded";
 import StarRounded from "@mui/icons-material/StarRounded";
 import StarBorderRounded from "@mui/icons-material/StarBorderRounded";
-import DownloadRounded from "@mui/icons-material/DownloadRounded";
-import MailOutlineRounded from "@mui/icons-material/MailOutlineRounded";
-import PhoneRounded from "@mui/icons-material/PhoneRounded";
 import InsertDriveFileRounded from "@mui/icons-material/InsertDriveFileRounded";
-import NotificationsRounded from "@mui/icons-material/NotificationsRounded";
-import CalendarMonthRounded from "@mui/icons-material/CalendarMonthRounded";
-import CheckRounded from "@mui/icons-material/CheckRounded";
 import CloseRounded from "@mui/icons-material/CloseRounded";
 import HubRounded from "@mui/icons-material/HubRounded";
 import ChatBubbleRounded from "@mui/icons-material/ChatBubbleRounded";
@@ -74,9 +67,8 @@ import type {
   DTableColumn,
   DTableViewMode,
   DTableSortOrder,
-  DTableFilter,
 } from "./types";
-import type { ListCardColumnKey, ListCardStatusType, ListCardMenuContext } from "../TableListCard";
+import type { ListCardColumnKey, ListCardStatusType } from "../TableListCard";
 
 // ============================================================================
 // STYLED CONTAINERS
@@ -1391,12 +1383,13 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         <Box
           sx={{
             px: 3,
-            py: 1.5,
-            my: 0.5,
+            py: 2,
+            my: 2,
             display: "flex",
             alignItems: "center",
             flexWrap: "wrap",
             gap: 1.25,
+            borderRadius: 1,
             borderTop: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
             borderBottom: `1px solid ${alpha(theme.palette.primary.main, 0.08)}`,
             bgcolor: alpha(theme.palette.primary.main, 0.03),
@@ -1461,8 +1454,6 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
 
       {/* 4. Bulk Action Bar */}
       {bulkActionBar}
-
-      <Divider />
 
       {/* 5. Main Content Area: Table View OR Card View */}
       {loading ? (
@@ -1629,10 +1620,10 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
             p: 3,
             display: "grid",
             gridTemplateColumns: {
-              xs: "1fr",
-              sm: "repeat(2, 1fr)",
-              md: "repeat(3, 1fr)",
-              lg: "repeat(4, 1fr)",
+              xs: `repeat(${Math.max(1, Math.round(12 / (cardGridColumns?.xs ?? 12)))}, 1fr)`,
+              sm: `repeat(${Math.max(1, Math.round(12 / (cardGridColumns?.sm ?? 6)))}, 1fr)`,
+              md: `repeat(${Math.max(1, Math.round(12 / (cardGridColumns?.md ?? 4)))}, 1fr)`,
+              lg: `repeat(${Math.max(1, Math.round(12 / (cardGridColumns?.lg ?? 3)))}, 1fr)`,
             },
             gap: 3,
           }}

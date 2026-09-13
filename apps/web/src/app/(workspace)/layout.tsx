@@ -1,12 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
-import Link from "next/link";
+import { use, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Box } from "@dhriti/ui";
 import { ConnectHeader } from "@/features/connect";
-import { AppRail } from "@/components/shared/AppRail";
-import { WorkspaceAppsHeader } from "@/components/shared/WorkspaceAppsHeader";
+import AppRail from "@/components/layout/workspace/sidebar";
+import Header from "@/components/layout/workspace/header";
 import { connectSearchResults, connectUsers } from "@/mocks/connect";
 import { PageName, PageType } from "@/types/app.types";
 
@@ -19,13 +18,14 @@ function getActiveApp(pathname: string): PageType {
   return "home";
 }
 
-export default function OrganizationWorkspaceLayoutClient({
+export default function WorkspaceLayout({
   children,
-  organizationSlug,
+  params,
 }: {
   children: ReactNode;
-  organizationSlug: string;
+  params: Promise<{ organizationSlug: string }>;
 }) {
+  use(params);
   const pathname = usePathname();
   const activeApp = getActiveApp(pathname);
   const headerAppName = activeApp === "home"
@@ -60,12 +60,12 @@ export default function OrganizationWorkspaceLayoutClient({
         {activeApp === "connect" ? (
           <ConnectHeader users={headerSearchUsers} messages={headerSearchMessages} files={headerSearchFiles} />
         ) : (
-          <WorkspaceAppsHeader appName={headerAppName} />
+          <Header activeView={activeApp} onViewChange={() => { }} />
         )}
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-        <AppRail organizationSlug={organizationSlug} activeApp={activeApp} linkComponent={Link} />
+        <AppRail activeView={activeApp} onViewChange={() => { }} onLogout={() => { }} />
         <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto" }}>{children}</Box>
       </Box>
     </Box>
