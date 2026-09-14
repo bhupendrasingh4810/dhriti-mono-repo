@@ -55,8 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
             const data = await res.json();
             return data.user || null;
-        } catch (error) {
-            console.error('Failed to fetch user:', error);
+        } catch {
             return null;
         }
     }, []);
@@ -96,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } finally {
             refreshPromise = null;
         }
-    }, [user]);
+    }, []);
 
     const loadUser = useCallback(async () => {
         try {
@@ -112,7 +111,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     // Load user on mount
     useEffect(() => {
-        loadUser();
+        void Promise.resolve().then(loadUser);
     }, [loadUser]);
 
     // Access tokens are HTTP-only, so refresh active sessions on an interval.
@@ -135,7 +134,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
             handlingUnauthorized = true;
 
-            const callbackUrl = `${window.location.pathname}${window.location.search}`;
+            const currentUrl = new URL(window.location.href);
+            const existingCallbackUrl = currentUrl.searchParams.get("callbackUrl");
+            const loginUrl = existingCallbackUrl
+                ? `/login?callbackUrl=${encodeURIComponent(existingCallbackUrl)}`
+                : currentUrl.pathname === "/login"
+                    ? "/login"
+                    : `/login?callbackUrl=${encodeURIComponent(`${currentUrl.pathname}${currentUrl.search}`)}`;
             try {
                 await originalFetch("/api/auth/logout", {
                     method: "POST",
@@ -143,14 +148,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
                 });
             } finally {
                 setUser(null);
-                window.location.assign(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+                window.location.assign(loginUrl);
             }
         };
 
         window.fetch = async (...args) => {
             const response = await originalFetch(...args);
             const requestUrl = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].pathname : args[0].url;
-            if (response.status === 401 && !requestUrl.includes("/api/auth/logout")) {
+            if (response.status === 401 && !requestUrl.includes("/api/auth/")) {
                 void handleUnauthorized();
             }
             return response;

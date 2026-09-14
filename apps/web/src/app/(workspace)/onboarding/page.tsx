@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Logo from "../../components/shared/logo";
+import Logo from "../../../components/shared/logo";
 import OnboardingStepOne from "@/components/onboarding/onboarding-step-one";
 import OnboardingStepTwo from "@/components/onboarding/onboarding-step-two";
 import OnboardingStepThree from "@/components/onboarding/onboarding-step-three";

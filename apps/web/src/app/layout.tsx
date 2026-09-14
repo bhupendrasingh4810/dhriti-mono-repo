@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>
+      <body suppressHydrationWarning>
         <AppRouterCacheProvider>
           <ThemeProvider mode="system" density="comfortable">
             <AuthProvider>

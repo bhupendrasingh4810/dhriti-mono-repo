@@ -1,4 +1,4 @@
-"use client";
+"use server";
 
 import {
   AIResponse,
@@ -21,7 +21,7 @@ const workItems = [
   { title: "Publish meeting notes", status: "Ready", priority: "Medium" },
 ];
 
-export default function DesignSystemPage() {
+export async function DesignSystemPage() {
   return (
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: 4 }}>
       <Container maxWidth="lg">
