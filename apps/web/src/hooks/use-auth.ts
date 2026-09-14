@@ -4,15 +4,16 @@
 import { createContext, createElement, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 
+interface Organization {
+    id: string;
+    name: string;
+    slug: string;
+}
 interface User {
     id: string;
     email: string;
-    fullName: string;
-    organizations: Array<{
-        id: string;
-        name: string;
-        role: 'owner' | 'admin' | 'member';
-    }>;
+    name: string;
+    organization: Organization | null;
 }
 
 interface AuthContextType {
@@ -26,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Track refresh in progress to avoid multiple simultaneous refreshes
-let refreshPromise: Promise<void> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 let handlingUnauthorized = false;
 
 interface AuthProviderProps {
@@ -63,8 +64,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const silentRefresh = useCallback(async (): Promise<boolean> => {
         // If refresh already in progress, wait for it
         if (refreshPromise) {
-            await refreshPromise;
-            return user !== null;
+            return await refreshPromise;
         }
 
         try {
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
  *   if (loading) return <Spinner />;
  *   if (!isAuthenticated) return <LoginPrompt />;
  *   
- *   return <div>Welcome, {user?.fullName}!</div>;
+ *   return <div>Welcome, {user?.name}!</div>;
  * }
  * ```
  */

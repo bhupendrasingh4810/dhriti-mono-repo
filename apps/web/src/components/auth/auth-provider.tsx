@@ -7,12 +7,12 @@ import { isTokenExpiringSoon } from '@/lib/auth/tokens';
 interface User {
   id: string;
   email: string;
-  fullName: string;
-  organizations: Array<{
+  name: string;
+  organization: {
     id: string;
     name: string;
-    role: 'owner' | 'admin' | 'member';
-  }>;
+    slug: string;
+  } | null;
 }
 
 interface AuthContextType {

@@ -12,18 +12,51 @@ export type Page =
   | "verify-email"
   | "dashboard";
 
+type FieldErrors = {
+  name: string | null;
+  email: string | null;
+  password: string | null;
+};
+
+const getEmailError = (email: string): string | null => {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail) {
+    return "Email is required";
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail) ? null : "Email is invalid";
+};
+
 export default function SignupPage() {
   const router = useRouter();
   const { showAlert } = useAlert();
-  const [form, setForm] = useState({ name: "", email: "", password: "", company: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({ name: null, email: null, password: null });
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [k]: e.target.value }));
+  const set = (field: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setForm((currentValue) => ({ ...currentValue, [field]: value }));
+    setFieldErrors((currentValue) => ({
+      ...currentValue,
+      [field]: field === "email"
+        ? getEmailError(value)
+        : value.trim() ? null : `${field === "name" ? "Name" : "Password"} is required`,
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const errors: FieldErrors = {
+      name: form.name.trim() ? null : "Name is required",
+      email: getEmailError(form.email),
+      password: form.password.trim() ? null : "Password is required",
+    };
+    setFieldErrors(errors);
+    if (Object.values(errors).some(Boolean)) {
+      return;
+    }
     setLoading(true);
 
     try {
@@ -61,50 +94,72 @@ export default function SignupPage() {
 
   return (
     <AuthLayout title="Create your account" subtitle="Start your 14-day free trial" illustration="signup">
-      <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
-            <input
-              type="text"
-              required
-              value={form.name}
-              onChange={set("name")}
-              placeholder="Jane Smith"
-              className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
-            />
-          </div>
-          {/* <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Company</label>
-            <input
-              type="text"
-              value={form.company}
-              onChange={set("company")}
-              placeholder="Acme Corp"
-              className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
-            />
-          </div> */}
+      <form noValidate onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Name {" "}
+            <span className="text-red-600">*</span>
+          </label>
+          <input
+            type="text"
+            name="name"
+            autoComplete="name"
+            value={form.name}
+            onChange={set("name")}
+            placeholder="Jane Smith"
+            className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
+            style={{
+              borderColor: fieldErrors.name ? '#dc2626' : '#036c5f',
+              boxShadow: fieldErrors.name ? '0 0 0 3px rgba(220,38,38,0.12)' : '0 0 0 3px rgba(3,108,95,0.12)',
+            }}
+          />
+          {fieldErrors.name && (
+            <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+          )}
+        </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Work email</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Work email {" "}
+            <span className="text-red-600">*</span>
+          </label>
           <input
             type="email"
-            required
+            name="email"
+            autoComplete="email"
             value={form.email}
             onChange={set("email")}
             placeholder="you@company.com"
             className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
+            style={{
+              borderColor: fieldErrors.email ? "#dc2626" : "#036c5f",
+              boxShadow: fieldErrors.email
+                ? "0 0 0 3px rgba(220,38,38,0.12)"
+                : "0 0 0 3px rgba(3,108,95,0.12)",
+            }}
           />
+          {fieldErrors.email && (
+            <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+          )}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            Password {" "}
+            <span className="text-red-600">*</span>
+          </label>
           <input
             type="password"
-            required
+            name="password"
+            autoComplete="new-password"
             value={form.password}
             onChange={set("password")}
             placeholder="Min. 8 characters"
             className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
+            style={{
+              borderColor: fieldErrors.password ? '#dc2626' : '#036c5f',
+              boxShadow: fieldErrors.password ? '0 0 0 3px rgba(220,38,38,0.12)' : '0 0 0 3px rgba(3,108,95,0.12)',
+            }}
           />
           {form.password && (
             <div className="mt-2">
@@ -121,6 +176,9 @@ export default function SignupPage() {
                 {strengthLabel}
               </span>
             </div>
+          )}
+          {fieldErrors.password && (
+            <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
           )}
         </div>
 

@@ -1,29 +1,30 @@
 // apps/web/src/lib/auth/server-session.ts
 import { cookies } from 'next/headers';
 import { decodeJWT } from './tokens';
+import { User } from '@/types/user.types';
 
 export interface SessionUser {
     id: string;
     email: string;
     name: string;
-    organizations: Array<{
+    organization: {
         id: string;
         name: string;
         role: string;
-    }>;
+    };
 }
 
 export async function getSession(): Promise<SessionUser | null> {
     const cookieStore = await cookies();
-    const accessToken = cookieStore.get('access_token')?.value;
+    const userCoockie = cookieStore.get('user')?.value;
 
-    if (!accessToken) {
+    if (!userCoockie) {
         return null;
     }
 
-    const user = decodeJWT(accessToken);
+    const user: any = decodeJWT(userCoockie);
 
-    if (!user?.userId) {
+    if (!user?.id) {
         return null;
     }
 
@@ -31,7 +32,7 @@ export async function getSession(): Promise<SessionUser | null> {
         id: user.userId,
         email: user.email,
         name: user?.name || user.email,
-        organizations: user.organizations || [],
+        organization: user.organization || null,
     };
 }
 

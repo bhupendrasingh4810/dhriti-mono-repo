@@ -198,7 +198,9 @@ describe("AuthService.login", () => {
     const prisma = makePrismaMock();
     prisma.user.findUnique.mockResolvedValue(makeUser());
     prisma.user.update.mockResolvedValue(makeUser());
-    prisma.organizationMember.findFirst.mockResolvedValue({ organizationId: "org-1" });
+    prisma.organizationMember.findFirst.mockResolvedValue({
+      organization: { id: "org-1", name: "Acme" },
+    });
     const { service, sessions } = makeSut(prisma);
 
     const result = await service.login(loginDto, {});
@@ -211,6 +213,7 @@ describe("AuthService.login", () => {
         id: "user-1",
         email: "jane@acme.com",
         name: "Jane Doe",
+        organization: { id: "org-1", name: "Acme" },
       },
     });
     expect(sessions.createSession).toHaveBeenCalledWith("user-1", "org-1", {});
@@ -369,12 +372,13 @@ describe("AuthService password flows", () => {
     );
   });
 
-  it("forgotPassword silently succeeds for unknown emails", async () => {
+  it("forgotPassword succeeds for unknown emails without sending a reset email", async () => {
     const prisma = makePrismaMock();
     prisma.user.findUnique.mockResolvedValue(null);
     const { service, emailSender } = makeSut(prisma);
 
     await expect(service.forgotPassword("ghost@acme.com")).resolves.toBeUndefined();
+    expect(prisma.verificationToken.create).not.toHaveBeenCalled();
     expect(emailSender.sendPasswordResetEmail).not.toHaveBeenCalled();
   });
 
@@ -480,7 +484,12 @@ describe("AuthService email verification", () => {
     prisma.user.findUnique.mockResolvedValue(makeUser());
     const { service, emailSender } = makeSut(prisma);
 
-    await service.verifyEmail("jane@acme.com", "raw-token", "123456");
+    prisma.organizationMember.findFirst.mockResolvedValue({
+      organization: { id: "org-1", name: "Acme" },
+    });
+    const result = await service.verifyEmail("jane@acme.com", "raw-token", "123456");
+
+    expect(result.user.organization).toEqual({ id: "org-1", name: "Acme" });
 
     expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({

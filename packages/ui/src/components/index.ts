@@ -12,3 +12,4 @@ export * from "./custom/Sidebar";
 export * from "./custom/Connect";
 export * from "./custom/TableListCard";
 export * from "./custom/DTable";
+export * from "./custom/PasswordField/PasswordField";

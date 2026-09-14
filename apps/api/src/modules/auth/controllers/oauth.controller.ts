@@ -84,11 +84,51 @@ export class AuthOAuthController {
             return;
         }
 
-        const tokens = await this.auth.loginWithOAuth(profile, this.sessionContext(ip, request));
-        const redirectUrl = new URL("/login", this.config.webAppUrl);
-        redirectUrl.searchParams.set("accessToken", tokens.accessToken);
-        redirectUrl.searchParams.set("refreshToken", tokens.refreshToken);
-        response.redirect(redirectUrl.toString());
+        try {
+            const tokens = await this.auth.loginWithOAuth(
+                profile,
+                this.sessionContext(ip, request),
+            );
+
+            this.setAuthCookies(response, tokens);
+
+            response.redirect(
+                `${this.config.webAppUrl}/oauth/callback`,
+            );
+        } catch {
+            response.redirect(
+                `${this.config.webAppUrl}/oauth/callback?error=oauth_failed`,
+            );
+        }
+    }
+
+    private setAuthCookies(
+        response: Response,
+        tokens: {
+            accessToken: string;
+            refreshToken: string;
+            accessTokenExpiresIn: number;
+            refreshTokenExpiresIn: number;
+        },
+    ): void {
+        const isProduction = process.env.NODE_ENV === 'production';
+
+        const commonOptions = {
+            httpOnly: true,
+            secure: isProduction,
+            sameSite: 'lax' as const,
+            path: '/',
+        };
+
+        response.cookie('access_token', tokens.accessToken, {
+            ...commonOptions,
+            maxAge: tokens.accessTokenExpiresIn * 1000,
+        });
+
+        response.cookie('refresh_token', tokens.refreshToken, {
+            ...commonOptions,
+            maxAge: tokens.refreshTokenExpiresIn * 1000,
+        });
     }
 
     private sessionContext(ip: string, request: Request): SessionContext {

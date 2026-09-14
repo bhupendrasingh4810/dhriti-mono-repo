@@ -61,8 +61,9 @@ export default function VerifyEmailPage({ email }: Props) {
 
     setLoading(true);
     try {
-      await verifyEmail({ email: verificationEmail, token: verificationToken, otp: code.join("") });
-      router.push("/onboarding");
+      const response = await verifyEmail({ email: verificationEmail, token: verificationToken, otp: code.join("") });
+      const organizationSlug = response.user.organization?.slug;
+      router.replace(organizationSlug ? `/${organizationSlug}/home` : "/onboarding");
     } catch (error) {
       showAlert({
         title: error instanceof Error ? error.message : "Unable to verify your email.",

@@ -39,14 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(responseBody, { status: backendResponse.status });
     }
 
-    const response = NextResponse.json(responseBody, { status: backendResponse.status });
-    response.cookies.set("organization", JSON.stringify({ id: responseBody.id, name: responseBody.name }), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-    });
-    return response;
+    return NextResponse.json(responseBody, { status: backendResponse.status });
   } catch {
     return NextResponse.json({ error: { message: "Internal server error" } }, { status: 500 });
   }

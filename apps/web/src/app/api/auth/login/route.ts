@@ -11,23 +11,24 @@ export async function POST(request: NextRequest) {
 
     if (!loginResponse.ok) {
       const error = await loginResponse.json();
-      return NextResponse.json({ error: error.message || 'Invalid credentials' }, { status: 401 });
+      return NextResponse.json({ error: error.message }, { status: 401 });
     }
 
-    const { user, accessToken, refreshToken, organization } = await loginResponse.json();
-    const response = NextResponse.json({ user, organization });
-    response.cookies.set('refresh_token', refreshToken, {
+    const tokens = await loginResponse.json();
+    const { user } = tokens;
+    const response = NextResponse.json({ user });
+    response.cookies.set('access_token', tokens.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: tokens.accessTokenExpiresIn,
       path: '/',
     });
-    response.cookies.set('access_token', accessToken, {
+    response.cookies.set('refresh_token', tokens.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 15,
+      maxAge: tokens.refreshTokenExpiresIn,
       path: '/',
     });
     response.cookies.set('user', JSON.stringify(user), {
@@ -37,16 +38,6 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
-    if (organization) {
-      response.cookies.set('organization', JSON.stringify(organization), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-      });
-    } else {
-      response.cookies.delete('organization');
-    }
     return response;
   } catch (error) {
     console.error('Login error:', error);

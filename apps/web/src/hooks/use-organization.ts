@@ -1,4 +1,3 @@
-// apps/web/src/hooks/use-organization.ts
 'use client';
 
 import { useMemo } from 'react';
@@ -26,12 +25,12 @@ export function useOrganization() {
         }
 
         return (
-            user.organizations.find((org) => org.name === currentOrg) || null
+            (user?.organization?.name === currentOrg) || null
         );
     }, [user, currentOrg]);
 
     const isMember = !!organization;
-    const role = organization?.role || null;
+    // const role = organization?.role || null;
 
     return {
         /** Current organization name from URL */
@@ -41,10 +40,8 @@ export function useOrganization() {
         /** Whether user is a member of this organization */
         isMember,
         /** User's role in this organization (owner, admin, member) */
-        role,
+        // role,
         /** Alias for isMember - can user access this org? */
-        canAccess: isMember,
-        /** All organizations user belongs to */
-        organizations: user?.organizations || [],
+        canAccess: isMember
     };
 }

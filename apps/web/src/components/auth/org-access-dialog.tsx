@@ -22,8 +22,8 @@ export function OrgAccessDialog({ orgName }: OrgAccessDialogProps) {
     const router = useRouter();
 
     const handleSwitchOrg = () => {
-        if (user && user?.organizations?.length > 0) {
-            router.push(`/${user?.organizations[0].name}/home`);
+        if (user && user?.organization) {
+            router.push(`/${user?.organization.name}/home`);
         }
     };
 
@@ -41,15 +41,15 @@ export function OrgAccessDialog({ orgName }: OrgAccessDialogProps) {
                 {/* </DialogHeader> */}
 
                 <div className="mt-6 space-y-3">
-                    {user && user.organizations.length > 0 && (
+                    {user && user.organization && (
                         <>
                             <div className="rounded-lg bg-muted p-4">
                                 <div className="flex items-center gap-3">
                                     <PeopleRounded className="h-5 w-5 text-muted-foreground" />
                                     <div>
-                                        <p className="text-sm font-medium">Your Organizations</p>
+                                        <p className="text-sm font-medium">Your Organization</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {user.organizations.map((org) => org.name).join(', ')}
+                                            {user.organization.name}
                                         </p>
                                     </div>
                                 </div>

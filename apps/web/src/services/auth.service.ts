@@ -20,6 +20,7 @@ export interface VerifyEmailInput {
 export interface OrganizationResponse {
   id: string;
   name: string;
+  slug: string;
 }
 
 export interface AuthUserResponse {
@@ -27,6 +28,7 @@ export interface AuthUserResponse {
   email: string;
   name: string;
   avatarUrl: string | null;
+  organization: OrganizationResponse | null;
 }
 
 export interface AuthTokensResponse {
@@ -36,7 +38,6 @@ export interface AuthTokensResponse {
   refreshTokenExpiresIn: number;
   sessionId: string;
   user: AuthUserResponse;
-  organization: OrganizationResponse | null;
 }
 
 export interface ResendVerificationInput {

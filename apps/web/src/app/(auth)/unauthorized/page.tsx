@@ -1,4 +1,3 @@
-// apps/web/src/app/(auth)/unauthorized/page.tsx
 import { Suspense } from 'react';
 import { OrgAccessDialog } from '@/components/auth/org-access-dialog';
 

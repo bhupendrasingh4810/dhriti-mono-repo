@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsLocale, IsOptional, IsString, IsTimeZone, IsUrl, MaxLength, MinLength } from "class-validator";
+import type { OrganizationResponse } from "./auth-response.dto";
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({ example: "Jane Doe" })
@@ -31,6 +32,7 @@ export interface UserProfileResponse {
   email: string;
   name: string;
   avatarUrl: string | null;
+  organization: OrganizationResponse | null;
   timezone: string;
   locale: string;
   status: string;

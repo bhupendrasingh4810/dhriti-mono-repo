@@ -5,15 +5,31 @@ import AuthLayout from "../../../components/auth/AuthLayout";
 import { useAlert } from "@/components/alerts/alert-provider";
 import { forgotPassword } from "@/services/auth.service";
 
+const getEmailError = (email: string): string | null => {
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail) {
+    return "Email is required";
+  }
+
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail) ? null : "Email is invalid";
+};
+
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { showAlert } = useAlert();
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const error = getEmailError(email);
+    setEmailError(error);
+    if (error) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       await forgotPassword({ email });
@@ -32,7 +48,7 @@ export default function ForgotPasswordPage() {
   return (
     <AuthLayout
       title={sent ? "Check your email" : "Forgot your password"}
-      subtitle={sent ? `We sent a reset link to ${email}` : "We'll send you a link to reset your password"}
+      subtitle={sent ? "If an account exists for this email, you will receive a password reset link shortly." : "We'll send you a link to reset your password"}
       illustration="reset"
     >
       {sent ? (
@@ -68,17 +84,34 @@ export default function ForgotPasswordPage() {
           </button>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form noValidate onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Work email</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              Work email {" "}
+              <span className="text-red-600">*</span>
+            </label>
             <input
               type="email"
-              required
+              name="email"
+              autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                const email = e.target.value;
+                setEmail(email);
+                setEmailError(getEmailError(email));
+              }}
               placeholder="you@company.com"
               className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
+              style={{
+                borderColor: emailError ? "#dc2626" : "#036c5f",
+                boxShadow: emailError
+                  ? "0 0 0 3px rgba(220,38,38,0.12)"
+                  : "0 0 0 3px rgba(3,108,95,0.12)",
+              }}
             />
+            {emailError && (
+              <p className="mt-1 text-sm text-red-600">{emailError}</p>
+            )}
           </div>
 
           <button

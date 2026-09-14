@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
       return response;
     }
 
-    const { user, accessToken, refreshToken: newRefreshToken, organization } = await backendResponse.json();
+    const { user, accessToken, refreshToken: newRefreshToken } = await backendResponse.json();
     const response = NextResponse.json({ user });
     if (newRefreshToken) {
       response.cookies.set('refresh_token', newRefreshToken, {
@@ -45,16 +45,6 @@ export async function POST(request: NextRequest) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
-    if (organization) {
-      response.cookies.set('organization', JSON.stringify(organization), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/',
-      });
-    } else {
-      response.cookies.delete('organization');
-    }
     return response;
   } catch (error) {
     console.error('Refresh error:', error);

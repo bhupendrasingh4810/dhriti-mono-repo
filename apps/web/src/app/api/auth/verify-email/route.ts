@@ -37,16 +37,6 @@ export async function POST(request: NextRequest) {
       maxAge: tokens.refreshTokenExpiresIn,
       path: "/",
     });
-    if (tokens.organization) {
-      response.cookies.set("organization", JSON.stringify(tokens.organization), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-      });
-    } else {
-      response.cookies.delete("organization");
-    }
     return response;
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -9,6 +9,7 @@ import type { OAuthProfile } from "../services/auth.service";
 export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
   constructor(config: ApiConfigService) {
     const credentials = config.googleOAuth;
+    console.log('Google OAuth credentials:', credentials);
     if (!credentials) {
       throw new Error("Google OAuth is not configured");
     }
@@ -16,7 +17,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
       clientID: credentials.clientId,
       clientSecret: credentials.clientSecret,
       callbackURL: credentials.callbackUrl,
-      scope: ["email", "profile"],
+      scope: ["openid", "email", "profile"],
     });
   }
 

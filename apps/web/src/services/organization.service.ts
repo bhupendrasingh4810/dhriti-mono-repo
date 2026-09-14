@@ -32,12 +32,12 @@ export async function createOrganization(input: CreateOrganizationInput): Promis
   throw new Error(fieldMessages?.join(" ") || responseBody.error?.message || "Unable to create your organization.");
 }
 
-export async function listOrganizations(): Promise<OrganizationResponse[]> {
-  const response = await fetch("/api/organizations");
-  if (response.ok) {
-    return response.json() as Promise<OrganizationResponse[]>;
-  }
+// export async function listOrganizations(): Promise<OrganizationResponse[]> {
+//   const response = await fetch("/api/organizations");
+//   if (response.ok) {
+//     return response.json() as Promise<OrganizationResponse[]>;
+//   }
 
-  const responseBody = await response.json().catch(() => ({})) as ApiErrorResponse;
-  throw new Error(responseBody.error?.message || "Unable to load your organizations.");
-}
+//   const responseBody = await response.json().catch(() => ({})) as ApiErrorResponse;
+//   throw new Error(responseBody.error?.message || "Unable to load your organizations.");
+// }

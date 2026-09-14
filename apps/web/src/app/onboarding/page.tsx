@@ -9,9 +9,10 @@ import OnboardingStepThree from "@/components/onboarding/onboarding-step-three";
 import OnboardingStepFour from "@/components/onboarding/onboarding-step-four";
 import OnboardingStepFive from "@/components/onboarding/onboarding-step-five";
 import WorkspacePreview from "@/components/onboarding/workspace-preview";
-import { createOrganization, listOrganizations } from "@/services/organization.service";
+import { createOrganization } from "@/services/organization.service";
 import { uploadProfilePhoto } from "@/services/auth.service";
 import { useAlert } from "@/components/alerts/alert-provider";
+import { useAuth } from "@/hooks/use-auth";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -26,6 +27,7 @@ const STEPS = [
 export default function OnboardingPage() {
     const router = useRouter();
     const { showAlert } = useAlert();
+    const { user } = useAuth();
     const [step, setStep] = useState<Step>(1);
     const [orgName, setOrgName] = useState("");
     const [orgSlug, setOrgSlug] = useState("");
@@ -40,26 +42,14 @@ export default function OnboardingPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        const loadOrganization = async () => {
-            try {
-                const [organization] = await listOrganizations();
-                if (organization) {
-                    setOrgName(organization.name);
-                    setOrgSlug(organization.slug);
-                    setHasOrganization(true);
-                    setStep(2);
-                }
-            } catch (error) {
-                showAlert({
-                    title: error instanceof Error ? error.message : "Unable to load your organization.",
-                    severity: "error",
-                    variant: "filled",
-                });
-            }
-        };
 
-        void loadOrganization();
-    }, [showAlert]);
+        if (user?.organization) {
+            setOrgName(user.organization.name);
+            setOrgSlug(user.organization.slug);
+            setHasOrganization(true);
+            setStep(2);
+        }
+    }, [user]);
 
     const handleOrgName = (val: string) => {
         setOrgName(val);

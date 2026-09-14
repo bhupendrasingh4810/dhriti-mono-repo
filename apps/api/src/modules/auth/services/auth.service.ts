@@ -243,7 +243,6 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: emailAddress.toLowerCase() },
     });
-    // Always succeed to avoid account enumeration.
     if (!user || user.deletedAt) {
       return;
     }
@@ -354,7 +353,8 @@ export class AuthService {
 
   async getProfile(userId: string): Promise<UserProfileResponse> {
     const user = await this.requireUser(userId);
-    return this.toProfile(user);
+    const organization = await this.resolveDefaultOrganization(userId);
+    return this.toProfile(user, organization);
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<UserProfileResponse> {
@@ -380,7 +380,8 @@ export class AuthService {
       });
     }
     const user = await this.requireUser(userId);
-    return this.toProfile(user);
+    const organization = await this.resolveDefaultOrganization(userId);
+    return this.toProfile(user, organization);
   }
 
   // ------------------------------------------------------------------
@@ -509,8 +510,8 @@ export class AuthService {
         email: user.email,
         name: user.name,
         avatarUrl: user.avatarUrl,
+        organization,
       },
-      organization,
     };
   }
 
@@ -518,7 +519,7 @@ export class AuthService {
     const membership = await this.prisma.organizationMember.findFirst({
       where: { userId, organization: { deletedAt: null } },
       orderBy: { createdAt: "asc" },
-      select: { organization: { select: { id: true, name: true } } },
+      select: { organization: { select: { id: true, name: true, slug: true } } },
     });
     return membership?.organization ?? null;
   }
@@ -650,12 +651,13 @@ export class AuthService {
     return this.requireUser(session.userId);
   }
 
-  private toProfile(user: UserWithRelations): UserProfileResponse {
+  private toProfile(user: UserWithRelations, organization: OrganizationResponse | null): UserProfileResponse {
     return {
       id: user.id,
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
+      organization,
       timezone: user.profile?.timezone ?? "UTC",
       locale: user.profile?.locale ?? "en",
       status: user.status,

@@ -38,6 +38,13 @@ export async function GET(request: NextRequest) {
           path: '/',
         });
       }
+      response.cookies.set('user', JSON.stringify(user), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+      });
       return response;
     }
 

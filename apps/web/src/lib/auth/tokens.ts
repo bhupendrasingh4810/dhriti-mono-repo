@@ -2,11 +2,12 @@
  * Simple JWT utilities for client-side operations only.
  */
 
+import { User } from "@/types/user.types";
+
 export interface JWTPayload {
     sub: string;
     sid: string;
-    org: string | null;
-    email: string;
+    user: User;
     iat: number;
     exp: number;
 }

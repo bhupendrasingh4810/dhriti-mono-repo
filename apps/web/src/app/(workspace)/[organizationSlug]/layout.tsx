@@ -8,6 +8,21 @@ interface OrgLayoutProps {
   params: Promise<{ organizationSlug: string }>;
 }
 
+function getUserOrganization(value?: string): { id: string; slug: string } | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const organization = (JSON.parse(value) as {
+      organization?: { id?: string; slug?: string } | null;
+    }).organization;
+    return organization?.id && organization.slug ? { id: organization.id, slug: organization.slug } : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function OrgLayout({ children, params }: OrgLayoutProps) {
   const { organizationSlug: org_name } = await params;
 
@@ -20,7 +35,7 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get('access_token')?.value;
   const refreshToken = cookieStore.get('refresh_token')?.value;
-  const organizationCookie = cookieStore.get('organization')?.value;
+  const userCookie = cookieStore.get('user')?.value;
 
   // No tokens at all - redirect to login
   if (!accessToken && !refreshToken) {
@@ -38,8 +53,12 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
     return <>{children}</>;
   }
 
-  const organization = organizationCookie ? JSON.parse(organizationCookie) as { id?: string; slug?: string } : null;
-  const isMember = organization?.id === user.org && organization.slug === org_name;
+  const organization = getUserOrganization(userCookie);
+  if (!organization) {
+    redirect('/onboarding');
+  }
+
+  const isMember = organization?.slug === org_name;
 
   if (!isMember) {
     redirect(`/unauthorized?org_name=${org_name}`);
