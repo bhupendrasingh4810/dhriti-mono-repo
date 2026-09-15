@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
-import type { OrganizationRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 import { ORG_ROLES_KEY } from "../decorators/org-roles.decorator";
 import type { OrganizationContext } from "../decorators/organization.decorator";
@@ -21,7 +21,7 @@ export class OrgRolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<OrganizationRole[] | undefined>(
+    const required = this.reflector.getAllAndOverride<UserRole[] | undefined>(
       ORG_ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );

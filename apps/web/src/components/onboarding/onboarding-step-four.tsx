@@ -151,12 +151,12 @@ export default function OnboardingStepFour({
                         </p>
                         <div className="space-y-2 mb-5">
                             {[
-                                { icon: "💬", text: "Real-time team messaging" },
-                                { icon: "📋", text: "Shared project boards" },
-                                { icon: "📄", text: "Collaborative documents" },
+                                { text: "Real-time team messaging" },
+                                { text: "Shared project boards" },
+                                { text: "Collaborative documents" },
                             ].map((item) => (
                                 <div key={item.text} className="flex items-center gap-3">
-                                    <span>{item.icon}</span>
+                                    {/* <span>{item.icon}</span> */}
                                     <span className="text-sm text-slate-600">{item.text}</span>
                                 </div>
                             ))}

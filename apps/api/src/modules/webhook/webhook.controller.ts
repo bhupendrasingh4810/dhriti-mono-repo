@@ -30,7 +30,7 @@ import { CreateWebhookDto, UpdateWebhookDto } from "./dto/webhook.dto";
 @ApiTags("webhooks")
 @ApiBearerAuth()
 @UseGuards(TenantGuard, OrgRolesGuard)
-@OrgRoles("OWNER", "ADMIN")
+@OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
 @Controller("organization/webhooks")
 export class WebhookController {
   constructor(private readonly webhooks: WebhookService) {}

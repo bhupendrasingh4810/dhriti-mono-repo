@@ -54,7 +54,7 @@ export class OrganizationController {
   }
 
   @Post("organizations")
-  @ApiOperation({ summary: "Create an organization; the creator becomes OWNER" })
+  @ApiOperation({ summary: "Create an organization" })
   @ApiResponse({ status: 201 })
   @ApiResponse({ status: 409, description: "Slug already taken" })
   async create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateOrganizationDto) {
@@ -74,8 +74,8 @@ export class OrganizationController {
 
   @Patch("organization")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
-  @ApiOperation({ summary: "Rename the active organization (OWNER/ADMIN)" })
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+  @ApiOperation({ summary: "Rename the active organization" })
   async updateActive(
     @CurrentOrganization() organization: OrganizationContext,
     @Body() dto: UpdateOrganizationDto,
@@ -94,8 +94,8 @@ export class OrganizationController {
 
   @Post("organization/members")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
-  @ApiOperation({ summary: "Add an existing user to the organization (OWNER/ADMIN)" })
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+  @ApiOperation({ summary: "Add an existing user to the organization" })
   @ApiResponse({ status: 201 })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 409, description: "Already a member" })
@@ -108,8 +108,8 @@ export class OrganizationController {
 
   @Patch("organization/members/:memberId")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
-  @ApiOperation({ summary: "Change a member's role; the last OWNER cannot be demoted" })
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+  @ApiOperation({ summary: "Change a member's global role" })
   async updateMemberRole(
     @CurrentOrganization() organization: OrganizationContext,
     @Param("memberId") memberId: string,
@@ -121,8 +121,8 @@ export class OrganizationController {
   @Delete("organization/members/:memberId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
-  @ApiOperation({ summary: "Remove a member; the last OWNER cannot be removed" })
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+  @ApiOperation({ summary: "Remove a member" })
   async removeMember(
     @CurrentOrganization() organization: OrganizationContext,
     @Param("memberId") memberId: string,
@@ -141,7 +141,7 @@ export class OrganizationController {
 
   @Post("organization/teams")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Create a team (OWNER/ADMIN)" })
   async createTeam(
     @CurrentOrganization() organization: OrganizationContext,
@@ -152,7 +152,7 @@ export class OrganizationController {
 
   @Patch("organization/teams/:teamId")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Update a team (OWNER/ADMIN)" })
   async updateTeam(
     @CurrentOrganization() organization: OrganizationContext,
@@ -165,7 +165,7 @@ export class OrganizationController {
   @Delete("organization/teams/:teamId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Soft-delete a team (OWNER/ADMIN)" })
   async deleteTeam(
     @CurrentOrganization() organization: OrganizationContext,
@@ -177,7 +177,7 @@ export class OrganizationController {
   @Post("organization/teams/:teamId/members/:userId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Add an organization member to a team (OWNER/ADMIN)" })
   async addTeamMember(
     @CurrentOrganization() organization: OrganizationContext,
@@ -190,7 +190,7 @@ export class OrganizationController {
   @Delete("organization/teams/:teamId/members/:userId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Remove a member from a team (OWNER/ADMIN)" })
   async removeTeamMember(
     @CurrentOrganization() organization: OrganizationContext,
@@ -204,7 +204,7 @@ export class OrganizationController {
 
   @Get("organization/invitations")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "List invitations (auto-expires stale pending ones)" })
   async listInvitations(@CurrentOrganization() organization: OrganizationContext) {
     return this.organizations.listInvitations(organization.organizationId);
@@ -212,7 +212,7 @@ export class OrganizationController {
 
   @Post("organization/invitations")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Invite a user by email; returns the invite token once" })
   async createInvitation(
     @CurrentUser() user: AuthenticatedUser,
@@ -223,7 +223,6 @@ export class OrganizationController {
       organization.organizationId,
       user.userId,
       dto.email,
-      dto.role ?? "MEMBER",
     );
   }
 
@@ -240,7 +239,7 @@ export class OrganizationController {
   @Delete("organization/invitations/:invitationId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Cancel a pending invitation" })
   async cancelInvitation(
     @CurrentUser() user: AuthenticatedUser,
@@ -261,7 +260,7 @@ export class OrganizationController {
 
   @Post("organization/groups")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Create a manual group" })
   async createGroup(
     @CurrentUser() user: AuthenticatedUser,
@@ -273,7 +272,7 @@ export class OrganizationController {
 
   @Patch("organization/groups/:groupId")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Update a group" })
   async updateGroup(
     @CurrentUser() user: AuthenticatedUser,
@@ -287,7 +286,7 @@ export class OrganizationController {
   @Delete("organization/groups/:groupId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Soft-delete a group" })
   async deleteGroup(
     @CurrentUser() user: AuthenticatedUser,
@@ -300,7 +299,7 @@ export class OrganizationController {
   @Post("organization/groups/:groupId/members/:userId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Add a member to a group" })
   async addGroupMember(
     @CurrentOrganization() organization: OrganizationContext,
@@ -313,7 +312,7 @@ export class OrganizationController {
   @Delete("organization/groups/:groupId/members/:userId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Remove a member from a group" })
   async removeGroupMember(
     @CurrentOrganization() organization: OrganizationContext,
@@ -325,7 +324,7 @@ export class OrganizationController {
 
   @Post("organization/groups/:groupId/sync")
   @UseGuards(TenantGuard, OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Re-evaluate a dynamic group's rule and sync membership" })
   async syncDynamicGroup(
     @CurrentUser() user: AuthenticatedUser,

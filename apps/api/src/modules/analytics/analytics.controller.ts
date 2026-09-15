@@ -36,7 +36,7 @@ export class AnalyticsController {
 
   @Get("overview")
   @UseGuards(OrgRolesGuard)
-  @OrgRoles("OWNER", "ADMIN")
+  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
   @ApiOperation({ summary: "Analytics overview: usage by app, daily activity, DAU/WAU/MAU, team velocity (OWNER/ADMIN)" })
   async overview(
     @CurrentOrganization() organization: OrganizationContext,

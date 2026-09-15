@@ -32,7 +32,7 @@ import {
 @ApiTags("control/organization")
 @ApiBearerAuth()
 @UseGuards(TenantGuard, OrgRolesGuard)
-@OrgRoles("OWNER", "ADMIN")
+@OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
 @Controller("control/organization")
 export class OrganizationAdminController {
   constructor(private readonly admin: OrganizationAdminService) {}

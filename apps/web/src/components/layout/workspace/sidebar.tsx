@@ -83,13 +83,14 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-interface Props {
+interface SidebarProps {
   activeView: AppView;
+  organizationSlug: string;
   onViewChange: (v: AppView) => void;
   onLogout: () => void;
 }
 
-export default function Sidebar({ activeView, onViewChange, onLogout }: Props) {
+export default function Sidebar({ activeView, onViewChange, onLogout, organizationSlug }: SidebarProps) {
   const router = useRouter();
   const [selectedView, setSelectedView] = useState<AppView>(activeView);
 
@@ -100,7 +101,7 @@ export default function Sidebar({ activeView, onViewChange, onLogout }: Props) {
   const handleNavClick = (item: NavItem) => {
     setSelectedView(item.id);
     onViewChange(item.id);
-    router.push(`/acme/${item.id}`);
+    router.push(`/${organizationSlug}/${item.id}`);
   };
 
   return (

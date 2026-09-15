@@ -1,11 +1,11 @@
 import { createParamDecorator, type ExecutionContext } from "@nestjs/common";
 import type { Request } from "express";
-import type { OrganizationRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 export interface OrganizationContext {
   organizationId: string;
   memberId: string;
-  role: OrganizationRole;
+  role: UserRole;
 }
 
 interface TenantRequest extends Request {

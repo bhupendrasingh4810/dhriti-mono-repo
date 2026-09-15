@@ -12,7 +12,7 @@ import type {
 } from "./dto/organization.dto";
 
 export interface OrgDashboard {
-  members: { total: number; active: number; owners: number; admins: number };
+  members: { total: number; active: number; orgAdmins: number; admins: number };
   teams: number;
   products: { enabled: number; total: number };
   subscription: Subscription | null;
@@ -34,7 +34,7 @@ export class OrganizationAdminService {
   async dashboard(organizationId: string): Promise<OrgDashboard> {
     const [
       members,
-      owners,
+      orgAdmins,
       admins,
       teams,
       entitlements,
@@ -46,8 +46,8 @@ export class OrganizationAdminService {
       pages,
     ] = await Promise.all([
       this.prisma.organizationMember.count({ where: { organizationId } }),
-      this.prisma.organizationMember.count({ where: { organizationId, role: "OWNER" } }),
-      this.prisma.organizationMember.count({ where: { organizationId, role: "ADMIN" } }),
+      this.prisma.organizationMember.count({ where: { organizationId, user: { role: "ORG_ADMIN" } } }),
+      this.prisma.organizationMember.count({ where: { organizationId, user: { role: "ADMIN" } } }),
       this.prisma.team.count({ where: { organizationId, deletedAt: null } }),
       this.prisma.productEntitlement.count({ where: { organizationId, isEnabled: true } }),
       this.prisma.product.count({ where: { isActive: true } }),
@@ -63,7 +63,7 @@ export class OrganizationAdminService {
     ]);
 
     return {
-      members: { total: members, active: members, owners, admins },
+      members: { total: members, active: members, orgAdmins, admins },
       teams,
       products: { enabled: entitlements, total: products },
       subscription,

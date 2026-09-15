@@ -8,6 +8,7 @@ model User {
   name                  String
   avatarUrl             String?     @map("avatar_url")
   status                UserStatus  @default(PENDING_VERIFICATION)
+  role                  UserRole    @default(MEMBER)
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   deletedAt             DateTime?
@@ -395,7 +396,6 @@ model OrganizationMember {
   id             String           @id @default(uuid()) @db.Uuid
   organizationId String           @db.Uuid
   userId         String           @db.Uuid
-  role           OrganizationRole @default(MEMBER)
   createdAt      DateTime         @default(now())
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -697,7 +697,6 @@ model Invitation {
   id             String           @id @default(uuid()) @db.Uuid
   organizationId String           @db.Uuid
   email          String
-  role           OrganizationRole @default(MEMBER)
   tokenHash      String           @unique
   status         InvitationStatus @default(PENDING)
   invitedById    String           @db.Uuid

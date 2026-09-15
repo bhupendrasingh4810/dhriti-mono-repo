@@ -5,7 +5,7 @@ import {
   Injectable,
 } from "@nestjs/common";
 import type { Request } from "express";
-import type { OrganizationRole } from "@prisma/client";
+import type { UserRole } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import type { AuthenticatedUser } from "../decorators/current-user.decorator";
@@ -52,7 +52,7 @@ export class TenantGuard implements CanActivate {
       where: {
         organizationId_userId: { organizationId, userId: user.userId },
       },
-      select: { id: true, role: true, organization: { select: { deletedAt: true } } },
+      select: { id: true, user: { select: { role: true } }, organization: { select: { deletedAt: true } } },
     });
 
     if (!membership || membership.organization.deletedAt !== null) {
@@ -65,7 +65,7 @@ export class TenantGuard implements CanActivate {
     const contextValue: OrganizationContext = {
       organizationId,
       memberId: membership.id,
-      role: membership.role,
+      role: membership.user.role,
     };
     request.organization = contextValue;
 
@@ -75,4 +75,4 @@ export class TenantGuard implements CanActivate {
   }
 }
 
-export type { OrganizationRole };
+export type { UserRole };

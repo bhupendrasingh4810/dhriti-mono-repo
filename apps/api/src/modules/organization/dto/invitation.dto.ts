@@ -1,6 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsEmail, IsEnum, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
-import { OrganizationRole } from "@prisma/client";
+import { IsEmail, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
 
 export class CreateInvitationDto {
   @ApiProperty({ example: "newbie@acme.com" })
@@ -8,10 +7,6 @@ export class CreateInvitationDto {
   @MaxLength(320)
   email!: string;
 
-  @ApiPropertyOptional({ enum: OrganizationRole, default: OrganizationRole.MEMBER })
-  @IsOptional()
-  @IsEnum(OrganizationRole)
-  role?: OrganizationRole;
 }
 
 export class AcceptInvitationDto {

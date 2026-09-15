@@ -1,13 +1,18 @@
 "use client";
 
 import { use, type ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { Box } from "@dhriti/ui";
 import { ConnectHeader } from "@/features/connect";
-import AppRail from "@/components/layout/workspace/sidebar";
+import Sidebar from "@/components/layout/workspace/sidebar";
 import Header from "@/components/layout/workspace/header";
 import { connectSearchResults, connectUsers } from "@/mocks/connect";
 import { PageName, PageType } from "@/types/app.types";
+
+interface WorkspaceLayoutProps {
+  children: ReactNode;
+  params: Promise<{ organizationSlug: string }>;
+}
 
 function getActiveApp(pathname: string): PageType {
   if (pathname.includes("/connect")) return "connect";
@@ -21,11 +26,9 @@ function getActiveApp(pathname: string): PageType {
 export default function WorkspaceLayout({
   children,
   params,
-}: {
-  children: ReactNode;
-  params: Promise<{ organizationSlug: string }>;
-}) {
-  use(params);
+}: WorkspaceLayoutProps) {
+  const { organizationSlug } = useParams();
+
   const pathname = usePathname();
   const activeApp = getActiveApp(pathname);
   const headerAppName = activeApp === "home"
@@ -65,7 +68,7 @@ export default function WorkspaceLayout({
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-        <AppRail activeView={activeApp} onViewChange={() => { }} onLogout={() => { }} />
+        <Sidebar activeView={activeApp} organizationSlug={organizationSlug as string} onViewChange={() => { }} onLogout={() => { }} />
         <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto" }}>{children}</Box>
       </Box>
     </Box>

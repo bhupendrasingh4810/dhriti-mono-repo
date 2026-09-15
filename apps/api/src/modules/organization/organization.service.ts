@@ -6,9 +6,9 @@ import type {
   Invitation,
   Organization,
   OrganizationMember,
-  OrganizationRole,
   Team,
   User,
+  UserRole,
 } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
@@ -17,7 +17,7 @@ import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
 
 export interface MemberWithUser extends OrganizationMember {
-  user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status">;
+  user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;
 }
 
 @Injectable()
@@ -50,22 +50,22 @@ export class OrganizationService {
         name: input.name.trim(),
         slug: input.slug,
         members: {
-          create: { userId: creatorUserId, role: "OWNER" },
+          create: { userId: creatorUserId },
         },
       },
     });
   }
 
-  async listMyOrganizations(userId: string): Promise<Array<Organization & { role: OrganizationRole }>> {
+  async listMyOrganizations(userId: string): Promise<Array<Organization & { role: UserRole }>> {
     const memberships = await this.prisma.organizationMember.findMany({
       where: { userId, organization: { deletedAt: null } },
-      include: { organization: true },
+      include: { organization: true, user: { select: { role: true } } },
       orderBy: { createdAt: "asc" },
     });
 
     return memberships.map((membership) => ({
       ...membership.organization,
-      role: membership.role,
+      role: membership.user.role,
     }));
   }
 
@@ -97,7 +97,7 @@ export class OrganizationService {
     return this.prisma.organizationMember.findMany({
       where: { organizationId, user: { deletedAt: null } },
       include: {
-        user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true } },
+        user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
       },
       orderBy: { createdAt: "asc" },
     });
@@ -106,7 +106,7 @@ export class OrganizationService {
   async addMember(
     organizationId: string,
     email: string,
-    role: OrganizationRole,
+    role: UserRole,
   ): Promise<MemberWithUser> {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
@@ -130,40 +130,35 @@ export class OrganizationService {
       );
     }
 
-    return this.prisma.organizationMember.create({
-      data: { organizationId, userId: user.id, role },
-      include: {
-        user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true } },
-      },
+    return this.prisma.$transaction(async (transaction) => {
+      await transaction.user.update({ where: { id: user.id }, data: { role } });
+      return transaction.organizationMember.create({
+        data: { organizationId, userId: user.id },
+        include: {
+          user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
+        },
+      });
     });
   }
 
   async updateMemberRole(
     organizationId: string,
     memberId: string,
-    role: OrganizationRole,
+    role: UserRole,
   ): Promise<MemberWithUser> {
     const member = await this.getMember(organizationId, memberId);
 
-    if (member.role === "OWNER" && role !== "OWNER") {
-      await this.assertAnotherOwnerExists(organizationId, member.id);
-    }
-
     return this.prisma.organizationMember.update({
       where: { id: member.id },
-      data: { role },
+      data: { user: { update: { role } } },
       include: {
-        user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true } },
+        user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
       },
     });
   }
 
   async removeMember(organizationId: string, memberId: string): Promise<void> {
     const member = await this.getMember(organizationId, memberId);
-    if (member.role === "OWNER") {
-      await this.assertAnotherOwnerExists(organizationId, member.id);
-    }
-
     await this.prisma.$transaction([
       this.prisma.teamMember.deleteMany({ where: { userId: member.userId, team: { organizationId } } }),
       this.prisma.organizationMember.delete({ where: { id: member.id } }),
@@ -274,7 +269,6 @@ export class OrganizationService {
     organizationId: string,
     invitedById: string,
     email: string,
-    role: OrganizationRole,
   ): Promise<{ invitation: Invitation; token: string }> {
     const normalizedEmail = email.toLowerCase();
 
@@ -308,7 +302,6 @@ export class OrganizationService {
       data: {
         organizationId,
         email: normalizedEmail,
-        role,
         invitedById,
         tokenHash: createHash("sha256").update(token).digest("hex"),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -321,7 +314,7 @@ export class OrganizationService {
       actorUserId: invitedById,
       resourceType: "Invitation",
       resourceId: invitation.id,
-      metadata: { email: normalizedEmail, role },
+      metadata: { email: normalizedEmail },
     });
     return { invitation, token };
   }
@@ -351,8 +344,8 @@ export class OrganizationService {
       }),
       this.prisma.organizationMember.upsert({
         where: { organizationId_userId: { organizationId: invitation.organizationId, userId } },
-        create: { organizationId: invitation.organizationId, userId, role: invitation.role },
-        update: { role: invitation.role },
+        create: { organizationId: invitation.organizationId, userId },
+        update: {},
       }),
     ]);
 
@@ -566,7 +559,7 @@ export class OrganizationService {
       const members = await this.prisma.organizationMember.findMany({
         where: {
           organizationId,
-          role: rule.op === "in" ? { in: values as never } : (rule.value as never),
+          user: { role: rule.op === "in" ? { in: values as never } : (rule.value as never) },
         },
         select: { userId: true },
       });
@@ -601,19 +594,4 @@ export class OrganizationService {
     }
   }
 
-  private async assertAnotherOwnerExists(
-    organizationId: string,
-    excludeMemberId: string,
-  ): Promise<void> {
-    const owners = await this.prisma.organizationMember.count({
-      where: { organizationId, role: "OWNER", id: { not: excludeMemberId } },
-    });
-    if (owners === 0) {
-      throw new AppError(
-        ErrorCode.LAST_OWNER,
-        "The organization must keep at least one owner",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
 }

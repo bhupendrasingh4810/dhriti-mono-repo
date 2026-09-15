@@ -31,9 +31,13 @@ enum VerificationTokenType {
   PASSWORD_RESET
 }
 
-enum OrganizationRole {
-  OWNER
+enum UserRole {
+  PLATFORM_ADMIN
   ADMIN
+  SUPPORT
+  SALES
+  ORG_ADMIN
+  HUMAN_RESOURCE
   MEMBER
   GUEST
 }
