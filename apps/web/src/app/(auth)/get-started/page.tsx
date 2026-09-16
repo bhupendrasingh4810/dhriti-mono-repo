@@ -30,6 +30,7 @@ const getEmailError = (email: string): string | null => {
 export default function SignupPage() {
   const router = useRouter();
   const { showAlert } = useAlert();
+  const [showPw, setShowPw] = useState(false);
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({ name: null, email: null, password: null });
   const [isTermsAccepted, setIsTermsAccepted] = useState(false);
@@ -148,19 +149,41 @@ export default function SignupPage() {
             Password {" "}
             <span className="text-red-600">*</span>
           </label>
-          <input
-            type="password"
-            name="password"
-            autoComplete="new-password"
-            value={form.password}
-            onChange={set("password")}
-            placeholder="Min. 8 characters"
-            className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
-            style={{
-              borderColor: fieldErrors.password ? '#dc2626' : '#036c5f',
-              boxShadow: fieldErrors.password ? '0 0 0 3px rgba(220,38,38,0.12)' : '0 0 0 3px rgba(3,108,95,0.12)',
-            }}
-          />
+          <div className="relative">
+            <input
+              type={showPw ? "text" : "password"}
+              name="password"
+              autoComplete="new-password"
+              value={form.password}
+              onChange={set("password")}
+              placeholder="Min. 8 characters"
+              className="w-full px-4 py-2.5 pr-11 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
+              style={{
+                borderColor: fieldErrors.password ? '#dc2626' : '#036c5f',
+                boxShadow: fieldErrors.password ? '0 0 0 3px rgba(220,38,38,0.12)' : '0 0 0 3px rgba(3,108,95,0.12)',
+              }}
+            />
+            <button
+              type="button"
+              aria-label={showPw ? "Hide password" : "Show password"}
+              onClick={() => setShowPw(!showPw)}
+              className="absolute z-10 right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+            >
+              {showPw ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
+                  <path d="M9.75 12a2.25 2.25 0 1 0 4.5 0 2.25 2.25 0 0 0-4.5 0z" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)" }}>
+                  <path d="M3 13.5c2.35-2.1 5.25-3.15 9-3.15s6.65 1.05 9 3.15" />
+                  <path d="M6.5 11.75 5 9.5" />
+                  <path d="M12 10.35V7.75" />
+                  <path d="m17.5 11.75 1.5-2.25" />
+                </svg>
+              )}
+            </button>
+          </div>
           {form.password && (
             <div className="mt-2">
               <div className="flex gap-1 mb-1">
@@ -199,6 +222,7 @@ export default function SignupPage() {
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                router.push("/terms-and-conditions");
               }}
             >
               Terms of Service
@@ -210,6 +234,7 @@ export default function SignupPage() {
               onClick={(event) => {
                 event.preventDefault();
                 event.stopPropagation();
+                router.push("/privacy-policy");
               }}
             >
               Privacy Policy
