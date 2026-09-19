@@ -11,10 +11,12 @@ async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
   // ---------- Users ----------
-  const [alice, bob, priya, admin] = await Promise.all([
-    upsertUser("alice@acme.com", "Alice Sharma", passwordHash),
-    upsertUser("bob@acme.com", "Bob Patel", passwordHash),
+  const [alice, bob, priya, marcus, elena, admin] = await Promise.all([
+    upsertUser("alice@acme.com", "Alice Sharma", passwordHash, "ORG_ADMIN"),
+    upsertUser("bob@acme.com", "Bob Patel", passwordHash, "ADMIN"),
     upsertUser("priya@acme.com", "Priya Singh", passwordHash),
+    upsertUser("marcus@acme.com", "Marcus Chen", passwordHash),
+    upsertUser("elena@acme.com", "Elena Rodriguez", passwordHash),
     upsertUser("admin@dhriti.dev", "Platform Admin", passwordHash, "SUPER_ADMIN"),
   ]);
 
@@ -25,23 +27,100 @@ async function main(): Promise<void> {
     create: { name: "Acme Technologies", slug: "acme" },
   });
 
-  for (const [user, role] of [
-    [alice, "OWNER"],
-    [bob, "ADMIN"],
-    [priya, "MEMBER"],
-  ] as const) {
-    await prisma.organizationMember.upsert({
-      where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
-      update: { role },
-      create: { organizationId: org.id, userId: user.id, role },
-    });
-  }
-
   await prisma.organizationSettings.upsert({
     where: { organizationId: org.id },
     update: {},
     create: { organizationId: org.id, timezone: "Asia/Kolkata", locale: "en" },
   });
+
+  await prisma.subscription.upsert({
+    where: { organizationId: org.id },
+    update: { plan: "PRO", status: "ACTIVE", seats: 25 },
+    create: {
+      organizationId: org.id,
+      plan: "PRO",
+      status: "ACTIVE",
+      seats: 25,
+      currentPeriodEnd: new Date("2026-10-01T00:00:00.000Z"),
+    },
+  });
+
+  for (const user of [alice, bob, priya, marcus, elena]) {
+    await prisma.organizationMember.upsert({
+      where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
+      update: {},
+      create: { organizationId: org.id, userId: user.id },
+    });
+  }
+
+  const userProfiles = [
+    { user: alice, firstName: "Alice", lastName: "Sharma", jobTitle: "Engineering Director", department: "Engineering", employeeId: "ACME-1001", skills: ["Leadership", "TypeScript", "Architecture"] },
+    { user: bob, firstName: "Bob", lastName: "Patel", jobTitle: "Staff Engineer", department: "Engineering", employeeId: "ACME-1002", skills: ["Payments", "PostgreSQL", "Node.js"] },
+    { user: priya, firstName: "Priya", lastName: "Singh", jobTitle: "Product Manager", department: "Product", employeeId: "ACME-1003", skills: ["Discovery", "Roadmaps", "Analytics"] },
+    { user: marcus, firstName: "Marcus", lastName: "Chen", jobTitle: "Product Designer", department: "Design", employeeId: "ACME-1004", skills: ["Research", "UX", "Design systems"] },
+    { user: elena, firstName: "Elena", lastName: "Rodriguez", jobTitle: "People Operations Manager", department: "People", employeeId: "ACME-1005", skills: ["HR Operations", "Recruiting", "Benefits"] },
+  ];
+
+  for (const profile of userProfiles) {
+    await prisma.userProfile.upsert({
+      where: { userId: profile.user.id },
+      update: {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        jobTitle: profile.jobTitle,
+        department: profile.department,
+        timezone: "Asia/Kolkata",
+      },
+      create: {
+        userId: profile.user.id,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        jobTitle: profile.jobTitle,
+        department: profile.department,
+        timezone: "Asia/Kolkata",
+        locale: "en-IN",
+        bio: `${profile.firstName} is part of the Acme Technologies team.`,
+      },
+    });
+    await prisma.onBoardingProfile.upsert({
+      where: { userId: profile.user.id },
+      update: { isOnBoarded: true, isOrgAdded: true, usageType: "professional", experience: "returning", isProfilePhotoSkipped: false },
+      create: {
+        userId: profile.user.id,
+        isOnBoarded: true,
+        isOrgAdded: true,
+        usageType: "professional",
+        experience: "returning",
+        legalAcceptedAt: new Date("2026-09-01T09:00:00.000Z"),
+      },
+    });
+    await prisma.userHRMSProfile.upsert({
+      where: { userId: profile.user.id },
+      update: { employeeId: profile.employeeId, employmentType: "FULL_TIME", skills: profile.skills },
+      create: {
+        userId: profile.user.id,
+        employeeId: profile.employeeId,
+        employmentType: "FULL_TIME",
+        employmentStartDate: new Date("2024-01-01T00:00:00.000Z"),
+        officeLocation: "Bengaluru",
+        workSchedule: { days: [1, 2, 3, 4, 5], hours: "09:30-18:30" },
+        skills: profile.skills,
+        experience: 5,
+      },
+    });
+    await prisma.userWorkOSProfile.upsert({
+      where: { userId: profile.user.id },
+      update: { workingHoursStart: "09:30", workingHoursEnd: "18:30" },
+      create: {
+        userId: profile.user.id,
+        workingHoursStart: "09:30",
+        workingHoursEnd: "18:30",
+        workingHoursPerWeek: 40,
+        vacationBalance: 12,
+        sickLeaveBalance: 8,
+      },
+    });
+  }
 
   // ---------- Team ----------
   const team = await prisma.team.upsert({
@@ -49,7 +128,7 @@ async function main(): Promise<void> {
     update: {},
     create: { organizationId: org.id, name: "Engineering", slug: "engineering" },
   });
-  for (const user of [alice, bob, priya]) {
+  for (const user of [alice, bob, priya, marcus]) {
     await prisma.teamMember.upsert({
       where: { teamId_userId: { teamId: team.id, userId: user.id } },
       update: {},
@@ -79,6 +158,33 @@ async function main(): Promise<void> {
     });
   }
 
+  await Promise.all([
+    prisma.featureFlag.upsert({
+      where: { organizationId_key: { organizationId: org.id, key: "ai-summaries" } },
+      update: { isEnabled: true },
+      create: { organizationId: org.id, key: "ai-summaries", isEnabled: true },
+    }),
+    prisma.featureFlag.upsert({
+      where: { organizationId_key: { organizationId: org.id, key: "advanced-analytics" } },
+      update: { isEnabled: true },
+      create: { organizationId: org.id, key: "advanced-analytics", isEnabled: true },
+    }),
+    prisma.holidayCalendar.upsert({
+      where: { organizationId_name: { organizationId: org.id, name: "India Holidays" } },
+      update: {},
+      create: {
+        organizationId: org.id,
+        name: "India Holidays",
+        countryCode: "IN",
+        holidays: [
+          { date: "2026-01-26", name: "Republic Day" },
+          { date: "2026-08-15", name: "Independence Day" },
+          { date: "2026-10-02", name: "Gandhi Jayanti" },
+        ],
+      },
+    }),
+  ]);
+
   // ---------- Connect ----------
   const channel = await prisma.channel.upsert({
     where: { organizationId_slug: { organizationId: org.id, slug: "engineering" } },
@@ -95,22 +201,44 @@ async function main(): Promise<void> {
     },
   });
 
-  const hello = await prisma.message.create({
-    data: {
+  const generalChannel = await prisma.channel.upsert({
+    where: { organizationId_slug: { organizationId: org.id, slug: "general" } },
+    update: { topic: "Company announcements and team updates" },
+    create: {
       organizationId: org.id,
-      channelId: channel.id,
-      authorId: alice.id,
-      content: "Welcome to #engineering! 👋",
+      name: "general",
+      slug: "general",
+      type: "CHANNEL",
+      visibility: "PUBLIC",
+      topic: "Company announcements and team updates",
+      createdById: alice.id,
     },
   });
-  await prisma.message.create({
-    data: {
-      organizationId: org.id,
-      channelId: channel.id,
-      authorId: bob.id,
-      content: "Thanks @alice — excited to be here.",
-      parentId: hello.id,
-    },
+  for (const channelMember of [alice, bob, priya, marcus, elena]) {
+    await prisma.channelMember.upsert({
+      where: { channelId_userId: { channelId: generalChannel.id, userId: channelMember.id } },
+      update: {},
+      create: { channelId: generalChannel.id, userId: channelMember.id },
+    });
+  }
+
+  const hello = await ensureMessage(org.id, channel.id, alice.id, "Welcome to #engineering! 👋");
+  await ensureMessage(org.id, channel.id, bob.id, "Thanks @alice — excited to be here.", hello.id);
+  const announcement = await ensureMessage(
+    org.id,
+    generalChannel.id,
+    alice.id,
+    "Welcome to Acme's shared workspace. Weekly planning begins Monday.",
+  );
+  await prisma.messageMention.upsert({
+    where: { messageId_userId: { messageId: announcement.id, userId: priya.id } },
+    update: {},
+    create: { messageId: announcement.id, userId: priya.id },
+  });
+  await prisma.messageReaction.upsert({
+    where: { messageId_userId_emoji: { messageId: announcement.id, userId: bob.id, emoji: "rocket" } },
+    update: {},
+    create: { messageId: announcement.id, userId: bob.id, emoji: "rocket" },
   });
 
   // ---------- Flow ----------
@@ -125,18 +253,41 @@ async function main(): Promise<void> {
       leadId: alice.id,
     },
   });
-  await prisma.issue.create({
-    data: {
-      organizationId: org.id,
+  let board = await prisma.board.findFirst({ where: { projectId: project.id, name: "Delivery board", deletedAt: null } });
+  if (!board) {
+    board = await prisma.board.create({ data: { projectId: project.id, name: "Delivery board" } });
+  }
+  for (const [position, status, name] of [[0, "BACKLOG", "Backlog"], [1, "TODO", "Ready"], [2, "IN_PROGRESS", "In progress"], [3, "IN_REVIEW", "In review"], [4, "DONE", "Done"]] as const) {
+    const existingColumn = await prisma.boardColumn.findFirst({ where: { boardId: board.id, status } });
+    if (!existingColumn) {
+      await prisma.boardColumn.create({ data: { boardId: board.id, position, status, name } });
+    }
+  }
+  let sprint = await prisma.sprint.findFirst({ where: { projectId: project.id, name: "Payments foundation" } });
+  if (!sprint) {
+    sprint = await prisma.sprint.create({ data: {
       projectId: project.id,
-      number: 1,
-      title: "Set up payment gateway",
-      status: "IN_PROGRESS",
-      priority: "HIGH",
-      assigneeId: bob.id,
-      reporterId: alice.id,
-    },
-  });
+      name: "Payments foundation",
+      goal: "Deliver a reliable payment workflow for the pilot.",
+      isActive: true,
+      startDate: new Date("2026-09-14T00:00:00.000Z"),
+      endDate: new Date("2026-09-28T00:00:00.000Z"),
+    } });
+  }
+  const issueSeeds = [
+    { number: 1, title: "Set up payment gateway", status: "IN_PROGRESS", priority: "HIGH", assigneeId: bob.id, reporterId: alice.id, sprintId: sprint.id, estimate: 5 },
+    { number: 2, title: "Define webhook retry policy", status: "TODO", priority: "MEDIUM", assigneeId: bob.id, reporterId: alice.id, sprintId: sprint.id, estimate: 3 },
+    { number: 3, title: "Complete checkout interaction design", status: "IN_REVIEW", priority: "HIGH", assigneeId: marcus.id, reporterId: priya.id, sprintId: sprint.id, estimate: 3 },
+    { number: 4, title: "Pilot account readiness checklist", status: "BACKLOG", priority: "MEDIUM", assigneeId: priya.id, reporterId: alice.id, estimate: 2 },
+    { number: 5, title: "Document payment reconciliation", status: "DONE", priority: "LOW", assigneeId: bob.id, reporterId: priya.id, estimate: 2 },
+  ] as const;
+  for (const issue of issueSeeds) {
+    await prisma.issue.upsert({
+      where: { projectId_number: { projectId: project.id, number: issue.number } },
+      update: issue,
+      create: { organizationId: org.id, projectId: project.id, position: issue.number, description: `Acme PAY-${issue.number}: ${issue.title}`, ...issue },
+    });
+  }
 
   // ---------- Atlas ----------
   const space = await prisma.atlasSpace.upsert({
@@ -149,41 +300,168 @@ async function main(): Promise<void> {
       createdById: alice.id,
     },
   });
-  await prisma.atlasPage.create({
-    data: {
-      organizationId: org.id,
-      spaceId: space.id,
-      title: "Payment Architecture",
-      content: "# Payment Architecture\n\nOverview of the payments system.",
-      isPublished: true,
-      createdById: alice.id,
-    },
-  });
+  let architecture = await prisma.atlasPage.findFirst({ where: { spaceId: space.id, title: "Payment Architecture" } });
+  if (!architecture) {
+    architecture = await prisma.atlasPage.create({
+      data: {
+        organizationId: org.id,
+        spaceId: space.id,
+        title: "Payment Architecture",
+        content: "# Payment Architecture\n\nOwnership, event flows, reconciliation, and operational runbooks.",
+        isPublished: true,
+        createdById: alice.id,
+      },
+    });
+  }
+  const existingComment = await prisma.atlasComment.findFirst({ where: { pageId: architecture.id, authorId: priya.id } });
+  if (!existingComment) {
+    await prisma.atlasComment.create({
+      data: { organizationId: org.id, pageId: architecture.id, authorId: priya.id, content: "Please add pilot rollout metrics before the architecture review." },
+    });
+  }
 
   // ---------- Pulse ----------
-  const calendar = await prisma.calendar.create({
-    data: { organizationId: org.id, ownerId: alice.id, name: "Engineering", isDefault: true },
-  });
-  await prisma.calendarEvent.create({
-    data: {
-      organizationId: org.id,
-      calendarId: calendar.id,
-      title: "Engineering Standup",
-      startsAt: new Date(Date.now() + 60 * 60 * 1000),
-      endsAt: new Date(Date.now() + 90 * 60 * 1000),
-      createdById: alice.id,
-      attendees: {
-        create: [
-          { userId: alice.id, isOrganizer: true, status: "ACCEPTED" },
-          { userId: bob.id, status: "PENDING" },
-          { userId: priya.id, status: "ACCEPTED" },
-        ],
+  let calendar = await prisma.calendar.findFirst({ where: { organizationId: org.id, name: "Engineering", deletedAt: null } });
+  if (!calendar) {
+    calendar = await prisma.calendar.create({ data: { organizationId: org.id, ownerId: alice.id, name: "Engineering", color: "teal", isDefault: true } });
+  }
+  let standup = await prisma.calendarEvent.findFirst({ where: { calendarId: calendar.id, title: "Engineering Standup", deletedAt: null } });
+  if (!standup) {
+    standup = await prisma.calendarEvent.create({
+      data: {
+        organizationId: org.id,
+        calendarId: calendar.id,
+        title: "Engineering Standup",
+        description: "Daily delivery update and blocker review.",
+        startsAt: new Date("2026-09-21T04:30:00.000Z"),
+        endsAt: new Date("2026-09-21T04:55:00.000Z"),
+        recurrenceRule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+        createdById: alice.id,
       },
-    },
+    });
+  }
+  for (const attendee of [{ user: alice, status: "ACCEPTED", isOrganizer: true }, { user: bob, status: "ACCEPTED", isOrganizer: false }, { user: priya, status: "TENTATIVE", isOrganizer: false }]) {
+    await prisma.eventAttendee.upsert({
+      where: { eventId_userId: { eventId: standup.id, userId: attendee.user.id } },
+      update: { status: attendee.status, isOrganizer: attendee.isOrganizer },
+      create: { eventId: standup.id, userId: attendee.user.id, status: attendee.status, isOrganizer: attendee.isOrganizer },
+    });
+  }
+
+  // ---------- Nexus, Cadence, and notifications ----------
+  let conversation = await prisma.nexusConversation.findFirst({ where: { organizationId: org.id, userId: priya.id, title: "Payments pilot planning" } });
+  if (!conversation) {
+    conversation = await prisma.nexusConversation.create({
+      data: { organizationId: org.id, userId: priya.id, title: "Payments pilot planning" },
+    });
+    await prisma.nexusMessage.createMany({
+      data: [
+        { conversationId: conversation.id, role: "user", content: "Summarize the key pilot risks for the payments rollout.", tokens: 14 },
+        { conversationId: conversation.id, role: "assistant", content: "The primary risks are webhook reliability, reconciliation coverage, and support readiness.", tokens: 18 },
+      ],
+    });
+  }
+  const existingTask = await prisma.nexusTask.findFirst({ where: { organizationId: org.id, sourceId: architecture.id, type: "SUMMARIZE_PAGE" } });
+  if (!existingTask) {
+    await prisma.nexusTask.create({
+      data: {
+        organizationId: org.id,
+        requestedById: priya.id,
+        type: "SUMMARIZE_PAGE",
+        status: "COMPLETED",
+        sourceType: "atlas_page",
+        sourceId: architecture.id,
+        input: { pageId: architecture.id },
+        result: { summary: "Payments architecture and operational controls for the pilot." },
+        startedAt: new Date("2026-09-18T08:00:00.000Z"),
+        completedAt: new Date("2026-09-18T08:00:04.000Z"),
+      },
+    });
+  }
+
+  let retrospective = await prisma.cadenceSession.findFirst({ where: { organizationId: org.id, title: "Sprint 12 retrospective" } });
+  if (!retrospective) {
+    retrospective = await prisma.cadenceSession.create({
+      data: { organizationId: org.id, teamId: team.id, type: "RETROSPECTIVE", title: "Sprint 12 retrospective", phase: "DISCUSS", facilitatorId: alice.id, startedAt: new Date("2026-09-18T10:00:00.000Z") },
+    });
+    const card = await prisma.cadenceCard.create({ data: { sessionId: retrospective.id, authorId: bob.id, column: "Went well", content: "The payment gateway spike reduced integration uncertainty." } });
+    await prisma.cadenceVote.create({ data: { cardId: card.id, userId: alice.id } });
+  }
+
+  for (const preference of [
+    { user: alice, type: "SYSTEM", email: true },
+    { user: bob, type: "ASSIGNMENT", email: true },
+    { user: priya, type: "COMMENT", email: false },
+  ] as const) {
+    await prisma.notificationPreference.upsert({
+      where: { userId_organizationId_type: { userId: preference.user.id, organizationId: org.id, type: preference.type } },
+      update: { inApp: true, email: preference.email },
+      create: { userId: preference.user.id, organizationId: org.id, type: preference.type, inApp: true, email: preference.email },
+    });
+  }
+  const assignmentNotification = await prisma.notification.findFirst({ where: { organizationId: org.id, userId: bob.id, title: "Assigned to PAY-1" } });
+  if (!assignmentNotification) {
+    await prisma.notification.create({ data: { organizationId: org.id, userId: bob.id, type: "ASSIGNMENT", title: "Assigned to PAY-1", body: "You were assigned to Set up payment gateway.", linkUrl: "/acme/flow/projects/PAY/issues/1", metadata: { projectKey: "PAY", issueNumber: 1 } } });
+  }
+
+  // ---------- HR, support, and operational records ----------
+  const [bobHr, priyaHr] = await Promise.all([
+    prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: bob.id } }),
+    prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: priya.id } }),
+  ]);
+  const attendanceDate = new Date("2026-09-18T00:00:00.000Z");
+  const attendance = await prisma.attendanceRecord.findFirst({ where: { userId: bobHr.id, date: attendanceDate } });
+  if (!attendance) {
+    await prisma.attendanceRecord.create({ data: { userId: bobHr.id, date: attendanceDate, checkIn: new Date("2026-09-18T04:05:00.000Z"), checkOut: new Date("2026-09-18T12:35:00.000Z"), status: "PRESENT", workHours: 8, breakTime: 30, location: "Bengaluru" } });
+  }
+  const leave = await prisma.leaveRequest.findFirst({ where: { userId: priyaHr.id, startDate: new Date("2026-10-12T00:00:00.000Z") } });
+  if (!leave) {
+    await prisma.leaveRequest.create({ data: { userId: priyaHr.id, leaveType: "VACATION", startDate: new Date("2026-10-12T00:00:00.000Z"), endDate: new Date("2026-10-14T00:00:00.000Z"), totalDays: 3, reason: "Planned family travel", status: "APPROVED", approvedBy: elena.id, approvedAt: new Date("2026-09-15T00:00:00.000Z") } });
+  }
+  let training = await prisma.training.findFirst({ where: { title: "Secure Payments Engineering" } });
+  if (!training) {
+    training = await prisma.training.create({ data: { title: "Secure Payments Engineering", description: "PCI basics, secure integration patterns, and incident response.", type: "TECHNICAL", provider: "Acme Academy", duration: 180, status: "SCHEDULED", maxParticipants: 25, certificationOffered: true } });
+  }
+  await prisma.trainingEnrollment.upsert({
+    where: { trainingId_userId: { trainingId: training.id, userId: bobHr.id } },
+    update: { status: "ENROLLED" },
+    create: { trainingId: training.id, userId: bobHr.id, status: "ENROLLED" },
   });
+  await prisma.asset.upsert({
+    where: { serialNumber: "ACME-MBP-1002" },
+    update: { status: "ASSIGNED", assignedTo: bobHr.id },
+    create: { name: "MacBook Pro 14", type: "LAPTOP", serialNumber: "ACME-MBP-1002", manufacturer: "Apple", model: "MacBook Pro M3", status: "ASSIGNED", assignedTo: bobHr.id, assignedAt: new Date("2026-01-08T00:00:00.000Z"), condition: "Excellent", location: "Bengaluru" },
+  });
+  const insurance = await prisma.healthInsurance.findFirst({ where: { organizationId: org.id, userId: bobHr.id, provider: "Acme Health" } });
+  if (!insurance) {
+    await prisma.healthInsurance.create({ data: { organizationId: org.id, userId: bobHr.id, provider: "Acme Health", planName: "Gold", policyNumber: "ACME-2026-GOLD", memberNumber: "1002", coverageStarts: new Date("2026-01-01T00:00:00.000Z"), isActive: true } });
+  }
+
+  const supportTicket = await prisma.supportTicket.findFirst({ where: { organizationId: org.id, subject: "Webhook delivery visibility" } });
+  if (!supportTicket) {
+    await prisma.supportTicket.create({ data: { organizationId: org.id, userId: alice.id, subject: "Webhook delivery visibility", body: "Requesting delivery attempt visibility for finance integrations.", status: "IN_PROGRESS", priority: "NORMAL", assignedToId: admin.id, notes: "Added to the Q4 platform backlog." } });
+  }
+  const auditEntry = await prisma.auditLog.findFirst({ where: { organizationId: org.id, action: "organization.seeded" } });
+  if (!auditEntry) {
+    await prisma.auditLog.create({ data: { organizationId: org.id, actorUserId: admin.id, action: "organization.seeded", resourceType: "organization", resourceId: org.id, metadata: { source: "prisma/seed.ts", fixture: "acme" } } });
+  }
+
+  // ---------- Public product content ----------
+  for (const document of [
+    { type: "TERMS_OF_SERVICE", version: "2026-09-01", title: "Terms of Service", content: "# Terms of Service\n\nSeed legal terms for the Dhriti environment." },
+    { type: "PRIVACY_POLICY", version: "2026-09-01", title: "Privacy Policy", content: "# Privacy Policy\n\nSeed privacy policy for the Dhriti environment." },
+  ] as const) {
+    await prisma.legalDocument.upsert({ where: { type_version: { type: document.type, version: document.version } }, update: { title: document.title, content: document.content, isPublished: true }, create: { ...document, isPublished: true, publishedAt: new Date("2026-09-01T00:00:00.000Z") } });
+  }
+  const faqGroup = await prisma.faqGroup.upsert({ where: { slug: "getting-started" }, update: { name: "Getting Started", order: 1 }, create: { name: "Getting Started", slug: "getting-started", order: 1 } });
+  const faq = await prisma.faqItem.findFirst({ where: { groupId: faqGroup.id, question: "How do I invite my team?" } });
+  if (!faq) {
+    await prisma.faqItem.create({ data: { groupId: faqGroup.id, question: "How do I invite my team?", answer: "Use the organization settings to send invitations or share an invite link.", order: 1, isDraft: false } });
+  }
+  await prisma.jobPost.upsert({ where: { slug: "senior-platform-engineer" }, update: { isPublished: true }, create: { slug: "senior-platform-engineer", title: "Senior Platform Engineer", description: "Build durable platform services for a growing work OS.", department: "Engineering", location: "Bengaluru / Remote", employmentType: "Full-time", isPublished: true, publishedAt: new Date("2026-09-10T00:00:00.000Z") } });
 
   console.log("Seed complete.");
-  console.log(`  Login: alice@acme.com / ${PASSWORD} (OWNER)`);
+  console.log(`  Login: alice@acme.com / ${PASSWORD} (ORG_ADMIN)`);
   console.log(`         bob@acme.com  / ${PASSWORD} (ADMIN)`);
   console.log(`         priya@acme.com / ${PASSWORD} (MEMBER)`);
   console.log(`         admin@dhriti.dev / ${PASSWORD} (platform SUPER_ADMIN)`);
@@ -194,23 +472,41 @@ async function upsertUser(
   email: string,
   name: string,
   passwordHash: string,
-  platformRole?: "SUPER_ADMIN",
+  role: "SUPER_ADMIN" | "ORG_ADMIN" | "ADMIN" | "EMPLOYEE" = "EMPLOYEE",
 ) {
   return prisma.user.upsert({
     where: { email },
-    update: {},
+    update: { name, status: "ACTIVE", role: role === "SUPER_ADMIN" ? "PLATFORM_ADMIN" : role },
     create: {
       email,
       name,
       status: "ACTIVE",
+      role: role === "SUPER_ADMIN" ? "PLATFORM_ADMIN" : role,
+      isPlatformUser: role === "SUPER_ADMIN",
       auth: {
         create: {
           passwordHash,
           emailVerifiedAt: new Date(),
-          ...(platformRole ? { platformRole } : {}),
+          ...(role === "SUPER_ADMIN" ? { platformRole: "SUPER_ADMIN" } : {}),
         },
       },
     },
+  });
+}
+
+async function ensureMessage(
+  organizationId: string,
+  channelId: string,
+  authorId: string,
+  content: string,
+  parentId?: string,
+) {
+  const existing = await prisma.message.findFirst({
+    where: { channelId, authorId, content, parentId: parentId ?? null },
+  });
+
+  return existing ?? prisma.message.create({
+    data: { organizationId, channelId, authorId, content, parentId },
   });
 }
 

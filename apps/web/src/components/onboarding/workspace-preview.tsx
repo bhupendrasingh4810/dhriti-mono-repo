@@ -1,25 +1,15 @@
 import React from "react";
 
-type Step = 1 | 2 | 3 | 4 | 5;
-
-const GOAL_OPTIONS = [
-    { id: "chat", icon: "💬", label: "Chat & Collaboration", desc: "Real-time messaging and team channels" },
-    { id: "projects", icon: "📋", label: "Project Management", desc: "Tasks, sprints, and delivery tracking" },
-    { id: "docs", icon: "📄", label: "Knowledge & Documentation", desc: "Wikis, runbooks, and shared knowledge" },
-    { id: "clients", icon: "🤝", label: "Client & Partner Communication", desc: "External-facing workspaces" },
-    { id: "ai", icon: "✨", label: "AI-Powered Workflows", desc: "Automate with AI assistants and agents" },
-];
+type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 export default function WorkspacePreview({
     step,
     orgName,
     photoPreview,
-    goals,
 }: {
     step: Step;
     orgName: string;
     photoPreview: string | null;
-    goals: string[];
 }) {
     return (
         <div
@@ -67,24 +57,6 @@ export default function WorkspacePreview({
                     </div>
                     <span className="text-white/60 text-xs">Jane Smith</span>
                 </div>
-
-                {goals.length > 0 && step >= 3 && (
-                    <>
-                        <div className="h-px" style={{ backgroundColor: "rgba(255,255,255,0.1)" }} />
-                        <div className="px-2">
-                            <p className="text-white/40 text-[10px] uppercase tracking-wider mb-1">Active tools</p>
-                            {goals.slice(0, 2).map((g) => {
-                                const opt = GOAL_OPTIONS.find((o) => o.id === g);
-                                return opt ? (
-                                    <div key={g} className="flex items-center gap-1.5 py-0.5">
-                                        <span className="text-[10px]">{opt.icon}</span>
-                                        <span className="text-white/50 text-[10px] truncate">{opt.label}</span>
-                                    </div>
-                                ) : null;
-                            })}
-                        </div>
-                    </>
-                )}
             </div>
         </div>
     );

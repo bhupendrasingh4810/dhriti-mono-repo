@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { useAlert } from "@/components/alerts/alert-provider";
+import { useAlert } from "@/components/shared/alert";
 import { register } from "@/services/auth.service";
 
 export type Page =
@@ -70,9 +70,9 @@ export default function SignupPage() {
       router.push(`/verify?email=${encodeURIComponent(response.email)}&token=${encodeURIComponent(response.token)}`);
     } catch (error) {
       showAlert({
-        title: error instanceof Error ? error.message : "Unable to create your account.",
-        severity: "error",
-        variant: "filled",
+        message: error instanceof Error ? error.message : "Unable to create your account.",
+        dismissible: true,
+        variant: "error",
       });
     } finally {
       setLoading(false);

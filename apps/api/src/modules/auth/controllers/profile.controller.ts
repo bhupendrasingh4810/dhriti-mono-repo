@@ -22,7 +22,7 @@ import {
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 
-import { AuthService } from "../services/auth.service";
+import { ProfileService } from "../services/profile.service";
 import { UpdateProfileDto, type UserProfileResponse } from "../dto/profile.dto";
 
 interface UploadedProfilePhoto {
@@ -36,18 +36,16 @@ const MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024;
 
 @ApiTags("auth")
 @Controller("auth")
-export class AuthProfileController {
+export class ProfileController {
     constructor(
-        private readonly auth: AuthService,
+        private readonly profileService: ProfileService,
     ) { }
-
-    // ---------------- Profile ----------------
 
     @Get("me")
     @ApiBearerAuth()
     @ApiOperation({ summary: "Get the current user profile" })
     async me(@CurrentUser() user: AuthenticatedUser): Promise<UserProfileResponse> {
-        return this.auth.getProfile(user.userId);
+        return this.profileService.getProfile(user.userId);
     }
 
     @Patch("me")
@@ -57,7 +55,7 @@ export class AuthProfileController {
         @CurrentUser() user: AuthenticatedUser,
         @Body() dto: UpdateProfileDto,
     ): Promise<UserProfileResponse> {
-        return this.auth.updateProfile(user.userId, dto);
+        return this.profileService.updateProfile(user.userId, dto);
     }
 
     @Post("me/avatar")
@@ -77,6 +75,6 @@ export class AuthProfileController {
         }
 
         const avatarUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
-        return this.auth.updateProfile(user.userId, { avatarUrl });
+        return this.profileService.updateProfile(user.userId, { avatarUrl });
     }
 }

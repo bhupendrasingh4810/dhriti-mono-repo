@@ -11,7 +11,128 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// prisma/parts/00-enums.prisma
+model BlogCategory {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  posts BlogPostTag[]
+
+  @@map("blog_tags")
+}
+
+model BlogPost {
+  id          String    @id @default(uuid()) @db.Uuid
+  slug        String    @unique
+  title       String
+  excerpt     String?
+  content     String
+  coverImage  String?
+  authorId    String?   @db.Uuid
+  categoryId  String?   @db.Uuid
+  isPublished Boolean   @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags     BlogPostTag[]
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@map("blog_posts")
+}
+
+model BlogPostTag {
+  postId String @db.Uuid
+  tagId  String @db.Uuid
+
+  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@index([tagId])
+  @@map("blog_post_tags")
+}
+
+
+
+model LegalDocument {
+  id          String            @id @default(uuid()) @db.Uuid
+  type        LegalDocumentType
+  version     String
+  title       String
+  content     String
+  isPublished Boolean           @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@unique([type, version])
+  @@index([type, isPublished])
+  @@map("legal_documents")
+}
+
+model FaqGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items FaqItem[]
+
+  @@map("faq_groups")
+}
+
+model FaqItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  groupId   String   @db.Uuid
+  question  String
+  answer    String
+  order     Int      @default(0)
+  isDraft   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  group FaqGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+  @@map("faq_items")
+}
+
+model JobPost {
+  id             String    @id @default(uuid()) @db.Uuid
+  slug           String    @unique
+  title          String
+  description    String
+  department     String?
+  location       String?
+  employmentType String?
+  isPublished    Boolean   @default(false)
+  publishedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([isPublished])
+  @@map("job_posts")
+}
+
 
 enum UserStatus {
   PENDING_VERIFICATION
@@ -51,7 +172,7 @@ enum UserRole {
   SALES
   ORG_ADMIN
   HUMAN_RESOURCE
-  MEMBER
+  EMPLOYEE
   GUEST
 }
 
@@ -305,22 +426,16 @@ enum NotificationType {
   SYSTEM
 }
 
-enum DhritiUsageType {
-  WORK
+enum AppUsageType {
+  PROFESSIONAL
   EDUCATION
+  PERSONAL
   OTHER
 }
 
-enum DhritiExperience {
+enum AppExperience {
   NEW
   RETURNING
-}
-
-enum DhritiUseCase {
-  CHAT_COLLABORATION
-  PROJECT_MANAGEMENT
-  HRMS
-  CALENDAR_MEETINGS
 }
 
 enum LegalDocumentType {
@@ -328,7 +443,412 @@ enum LegalDocumentType {
   PRIVACY_POLICY
 }
 
-// prisma/parts/10-platform.prisma
+model AttendanceRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  date            DateTime @db.Date
+  checkIn         DateTime?
+  checkOut        DateTime?
+  status          AttendanceStatus @default(PRESENT)
+  workHours       Float?
+  breakTime       Int?
+  location        String?
+  ipAddress       String?
+  deviceInfo      String?
+  notes           String?  @db.Text
+  approvedBy      String?  @db.Uuid
+  approvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_records")
+}
+
+model LeaveRequest {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  leaveType       LeaveType
+  startDate       DateTime @db.Date
+  endDate         DateTime @db.Date
+  totalDays       Float
+  reason          String?  @db.Text
+  status          LeaveStatus @default(PENDING)
+  approvedBy      String?  @db.Uuid
+  approvedAt      DateTime?
+  rejectedBy      String?  @db.Uuid
+  rejectedAt      DateTime?
+  rejectionReason String?  @db.Text
+  attachmentUrls  String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+  @@index([leaveType])
+  @@map("leave_requests")
+}
+
+model PerformanceReview {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  reviewerId      String   @db.Uuid
+  reviewType      ReviewType
+  cycle           String
+  startDate       DateTime @db.Date
+  dueDate         DateTime @db.Date
+  completedAt     DateTime?
+  status          ReviewStatus @default(PENDING)
+  
+  overallRating   Int?
+  performanceRating Int?
+  behaviorRating  Int?
+  leadershipRating Int?
+  
+  strengths       String?  @db.Text
+  areasForImprovement String? @db.Text
+  goals           Json?    @db.JsonB
+  comments        String?  @db.Text
+  employeeComments String? @db.Text
+  
+  calibrationStatus String?
+  finalRating     Int?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewer        UserHRMSProfile     @relation("RevieweeReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([reviewerId])
+  @@index([status])
+  @@map("performance_reviews")
+}
+
+model PayrollRecord {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @db.Uuid
+  period          String
+  periodStart     DateTime @db.Date
+  periodEnd       DateTime @db.Date
+  payDate         DateTime @db.Date
+  
+  basicSalary     Float
+  allowances      Json?    @db.JsonB
+  overtime        Float    @default(0)
+  bonus           Float    @default(0)
+  commission      Float    @default(0)
+  otherEarnings   Float    @default(0)
+  grossSalary     Float
+  
+  tax             Float    @default(0)
+  socialSecurity  Float    @default(0)
+  healthInsurance Float    @default(0)
+  retirement      Float    @default(0)
+  otherDeductions Float    @default(0)
+  totalDeductions Float
+  
+  netPay          Float
+  currency        String   @default("USD")
+  
+  status          PayrollStatus @default(DRAFT)
+  paidAt          DateTime?
+  paymentMethod   String?
+  bankAccount     String?
+  
+  notes           String?
+  metadata        Json?    @db.JsonB
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([period])
+  @@index([status])
+  @@map("payroll_records")
+}
+
+model Training {
+  id              String   @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?  @db.Text
+  type            TrainingType
+  provider        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  duration        Int?
+  location        String?
+  url             String?
+  status          TrainingStatus @default(SCHEDULED)
+  maxParticipants Int?
+  
+  enrollments     TrainingEnrollment[]
+  
+  cost            Float?
+  currency        String?  @default("USD")
+  
+  certificationOffered Boolean @default(false)
+  certificationUrl  String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@map("trainings")
+}
+
+model TrainingEnrollment {
+  id              String   @id @default(uuid()) @db.Uuid
+  trainingId      String   @db.Uuid
+  userId          String   @db.Uuid
+  enrolledAt      DateTime @default(now())
+  completedAt     DateTime?
+  status          TrainingEnrollmentStatus @default(ENROLLED)
+  score           Float?
+  feedback        String?  @db.Text
+  certificateUrl  String?
+  
+  training        Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([trainingId, userId])
+  @@index([trainingId])
+  @@index([userId])
+  @@map("training_enrollments")
+}
+
+model Asset {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  type            AssetType
+  serialNumber    String?  @unique
+  model           String?
+  manufacturer    String?
+  purchaseDate    DateTime?
+  purchasePrice   Float?
+  warrantyExpiry  DateTime?
+  status          AssetStatus @default(AVAILABLE)
+  assignedTo      String?  @db.Uuid
+  assignedAt      DateTime?
+  assignedBy      String?  @db.Uuid
+  condition       String?
+  location        String?
+  notes           String?  @db.Text
+  metadata        Json?    @db.JsonB
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            UserHRMSProfile?    @relation(fields: [assignedTo], references: [id])
+  
+  @@index([type])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("assets")
+}
+
+model HolidayCalendar {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  countryCode    String?
+  region         String?
+  holidays       Json      @default("[]") @db.JsonB
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("holiday_calendars")
+}
+
+model HealthInsurance {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  provider       String
+  planName       String
+  policyNumber   String?
+  memberNumber   String?
+  coverageStarts DateTime         @db.Date
+  coverageEnds   DateTime?        @db.Date
+  isActive       Boolean          @default(true)
+  metadata       Json?            @db.JsonB
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         UserHRMSProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@index([userId, isActive])
+  @@map("health_insurances")
+}
+
+// prisma/parts/30-nexus.prisma
+
+model NexusTask {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @db.Uuid
+  requestedById  String          @db.Uuid
+  type           NexusTaskType
+  status         NexusTaskStatus @default(PENDING)
+  input          Json
+  result         Json?
+  error          String?
+  sourceType     String?
+  sourceId       String?
+  createdAt      DateTime        @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedBy  User         @relation(fields: [requestedById], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([requestedById, createdAt])
+  @@index([status])
+  @@map("nexus_tasks")
+}
+
+model NexusConversation {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  userId         String    @db.Uuid
+  title          String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     NexusMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("nexus_conversations")
+}
+
+model NexusMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  conversationId String   @db.Uuid
+  role           String
+  content        String   @db.Text
+  tokens         Int?
+  createdAt      DateTime @default(now())
+
+  conversation NexusConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("nexus_messages")
+}
+
+model Notification {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  type           NotificationType
+  title          String
+  body           String?
+  linkUrl        String?
+  metadata       Json?
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  type           NotificationType
+  inApp          Boolean  @default(true)
+  email          Boolean  @default(true)
+  push           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId, type])
+  @@map("notification_preferences")
+}
+
+
+model Organization {
+  id        String    @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  members  OrganizationMember[]
+  teams    Team[]
+  auditLogs AuditLog[]
+  files     StoredFile[]
+  channels  Channel[]
+  messages  Message[]
+  projects  Project[]
+  issues    Issue[]
+  atlasSpaces   AtlasSpace[]
+  atlasPages    AtlasPage[]
+  atlasComments AtlasComment[]
+  calendars     Calendar[]
+  calendarEvents CalendarEvent[]
+  nexusTasks    NexusTask[]
+  nexusConversations NexusConversation[]
+  cadenceSessions CadenceSession[]
+  webhooks      Webhook[]
+  subscription  Subscription?
+  entitlements  ProductEntitlement[]
+  featureFlags  FeatureFlag[]
+  supportTickets SupportTicket[]
+  settings      OrganizationSettings?
+  notifications Notification[]
+  notificationPreferences NotificationPreference[]
+  searchIndex   SearchIndex[]
+  searchHistory SearchHistory[]
+  invitations   Invitation[]
+  groups        Group[]
+  usageEvents   UsageEvent[]
+  holidayCalendars HolidayCalendar[]
+  healthInsurancePlans HealthInsurance[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
 
 // ==================== Core User Model ====================
 model User {
@@ -338,12 +858,11 @@ model User {
   name                  String
   avatarUrl             String?     @map("avatar_url")
   status                UserStatus  @default(PENDING_VERIFICATION)
-  role                  UserRole    @default(MEMBER)
+  role                  UserRole    @default(EMPLOYEE)
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
   deletedAt             DateTime?
-  
-  onboardingProfile     Json?
+  isPlatformUser         Boolean @default(false)
 
   // Relations
   identities            UserIdentity[]
@@ -370,6 +889,7 @@ model User {
   // Extensions
   auth                  UserAuth?
   profile               UserProfile?
+  onboardingProfile     OnBoardingProfile?
   hrmsProfile           UserHRMSProfile?
   workosProfile         UserWorkOSProfile?
   complianceProfile     UserComplianceProfile?
@@ -384,6 +904,25 @@ model User {
   @@index([createdAt])
   @@index([deletedAt])
   @@map("users")
+}
+
+model OnBoardingProfile {
+  id                         String   @id @default(uuid()) @db.Uuid
+  userId                     String   @unique @db.Uuid
+  isOnBoarded                Boolean  @default(false)
+  isOrgAdded                 Boolean  @default(false)
+  usageType                  String   @default("")
+  experience                 String   @default("")
+  isProfilePhotoSkipped        Boolean  @default(false)
+  legalAcceptedAt            DateTime
+  legalPrivacyPolicyAccepted Boolean  @default(true)
+  legalPrivacyPolicyVersion  String   @default("2026-09-01")
+  legalTermsAccepted         Boolean  @default(true)
+  legalTermsVersion          String   @default("2026-09-01")
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  user                       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // ==================== User Auth Extension ====================
@@ -510,6 +1049,7 @@ model UserHRMSProfile {
   trainingEnrollments   TrainingEnrollment[]
   assignedAssets        Asset[]
   reviewedPerformance   PerformanceReview[] @relation("RevieweeReviewer")
+  healthInsurancePlans  HealthInsurance[]
   
   @@index([userId])
   @@index([employeeId])
@@ -679,61 +1219,6 @@ model MfaRecoveryCode {
 
   @@index([userId])
   @@map("mfa_recovery_codes")
-}
-
-model Organization {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String    @unique
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-
-  members  OrganizationMember[]
-  teams    Team[]
-  auditLogs AuditLog[]
-  files     StoredFile[]
-  channels  Channel[]
-  messages  Message[]
-  projects  Project[]
-  issues    Issue[]
-  atlasSpaces   AtlasSpace[]
-  atlasPages    AtlasPage[]
-  atlasComments AtlasComment[]
-  calendars     Calendar[]
-  calendarEvents CalendarEvent[]
-  nexusTasks    NexusTask[]
-  nexusConversations NexusConversation[]
-  cadenceSessions CadenceSession[]
-  webhooks      Webhook[]
-  subscription  Subscription?
-  entitlements  ProductEntitlement[]
-  featureFlags  FeatureFlag[]
-  supportTickets SupportTicket[]
-  settings      OrganizationSettings?
-  notifications Notification[]
-  notificationPreferences NotificationPreference[]
-  searchIndex   SearchIndex[]
-  searchHistory SearchHistory[]
-  invitations   Invitation[]
-  groups        Group[]
-  usageEvents   UsageEvent[]
-
-  @@map("organizations")
-}
-
-model OrganizationMember {
-  id             String           @id @default(uuid()) @db.Uuid
-  organizationId String           @db.Uuid
-  userId         String           @db.Uuid
-  createdAt      DateTime         @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, userId])
-  @@index([userId])
-  @@map("organization_members")
 }
 
 model Team {
@@ -950,45 +1435,6 @@ model OrganizationSettings {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@map("organization_settings")
-}
-
-model Notification {
-  id             String           @id @default(uuid()) @db.Uuid
-  organizationId String           @db.Uuid
-  userId         String           @db.Uuid
-  type           NotificationType
-  title          String
-  body           String?
-  linkUrl        String?
-  metadata       Json?
-  isRead         Boolean          @default(false)
-  readAt         DateTime?
-  createdAt      DateTime         @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead, createdAt])
-  @@index([organizationId, createdAt])
-  @@map("notifications")
-}
-
-model NotificationPreference {
-  id             String   @id @default(uuid()) @db.Uuid
-  organizationId String   @db.Uuid
-  userId         String   @db.Uuid
-  type           NotificationType
-  inApp          Boolean  @default(true)
-  email          Boolean  @default(true)
-  push           Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, organizationId, type])
-  @@map("notification_preferences")
 }
 
 model SearchIndex {
@@ -1478,395 +1924,4 @@ model CadenceVote {
   @@index([userId])
   @@map("cadence_votes")
 }
-
-// prisma/parts/30-nexus.prisma
-
-model NexusTask {
-  id             String          @id @default(uuid()) @db.Uuid
-  organizationId String          @db.Uuid
-  requestedById  String          @db.Uuid
-  type           NexusTaskType
-  status         NexusTaskStatus @default(PENDING)
-  input          Json
-  result         Json?
-  error          String?
-  sourceType     String?
-  sourceId       String?
-  createdAt      DateTime        @default(now())
-  startedAt      DateTime?
-  completedAt    DateTime?
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  requestedBy  User         @relation(fields: [requestedById], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, createdAt])
-  @@index([requestedById, createdAt])
-  @@index([status])
-  @@map("nexus_tasks")
-}
-
-model NexusConversation {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
-  userId         String    @db.Uuid
-  title          String
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages     NexusMessage[]
-
-  @@index([userId, updatedAt])
-  @@map("nexus_conversations")
-}
-
-model NexusMessage {
-  id             String   @id @default(uuid()) @db.Uuid
-  conversationId String   @db.Uuid
-  role           String
-  content        String   @db.Text
-  tokens         Int?
-  createdAt      DateTime @default(now())
-
-  conversation NexusConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-
-  @@index([conversationId, createdAt])
-  @@map("nexus_messages")
-}
-
-model AttendanceRecord {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  date            DateTime @db.Date
-  checkIn         DateTime?
-  checkOut        DateTime?
-  status          AttendanceStatus @default(PRESENT)
-  workHours       Float?
-  breakTime       Int?
-  location        String?
-  ipAddress       String?
-  deviceInfo      String?
-  notes           String?  @db.Text
-  approvedBy      String?  @db.Uuid
-  approvedAt      DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([date])
-  @@index([status])
-  @@map("attendance_records")
-}
-
-model LeaveRequest {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  leaveType       LeaveType
-  startDate       DateTime @db.Date
-  endDate         DateTime @db.Date
-  totalDays       Float
-  reason          String?  @db.Text
-  status          LeaveStatus @default(PENDING)
-  approvedBy      String?  @db.Uuid
-  approvedAt      DateTime?
-  rejectedBy      String?  @db.Uuid
-  rejectedAt      DateTime?
-  rejectionReason String?  @db.Text
-  attachmentUrls  String[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([status])
-  @@index([leaveType])
-  @@map("leave_requests")
-}
-
-model PerformanceReview {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  reviewerId      String   @db.Uuid
-  reviewType      ReviewType
-  cycle           String
-  startDate       DateTime @db.Date
-  dueDate         DateTime @db.Date
-  completedAt     DateTime?
-  status          ReviewStatus @default(PENDING)
-  
-  overallRating   Int?
-  performanceRating Int?
-  behaviorRating  Int?
-  leadershipRating Int?
-  
-  strengths       String?  @db.Text
-  areasForImprovement String? @db.Text
-  goals           Json?    @db.JsonB
-  comments        String?  @db.Text
-  employeeComments String? @db.Text
-  
-  calibrationStatus String?
-  finalRating     Int?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviewer        UserHRMSProfile     @relation("RevieweeReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([reviewerId])
-  @@index([status])
-  @@map("performance_reviews")
-}
-
-model PayrollRecord {
-  id              String   @id @default(uuid()) @db.Uuid
-  userId          String   @db.Uuid
-  period          String
-  periodStart     DateTime @db.Date
-  periodEnd       DateTime @db.Date
-  payDate         DateTime @db.Date
-  
-  basicSalary     Float
-  allowances      Json?    @db.JsonB
-  overtime        Float    @default(0)
-  bonus           Float    @default(0)
-  commission      Float    @default(0)
-  otherEarnings   Float    @default(0)
-  grossSalary     Float
-  
-  tax             Float    @default(0)
-  socialSecurity  Float    @default(0)
-  healthInsurance Float    @default(0)
-  retirement      Float    @default(0)
-  otherDeductions Float    @default(0)
-  totalDeductions Float
-  
-  netPay          Float
-  currency        String   @default("USD")
-  
-  status          PayrollStatus @default(DRAFT)
-  paidAt          DateTime?
-  paymentMethod   String?
-  bankAccount     String?
-  
-  notes           String?
-  metadata        Json?    @db.JsonB
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([period])
-  @@index([status])
-  @@map("payroll_records")
-}
-
-model Training {
-  id              String   @id @default(uuid()) @db.Uuid
-  title           String
-  description     String?  @db.Text
-  type            TrainingType
-  provider        String?
-  startDate       DateTime?
-  endDate         DateTime?
-  duration        Int?
-  location        String?
-  url             String?
-  status          TrainingStatus @default(SCHEDULED)
-  maxParticipants Int?
-  
-  enrollments     TrainingEnrollment[]
-  
-  cost            Float?
-  currency        String?  @default("USD")
-  
-  certificationOffered Boolean @default(false)
-  certificationUrl  String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([type])
-  @@index([status])
-  @@map("trainings")
-}
-
-model TrainingEnrollment {
-  id              String   @id @default(uuid()) @db.Uuid
-  trainingId      String   @db.Uuid
-  userId          String   @db.Uuid
-  enrolledAt      DateTime @default(now())
-  completedAt     DateTime?
-  status          TrainingEnrollmentStatus @default(ENROLLED)
-  score           Float?
-  feedback        String?  @db.Text
-  certificateUrl  String?
-  
-  training        Training @relation(fields: [trainingId], references: [id], onDelete: Cascade)
-  user            UserHRMSProfile     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@unique([trainingId, userId])
-  @@index([trainingId])
-  @@index([userId])
-  @@map("training_enrollments")
-}
-
-model Asset {
-  id              String   @id @default(uuid()) @db.Uuid
-  name            String
-  type            AssetType
-  serialNumber    String?  @unique
-  model           String?
-  manufacturer    String?
-  purchaseDate    DateTime?
-  purchasePrice   Float?
-  warrantyExpiry  DateTime?
-  status          AssetStatus @default(AVAILABLE)
-  assignedTo      String?  @db.Uuid
-  assignedAt      DateTime?
-  assignedBy      String?  @db.Uuid
-  condition       String?
-  location        String?
-  notes           String?  @db.Text
-  metadata        Json?    @db.JsonB
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user            UserHRMSProfile?    @relation(fields: [assignedTo], references: [id])
-  
-  @@index([type])
-  @@index([status])
-  @@index([assignedTo])
-  @@map("assets")
-}
-
-model LegalDocument {
-  id          String            @id @default(uuid()) @db.Uuid
-  type        LegalDocumentType
-  version     String
-  title       String
-  content     String
-  isPublished Boolean           @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  @@unique([type, version])
-  @@index([type, isPublished])
-  @@map("legal_documents")
-}
-
-model FaqGroup {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String   @unique
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  items FaqItem[]
-
-  @@map("faq_groups")
-}
-
-model FaqItem {
-  id        String   @id @default(uuid()) @db.Uuid
-  groupId   String   @db.Uuid
-  question  String
-  answer    String
-  order     Int      @default(0)
-  isDraft   Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  group FaqGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-
-  @@index([groupId])
-  @@map("faq_items")
-}
-
-model JobPost {
-  id             String    @id @default(uuid()) @db.Uuid
-  slug           String    @unique
-  title          String
-  description    String
-  department     String?
-  location       String?
-  employmentType String?
-  isPublished    Boolean   @default(false)
-  publishedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  @@index([isPublished])
-  @@map("job_posts")
-}
-
-model BlogCategory {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  posts BlogPost[]
-
-  @@map("blog_categories")
-}
-
-model BlogTag {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  posts BlogPostTag[]
-
-  @@map("blog_tags")
-}
-
-model BlogPost {
-  id          String    @id @default(uuid()) @db.Uuid
-  slug        String    @unique
-  title       String
-  excerpt     String?
-  content     String
-  coverImage  String?
-  authorId    String?   @db.Uuid
-  categoryId  String?   @db.Uuid
-  isPublished Boolean   @default(false)
-  publishedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  category BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  tags     BlogPostTag[]
-
-  @@index([categoryId])
-  @@index([isPublished])
-  @@map("blog_posts")
-}
-
-model BlogPostTag {
-  postId String @db.Uuid
-  tagId  String @db.Uuid
-
-  post BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
-  tag  BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([postId, tagId])
-  @@index([tagId])
-  @@map("blog_post_tags")
-}
-
 

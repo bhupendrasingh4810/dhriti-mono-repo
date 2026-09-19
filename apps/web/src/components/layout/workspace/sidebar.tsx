@@ -101,7 +101,11 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
   const handleNavClick = (item: NavItem) => {
     setSelectedView(item.id);
     onViewChange(item.id);
-    router.push(`/${organizationSlug}/${item.id}`);
+    if(item.id == "control") {
+      router.push(`/${organizationSlug}/${item.id}/dashboard`);
+    } else {
+      router.push(`/${organizationSlug}/${item.id}`);
+    }
   };
 
   return (

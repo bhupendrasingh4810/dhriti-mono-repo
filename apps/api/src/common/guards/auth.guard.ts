@@ -47,11 +47,11 @@ export class AuthGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<GuardedRequest>();
-    const token = this.extractBearerToken(request);
+    const token = this.extractToken(request);
     if (!token) {
       throw new UnauthorizedException({
         code: "UNAUTHORIZED",
-        message: "Missing bearer token",
+        message: "Missing access token",
       });
     }
 
@@ -84,15 +84,15 @@ export class AuthGuard implements CanActivate {
     return true;
   }
 
-  private extractBearerToken(request: Request): string | null {
+  private extractToken(request: Request): string | null {
     const header = request.headers.authorization;
-    if (!header) {
-      return null;
+    if (header) {
+      const [scheme, token] = header.split(" ");
+      if (scheme?.toLowerCase() === "bearer" && token) {
+        return token;
+      }
     }
-    const [scheme, token] = header.split(" ");
-    if (scheme?.toLowerCase() !== "bearer" || !token) {
-      return null;
-    }
-    return token;
+
+    return request.cookies?.access_token ?? null;
   }
 }

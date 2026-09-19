@@ -34,6 +34,7 @@ export interface UserProfileResponse {
   avatarUrl: string | null;
   organization: OrganizationResponse | null;
   timezone: string;
+  role: string;
   locale: string;
   status: string;
   emailVerified: boolean;

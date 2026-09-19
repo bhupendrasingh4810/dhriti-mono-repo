@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider } from "@dhriti/ui";
-import { AlertProvider } from '@/components/alerts/alert-provider';
+import { AlertProvider } from "@/components/shared/alert";
 import { AuthProvider } from "@/hooks/use-auth";
 import "./globals.css";
 

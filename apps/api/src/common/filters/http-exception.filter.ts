@@ -17,6 +17,15 @@ interface ValidationExceptionResponse {
   message?: string | string[];
 }
 
+/**
+ * Global HTTP exception filter for handling and normalizing exceptions.
+ * Catches all exceptions thrown in the application and formats them into a consistent error response structure.
+ * Normalizes different types of exceptions into a unified error response format.
+ * Adds correlation IDs and timestamps to error responses for better traceability.
+ * Provides a centralized mechanism for handling errors consistently across the application.
+ * Ensures that all errors are logged appropriately for monitoring and debugging purposes.
+ * Supports both application-specific errors and standard HTTP exceptions.
+ */
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(HttpExceptionFilter.name);
@@ -39,6 +48,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const body: ErrorResponseBody = {
       error: {
         code,
+        status,
         message,
         ...(details !== undefined ? { details } : {}),
         correlationId,

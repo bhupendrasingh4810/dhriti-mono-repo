@@ -25,7 +25,7 @@ interface PassportRequest extends Request {
 
 @ApiTags("auth")
 @Controller("auth")
-export class AuthOAuthController {
+export class OAuthController {
     constructor(
         private readonly auth: AuthService,
         private readonly config: ApiConfigService,

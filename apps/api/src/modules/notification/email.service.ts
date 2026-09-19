@@ -9,9 +9,10 @@ import {
   getVerificationTemplate,
   getResetPasswordConfirmationTemplate,
 } from "../../mail/templates";
+import { getInvitationTemplate } from "../../mail/templates/invitation/invitation.template";
 
 export interface EmailMessage {
-  to: string;
+  to: { email: string }[];
   subject: string;
   text?: string;
   html?: string;
@@ -37,7 +38,7 @@ export class EmailService {
     try {
       await new SibApiV3Sdk.TransactionalEmailsApi().sendTransacEmail({
         sender: { email: brevo.senderEmail, name: brevo.senderName },
-        to: [{ email: message.to }],
+        to: message.to,
         subject: message.subject,
         htmlContent: message.html,
       });
@@ -48,18 +49,18 @@ export class EmailService {
     }
   }
 
-  async sendVerificationEmail(to: string, name: string, otp: string, verificationUrl: string): Promise<void> {
-    this.logger.log(`Sending verification email to=${to}`);
+  async sendVerificationEmail(email: string, name: string, otp: string, verificationUrl: string): Promise<void> {
+    this.logger.log(`Sending verification email to=${email}`);
 
     try {
       await this.send({
-        to,
+        to: [{ email: email }],
         subject: "Welcome to Dhriti - verify your email",
         text: `Hi ${name}, welcome to Dhriti. Your verification code is ${otp}. You can also verify your email here: ${verificationUrl}`,
         html: getVerificationTemplate(name, otp, verificationUrl)
       });
     } catch (error) {
-      this.logger.error(`Failed to send verification email to=${to}`, error instanceof Error ? error.stack : undefined);
+      this.logger.error(`Failed to send verification email to=${email}`, error instanceof Error ? error.stack : undefined);
       throw error;
     }
   }
@@ -72,7 +73,7 @@ export class EmailService {
     verificationUrl: string,
   ) {
     await this.send({
-      to: email,
+      to: [{ email: email }],
       subject: '🔐 Your Dhriti Verification Code',
       text: `Hi ${name}, your verification code is ${otp}. It expires in ${expiryMinutes} minutes. You can also verify your email here: ${verificationUrl}`,
       html: getResendOtpTemplate(name, email, otp, expiryMinutes, verificationUrl),
@@ -85,18 +86,18 @@ export class EmailService {
     expiryMinutes: number
   ) {
     await this.send({
-      to: email,
+      to: [{ email: email }],
       subject: '🔐 Reset Your Dhriti Password',
       html: getResetPasswordTemplate(email, resetToken, expiryMinutes),
     });
   }
 
-  async sendWelcomeEmail(to: string, name: string, onboardingUrl: string): Promise<void> {
+  async sendWelcomeEmail(email: string, name: string, onboardingUrl: string): Promise<void> {
     await this.send({
-      to,
+      to: [{ email: email }],
       subject: "Welcome to Dhriti",
       text: `Hi ${name}, welcome to Dhriti. Get started here: ${onboardingUrl}`,
-      html: getWelcomeTemplate(name, to, onboardingUrl),
+      html: getWelcomeTemplate(name, email, onboardingUrl),
     });
   }
 
@@ -110,23 +111,45 @@ export class EmailService {
   ) {
     const loginUrl = 'https://app.dhriti.com/auth/login';
     await this.send({
-      to: email,
+      to: [{ email: email }],
       subject: '✅ Password Reset Successful - Dhriti',
       html: getResetPasswordConfirmationTemplate(name, email, loginUrl, resetDate, resetTime, ipAddress, deviceInfo),
     });
   }
 
-  async sendAccountLockedEmail(to: string, name: string, unlockAt: Date): Promise<void> {
-    this.logger.log(`Sending account locked email to=${to}`);
+  async sendInvitationEmail(
+    emails: string[],
+    recipientName: string,
+    recipientEmail: string,
+    senderName: string,
+    organizationName: string,
+    invitationUrl: string,
+    expiryDays: number
+  ): Promise<void> {
+    this.logger.log(`Sending invitation email to=${emails.join(', ')}`);
+    try {
+      await this.send({
+        to: emails.map(email => ({ email })),
+        subject: `You're Invited to Join ${organizationName} on Dhriti`,
+        html: getInvitationTemplate(recipientName, recipientEmail, senderName, organizationName, invitationUrl, expiryDays),
+      });
+    } catch (error) {
+      this.logger.error(`Failed to send invitation email to=${emails.join(', ')}`, error instanceof Error ? error.stack : undefined);
+      throw error;
+    }
+  }
+
+  async sendAccountLockedEmail(email: string, name: string, unlockAt: Date): Promise<void> {
+    this.logger.log(`Sending account locked email to=${email}`);
     this.logger.debug(`Account locked email details: name=${name} unlockAt=${unlockAt.toISOString()}`);
     try {
       await this.send({
-        to,
+        to: [{ email: email }],
         subject: "Your Dhriti account was locked",
         text: `Hi ${name}, your account was locked after too many failed sign-in attempts. It unlocks at ${unlockAt.toISOString()}.`,
       });
     } catch (error) {
-      this.logger.error(`Failed to send account locked email to=${to}`, error instanceof Error ? error.stack : undefined);
+      this.logger.error(`Failed to send account locked email to=${email}`, error instanceof Error ? error.stack : undefined);
       throw error;
     }
   }

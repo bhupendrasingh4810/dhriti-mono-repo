@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 // import type { Page } from "../App";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { useAlert } from "@/components/alerts/alert-provider";
+import { useAlert } from "@/components/shared/alert";
 import { resendVerification, verifyEmail } from "@/services/auth.service";
 
 interface Props {
@@ -55,7 +55,11 @@ export default function VerifyEmailPage({ email }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!verificationEmail || !verificationToken) {
-      showAlert({ title: "Verification link is invalid or incomplete.", severity: "error", variant: "filled" });
+      showAlert({
+        message: "Verification link is invalid or incomplete.",
+        dismissible: true,
+        variant: "error"
+      });
       return;
     }
 
@@ -66,9 +70,9 @@ export default function VerifyEmailPage({ email }: Props) {
       router.replace(organizationSlug ? `/${organizationSlug}/home` : "/onboarding");
     } catch (error) {
       showAlert({
-        title: error instanceof Error ? error.message : "Unable to verify your email.",
-        severity: "error",
-        variant: "filled",
+        message: error instanceof Error ? error.message : "Unable to verify your email.",
+        dismissible: true,
+        variant: "error",
       });
     } finally {
       setLoading(false);
@@ -77,7 +81,11 @@ export default function VerifyEmailPage({ email }: Props) {
 
   const handleResend = async () => {
     if (!verificationEmail || !verificationToken) {
-      showAlert({ title: "Verification link is invalid or incomplete.", severity: "error", variant: "filled" });
+      showAlert({
+        message: "Verification link is invalid or incomplete.",
+        dismissible: true,
+        variant: "error"
+      });
       return;
     }
 
@@ -86,9 +94,9 @@ export default function VerifyEmailPage({ email }: Props) {
       await resendVerification({ email: verificationEmail, token: verificationToken });
     } catch (error) {
       showAlert({
-        title: error instanceof Error ? error.message : "Unable to resend the verification email.",
-        severity: "error",
-        variant: "filled",
+        message: error instanceof Error ? error.message : "Unable to resend the verification email.",
+        dismissible: true,
+        variant: "error",
       });
       return;
     } finally {
@@ -144,8 +152,8 @@ export default function VerifyEmailPage({ email }: Props) {
           {loading ? (
             <>
               <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
               </svg>
               Verifying…
             </>

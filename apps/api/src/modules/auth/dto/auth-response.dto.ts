@@ -8,6 +8,7 @@ export interface AuthUserResponse {
   id: string;
   email: string;
   name: string;
+  role: string;
   avatarUrl: string | null;
   organization: OrganizationResponse | null;
 }

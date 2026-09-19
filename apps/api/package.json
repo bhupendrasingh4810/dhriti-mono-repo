@@ -21,7 +21,7 @@
     "db:migrate": "pnpm db:build && prisma migrate dev --schema ../../prisma/schema.prisma",
     "db:push": "pnpm db:build && prisma db push --schema ../../prisma/schema.prisma",
     "db:migrate:deploy": "pnpm db:build && prisma migrate deploy --schema ../../prisma/schema.prisma",
-    "db:seed": "pnpm db:build && prisma db seed --schema ../../prisma/schema.prisma",
+    "db:seed": "pnpm db:build && pnpm --dir ../.. exec prisma db seed --schema prisma/schema.prisma",
     "db:studio": "pnpm db:build && prisma studio --schema ../../prisma/schema.prisma",
     "db:reset": "pnpm db:build && prisma migrate reset --force --schema ../../prisma/schema.prisma",
     "validate": "pnpm run lint && pnpm run typecheck && pnpm run build"

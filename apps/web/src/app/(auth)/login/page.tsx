@@ -2,9 +2,9 @@
 "use client";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAlert } from "@/components/alerts/alert-provider";
+import { useAlert } from "@/components/shared/alert";
+import { login } from "@/services/auth.service";
 import AuthLayout from "../../../components/auth/AuthLayout";
-import { MicrosoftOAuthButton } from "@/components/shared/oauth/MicrosoftOAuthButton";
 import { GoogleOAuthButton } from "@/components/shared/oauth/GoogleOAuthButton";
 import { GitHubOAuthButton } from "@/components/shared/oauth/GitHubOAuthButton";
 
@@ -49,17 +49,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Unable to sign in.");
-      }
+      const data = await login({ email, password });
       const callbackUrl = searchParams.get("callbackUrl");
       const organizationSlug = data.user?.organization?.slug;
       const isOrganizationCallback = callbackUrl?.startsWith(`/${organizationSlug}/`)
@@ -73,9 +63,9 @@ export default function LoginPage() {
       router.refresh();
     } catch (submitError) {
       showAlert({
-        title: submitError instanceof Error ? submitError.message : "Unable to sign in.",
-        severity: "error",
-        variant: "filled",
+        message: submitError instanceof Error ? submitError.message : "Unable to sign in.",
+        dismissible: true,
+        variant: "error",
       });
     } finally {
       setLoading(false);

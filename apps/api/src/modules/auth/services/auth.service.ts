@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
-import type { OAuthProvider, User, UserAuth, UserProfile } from "@prisma/client";
+import { UserRole, type OAuthProvider, type User, type UserAuth, type UserProfile } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { ApiConfigService } from "../../../config/config.service";
@@ -54,6 +54,12 @@ export class AuthService {
   // Registration
   // ------------------------------------------------------------------
 
+  /**
+   * Registers a new user and issues an email verification token.
+   * @param dto The registration details.
+   * @returns The email and verification token.
+   * @throws AppError if the email is already registered.
+   */
   async register(dto: RegisterDto): Promise<{ email: string; token: string }> {
     const email = dto.email.toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
@@ -70,17 +76,21 @@ export class AuthService {
       data: {
         email,
         name: dto.name.trim(),
+        role: UserRole.ORG_ADMIN,
+        isPlatformUser: false,
         onboardingProfile: {
-          usageType: "",
-          experience: "",
-          useCases: [],
-          legal: {
-            termsAccepted: true,
-            privacyPolicyAccepted: true,
-            termsVersion: "2026-09-01",
-            privacyPolicyVersion: "2026-09-01",
-            acceptedAt: new Date()
-          }
+          create: {
+            isOrgAdded: false,
+            isOnBoarded: false,
+            usageType: "",
+            experience: "",
+            isProfilePhotoSkipped: false,
+            legalAcceptedAt: new Date(),
+            legalTermsAccepted: true,
+            legalPrivacyPolicyAccepted: true,
+            legalTermsVersion: "2026-09-01",
+            legalPrivacyPolicyVersion: "2026-09-01",
+          },
         },
         auth: {
           create: { passwordHash }
@@ -93,6 +103,14 @@ export class AuthService {
     return { email: user.email, token };
   }
 
+  /**
+   * Verifies the email using the provided token and OTP.
+   * @param emailAddress The email address to verify.
+   * @param token The email verification token.
+   * @param otp The one-time password sent to the email.
+   * @returns The authentication tokens upon successful verification.
+   * @throws AppError if the token is invalid or expired.
+   */
   async verifyEmail(emailAddress: string, token: string, otp: string): Promise<AuthTokensResponse> {
     const record = await this.consumeToken(token, "EMAIL_VERIFICATION", otp, emailAddress);
     await this.prisma.userAuth.upsert({
@@ -108,6 +126,12 @@ export class AuthService {
     return this.issueTokens(record.userId, emailAddress.toLowerCase(), {});
   }
 
+  /**
+   * Resends the email verification OTP.
+   * @param emailAddress The email address to resend the verification to.
+   * @param token The email verification token.
+   * @throws AppError if the verification request is invalid.
+   */
   async resendVerification(emailAddress: string, token: string): Promise<void> {
     const record = await this.prisma.verificationToken.findUnique({
       where: { tokenHash: this.tokens.hashToken(token) },
@@ -138,6 +162,13 @@ export class AuthService {
   // Login / logout
   // ------------------------------------------------------------------
 
+  /**
+   * Logs in a user with the provided credentials.
+   * @param dto The login details.
+   * @param context The session context.
+   * @returns The login response, which may include MFA requirements or authentication tokens.
+   * @throws AppError if the credentials are invalid or the account is suspended.
+   */
   async login(dto: LoginDto, context: SessionContext = {}): Promise<LoginResponse> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email.toLowerCase() },
@@ -190,6 +221,14 @@ export class AuthService {
     return this.issueTokens(user.id, user.email, context);
   }
 
+  /**
+   * Completes the MFA login process using the provided MFA token and code.
+   * @param mfaToken The MFA token obtained from the initial login response.
+   * @param code The one-time password from the authenticator app.
+   * @param context The session context.
+   * @returns The authentication tokens upon successful verification.
+   * @throws AppError if the MFA code is invalid.
+   */
   async completeMfaLogin(mfaToken: string, code: string, context: SessionContext = {}): Promise<AuthTokensResponse> {
     const userId = await this.userIdFromMfaToken(mfaToken);
     const valid = await this.mfa.verifyTotpForUser(userId, code);
@@ -200,6 +239,14 @@ export class AuthService {
     return this.issueTokens(user.id, user.email, context);
   }
 
+  /**
+   * Completes the recovery login process using the provided MFA token and recovery code.
+   * @param mfaToken The MFA token obtained from the initial login response.
+   * @param recoveryCode The recovery code for account access.
+   * @param context The session context.
+   * @returns The authentication tokens upon successful verification.
+   * @throws AppError if the recovery code is invalid or already used.
+   */
   async completeRecoveryLogin(
     mfaToken: string,
     recoveryCode: string,
@@ -218,15 +265,31 @@ export class AuthService {
     return this.issueTokens(user.id, user.email, context);
   }
 
+  /**
+   * Logs out the current user by revoking their session.
+   * @param current The currently authenticated user.
+   */
   async logout(current: AuthenticatedUser): Promise<void> {
     await this.sessions.revokeSession(current.sessionId);
   }
 
+  /**
+   * Logs out the current user from all sessions.
+   * @param current The currently authenticated user.
+   * @returns The number of revoked sessions.
+   */
   async logoutAll(current: AuthenticatedUser): Promise<{ revoked: number }> {
     const revoked = await this.sessions.revokeAllUserSessions(current.userId);
     return { revoked };
   }
 
+  /**
+   * Refreshes the authentication tokens using the provided refresh token.
+   * @param refreshToken The refresh token.
+   * @param context The session context.
+   * @returns The new authentication tokens.
+   * @throws AppError if the refresh token is invalid or expired.
+   */
   async refresh(refreshToken: string, context: SessionContext = {}): Promise<AuthTokensResponse> {
     const rotated = await this.sessions.rotateSession(refreshToken, context);
     const user = await this.requireUserBySession(rotated.sessionId);
@@ -236,158 +299,15 @@ export class AuthService {
   }
 
   // ------------------------------------------------------------------
-  // Password flows
-  // ------------------------------------------------------------------
-
-  async forgotPassword(emailAddress: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { email: emailAddress.toLowerCase() },
-    });
-    if (!user || user.deletedAt) {
-      return;
-    }
-
-    const token = this.tokens.generateOpaqueToken();
-    await this.prisma.verificationToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: this.tokens.hashToken(token),
-        type: "PASSWORD_RESET",
-        expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
-      },
-    });
-
-    const resetUrl = `${this.config.webAppUrl}/reset-password?token=${encodeURIComponent(token)}`;
-    await this.email.sendResetPasswordEmail(user.email, resetUrl, PASSWORD_RESET_TOKEN_TTL_MS);
-  }
-
-  async resetPassword(
-    token: string,
-    newPassword: string,
-    ipAddress = "Unknown",
-    deviceInfo = "Unknown device",
-  ): Promise<void> {
-    const record = await this.consumeToken(token, "PASSWORD_RESET");
-    const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
-
-    await this.prisma.userAuth.upsert({
-      where: { userId: record.userId },
-      create: { userId: record.userId, passwordHash },
-      update: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
-    });
-    await this.prisma.user.update({
-      where: { id: record.userId },
-      data: { status: "ACTIVE" },
-    });
-    await this.sessions.revokeAllUserSessions(record.userId);
-
-    const resetAt = new Date();
-    try {
-      await this.email.sendResetPasswordConfirmationEmail(
-        record.user.email,
-        record.user.name,
-        resetAt.toLocaleDateString("en-US"),
-        resetAt.toLocaleTimeString("en-US"),
-        ipAddress,
-        deviceInfo,
-      );
-    } catch (error) {
-      this.logger.error(
-        `Password reset confirmation email failed for user=${record.userId}`,
-        error instanceof Error ? error.stack : undefined,
-      );
-    }
-  }
-
-  async changePassword(
-    current: AuthenticatedUser,
-    currentPassword: string,
-    newPassword: string,
-  ): Promise<void> {
-    const user = await this.requireUser(current.userId);
-    if (!user.auth?.passwordHash) {
-      throw new AppError(
-        ErrorCode.OAUTH_ACCOUNT_EXISTS,
-        "This account uses social sign-in and has no password",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const matches = await bcrypt.compare(currentPassword, user.auth.passwordHash);
-    if (!matches) {
-      throw new AppError(
-        ErrorCode.PASSWORD_INCORRECT,
-        "Current password is incorrect",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
-    await this.prisma.userAuth.update({ where: { userId: user.id }, data: { passwordHash } });
-    await this.sessions.revokeAllUserSessions(user.id, current.sessionId);
-  }
-
-  /** Verifies the user's current password without mutating anything (e.g. before MFA disable). */
-  async verifyUserPassword(userId: string, password: string): Promise<void> {
-    const user = await this.requireUser(userId);
-    if (!user.auth?.passwordHash) {
-      throw new AppError(
-        ErrorCode.OAUTH_ACCOUNT_EXISTS,
-        "This account uses social sign-in and has no password",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-    const matches = await bcrypt.compare(password, user.auth.passwordHash);
-    if (!matches) {
-      throw new AppError(
-        ErrorCode.PASSWORD_INCORRECT,
-        "Password is incorrect",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-  }
-
-  // ------------------------------------------------------------------
-  // Profile
-  // ------------------------------------------------------------------
-
-  async getProfile(userId: string): Promise<UserProfileResponse> {
-    const user = await this.requireUser(userId);
-    const organization = await this.resolveDefaultOrganization(userId);
-    return this.toProfile(user, organization);
-  }
-
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<UserProfileResponse> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
-        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
-      },
-    });
-    if (dto.timezone !== undefined || dto.locale !== undefined) {
-      await this.prisma.userProfile.upsert({
-        where: { userId },
-        create: {
-          userId,
-          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
-          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
-        },
-        update: {
-          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
-          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
-        },
-      });
-    }
-    const user = await this.requireUser(userId);
-    const organization = await this.resolveDefaultOrganization(userId);
-    return this.toProfile(user, organization);
-  }
-
-  // ------------------------------------------------------------------
   // OAuth
   // ------------------------------------------------------------------
-
+  /**
+   * Logs in a user using an OAuth provider.
+   * @param profile The OAuth profile information.
+   * @param context The session context.
+   * @returns The authentication tokens for the user.
+   * @throws AppError if the OAuth login fails or if an account conflict occurs.
+   */
   async loginWithOAuth(profile: OAuthProfile, context: SessionContext = {}): Promise<AuthTokensResponse> {
     const email = profile.email.toLowerCase();
 
@@ -475,6 +395,14 @@ export class AuthService {
   // Internals
   // ------------------------------------------------------------------
 
+  /**
+   * Issues authentication tokens for the specified user.
+   * @param userId The ID of the user.
+   * @param emailAddress The email address of the user.
+   * @param context The session context.
+   * @returns The authentication tokens for the user.
+   * @throws AppError if the user does not exist or if token issuance fails.
+   */
   private async issueTokens(
     userId: string,
     emailAddress: string,
@@ -486,6 +414,14 @@ export class AuthService {
     return this.buildTokenResponse(user, session, organization?.id ?? null, organization);
   }
 
+  /**
+   * Builds the token response for the specified user and session.
+   * @param user The user for whom the tokens are being issued.
+   * @param session The session information including session ID, refresh token, and expiration.
+   * @param organizationId The ID of the user's default organization, if any.
+   * @param organization The user's default organization details, if any.
+   * @returns The authentication tokens and related information for the user.
+   */
   private async buildTokenResponse(
     user: User,
     session: { sessionId: string; refreshToken: string; expiresAt: Date },
@@ -509,12 +445,18 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         avatarUrl: user.avatarUrl,
         organization,
       },
     };
   }
 
+  /**
+   * Resolves the default organization for the specified user.
+   * @param userId The ID of the user.
+   * @returns The user's default organization details, or null if none exists.
+   */
   private async resolveDefaultOrganization(userId: string): Promise<OrganizationResponse | null> {
     const membership = await this.prisma.organizationMember.findFirst({
       where: { userId, organization: { deletedAt: null } },
@@ -524,6 +466,12 @@ export class AuthService {
     return membership?.organization ?? null;
   }
 
+  /**
+   * Extracts the user ID from the provided MFA token.
+   * @param mfaToken The MFA token to be verified.
+   * @returns The user ID associated with the MFA token.
+   * @throws AppError if the MFA token is invalid or expired.
+   */
   private async userIdFromMfaToken(mfaToken: string): Promise<string> {
     try {
       const payload = await this.tokens.verifyMfaToken(mfaToken);
@@ -537,6 +485,15 @@ export class AuthService {
     }
   }
 
+  /**
+   * Consumes a verification token, marking it as used and validating its type, OTP, and email address.
+   * @param token The verification token to be consumed.
+   * @param type The type of the verification token ("EMAIL_VERIFICATION" or "PASSWORD_RESET").
+   * @param otp The one-time password associated with the token, if applicable.
+   * @param emailAddress The email address associated with the token, if applicable.
+   * @returns The updated verification token record.
+   * @throws AppError if the token is invalid, already used, expired, or does not match the provided OTP or email address.
+   */
   private async consumeToken(
     token: string,
     type: "EMAIL_VERIFICATION" | "PASSWORD_RESET",
@@ -572,6 +529,11 @@ export class AuthService {
     });
   }
 
+  /**
+   * Issues a new email verification token for the specified user.
+   * @param user The user for whom the verification token is being issued.
+   * @returns The newly issued verification token.
+   */
   private async issueVerificationToken(user: User): Promise<string> {
     const otp = this.tokens.generateSixDigitOtp();
     const token = this.tokens.generateOpaqueToken();
@@ -590,6 +552,11 @@ export class AuthService {
     return token;
   }
 
+  /**
+   * Asserts that the specified user account is not currently locked due to too many failed login attempts.
+   * @param user The user whose account lock status is being checked.
+   * @throws AppError if the account is temporarily locked.
+   */
   private assertNotLocked(user: UserWithAuth): void {
     const lockedUntil = user.auth?.lockedUntil;
     if (lockedUntil && lockedUntil > new Date()) {
@@ -602,6 +569,10 @@ export class AuthService {
     }
   }
 
+  /**
+   * Registers a failed login attempt for the specified user and locks the account if the threshold is exceeded.
+   * @param user The user for whom the failed login attempt is being registered.
+   */
   private async registerFailedAttempt(user: UserWithAuth): Promise<void> {
     const attempts = (user.auth?.failedLoginAttempts ?? 0) + 1;
     const shouldLock = attempts >= this.config.lockoutThreshold;
@@ -621,6 +592,10 @@ export class AuthService {
     }
   }
 
+  /**
+   * Creates an AppError indicating that the provided credentials are invalid.
+   * @returns An AppError representing invalid credentials.
+   */
   private invalidCredentials(): AppError {
     return new AppError(
       ErrorCode.INVALID_CREDENTIALS,
@@ -629,6 +604,12 @@ export class AuthService {
     );
   }
 
+  /**
+   * Retrieves the user with the specified ID, throwing an error if the user does not exist or has been deleted.
+   * @param userId The ID of the user to retrieve.
+   * @returns The user with the specified ID.
+   * @throws AppError if the user is not found or has been deleted.
+   */
   private async requireUser(userId: string): Promise<UserWithRelations> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -640,6 +621,12 @@ export class AuthService {
     return user;
   }
 
+  /**
+   * Retrieves the user associated with the specified session ID, throwing an error if the session does not exist or has been revoked.
+   * @param sessionId The ID of the session to retrieve the user for.
+   * @returns The user associated with the specified session ID.
+   * @throws AppError if the session is not found or has been revoked.
+   */
   private async requireUserBySession(sessionId: string): Promise<UserWithRelations> {
     const session = await this.prisma.userSession.findUnique({
       where: { id: sessionId },
@@ -651,6 +638,12 @@ export class AuthService {
     return this.requireUser(session.userId);
   }
 
+  /**
+   * Converts a user entity and an optional organization into a user profile response.
+   * @param user The user entity to convert.
+   * @param organization The organization associated with the user, or null if none.
+   * @returns The user profile response.
+   */
   private toProfile(user: UserWithRelations, organization: OrganizationResponse | null): UserProfileResponse {
     return {
       id: user.id,
@@ -658,6 +651,7 @@ export class AuthService {
       name: user.name,
       avatarUrl: user.avatarUrl,
       organization,
+      role: user.role,
       timezone: user.profile?.timezone ?? "UTC",
       locale: user.profile?.locale ?? "en",
       status: user.status,

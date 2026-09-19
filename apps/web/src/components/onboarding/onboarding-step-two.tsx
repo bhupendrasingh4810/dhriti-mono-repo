@@ -35,7 +35,7 @@ export default function OnboardingStepTwo({
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" /><circle cx="12" cy="7" r="4" />
                     </svg>
-                    Step 2 of 5
+                    Step 2 of 6
                 </div>
                 <h1
                     className="text-3xl font-bold text-slate-900 mb-3 leading-tight"

@@ -24,13 +24,15 @@ import {
     type MfaConfirmResponse,
     type MfaSetupResponse,
 } from "../dto/mfa.dto";
+import { PasswordService } from "../services/password.service";
 
 @ApiTags("auth/mfa")
 @Controller("auth/mfa")
-export class AuthMfaController {
+export class MfaController {
     constructor(
         private readonly auth: AuthService,
         private readonly mfa: MfaService,
+        private readonly passwordService: PasswordService,
     ) { }
 
     // ---------------- MFA management ----------------
@@ -60,7 +62,7 @@ export class AuthMfaController {
         @CurrentUser() user: AuthenticatedUser,
         @Body() dto: MfaDisableDto,
     ): Promise<void> {
-        await this.auth.verifyUserPassword(user.userId, dto.password);
+        await this.passwordService.verifyUserPassword(user.userId, dto.password);
         return this.mfa.disable(user.userId, dto.code);
     }
 }

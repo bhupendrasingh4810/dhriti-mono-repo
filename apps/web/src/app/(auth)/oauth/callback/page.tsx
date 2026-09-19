@@ -3,6 +3,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getCurrentUser } from "@/services/auth.service";
 
 interface CurrentUserResponse {
   user: {
@@ -30,15 +31,14 @@ function OAuthCallbackContent() {
       }
 
       try {
-        const response = await fetch('/api/auth/me', { credentials: 'include' });
-        if (!response.ok) {
+        const user = await getCurrentUser();
+        if (!user) {
           throw new Error('Unable to load the authenticated user.');
         }
-        const result = await response.json() as CurrentUserResponse;
 
         if (cancelled) return;
 
-        const organization = result.user?.organization;
+        const organization = user.organization;
 
         if (organization?.slug) {
           router.replace(`/${encodeURIComponent(organization.slug)}/home`);

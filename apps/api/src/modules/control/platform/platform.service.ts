@@ -32,6 +32,11 @@ export class PlatformService {
 
   // ---------------- Dashboard ----------------
 
+  /**
+   * Retrieves the platform dashboard data, including statistics for organizations, users, subscriptions, products, and support tickets.
+   * @returns The platform dashboard data.
+   * @throws Error if there is an issue retrieving the dashboard data.
+   */
   async dashboard(): Promise<PlatformDashboard> {
     const [
       totalOrgs,
@@ -73,6 +78,11 @@ export class PlatformService {
 
   // ---------------- Organizations ----------------
 
+  /**
+   * Retrieves a list of all organizations with their member counts and subscription details.
+   * @returns An array of organizations with additional information.
+   * @throws AppError if there is an issue retrieving the list of organizations.
+   */
   async listOrganizations(): Promise<unknown[]> {
     return this.prisma.organization.findMany({
       include: {
@@ -83,6 +93,13 @@ export class PlatformService {
     });
   }
 
+  /**
+   * Sets the suspended status of an organization.
+   * @param organizationId The ID of the organization to update.
+   * @param suspended Whether the organization should be suspended.
+   * @param actorUserId The ID of the user performing the action.
+   * @throws AppError if the organization is not found.
+   */
   async setOrganizationSuspended(
     organizationId: string,
     suspended: boolean,
@@ -109,6 +126,11 @@ export class PlatformService {
 
   // ---------------- Users ----------------
 
+  /**
+   * Retrieves a list of all users with their authentication and membership details.
+   * @returns An array of users with additional information.
+   * @throws AppError if there is an issue retrieving the list of users.
+   */
   async listUsers(): Promise<unknown[]> {
     return this.prisma.user.findMany({
       where: { deletedAt: null },
@@ -126,6 +148,13 @@ export class PlatformService {
     });
   }
 
+  /**
+   * Sets the suspended status of a user.
+   * @param userId The ID of the user to update.
+   * @param suspended Whether the user should be suspended.
+   * @param actorUserId The ID of the user performing the action.
+   * @throws AppError if the user is not found.
+   */
   async setUserSuspended(userId: string, suspended: boolean, actorUserId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || user.deletedAt) {
@@ -147,10 +176,22 @@ export class PlatformService {
 
   // ---------------- Products ----------------
 
+  /**
+   * Retrieves a list of all products.
+   * @returns An array of products.
+   * @throws AppError if there is an issue retrieving the list of products.
+   */
   async listProducts(): Promise<Product[]> {
     return this.prisma.product.findMany({ orderBy: { createdAt: "asc" } });
   }
 
+  /**
+   * Creates a new product.
+   * @param actorUserId The ID of the user performing the action.
+   * @param dto The data transfer object containing product details.
+   * @returns The created product.
+   * @throws AppError if the product key already exists.
+   */
   async createProduct(actorUserId: string, dto: CreateProductDto): Promise<Product> {
     const existing = await this.prisma.product.findUnique({ where: { key: dto.key } });
     if (existing) {
@@ -175,6 +216,14 @@ export class PlatformService {
     return product;
   }
 
+  /**
+   * Updates an existing product.
+   * @param productId The ID of the product to update.
+   * @param actorUserId The ID of the user performing the action.
+   * @param dto The data transfer object containing updated product details.
+   * @returns The updated product.
+   * @throws AppError if the product is not found.
+   */
   async updateProduct(productId: string, actorUserId: string, dto: UpdateProductDto): Promise<Product> {
     const product = await this.prisma.product.findUnique({ where: { id: productId } });
     if (!product) {
@@ -201,10 +250,26 @@ export class PlatformService {
 
   // ---------------- Subscriptions ----------------
 
+  /**
+   * Retrieves the subscription for a given organization.
+   * @param organizationId The ID of the organization.
+   * @returns The subscription if found, otherwise null.
+   * @throws AppError if there is an issue retrieving the subscription.
+   */
+
+
   async getSubscription(organizationId: string): Promise<Subscription | null> {
     return this.prisma.subscription.findUnique({ where: { organizationId } });
   }
 
+  /**
+   * Creates or updates a subscription for a given organization.
+   * @param organizationId The ID of the organization.
+   * @param actorUserId The ID of the user performing the action.
+   * @param dto The data transfer object containing subscription details.
+   * @returns The created or updated subscription.
+   * @throws AppError if there is an issue upserting the subscription.
+   */
   async upsertSubscription(
     organizationId: string,
     actorUserId: string,
@@ -245,6 +310,12 @@ export class PlatformService {
 
   // ---------------- Support tickets ----------------
 
+  /**
+   * Retrieves a list of support tickets, optionally filtered by status.
+   * @param status The status to filter tickets by (optional).
+   * @returns An array of support tickets.
+   * @throws AppError if there is an issue retrieving the tickets.
+   */
   async listTickets(status?: SupportTicketStatus): Promise<SupportTicket[]> {
     return this.prisma.supportTicket.findMany({
       where: status ? { status } : undefined,
@@ -253,6 +324,14 @@ export class PlatformService {
     });
   }
 
+  /**
+   * Creates a new support ticket.
+   * @param userId The ID of the user creating the ticket.
+   * @param organizationId The ID of the organization associated with the ticket (optional).
+   * @param dto The data transfer object containing ticket details.
+   * @returns The created support ticket.
+   * @throws AppError if there is an issue creating the ticket.
+   */
   async createTicket(userId: string, organizationId: string | null, dto: CreateTicketDto): Promise<SupportTicket> {
     return this.prisma.supportTicket.create({
       data: {
@@ -265,6 +344,14 @@ export class PlatformService {
     });
   }
 
+  /**
+   * Updates an existing support ticket.
+   * @param ticketId The ID of the ticket to update.
+   * @param actorUserId The ID of the user performing the action.
+   * @param dto The data transfer object containing updated ticket details.
+   * @returns The updated support ticket.
+   * @throws AppError if the ticket is not found or there is an issue updating it.
+   */
   async updateTicket(ticketId: string, actorUserId: string, dto: UpdateTicketDto): Promise<SupportTicket> {
     const ticket = await this.prisma.supportTicket.findUnique({ where: { id: ticketId } });
     if (!ticket) {
@@ -292,6 +379,12 @@ export class PlatformService {
 
   // ---------------- Platform audit ----------------
 
+  /**
+   * Retrieves a list of audit logs, optionally limited by the specified number.
+   * @param limit The maximum number of audit logs to retrieve (default is 100, maximum is 500).
+   * @returns An array of audit logs.
+   * @throws AppError if there is an issue retrieving the audit logs.
+   */
   async listAuditLogs(limit = 100): Promise<unknown[]> {
     return this.prisma.auditLog.findMany({
       orderBy: { createdAt: "desc" },
@@ -300,6 +393,11 @@ export class PlatformService {
   }
 
   // ---------------- System health ----------------
+  /**
+   * Retrieves the current system health status, including uptime, memory usage, and Redis connectivity.
+   * @returns An object containing system health information.
+   * @throws AppError if there is an issue retrieving the system health.
+   */
 
   async systemHealth(): Promise<{ uptime: number; memory: NodeJS.MemoryUsage; redis: string }> {
     const redis = await this.redis.raw.info("server").catch(() => "");

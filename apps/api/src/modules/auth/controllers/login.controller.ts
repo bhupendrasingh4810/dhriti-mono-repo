@@ -33,12 +33,11 @@ import type { AuthTokensResponse, LoginResponse } from "../dto/auth-response.dto
 
 @ApiTags("auth")
 @Controller("auth")
-export class AuthLoginController {
+export class LoginController {
     constructor(
         private readonly auth: AuthService,
     ) { }
 
-    // ---------------- Login / tokens / logout ----------------
 
     @Public()
     @Post("login")

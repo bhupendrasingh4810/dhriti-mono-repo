@@ -15,15 +15,15 @@ UPDATE "users" AS "user"
 SET "role" = CASE
   WHEN EXISTS (
     SELECT 1 FROM "organization_members"
-    WHERE "user_id" = "user"."id" AND "role" = 'OWNER'
+    WHERE "userId" = "user"."id" AND "role" = 'OWNER'
   ) THEN 'ORG_ADMIN'::"UserRole"
   WHEN EXISTS (
     SELECT 1 FROM "organization_members"
-    WHERE "user_id" = "user"."id" AND "role" = 'ADMIN'
+    WHERE "userId" = "user"."id" AND "role" = 'ADMIN'
   ) THEN 'ADMIN'::"UserRole"
   WHEN EXISTS (
     SELECT 1 FROM "organization_members"
-    WHERE "user_id" = "user"."id" AND "role" = 'GUEST'
+    WHERE "userId" = "user"."id" AND "role" = 'GUEST'
   ) THEN 'GUEST'::"UserRole"
   ELSE 'MEMBER'::"UserRole"
 END;

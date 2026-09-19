@@ -40,6 +40,13 @@ export class SessionService {
     private readonly config: ApiConfigService,
   ) {}
 
+  /**
+   * Creates a new session for a user.
+   * @param userId The ID of the user for whom to create the session.
+   * @param organizationId The ID of the organization associated with the user, or null if none.
+   * @param context Optional session context containing IP address and user agent.
+   * @returns The issued session containing the session ID, refresh token, and expiration date.
+   */
   async createSession(
     userId: string,
     organizationId: string | null,
@@ -68,6 +75,9 @@ export class SessionService {
   /**
    * Rotates a refresh token. Reuse of a revoked/expired token revokes every
    * session for the user (token-theft signal).
+   * @param refreshToken The refresh token to rotate.
+   * @param context Optional session context containing IP address and user agent.
+   * @returns The newly issued session containing the session ID, refresh token, and expiration date.
    */
   async rotateSession(refreshToken: string, context: SessionContext = {}): Promise<IssuedSession> {
     const tokenHash = this.tokens.hashToken(refreshToken);
@@ -96,14 +106,12 @@ export class SessionService {
     }
 
     const nextRefreshToken = this.tokens.generateOpaqueToken();
-    const expiresAt = this.refreshExpiry();
 
     const updated = await this.prisma.userSession.update({
       where: { id: session.id },
       data: {
         rotatedAt: now,
         refreshTokenHash: this.tokens.hashToken(nextRefreshToken),
-        expiresAt,
         ipAddress: context.ipAddress ?? session.ipAddress,
         userAgent: context.userAgent ?? session.userAgent,
       },
@@ -111,9 +119,14 @@ export class SessionService {
 
     await this.cacheSession(updated);
 
-    return { sessionId: updated.id, refreshToken: nextRefreshToken, expiresAt };
+    return { sessionId: updated.id, refreshToken: nextRefreshToken, expiresAt: updated.expiresAt };
   }
 
+  /**
+   * Checks if a session is currently active.
+   * @param sessionId The ID of the session to check.
+   * @returns A boolean indicating whether the session is active.
+   */
   async isSessionActive(sessionId: string): Promise<boolean> {
     const cached = await this.redis.getJson<SessionCachePayload>(sessionKey(sessionId));
     if (cached) {
@@ -129,6 +142,10 @@ export class SessionService {
     return true;
   }
 
+  /**
+   * Revokes a specific session.
+   * @param sessionId The ID of the session to revoke.
+   */
   async revokeSession(sessionId: string): Promise<void> {
     await this.prisma.userSession.updateMany({
       where: { id: sessionId, revokedAt: null },
@@ -137,6 +154,12 @@ export class SessionService {
     await this.redis.delete(sessionKey(sessionId));
   }
 
+  /**
+   * Revokes all sessions for a specific user, optionally excluding a specific session.
+   * @param userId The ID of the user whose sessions are to be revoked.
+   * @param exceptSessionId Optional session ID to exclude from revocation.
+   * @returns The number of sessions revoked.
+   */
   async revokeAllUserSessions(userId: string, exceptSessionId?: string): Promise<number> {
     const result = await this.prisma.userSession.updateMany({
       where: {
@@ -152,6 +175,11 @@ export class SessionService {
     return result.count;
   }
 
+  /**
+   * Retrieves the organization ID associated with a specific session.
+   * @param sessionId The ID of the session.
+   * @returns The organization ID if available, otherwise null.
+   */
   async getSessionOrganization(sessionId: string): Promise<string | null> {
     const session = await this.prisma.userSession.findUnique({
       where: { id: sessionId },
@@ -160,6 +188,11 @@ export class SessionService {
     return session?.organizationId ?? null;
   }
 
+  /**
+   * Sets the organization ID for a specific session.
+   * @param sessionId The ID of the session.
+   * @param organizationId The organization ID to associate with the session.
+   */
   async setSessionOrganization(sessionId: string, organizationId: string): Promise<void> {
     const session = await this.prisma.userSession.update({
       where: { id: sessionId },
@@ -168,6 +201,10 @@ export class SessionService {
     await this.cacheSession(session);
   }
 
+  /**
+   * Caches the session data in Redis with an expiration time.
+   * @param session The session object to cache.
+   */
   private async cacheSession(session: UserSession): Promise<void> {
     const ttlSeconds = Math.max(1, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
     const payload: SessionCachePayload = {

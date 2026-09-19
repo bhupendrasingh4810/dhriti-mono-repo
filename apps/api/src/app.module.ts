@@ -21,6 +21,7 @@ import { HealthModule } from "./health/health.module";
 import { ControlModule } from "./modules/control/control.module";
 import { SearchModule } from "./modules/search/search.module";
 import { AnalyticsModule } from "./modules/analytics/analytics.module";
+import { UserModule } from "./modules/user/user.module";
 import { WebsocketModule } from "./websocket/websocket.module";
 import { AuthGuard } from "./common/guards/auth.guard";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
@@ -51,6 +52,7 @@ import { MetricsInterceptor } from "./common/metrics/metrics.interceptor";
     ControlModule,
     SearchModule,
     AnalyticsModule,
+    UserModule,
     WebsocketModule,
   ],
   providers: [

@@ -25,6 +25,13 @@ export class MfaService {
     private readonly config: ApiConfigService,
   ) {}
 
+  /**
+   * Initiates the MFA setup process for a user by generating a secret and corresponding QR code.
+   * @param userId The ID of the user for whom to begin MFA setup.
+   * @param email The email of the user, used for generating the OTP auth URL.
+   * @returns An object containing the secret, OTP auth URL, and QR code data URL.
+   * @throws AppError if the user is not found or MFA is already enabled.
+   */
   async beginSetup(userId: string, email: string): Promise<MfaSetupResponse> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -50,6 +57,13 @@ export class MfaService {
     return { secret, otpauthUrl, qrCodeDataUrl };
   }
 
+  /**
+   * Confirms the MFA setup for a user by verifying the provided TOTP code and generating recovery codes.
+   * @param userId The ID of the user confirming MFA setup.
+   * @param code The TOTP code provided by the user.
+   * @returns An object indicating that MFA is enabled and containing the recovery codes.
+   * @throws AppError if no MFA setup is pending or the provided code is invalid.
+   */
   async confirmSetup(userId: string, code: string): Promise<MfaConfirmResponse> {
     const pending = await this.redis.getJson<{ secret: string }>(pendingSecretKey(userId));
     if (!pending) {
@@ -83,7 +97,12 @@ export class MfaService {
 
     return { enabled: true, recoveryCodes };
   }
-
+  /**
+   * Verifies the TOTP code for a user.
+   * @param userId The ID of the user to verify the TOTP code for.
+   * @param code The TOTP code provided by the user.
+   * @returns A boolean indicating whether the TOTP code is valid.
+   */
   async verifyTotpForUser(userId: string, code: string): Promise<boolean> {
     const auth = await this.prisma.userAuth.findUnique({
       where: { userId },
@@ -95,6 +114,12 @@ export class MfaService {
     return this.verifyTotp(auth.mfaSecret, code);
   }
 
+  /**
+   * Consumes a recovery code for a user, marking it as used.
+   * @param userId The ID of the user consuming the recovery code.
+   * @param recoveryCode The recovery code provided by the user.
+   * @returns A boolean indicating whether the recovery code was successfully consumed.
+   */
   async consumeRecoveryCode(userId: string, recoveryCode: string): Promise<boolean> {
     const codeHash = this.tokens.hashToken(recoveryCode.trim().toLowerCase());
     const result = await this.prisma.mfaRecoveryCode.updateMany({
@@ -104,6 +129,12 @@ export class MfaService {
     return result.count === 1;
   }
 
+  /**
+   * Disables MFA for a user by verifying the provided TOTP code.
+   * @param userId The ID of the user to disable MFA for.
+   * @param code The TOTP code provided by the user.
+   * @throws AppError if MFA is not enabled or the provided code is invalid.
+   */
   async disable(userId: string, code: string): Promise<void> {
     const auth = await this.prisma.userAuth.findUnique({ where: { userId } });
     if (!auth || !auth.mfaEnabled || !auth.mfaSecret) {
@@ -122,10 +153,20 @@ export class MfaService {
     ]);
   }
 
+  /**
+   * Verifies a TOTP code against a given secret.
+   * @param secret The secret key used to generate the TOTP code.
+   * @param code The TOTP code to verify.
+   * @returns A boolean indicating whether the TOTP code is valid.
+   */
   private verifyTotp(secret: string, code: string): boolean {
     return authenticator.verify({ token: code, secret });
   }
 
+  /**
+   * Generates a set of recovery codes for MFA.
+   * @returns An array of recovery codes.
+   */
   private generateRecoveryCodes(): string[] {
     return Array.from({ length: RECOVERY_CODE_COUNT }, () => {
       const raw = randomBytes(6).toString("hex");

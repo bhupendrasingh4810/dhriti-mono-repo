@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { organizationBackend } from "@/services/organization.server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,9 +8,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: { message: "Authentication is required." } }, { status: 401 });
     }
 
-    const backendResponse = await fetch(`${process.env.BACKEND_URL}/organizations`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    const backendResponse = await organizationBackend.list(accessToken);
     const responseBody = await backendResponse.json().catch(() => ({}));
     return NextResponse.json(responseBody, { status: backendResponse.status });
   } catch {
@@ -25,14 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const backendResponse = await fetch(`${process.env.BACKEND_URL}/organizations`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(body),
-    });
+    const backendResponse = await organizationBackend.create(accessToken, body);
 
     const responseBody = await backendResponse.json().catch(() => ({}));
     if (!backendResponse.ok) {

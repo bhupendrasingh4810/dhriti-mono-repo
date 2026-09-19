@@ -20,7 +20,7 @@ import type { AuthTokensResponse } from "../dto/auth-response.dto";
 
 @ApiTags("auth")
 @Controller("auth")
-export class AuthRegistrationController {
+export class RegistrationController {
     constructor(
         private readonly authService: AuthService,
     ) { }

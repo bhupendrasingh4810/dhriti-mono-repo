@@ -1,0 +1,37 @@
+model Webhook {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  url            String
+  secret         String
+  events         String[]
+  isActive       Boolean   @default(true)
+  description    String?
+  createdById    String    @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deliveries   WebhookDelivery[]
+
+  @@index([organizationId])
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id          String    @id @default(uuid()) @db.Uuid
+  webhookId   String    @db.Uuid
+  event       String
+  payload     Json
+  statusCode  Int?
+  success     Boolean   @default(false)
+  attempt     Int       @default(1)
+  durationMs  Int?
+  error       String?
+  createdAt   DateTime  @default(now())
+
+  webhook Webhook @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+
+  @@index([webhookId, createdAt])
+  @@map("webhook_deliveries")
+}

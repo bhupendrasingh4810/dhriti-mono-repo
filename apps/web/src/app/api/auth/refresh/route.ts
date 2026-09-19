@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { authService } from "@/services/auth.server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,16 +8,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
     }
 
-    const backendResponse = await fetch(`${process.env.BACKEND_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+    const backendResponse = await authService.refresh(refreshToken);
 
     if (!backendResponse.ok) {
       const response = NextResponse.json({ error: 'Session expired' }, { status: 401 });
       response.cookies.delete('refresh_token');
       response.cookies.delete('access_token');
+      response.cookies.delete('user');
       return response;
     }
 
@@ -46,8 +44,7 @@ export async function POST(request: NextRequest) {
       path: '/',
     });
     return response;
-  } catch (error) {
-    console.error('Refresh error:', error);
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

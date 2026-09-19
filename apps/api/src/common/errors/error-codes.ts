@@ -119,6 +119,7 @@ export enum ErrorCode {
 export interface ErrorResponseBody {
   error: {
     code: ErrorCode | string;
+    status: number;
     message: string;
     details?: unknown;
     correlationId: string;

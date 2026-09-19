@@ -8,7 +8,7 @@ export class InviteMemberDto {
   @MaxLength(320)
   email!: string;
 
-  @ApiProperty({ enum: UserRole, default: UserRole.MEMBER })
+  @ApiProperty({ enum: UserRole, default: UserRole.EMPLOYEE })
   @IsEnum(UserRole)
   role!: UserRole;
 }

@@ -46,7 +46,7 @@ pnpm --filter @dhriti/api exec prisma generate --schema ../../prisma/schema.pris
 pnpm --filter @dhriti/api exec prisma migrate dev --schema ../../prisma/schema.prisma
 
 # seed demo data (Acme org, users, sample content)
-pnpm --filter @dhriti/api exec prisma db seed --schema ../../prisma/schema.prisma
+pnpm --filter @dhriti/api db:seed
 ```
 
 ## Run
@@ -69,7 +69,7 @@ pnpm dev
 | --- | --- | --- |
 | alice@acme.com | Sup3rSecure! | OWNER |
 | bob@acme.com | Sup3rSecure! | ADMIN |
-| priya@acme.com | Sup3rSecure! | MEMBER |
+| priya@acme.com | Sup3rSecure! | EMPLOYEE |
 | admin@dhriti.dev | Sup3rSecure! | platform SUPER_ADMIN |
 
 Org slug: `acme`. Tenant-scoped endpoints take `x-organization-id: <orgId>` or use the org in the JWT.

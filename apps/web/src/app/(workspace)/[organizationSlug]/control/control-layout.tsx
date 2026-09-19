@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
@@ -36,11 +37,12 @@ const NAVIGATION: Record<ControlMode, Array<{ href: string; label: string, enabl
 
 export function ControlLayout({ children, mode }: ControlLayoutProps) {
   const pathname = usePathname();
+  const { user } = useAuth(); // Assuming you have a useAuth hook to get the current user
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const navigation = NAVIGATION[mode];
   const basePath = `/${organizationSlug}/control`;
   const activeItem = navigation.find((item) => pathname.endsWith(`/${item.href}`));
-  const modeLabel = mode === "platform" ? "Platform" : "Organization";
+  const modeLabel = user?.role === "" && mode === "platform" ? "Platform" : "Organization";
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-slate-50 p-4">

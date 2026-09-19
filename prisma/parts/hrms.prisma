@@ -211,3 +211,43 @@ model Asset {
   @@index([assignedTo])
   @@map("assets")
 }
+
+model HolidayCalendar {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  countryCode    String?
+  region         String?
+  holidays       Json      @default("[]") @db.JsonB
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
+  @@map("holiday_calendars")
+}
+
+model HealthInsurance {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  userId         String           @db.Uuid
+  provider       String
+  planName       String
+  policyNumber   String?
+  memberNumber   String?
+  coverageStarts DateTime         @db.Date
+  coverageEnds   DateTime?        @db.Date
+  isActive       Boolean          @default(true)
+  metadata       Json?            @db.JsonB
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         UserHRMSProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@index([userId, isActive])
+  @@map("health_insurances")
+}

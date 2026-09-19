@@ -1,62 +1,135 @@
+// apps/web/src/app/api/auth/me/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+import { authService } from '@/services/auth.server';
+import {
+  clearAuthCookies,
+  setAuthCookies,
+} from '@/lib/auth/cookie-helpers';
+
+type AuthUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+  } | null;
+};
+
+type RefreshResponse = {
+  accessToken: string;
+  refreshToken?: string;
+  user: AuthUser;
+};
+
+function jsonError(
+  message: string,
+  status: number,
+) {
+  return NextResponse.json(
+    {
+      user: null,
+      message,
+    },
+    { status },
+  );
+}
+
+async function parseJson<T>(response: Response): Promise<T | null> {
   try {
-    const accessToken = request.cookies.get('access_token')?.value;
-    const refreshToken = request.cookies.get('refresh_token')?.value;
-    if (!accessToken && !refreshToken) {
-      return NextResponse.json({ user: null });
-    }
-
-    if (!accessToken && refreshToken) {
-      const refreshResponse = await fetch(`${process.env.BACKEND_URL}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-      if (!refreshResponse.ok) {
-        const response = NextResponse.json({ user: null });
-        response.cookies.delete('refresh_token');
-        response.cookies.delete('access_token');
-        return response;
-      }
-      const { user, accessToken: newAccessToken, refreshToken: newRefreshToken } = await refreshResponse.json();
-      const response = NextResponse.json({ user });
-      response.cookies.set('access_token', newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 15,
-        path: '/',
-      });
-      if (newRefreshToken) {
-        response.cookies.set('refresh_token', newRefreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7,
-          path: '/',
-        });
-      }
-      response.cookies.set('user', JSON.stringify(user), {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7,
-        path: '/',
-      });
-      return response;
-    }
-
-    const backendResponse = await fetch(`${process.env.BACKEND_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-    if (!backendResponse.ok) {
-      return NextResponse.json({ user: null });
-    }
-    return NextResponse.json({ user: await backendResponse.json() });
-  } catch (error) {
-    console.error('Get user error:', error);
-    return NextResponse.json({ user: null });
+    return (await response.json()) as T;
+  } catch {
+    return null;
   }
+}
+
+export async function GET(request: NextRequest) {
+  const accessToken =
+    request.cookies.get('access_token')?.value;
+
+  const refreshToken =
+    request.cookies.get('refresh_token')?.value;
+
+  if (!accessToken && !refreshToken) {
+    return jsonError('Unauthenticated', 401);
+  }
+
+  if (accessToken) {
+    const backendResponse = await authService.me(accessToken);
+
+    if (backendResponse.ok) {
+      const user = await parseJson<AuthUser>(backendResponse);
+
+      if (!user) {
+        return jsonError('Invalid authentication response', 502);
+      }
+
+      return NextResponse.json({ user });
+    }
+
+    if (backendResponse.status !== 401) {
+      const body = await parseJson<{
+        message?: string | string[];
+      }>(backendResponse);
+
+      return NextResponse.json(
+        {
+          user: null,
+          message: body?.message ?? 'Unable to load session',
+        },
+        {
+          status: backendResponse.status >= 400
+            ? backendResponse.status
+            : 502,
+        },
+      );
+    }
+  }
+
+  if (!refreshToken) {
+    const response = jsonError('Unauthenticated', 401);
+    clearAuthCookies(response);
+    return response;
+  }
+
+  const refreshResponse =
+    await authService.refresh(refreshToken);
+
+  if (!refreshResponse.ok) {
+    const response = jsonError('Unauthenticated', 401);
+    clearAuthCookies(response);
+    return response;
+  }
+
+  const refreshed =
+    await parseJson<RefreshResponse>(refreshResponse);
+
+  if (
+    !refreshed?.accessToken ||
+    !refreshed.user
+  ) {
+    const response = jsonError(
+      'Invalid refresh response',
+      502,
+    );
+
+    clearAuthCookies(response);
+    return response;
+  }
+
+  const response = NextResponse.json({
+    user: refreshed.user,
+  });
+
+  setAuthCookies(response, {
+    accessToken: refreshed.accessToken,
+    refreshToken: refreshed.refreshToken,
+    user: refreshed.user,
+  });
+
+  return response;
 }

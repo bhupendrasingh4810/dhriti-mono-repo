@@ -1,11 +1,13 @@
 import { Module, type Provider } from "@nestjs/common";
+import { ProfileService } from "./services/profile.service";
 import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
-import { AuthLoginController } from "./controllers/login.controller";
-import { AuthOAuthController } from "./controllers/oauth.controller";
-import { AuthPasswordController } from "./controllers/password.controller";
-import { AuthProfileController } from "./controllers/profile.controller";
-import { AuthMfaController } from "./controllers/mfa.controller";
+import { LoginController } from "./controllers/login.controller";
+import { OAuthController } from "./controllers/oauth.controller";
+import { PasswordController } from "./controllers/password.controller";
+import { ProfileController } from "./controllers/profile.controller";
+import { MfaController } from "./controllers/mfa.controller";
+import { RegistrationController } from "./controllers/registration.controller";
 
 import { ApiConfigService } from "../../config/config.service";
 
@@ -15,7 +17,7 @@ import { SessionService } from "./services/session.service";
 import { MfaService } from "./services/mfa.service";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { GithubStrategy } from "./strategies/github.strategy";
-import { AuthRegistrationController } from "./controllers/registration.controller";
+import { PasswordService } from "./services/password.service";
 
 /**
  * OAuth strategies are instantiated only when the provider's credentials are
@@ -42,18 +44,22 @@ const conditionalStrategyProviders: Provider[] = [
     JwtModule.register({}),
   ],
   controllers: [
-    AuthRegistrationController,
-    AuthLoginController,
-    AuthOAuthController,
-    AuthPasswordController,
-    AuthProfileController,
-    AuthMfaController,
+    RegistrationController,
+    LoginController,
+    OAuthController,
+    PasswordController,
+    ProfileController,
+    MfaController,
+    PasswordController,
+    ProfileController,
   ],
   providers: [
     AuthService,
     TokenService,
     SessionService,
     MfaService,
+    PasswordService,
+    ProfileService,
     ...conditionalStrategyProviders,
   ],
   exports: [AuthService, SessionService, TokenService, MfaService, JwtModule],

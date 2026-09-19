@@ -1,13 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { authService } from "@/services/auth.server";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const backendResponse = await fetch(`${process.env.BACKEND_URL}/auth/forgot-password`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const backendResponse = await authService.forgotPassword(body);
 
     if (!backendResponse.ok) {
       const error = await backendResponse.json().catch(() => ({}));

@@ -6,7 +6,6 @@ export class CreateInvitationDto {
   @IsEmail()
   @MaxLength(320)
   email!: string;
-
 }
 
 export class AcceptInvitationDto {

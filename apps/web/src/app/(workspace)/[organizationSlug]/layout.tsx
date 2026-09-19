@@ -1,67 +1,124 @@
 // apps/web/src/app/(dashboard)/[org_name]/layout.tsx
+
+import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { decodeJWT } from '@/lib/auth/tokens';
+
+import {
+  decodeJWT,
+  isTokenExpired,
+  type JWTPayload,
+} from '@/lib/auth/tokens';
 
 interface OrgLayoutProps {
-  children: React.ReactNode;
-  params: Promise<{ organizationSlug: string }>;
+  children: ReactNode;
+  params: Promise<{
+    organizationSlug: string;
+  }>;
 }
 
-function getUserOrganization(value?: string): { id: string; slug: string } | null {
+type UserOrganization = {
+  id: string;
+  slug: string;
+};
+
+function getUserOrganization(
+  value?: string,
+): UserOrganization | null {
   if (!value) {
     return null;
   }
 
   try {
-    const organization = (JSON.parse(value) as {
-      organization?: { id?: string; slug?: string } | null;
-    }).organization;
-    return organization?.id && organization.slug ? { id: organization.id, slug: organization.slug } : null;
+    const parsed = JSON.parse(value) as {
+      organization?: {
+        id?: string;
+        slug?: string;
+      } | null;
+    };
+
+    const organization = parsed.organization;
+
+    if (!organization?.id || !organization.slug) {
+      return null;
+    }
+
+    return {
+      id: organization.id,
+      slug: organization.slug,
+    };
   } catch {
     return null;
   }
 }
 
-export default async function OrgLayout({ children, params }: OrgLayoutProps) {
-  const { organizationSlug: org_name } = await params;
+function getSessionUser(token?: string): JWTPayload | null {
+  if (!token || isTokenExpired(token)) {
+    return null;
+  }
 
-  // Validate org name format
-  if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(org_name)) {
+  try {
+    const user = decodeJWT(token);
+
+    return user?.sub ? user : null;
+  } catch {
+    return null;
+  }
+}
+
+function createLoginRedirect(orgName: string) {
+  const loginUrl = new URL(
+    '/login',
+    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+  );
+
+  loginUrl.searchParams.set(
+    'callbackUrl',
+    `/${orgName}/home`,
+  );
+
+  return loginUrl.pathname + loginUrl.search;
+}
+
+export default async function OrgLayout({
+  children,
+  params,
+}: OrgLayoutProps) {
+  const { organizationSlug } = await params;
+
+  if (!/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(organizationSlug)) {
     redirect('/unauthorized');
   }
 
-  // Get tokens
   const cookieStore = await cookies();
+
   const accessToken = cookieStore.get('access_token')?.value;
-  const refreshToken = cookieStore.get('refresh_token')?.value;
   const userCookie = cookieStore.get('user')?.value;
 
-  // No tokens at all - redirect to login
-  if (!accessToken && !refreshToken) {
-    const callbackUrl = encodeURIComponent(`/${org_name}`);
-    redirect(`/login?callbackUrl=${callbackUrl}`);
-  }
+  const user = getSessionUser(accessToken);
 
-  // Decode user from access token
-  const user = accessToken ? decodeJWT(accessToken) : null;
-
-  // If no valid user from access token, they'll be handled by client-side refresh
-  // For now, just let them through and let the client handle token refresh
-  if (!user?.sub) {
-    // Don't redirect here - let the client-side auth handle refresh
-    return <>{children}</>;
+  if (!user) {
+    redirect(createLoginRedirect(organizationSlug));
   }
 
   const organization = getUserOrganization(userCookie);
+
   if (!organization) {
     redirect('/onboarding');
   }
+  console.log(organization, organizationSlug);
+  if (organization.slug !== organizationSlug) {
+    const unauthorizedUrl = new URL(
+      '/unauthorized',
+      process.env.NEXT_PUBLIC_APP_URL ??
+      'http://localhost:3000',
+    );
 
-  const isMember = organization?.slug === org_name;
+    unauthorizedUrl.searchParams.set('organizationSlug', organizationSlug);
 
-  if (!isMember) {
-    redirect(`/unauthorized?org_name=${org_name}`);
+    redirect(
+      unauthorizedUrl.pathname + unauthorizedUrl.search,
+    );
   }
 
   return <>{children}</>;
