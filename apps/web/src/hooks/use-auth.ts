@@ -30,6 +30,7 @@ interface User {
     email: string;
     name: string;
     role: string;
+    isPlatformUser: boolean;
     organization: Organization | null;
 }
 

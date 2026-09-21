@@ -123,6 +123,7 @@ export class ProfileService {
       mfaEnabled: user.auth?.mfaEnabled ?? false,
       lastLoginAt: user.auth?.lastLoginAt ? user.auth.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
+      isPlatformUser: user.isPlatformUser,
     };
   }
 }

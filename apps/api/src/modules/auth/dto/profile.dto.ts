@@ -41,4 +41,5 @@ export interface UserProfileResponse {
   mfaEnabled: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  isPlatformUser: boolean;
 }

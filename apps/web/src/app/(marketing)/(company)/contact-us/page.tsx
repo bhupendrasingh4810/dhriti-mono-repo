@@ -78,31 +78,6 @@ export default function ContactPage({ navigate }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: "#f8fafc" }}>
-      {/* Nav */}
-      {/* <nav
-        className="sticky top-0 z-30 flex items-center justify-between px-8 py-4 border-b"
-        style={{ backgroundColor: "white", borderColor: "#e2e8f0" }}
-      >
-        <button onClick={() => navigate("login")} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#036c5f" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </div>
-          <span className="font-bold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>Dhriti OS</span>
-        </button>
-        <div className="flex items-center gap-4">
-          <button onClick={() => navigate("faq" as Page)} className="text-sm text-slate-500 hover:text-slate-800 transition-colors">FAQ</button>
-          <button
-            onClick={() => navigate("login")}
-            className="text-sm font-semibold px-4 py-2 rounded-lg text-white"
-            style={{ backgroundColor: "#036c5f" }}
-          >
-            Sign in
-          </button>
-        </div>
-      </nav> */}
-
       <div className="flex-1 flex">
         {/* Left — form */}
         <div className="flex-1 px-8 py-12">
@@ -297,16 +272,6 @@ export default function ContactPage({ navigate }: Props) {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      {/* <footer className="border-t px-8 py-4 flex items-center justify-between" style={{ borderColor: "#e2e8f0", backgroundColor: "white" }}>
-        <p className="text-xs text-slate-400">© 2026 Dhriti OS, Inc.</p>
-        <div className="flex gap-4">
-          {(["terms", "privacy", "faq"] as Page[]).map((p) => (
-            <button key={p} onClick={() => navigate(p)} className="text-xs text-slate-400 hover:text-slate-600 capitalize transition-colors">{p}</button>
-          ))}
-        </div>
-      </footer> */}
     </div>
   );
 }

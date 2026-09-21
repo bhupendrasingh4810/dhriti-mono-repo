@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthLayout from "../../../components/auth/AuthLayout";
-import { useAlert } from "@/components/alerts/alert-provider";
+import { useAlert } from "@/components/shared/alert";
 import { forgotPassword } from "@/services/auth.service";
 
 const getEmailError = (email: string): string | null => {
@@ -36,9 +36,9 @@ export default function ForgotPasswordPage() {
       setSent(true);
     } catch (error) {
       showAlert({
-        title: error instanceof Error ? error.message : "Unable to request a password reset.",
-        severity: "error",
-        variant: "filled",
+        message: error instanceof Error ? error.message : "Unable to request a password reset.",
+        variant: "error",
+        dismissible: true,
       });
     } finally {
       setLoading(false);

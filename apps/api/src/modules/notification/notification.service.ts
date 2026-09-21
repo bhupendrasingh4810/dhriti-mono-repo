@@ -16,7 +16,7 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
-  ) {}
+  ) { }
 
   // ---------------- In-app notifications ----------------
 
@@ -155,7 +155,7 @@ export class NotificationService {
       return;
     }
     await this.email.send({
-      to: user.email,
+      to: [{ email: user.email }],
       subject: dto.title,
       text: dto.body ?? dto.title,
     });

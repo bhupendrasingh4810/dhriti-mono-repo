@@ -1,54 +1,68 @@
+"use client";
 
-import { Box, Container, Stack, Typography, Divider } from "@dhriti/ui";
+import { useRouter } from "next/navigation";
 
 export const Footer = () => {
+    const router = useRouter();
     return (
-        <Box component="footer" sx={{ bgcolor: "background.paper", borderTop: 1, borderColor: "borders.borderSubtle", px: 2, py: { xs: 8, md: 12 } }}>
-            <Container maxWidth={false} sx={{ maxWidth: 1440 }}>
-                <Stack direction={{ xs: "column", lg: "row" }} spacing={6} sx={{ justifyContent: "space-between" }}>
-                    <Box sx={{ maxWidth: 420 }}>
-                        <Stack direction="row" spacing={2} sx={{ alignItems: "center", mb: 3 }}>
-                            <Box sx={{ width: 32, height: 32, borderRadius: "50%", bgcolor: "primary.main", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                <Box sx={{ width: 16, height: 16, borderRadius: "50%", bgcolor: "primary.contrastText" }} />
-                            </Box>
-                            <Typography variant="h5" sx={{ fontWeight: 800 }}>Dhriti</Typography>
-                        </Stack>
-                        <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.8 }}>
-                            The operating system for modern teams. One platform to connect, collaborate, and achieve more.
-                        </Typography>
-                    </Box>
+        <footer className="py-16 border-t" style={{ backgroundColor: "#0a0f1a", borderColor: "#1e293b" }}>
+            <div className="max-w-7xl mx-auto px-6">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-10 mb-12">
+                    {/* Brand */}
+                    <div className="col-span-2 md:col-span-1">
+                        <div className="flex items-center gap-2.5 mb-4">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#036c5f" }}>
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                </svg>
+                            </div>
+                            <span className="text-white font-bold" style={{ fontFamily: "var(--font-display)" }}>Dhriti OS</span>
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed">The operating system for modern teams. Work smarter. Move faster.</p>
+                    </div>
 
-                    <Stack direction="row" spacing={{ xs: 4, md: 6 }} sx={{ flexWrap: "wrap", justifyContent: "space-between", flex: 1 }}>
-                        {[
-                            ["Product", ["Overview", "Features", "Apps", "Integrations", "Roadmap"]],
-                            ["Solutions", ["By Team", "By Use Case", "Enterprise", "Remote Teams", "Startups"]],
-                            ["Resources", ["Documentation", "Blog", "Guides", "Templates", "Help Center"]],
-                            ["Company", ["About Us", "Careers", "Customers", "Partners", "Contact"]],
-                            ["Legal", ["Privacy Policy", "Terms of Service", "Security", "Status"]],
-                        ].map(([title, items]) => (
-                            <Box key={title as string} sx={{ minWidth: 140 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 800, mb: 2 }}>{title as string}</Typography>
-                                <Stack spacing={1.5}>
-                                    {(items as string[]).map((item) => (
-                                        <Typography key={item} variant="body2" color="text.secondary">{item}</Typography>
-                                    ))}
-                                </Stack>
-                            </Box>
-                        ))}
-                    </Stack>
-                </Stack>
+                    {/* Links */}
+                    {[
+                        { heading: "Product", items: ["Connect", "Flow", "Atlas", "Pulse", "Nexus AI"] },
+                        { heading: "Company", items: ["About", "Careers", "Blog", "Press", "Partners"] },
+                        { heading: "Resources", items: ["Documentation", "API Reference", "Status", "Changelog", "Integrations"] },
+                        { heading: "Legal", items: ["Privacy Policy", "Terms of Service", "Security", "GDPR", "Cookie Policy"] },
+                    ].map((col) => (
+                        <div key={col.heading}>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">{col.heading}</p>
+                            <ul className="space-y-2.5">
+                                {col.items.map((item) => (
+                                    <li key={item}>
+                                        <button
+                                            onClick={() => {
+                                                if (item === "Privacy Policy") router.push("privacy-policy");
+                                                else if (item === "Terms of Service") router.push("terms-and-conditions");
+                                                else if (item === "About") router.push("about-us");
+                                                else if (item === "Careers") router.push("careers");
+                                            }}
+                                            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                                        >
+                                            {item}
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
 
-                <Divider sx={{ my: 4 }} />
-
-                <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: "center" }}>
-                    <Typography variant="body2" color="text.disabled">
-                        © 2025 Dhriti. All rights reserved.
-                    </Typography>
-                    {/* <Typography variant="body2" color="text.disabled">
-              Made with <Box component="span" sx={{ color: "primary.main" }}>💛</Box> for modern teams
-            </Typography> */}
-                </Stack>
-            </Container>
-        </Box>
+                <div className="border-t pt-8 flex flex-col sm:flex-row items-center justify-between gap-4" style={{ borderColor: "#1e293b" }}>
+                    <p className="text-xs text-slate-600">© 2026 Dhriti OS, Inc. All rights reserved.</p>
+                    <div className="flex items-center gap-4">
+                        <span
+                            className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                            style={{ backgroundColor: "rgba(3,108,95,0.2)", color: "#4ade80" }}
+                        >
+                            ● All systems operational
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </footer>
     );
 };

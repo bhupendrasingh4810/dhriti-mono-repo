@@ -17,6 +17,7 @@ export interface AuthUserResponse {
     role: string;
     avatarUrl: string | null;
     organization: OrganizationResponse | null;
+    isPlatformUser: boolean;
 }
 
 export interface AuthTokensResponse {

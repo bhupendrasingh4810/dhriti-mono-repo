@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AppView } from "@/types/app.types";
+import { useAuth } from "@/hooks/use-auth";
 interface NavItem {
   id: AppView;
   label: string;
@@ -92,8 +93,9 @@ interface SidebarProps {
 
 export default function Sidebar({ activeView, onViewChange, onLogout, organizationSlug }: SidebarProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [selectedView, setSelectedView] = useState<AppView>(activeView);
-
+  
   useEffect(() => {
     setSelectedView(activeView);
   }, [activeView]);
@@ -101,8 +103,9 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
   const handleNavClick = (item: NavItem) => {
     setSelectedView(item.id);
     onViewChange(item.id);
+    const controlPath = user?.isPlatformUser ? 'platform' : 'org';
     if(item.id == "control") {
-      router.push(`/${organizationSlug}/${item.id}/dashboard`);
+      router.push(`/${organizationSlug}/${item.id}/${controlPath}/dashboard`);
     } else {
       router.push(`/${organizationSlug}/${item.id}`);
     }
@@ -113,21 +116,6 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
       className="flex flex-col h-full flex-shrink-0 border-r border-slate-100 bg-white"
       style={{ width: "72px" }}
     >
-      {/* Logo */}
-      {/* <div className="flex items-center justify-center py-4 border-b border-slate-100" style={{ height: "60px" }}>
-        <div
-          className="w-9 h-9 rounded-xl flex items-center justify-center"
-          style={{ backgroundColor: "#036c5f" }}
-        >
-          <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-            <rect x="2" y="2" width="7" height="7" rx="2" fill="white"/>
-            <rect x="11" y="2" width="7" height="7" rx="2" fill="white" fillOpacity="0.6"/>
-            <rect x="2" y="11" width="7" height="7" rx="2" fill="white" fillOpacity="0.6"/>
-            <rect x="11" y="11" width="7" height="7" rx="2" fill="white"/>
-          </svg>
-        </div>
-      </div> */}
-
       {/* Nav items */}
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         {NAV_ITEMS.map((item) => {

@@ -93,7 +93,7 @@ export default function OrgSettings() {
 
         {/* Danger zone */}
         <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #fecaca", padding: 24 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: "#dc2626", margin: "0 0 12px" }}>Danger Zone</h2>
+          {/* <h2 style={{ fontSize: 15, fontWeight: 700, color: "#dc2626", margin: "0 0 12px" }}>Danger Zone</h2> */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>Delete Organization</div>

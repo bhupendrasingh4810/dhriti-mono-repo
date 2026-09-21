@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
 
-interface Member {
+interface Employee {
   name: string;
   email: string;
   role: string;
@@ -12,7 +12,7 @@ interface Member {
   status: "Active" | "Inactive" | "Pending";
 }
 
-const members: Member[] = [
+const members: Employee[] = [
   { name: "Alice Johnson", email: "alice@acme.com", role: "Owner", team: "Leadership", joined: "Jan 15, 2024", status: "Active" },
   { name: "Bob Smith", email: "bob@acme.com", role: "Admin", team: "Engineering", joined: "Jan 20, 2024", status: "Active" },
   { name: "Carol White", email: "carol@acme.com", role: "Member", team: "Design", joined: "Feb 1, 2024", status: "Active" },
@@ -23,13 +23,13 @@ const members: Member[] = [
   { name: "Henry Moore", email: "henry@acme.com", role: "Member", team: "Engineering", joined: "Jul 22, 2024", status: "Pending" },
 ];
 
-const statusColors: Record<Member["status"], { bg: string; color: string }> = {
+const statusColors: Record<Employee["status"], { bg: string; color: string }> = {
   Active: { bg: "#dcfce7", color: "#166534" },
   Inactive: { bg: "#f1f5f9", color: "#475569" },
   Pending: { bg: "#fef9c3", color: "#92400e" },
 };
 
-export default function PeoplePanel() {
+export default function EmployeePage() {
   const { toasts, addToast, removeToast } = useToast();
   const [search, setSearch] = useState("");
 
@@ -43,8 +43,8 @@ export default function PeoplePanel() {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>People</h1>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>{members.length} members in this organization</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>Employees</h1>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>{members.length} employees in this organization</p>
         </div>
         <button
           onClick={() => addToast("Invite sent", "success")}

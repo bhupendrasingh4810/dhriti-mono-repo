@@ -637,28 +637,4 @@ export class AuthService {
     }
     return this.requireUser(session.userId);
   }
-
-  /**
-   * Converts a user entity and an optional organization into a user profile response.
-   * @param user The user entity to convert.
-   * @param organization The organization associated with the user, or null if none.
-   * @returns The user profile response.
-   */
-  private toProfile(user: UserWithRelations, organization: OrganizationResponse | null): UserProfileResponse {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatarUrl: user.avatarUrl,
-      organization,
-      role: user.role,
-      timezone: user.profile?.timezone ?? "UTC",
-      locale: user.profile?.locale ?? "en",
-      status: user.status,
-      emailVerified: user.auth?.emailVerifiedAt != null,
-      mfaEnabled: user.auth?.mfaEnabled ?? false,
-      lastLoginAt: user.auth?.lastLoginAt ? user.auth.lastLoginAt.toISOString() : null,
-      createdAt: user.createdAt.toISOString(),
-    };
-  }
 }

@@ -2,8 +2,6 @@
 import { Navbar } from "../../components/layout/marketing/navbar";
 import { Footer } from "../../components/layout/marketing/footer";
 
-const navItems = ["Product", "Solutions", "Resources", "Pricing", "Company"];
-
 export default function MarketingLayout({
   children,
 }: {
@@ -11,7 +9,7 @@ export default function MarketingLayout({
 }) {
   return (
     <div className="relative flex min-h-screen flex-col">
-      <Navbar navItems={navItems} />
+      <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
     </div>
