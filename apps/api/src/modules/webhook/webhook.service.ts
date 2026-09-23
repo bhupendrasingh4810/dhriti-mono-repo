@@ -3,6 +3,7 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import type { Webhook, WebhookDelivery } from "@prisma/client";
 
+import { ApiConfigService } from "../../config/config.service";
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
@@ -18,6 +19,7 @@ export class WebhookService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly secrets: SecretEncryptionService,
+    private readonly config: ApiConfigService,
   ) {}
 
   // ---------------- CRUD ----------------

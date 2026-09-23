@@ -98,6 +98,8 @@ async function main(): Promise<void> {
     "hrms.asset.manage",
     "hrms.benefit.read",
     "hrms.benefit.manage",
+    "hrms.holiday.read",
+    "hrms.holiday.manage",
   ];
   const permissions = await Promise.all(systemPermissions.map((key) => {
     const [resource, action] = key.split(".");

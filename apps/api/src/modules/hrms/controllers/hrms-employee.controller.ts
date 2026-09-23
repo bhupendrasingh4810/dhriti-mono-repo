@@ -1,13 +1,13 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
-import { RequireAccess } from "../../common/decorators/access.decorator";
-import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
-import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
-import { AccessGuard } from "../../common/guards/access.guard";
-import { TenantGuard } from "../../common/guards/tenant.guard";
-import { CreateHrmsEmployeeDto, UpdateHrmsEmployeeDto } from "./dto/hrms-employee.dto";
-import { HrmsEmployeeService } from "./hrms-employee.service";
+import { RequireAccess } from "../../../common/decorators/access.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
+import { AccessGuard } from "../../../common/guards/access.guard";
+import { TenantGuard } from "../../../common/guards/tenant.guard";
+import { CreateHrmsEmployeeDto, UpdateHrmsEmployeeDto } from "../dto/hrms-employee.dto";
+import { HrmsEmployeeService } from "../services/hrms-employee.service";
 
 @ApiTags("hrms")
 @ApiBearerAuth()

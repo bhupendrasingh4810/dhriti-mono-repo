@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
-import { RequireAccess } from "../../common/decorators/access.decorator";
-import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
-import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
-import { AccessGuard } from "../../common/guards/access.guard";
-import { TenantGuard } from "../../common/guards/tenant.guard";
-import { UpsertHrmsAttendanceDto } from "./dto/hrms-attendance.dto";
-import { HrmsAttendanceService } from "./hrms-attendance.service";
+import { RequireAccess } from "../../../common/decorators/access.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
+import { AccessGuard } from "../../../common/guards/access.guard";
+import { TenantGuard } from "../../../common/guards/tenant.guard";
+import { UpsertHrmsAttendanceDto } from "../dto/hrms-attendance.dto";
+import { HrmsAttendanceService } from "../services/hrms-attendance.service";
 
 @ApiTags("hrms")
 @ApiBearerAuth()

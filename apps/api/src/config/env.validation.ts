@@ -3,6 +3,9 @@ import { z } from "@dhriti/validation";
 const optionalWhen = (enabled: boolean, value: string | undefined): boolean =>
   !enabled || (typeof value === "string" && value.length > 0);
 
+const emptyStringToUndefined = (value: unknown): unknown =>
+  typeof value === "string" && value.trim().length === 0 ? undefined : value;
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -64,7 +67,7 @@ export const envSchema = z
     BREVO_API_KEY: z.string().optional(),
     BREVO_SENDER_EMAIL: z.string().email().optional(),
     BREVO_SENDER_NAME: z.string().min(1).optional(),
-    STRIPE_WEBHOOK_SECRET: z.string().min(32).optional(),
+    STRIPE_WEBHOOK_SECRET: z.preprocess(emptyStringToUndefined, z.string().min(32).optional()),
     BILLING_WEBHOOK_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
     BILLING_WEBHOOK_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
     BILLING_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),

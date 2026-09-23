@@ -67,7 +67,7 @@ model OrganizationMember {
   joinedAt       DateTime         @default(now())
   suspendedAt    DateTime?
   removedAt      DateTime?
-  updatedAt      DateTime         @updatedAt
+  updatedAt      DateTime         @default(now()) @updatedAt
   deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)

@@ -1,10 +1,10 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { AssetStatus, LeaveStatus, PayrollStatus, ReviewStatus, TrainingEnrollmentStatus, TrainingStatus, type AssetType, type LeaveType, type Prisma, type ReviewType, type TrainingType } from "@prisma/client";
 
-import { AppError } from "../../common/errors/app-error";
-import { ErrorCode } from "../../common/errors/error-codes";
-import { PrismaService } from "../../database/prisma.service";
-import { AuditService } from "../audit/audit.service";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
+import { PrismaService } from "../../../database/prisma.service";
+import { AuditService } from "../../audit/audit.service";
 
 @Injectable()
 export class HrmsOperationsService {
