@@ -141,3 +141,23 @@ export class UpdateTicketDto {
   @MaxLength(10000)
   notes?: string;
 }
+
+export class CreatePlatformRoleDto {
+  @ApiProperty({ example: "operations" })
+  @IsString()
+  @MinLength(2)
+  @MaxLength(80)
+  key!: string;
+
+  @ApiProperty({ example: "Operations" })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  name!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+}

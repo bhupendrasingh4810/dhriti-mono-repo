@@ -4,6 +4,7 @@ import {
     HttpCode,
     HttpStatus,
     Post,
+    UseGuards,
 } from "@nestjs/common";
 import {
     ApiOperation,
@@ -12,6 +13,7 @@ import {
 } from "@nestjs/swagger";
 
 import { Public } from "../../../common/decorators/public.decorator";
+import { PublicAuthRateLimitGuard } from "../../../common/guards/public-auth-rate-limit.guard";
 
 import { AuthService } from "../services/auth.service";
 import { RegisterDto } from "../dto/register.dto";
@@ -28,15 +30,17 @@ export class RegistrationController {
     // ---------------- Registration & email verification ----------------
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("register")
     @ApiOperation({ summary: "Register a new user and send verification email" })
     @ApiResponse({ status: 201, description: "User created; verification email sent" })
     @ApiResponse({ status: 409, description: "Email already registered" })
-    async register(@Body() dto: RegisterDto): Promise<{ email: string; token: string }> {
+    async register(@Body() dto: RegisterDto): Promise<{ email: string }> {
         return this.authService.register(dto);
     }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("verify-email")
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: "Verify email address with the emailed token" })
@@ -46,6 +50,7 @@ export class RegistrationController {
     }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("resend-verification")
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: "Resend the verification email (no account enumeration)" })

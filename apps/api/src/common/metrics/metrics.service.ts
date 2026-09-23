@@ -13,6 +13,8 @@ interface Counter {
 export class MetricsService {
   private readonly httpRequests: Counter = {};
   private readonly httpDurationBuckets: Record<string, number[]> = {};
+  private billingWebhookRateLimitFailures = 0;
+  private billingWebhookDeadLetters = 0;
   private wsConnections = 0;
   private wsMessages = 0;
 
@@ -30,6 +32,14 @@ export class MetricsService {
 
   wsDisconnected(): void {
     this.wsConnections = Math.max(0, this.wsConnections - 1);
+  }
+
+  billingWebhookRateLimitUnavailable(): void {
+    this.billingWebhookRateLimitFailures += 1;
+  }
+
+  billingWebhookDeadLettered(count = 1): void {
+    this.billingWebhookDeadLetters += count;
   }
 
   wsMessage(): void {
@@ -64,6 +74,12 @@ export class MetricsService {
       "# HELP websocket_messages_total Total WebSocket messages",
       "# TYPE websocket_messages_total counter",
       `websocket_messages_total ${this.wsMessages}`,
+      "# HELP billing_webhook_rate_limit_unavailable_total Billing webhook requests accepted while rate limiting is unavailable",
+      "# TYPE billing_webhook_rate_limit_unavailable_total counter",
+      `billing_webhook_rate_limit_unavailable_total ${this.billingWebhookRateLimitFailures}`,
+      "# HELP billing_webhook_dead_letters_total Billing webhook events moved to the dead-letter state",
+      "# TYPE billing_webhook_dead_letters_total counter",
+      `billing_webhook_dead_letters_total ${this.billingWebhookDeadLetters}`,
     );
 
     return `${lines.join("\n")}\n`;
@@ -78,5 +94,7 @@ export class MetricsService {
     }
     this.wsConnections = 0;
     this.wsMessages = 0;
+    this.billingWebhookRateLimitFailures = 0;
+    this.billingWebhookDeadLetters = 0;
   }
 }

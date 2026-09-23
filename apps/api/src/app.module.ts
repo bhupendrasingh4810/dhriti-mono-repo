@@ -28,6 +28,9 @@ import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 import { LoggingInterceptor } from "./common/interceptors/logging.interceptor";
 import { MetricsModule } from "./common/metrics/metrics.module";
 import { MetricsInterceptor } from "./common/metrics/metrics.interceptor";
+import { AuthorizationModule } from "./modules/authorization/authorization.module";
+import { HrmsModule } from "./modules/hrms/hrms.module";
+import { JobsModule } from "./jobs/jobs.module";
 
 @Module({
   imports: [
@@ -35,6 +38,9 @@ import { MetricsInterceptor } from "./common/metrics/metrics.interceptor";
     ConfigModule,
     DatabaseModule,
     RedisModule,
+    AuthorizationModule,
+    HrmsModule,
+    JobsModule,
     MetricsModule,
     NotificationModule,
     AuditModule,

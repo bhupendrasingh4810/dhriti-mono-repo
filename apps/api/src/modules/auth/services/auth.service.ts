@@ -14,11 +14,7 @@ import { SessionService, type SessionContext } from "./session.service";
 import { MfaService } from "./mfa.service";
 import type { RegisterDto } from "../dto/register.dto";
 import type { LoginDto } from "../dto/login.dto";
-import type { UpdateProfileDto, UserProfileResponse } from "../dto/profile.dto";
 import type { AuthTokensResponse, LoginResponse, OrganizationResponse } from "../dto/auth-response.dto";
-
-const VERIFICATION_TOKEN_TTL_MS = 20 * 60 * 1000;
-const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
 
 export interface OAuthProfile {
   provider: OAuthProvider;
@@ -60,8 +56,9 @@ export class AuthService {
    * @returns The email and verification token.
    * @throws AppError if the email is already registered.
    */
-  async register(dto: RegisterDto): Promise<{ email: string; token: string }> {
+  async register(dto: RegisterDto): Promise<{ email: string }> {
     const email = dto.email.toLowerCase();
+    this.assertBcryptPasswordLength(dto.password);
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
       throw new AppError(
@@ -98,9 +95,9 @@ export class AuthService {
       },
     });
 
-    const token = await this.issueVerificationToken(user);
+    await this.issueVerificationToken(user);
     this.logger.log(`Registered user=${user.id}`);
-    return { email: user.email, token };
+    return { email: user.email };
   }
 
   /**
@@ -148,7 +145,7 @@ export class AuthService {
     }
 
     const otp = this.tokens.generateSixDigitOtp();
-    const expiresAt = new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS);
+    const expiresAt = new Date(Date.now() + this.config.emailVerificationTokenTtlSeconds * 1000);
     await this.prisma.verificationToken.update({
       where: { id: record.id },
       data: { otpHash: this.tokens.hashToken(otp), expiresAt },
@@ -459,7 +456,7 @@ export class AuthService {
    */
   private async resolveDefaultOrganization(userId: string): Promise<OrganizationResponse | null> {
     const membership = await this.prisma.organizationMember.findFirst({
-      where: { userId, organization: { deletedAt: null } },
+      where: { userId, deletedAt: null, organization: { deletedAt: null } },
       orderBy: { createdAt: "asc" },
       select: { organization: { select: { id: true, name: true, slug: true } } },
     });
@@ -522,11 +519,15 @@ export class AuthService {
       throw new AppError(ErrorCode.TOKEN_EXPIRED, "Token has expired", HttpStatus.BAD_REQUEST);
     }
 
-    return this.prisma.verificationToken.update({
-      where: { id: record.id },
-      data: { usedAt: new Date() },
-      include: { user: { select: { email: true, name: true } } },
+    const usedAt = new Date();
+    const consumed = await this.prisma.verificationToken.updateMany({
+      where: { id: record.id, usedAt: null, expiresAt: { gt: usedAt } },
+      data: { usedAt },
     });
+    if (consumed.count !== 1) {
+      throw new AppError(ErrorCode.TOKEN_ALREADY_USED, "Token was already used", HttpStatus.BAD_REQUEST);
+    }
+    return { ...record, usedAt };
   }
 
   /**
@@ -537,14 +538,20 @@ export class AuthService {
   private async issueVerificationToken(user: User): Promise<string> {
     const otp = this.tokens.generateSixDigitOtp();
     const token = this.tokens.generateOpaqueToken();
-    await this.prisma.verificationToken.create({
-      data: {
-        userId: user.id,
-        tokenHash: this.tokens.hashToken(token),
-        otpHash: this.tokens.hashToken(otp),
-        type: "EMAIL_VERIFICATION",
-        expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_TTL_MS),
-      },
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.verificationToken.updateMany({
+        where: { userId: user.id, type: "EMAIL_VERIFICATION", usedAt: null },
+        data: { usedAt: new Date() },
+      });
+      await transaction.verificationToken.create({
+        data: {
+          userId: user.id,
+          tokenHash: this.tokens.hashToken(token),
+          otpHash: this.tokens.hashToken(otp),
+          type: "EMAIL_VERIFICATION",
+          expiresAt: new Date(Date.now() + this.config.emailVerificationTokenTtlSeconds * 1000),
+        },
+      });
     });
 
     const verificationUrl = `${this.config.webAppUrl}/verify?email=${encodeURIComponent(user.email)}&token=${encodeURIComponent(token)}`;
@@ -566,6 +573,12 @@ export class AuthService {
         HttpStatus.TOO_MANY_REQUESTS,
         { unlockAt: lockedUntil.toISOString() },
       );
+    }
+  }
+
+  private assertBcryptPasswordLength(password: string): void {
+    if (Buffer.byteLength(password, "utf8") > 72) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Password must not exceed 72 UTF-8 bytes", HttpStatus.BAD_REQUEST);
     }
   }
 

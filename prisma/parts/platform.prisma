@@ -33,6 +33,11 @@ model User {
   notificationPrefs     NotificationPreference[]
   sentInvitations       Invitation[]
   groupMemberships      GroupMember[]
+  organizationTeamMemberships OrganizationTeamMember[]
+  organizationDepartmentMemberships OrganizationDepartmentMember[]
+  organizationPermissionAssignments OrganizationPermissionGroupAssignment[] @relation("OrganizationPermissionGroupAssignee")
+  platformRoleAssignments PlatformUserRoleAssignment[]
+  hrmsEmployees HrmsEmployee[]
   
   // Extensions
   auth                  UserAuth?
@@ -92,6 +97,7 @@ model UserAuth {
   // Security
   mfaEnabled            Boolean     @default(false)
   mfaSecret             String?
+  mfaSecretEncrypted    String?
   mfaBackupCodesUsed    Int         @default(0)
   failedLoginAttempts   Int         @default(0)
   lockedUntil           DateTime?
@@ -108,7 +114,7 @@ model UserAuth {
   sourceMetadata        Json?       @db.JsonB
   externalId            String?     @unique @map("external_id")
   
-  platformRole        PlatformRole?
+  platformRole        LegacyPlatformRole?
 
   // Relation
   user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -501,20 +507,223 @@ model Product {
   @@map("products")
 }
 
+model Permission {
+  id           String   @id @default(uuid()) @db.Uuid
+  key          String   @unique
+  resource     String
+  action       String
+  description  String?
+  productKey   String?
+  isAssignable Boolean  @default(true)
+  isSystemOnly Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  organizationGroupPermissions OrganizationPermissionGroupPermission[]
+  platformRolePermissions       PlatformRolePermission[]
+
+  @@index([productKey])
+  @@map("permissions")
+}
+
+model PlatformRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  permissions PlatformRolePermission[]
+  assignments PlatformUserRoleAssignment[]
+
+  @@map("platform_roles")
+}
+
+model PlatformRolePermission {
+  platformRoleId String @db.Uuid
+  permissionId   String @db.Uuid
+
+  platformRole PlatformRole @relation(fields: [platformRoleId], references: [id], onDelete: Cascade)
+  permission   Permission   @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([platformRoleId, permissionId])
+  @@map("platform_role_permissions")
+}
+
+model PlatformUserRoleAssignment {
+  userId         String   @db.Uuid
+  platformRoleId String   @db.Uuid
+  assignedById   String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  revokedAt      DateTime?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platformRole PlatformRole @relation(fields: [platformRoleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, platformRoleId])
+  @@index([userId, revokedAt])
+  @@map("platform_user_role_assignments")
+}
+
+model Plan {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  isPublic    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices       PlanPrice[]
+  entitlements PlanEntitlement[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model PlanPrice {
+  id              String          @id @default(uuid()) @db.Uuid
+  planId          String          @db.Uuid
+  currency        String
+  interval        BillingInterval
+  amountMinor     Int
+  provider        String?
+  providerPriceId String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, currency, interval])
+  @@map("plan_prices")
+}
+
+model Entitlement {
+  id          String          @id @default(uuid()) @db.Uuid
+  key         String          @unique
+  name        String
+  description String?
+  kind        EntitlementKind
+  productKey  String?
+  unit        String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  planEntitlements PlanEntitlement[]
+  overrides        OrganizationEntitlement[]
+
+  @@index([productKey])
+  @@map("entitlements")
+}
+
+model PlanEntitlement {
+  planId        String  @db.Uuid
+  entitlementId String  @db.Uuid
+  enabled       Boolean @default(false)
+  value         Int?
+
+  plan        Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  entitlement Entitlement @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+
+  @@id([planId, entitlementId])
+  @@map("plan_entitlements")
+}
+
+model OrganizationEntitlement {
+  organizationId String   @db.Uuid
+  entitlementId  String   @db.Uuid
+  enabled        Boolean?
+  value          Int?
+  reason         String?
+  expiresAt      DateTime?
+  createdById    String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entitlement  Entitlement  @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, entitlementId])
+  @@index([organizationId, expiresAt])
+  @@map("organization_entitlements")
+}
+
 model Subscription {
   id             String             @id @default(uuid()) @db.Uuid
   organizationId String             @unique @db.Uuid
-  plan           SubscriptionPlan   @default(FREE)
+  plan           SubscriptionPlan @default(FREE)
+  planId         String?            @db.Uuid
   status         SubscriptionStatus @default(TRIALING)
   seats          Int                @default(5)
+  currentPeriodStart DateTime?
+  provider       String?
+  providerCustomerId String?
+  providerSubscriptionId String?
   currentPeriodEnd DateTime?
+  trialEndsAt    DateTime?
+  gracePeriodEndsAt DateTime?
   cancelAtPeriodEnd Boolean         @default(false)
+  cancelledAt     DateTime?
+  suspendedAt     DateTime?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planRecord Plan? @relation(fields: [planId], references: [id], onDelete: Restrict)
+  history SubscriptionHistory[]
 
+  @@index([planId, status])
   @@map("subscriptions")
+}
+
+model SubscriptionHistory {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  subscriptionId String             @db.Uuid
+  previousPlanId String?            @db.Uuid
+  planId         String?            @db.Uuid
+  previousStatus SubscriptionStatus?
+  status         SubscriptionStatus
+  reason         String?
+  actorUserId    String?            @db.Uuid
+  providerEventId String?
+  createdAt      DateTime           @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+
+  @@unique([providerEventId])
+  @@index([organizationId, createdAt])
+  @@map("subscription_history")
+}
+
+model BillingWebhookEvent {
+  id              String                    @id @default(uuid()) @db.Uuid
+  provider        String
+  providerEventId String
+  organizationId  String?                   @db.Uuid
+  providerCreatedAt DateTime
+  status          BillingWebhookEventStatus @default(PROCESSING)
+  payloadHash     String
+  eventData       Json
+  attemptCount    Int                       @default(1)
+  processingStartedAt DateTime?
+  nextRetryAt     DateTime?
+  processedAt     DateTime?
+  failedAt        DateTime?
+  deadLetteredAt  DateTime?
+  errorCode       String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerEventId])
+  @@index([organizationId, status])
+  @@index([status, nextRetryAt])
+  @@map("billing_webhook_events")
 }
 
 model ProductEntitlement {

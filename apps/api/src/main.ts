@@ -13,15 +13,17 @@ import { ApiConfigService } from "./config/config.service";
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    rawBody: true,
   });
   const config = app.get(ApiConfigService);
 
+  if (config.trustProxy) app.set("trust proxy", 1);
   app.use(helmet());
   app.enableCors({
     origin: config.corsOrigins,
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key"],
   });
 
   app.setGlobalPrefix(config.apiPrefix);

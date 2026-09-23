@@ -354,7 +354,7 @@ export class PulseService {
 
   private async assertOrgMembers(organizationId: string, userIds: string[]): Promise<void> {
     const members = await this.prisma.organizationMember.findMany({
-      where: { organizationId, userId: { in: userIds } },
+      where: { organizationId, userId: { in: userIds }, deletedAt: null },
       select: { userId: true },
     });
     if (members.length !== new Set(userIds).size) {

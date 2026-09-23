@@ -3,6 +3,7 @@ import { ConfigModule as NestConfigModule } from "@nestjs/config";
 
 import { ApiConfigService } from "./config.service";
 import { validateEnv } from "./env.validation";
+import { SecretEncryptionService } from "../common/crypto/secret-encryption.service";
 
 @Global()
 @Module({
@@ -13,7 +14,7 @@ import { validateEnv } from "./env.validation";
       validate: validateEnv,
     }),
   ],
-  providers: [ApiConfigService],
-  exports: [ApiConfigService],
+  providers: [ApiConfigService, SecretEncryptionService],
+  exports: [ApiConfigService, SecretEncryptionService],
 })
 export class ConfigModule {}

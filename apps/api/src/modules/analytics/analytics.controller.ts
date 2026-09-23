@@ -9,16 +9,16 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
-import { OrgRoles } from "../../common/decorators/org-roles.decorator";
+import { RequirePermission } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
-import { OrgRolesGuard } from "../../common/guards/org-roles.guard";
 
 import { AnalyticsService, type AnalyticsOverview } from "./analytics.service";
 import { AnalyticsQueryDto, TrackEventDto } from "./dto/analytics.dto";
 
 @ApiTags("analytics")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/analytics")
 export class AnalyticsController {
   constructor(private readonly analytics: AnalyticsService) {}
@@ -35,8 +35,7 @@ export class AnalyticsController {
   }
 
   @Get("overview")
-  @UseGuards(OrgRolesGuard)
-  @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+  @RequirePermission("analytics.read")
   @ApiOperation({ summary: "Analytics overview: usage by app, daily activity, DAU/WAU/MAU, team velocity (OWNER/ADMIN)" })
   async overview(
     @CurrentOrganization() organization: OrganizationContext,

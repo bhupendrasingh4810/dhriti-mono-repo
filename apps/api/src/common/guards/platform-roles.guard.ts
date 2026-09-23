@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
-import type { PlatformRole } from "@prisma/client";
+import type { LegacyPlatformRole } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { PLATFORM_ROLES_KEY } from "../decorators/platform-roles.decorator";
@@ -25,7 +25,7 @@ export class PlatformRolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<PlatformRole[] | undefined>(
+    const required = this.reflector.getAllAndOverride<LegacyPlatformRole[] | undefined>(
       PLATFORM_ROLES_KEY,
       [context.getHandler(), context.getClass()],
     );
@@ -37,6 +37,18 @@ export class PlatformRolesGuard implements CanActivate {
     const user = request.user;
     if (!user) {
       throw new ForbiddenException({ code: "UNAUTHORIZED", message: "Authentication required" });
+    }
+
+    const explicitAssignment = await this.prisma.platformUserRoleAssignment.findFirst({
+      where: {
+        userId: user.userId,
+        revokedAt: null,
+        platformRole: { key: { in: required.map((role) => role.toLowerCase()) } },
+      },
+      select: { userId: true },
+    });
+    if (explicitAssignment) {
+      return true;
     }
 
     const record = await this.prisma.userAuth.findUnique({

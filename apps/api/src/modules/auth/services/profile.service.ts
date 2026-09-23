@@ -11,7 +11,6 @@ import type { OrganizationResponse } from "../dto/auth-response.dto";
 
 type UserWithRelations = User & { auth: UserAuth | null; profile: UserProfile | null };
 
-const withAuth = { auth: true } as const;
 const withAuthAndProfile = { auth: true, profile: true } as const;
 
 @Injectable()
@@ -78,7 +77,7 @@ export class ProfileService {
    */
   private async resolveDefaultOrganization(userId: string): Promise<OrganizationResponse | null> {
     const membership = await this.prisma.organizationMember.findFirst({
-      where: { userId, organization: { deletedAt: null } },
+      where: { userId, deletedAt: null, organization: { deletedAt: null } },
       orderBy: { createdAt: "asc" },
       select: { organization: { select: { id: true, name: true, slug: true } } },
     });

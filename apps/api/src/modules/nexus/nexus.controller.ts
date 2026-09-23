@@ -9,6 +9,8 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
+import { RequireAccess } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { NexusService, type ExtractedTask } from "./nexus.service";
@@ -21,12 +23,13 @@ import {
 
 @ApiTags("nexus")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/nexus")
 export class NexusController {
   constructor(private readonly nexus: NexusService) {}
 
   @Post("summarize/conversation")
+  @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.task.create" })
   @ApiOperation({ summary: "Summarize a Connect channel into summary, decisions, action items" })
   async summarizeConversation(
     @CurrentUser() user: AuthenticatedUser,
@@ -42,6 +45,7 @@ export class NexusController {
   }
 
   @Post("summarize/page")
+  @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.task.create" })
   @ApiOperation({ summary: "Summarize an Atlas page" })
   async summarizePage(
     @CurrentUser() user: AuthenticatedUser,
@@ -52,6 +56,7 @@ export class NexusController {
   }
 
   @Post("extract-tasks")
+  @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.task.create" })
   @ApiOperation({ summary: "Extract action items (title, assignee, due date, priority) from text" })
   async extractTasks(
     @CurrentUser() user: AuthenticatedUser,
@@ -62,6 +67,7 @@ export class NexusController {
   }
 
   @Post("ask")
+  @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.conversation.create" })
   @ApiOperation({ summary: "Ask Nexus a question; pass conversationId to continue a thread" })
   async ask(
     @CurrentUser() user: AuthenticatedUser,
@@ -72,6 +78,7 @@ export class NexusController {
   }
 
   @Get("conversations")
+  @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.conversation.read" })
   @ApiOperation({ summary: "List the current user's Nexus conversations" })
   async listConversations(
     @CurrentUser() user: AuthenticatedUser,
@@ -81,6 +88,7 @@ export class NexusController {
   }
 
   @Get("tasks")
+  @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.task.read" })
   @ApiOperation({ summary: "List the current user's Nexus AI tasks (summaries, extractions)" })
   async listTasks(
     @CurrentUser() user: AuthenticatedUser,

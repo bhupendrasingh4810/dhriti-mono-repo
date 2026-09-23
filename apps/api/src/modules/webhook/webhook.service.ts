@@ -6,11 +6,9 @@ import type { Webhook, WebhookDelivery } from "@prisma/client";
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
+import { SecretEncryptionService } from "../../common/crypto/secret-encryption.service";
 import { AuditService } from "../audit/audit.service";
 import type { CreateWebhookDto, UpdateWebhookDto } from "./dto/webhook.dto";
-
-const DELIVERY_TIMEOUT_MS = 10_000;
-const MAX_ATTEMPTS = 3;
 
 @Injectable()
 export class WebhookService {
@@ -19,16 +17,17 @@ export class WebhookService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly secrets: SecretEncryptionService,
   ) {}
 
   // ---------------- CRUD ----------------
 
-  async list(organizationId: string): Promise<Array<Omit<Webhook, "secret">>> {
+  async list(organizationId: string): Promise<Array<Omit<Webhook, "secret" | "secretEncrypted">>> {
     const webhooks = await this.prisma.webhook.findMany({
       where: { organizationId, deletedAt: null },
       orderBy: { createdAt: "desc" },
     });
-    return webhooks.map(({ secret: _secret, ...rest }) => rest);
+    return webhooks.map(({ secret: _secret, secretEncrypted: _secretEncrypted, ...rest }) => rest);
   }
 
   async create(organizationId: string, userId: string, dto: CreateWebhookDto): Promise<Webhook> {
@@ -36,7 +35,7 @@ export class WebhookService {
       data: {
         organizationId,
         url: dto.url,
-        secret: randomBytes(32).toString("hex"),
+        secretEncrypted: this.secrets.encrypt(randomBytes(32).toString("hex")),
         events: dto.events,
         description: dto.description ?? null,
         createdById: userId,
@@ -80,7 +79,7 @@ export class WebhookService {
     await this.getWebhook(organizationId, webhookId);
     const updated = await this.prisma.webhook.update({
       where: { id: webhookId },
-      data: { secret: randomBytes(32).toString("hex") },
+      data: { secret: null, secretEncrypted: this.secrets.encrypt(randomBytes(32).toString("hex")) },
     });
 
     await this.audit.record({
@@ -152,10 +151,12 @@ export class WebhookService {
 
   private async deliver(webhook: Webhook, event: string, payload: object): Promise<void> {
     const body = JSON.stringify(payload);
-    const signature = this.sign(webhook.secret, body);
+    const timestamp = Math.floor(Date.now() / 1000).toString();
+    const signature = this.sign(await this.resolveSecret(webhook), `${timestamp}.${body}`);
     const startedAt = Date.now();
 
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const delivery = this.config.webhookDelivery;
+    for (let attempt = 1; attempt <= delivery.maxAttempts; attempt += 1) {
       try {
         const response = await fetch(webhook.url, {
           method: "POST",
@@ -163,10 +164,11 @@ export class WebhookService {
             "Content-Type": "application/json",
             "X-Dhriti-Event": event,
             "X-Dhriti-Signature": `sha256=${signature}`,
+            "X-Dhriti-Timestamp": timestamp,
             "X-Dhriti-Delivery": payload["id" as keyof typeof payload] as string,
           },
           body,
-          signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
+          signal: AbortSignal.timeout(delivery.timeoutSeconds * 1000),
         });
 
         await this.recordDelivery(webhook.id, event, payload, response.status, response.ok, attempt, startedAt, null);
@@ -178,12 +180,12 @@ export class WebhookService {
         await this.recordDelivery(webhook.id, event, payload, null, false, attempt, startedAt, message);
       }
 
-      if (attempt < MAX_ATTEMPTS) {
-        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+      if (attempt < delivery.maxAttempts) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * delivery.retryBaseDelaySeconds * 1000));
       }
     }
 
-    this.logger.warn(`Webhook ${webhook.id} delivery failed after ${MAX_ATTEMPTS} attempts for event=${event}`);
+    this.logger.warn(`Webhook ${webhook.id} delivery failed after ${delivery.maxAttempts} attempts for event=${event}`);
   }
 
   private async recordDelivery(
@@ -219,11 +221,21 @@ export class WebhookService {
   }
 
   /** Verifies a webhook signature (used by consumers / docs). */
-  verifySignature(secret: string, body: string, signature: string): boolean {
-    const expected = `sha256=${this.sign(secret, body)}`;
+  verifySignature(secret: string, body: string, timestamp: string, signature: string): boolean {
+    const expected = `sha256=${this.sign(secret, `${timestamp}.${body}`)}`;
     const a = Buffer.from(expected);
     const b = Buffer.from(signature);
     return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  private async resolveSecret(webhook: Webhook): Promise<string> {
+    if (webhook.secretEncrypted) return this.secrets.decrypt(webhook.secretEncrypted);
+    if (!webhook.secret) throw new AppError(ErrorCode.WEBHOOK_NOT_FOUND, "Webhook secret is unavailable", HttpStatus.INTERNAL_SERVER_ERROR);
+    await this.prisma.webhook.update({
+      where: { id: webhook.id },
+      data: { secret: null, secretEncrypted: this.secrets.encrypt(webhook.secret) },
+    });
+    return webhook.secret;
   }
 
   private async getWebhook(organizationId: string, webhookId: string): Promise<Webhook> {

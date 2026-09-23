@@ -21,6 +21,8 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
+import { RequireAccess } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { FlowService } from "./flow.service";
@@ -36,7 +38,7 @@ import { CreateColumnDto, UpdateColumnDto } from "./dto/board.dto";
 
 @ApiTags("flow")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/flow")
 export class FlowController {
   constructor(private readonly flow: FlowService) {}
@@ -44,12 +46,14 @@ export class FlowController {
   // ---------------- Projects ----------------
 
   @Get("projects")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "List projects in the active organization" })
   async listProjects(@CurrentOrganization() organization: OrganizationContext) {
     return this.flow.listProjects(organization.organizationId);
   }
 
   @Post("projects")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.create" })
   @ApiOperation({ summary: "Create a project (unique key, e.g. PAY)" })
   async createProject(
     @CurrentUser() user: AuthenticatedUser,
@@ -60,6 +64,7 @@ export class FlowController {
   }
 
   @Get("projects/:projectId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "Get a project" })
   async getProject(
     @CurrentOrganization() organization: OrganizationContext,
@@ -69,6 +74,7 @@ export class FlowController {
   }
 
   @Patch("projects/:projectId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.update" })
   @ApiOperation({ summary: "Update a project (name, description, lead)" })
   async updateProject(
     @CurrentUser() user: AuthenticatedUser,
@@ -82,6 +88,7 @@ export class FlowController {
   // ---------------- Issues ----------------
 
   @Get("projects/:projectId/issues")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.read" })
   @ApiOperation({ summary: "List issues with status/priority/assignee/sprint filters" })
   async listIssues(
     @CurrentOrganization() organization: OrganizationContext,
@@ -92,6 +99,7 @@ export class FlowController {
   }
 
   @Post("projects/:projectId/issues")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.create" })
   @ApiOperation({ summary: "Create an issue; number is auto-incremented per project" })
   async createIssue(
     @CurrentUser() user: AuthenticatedUser,
@@ -103,6 +111,7 @@ export class FlowController {
   }
 
   @Get("issues/:issueId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.read" })
   @ApiOperation({ summary: "Get an issue" })
   async getIssue(
     @CurrentOrganization() organization: OrganizationContext,
@@ -112,6 +121,7 @@ export class FlowController {
   }
 
   @Patch("issues/:issueId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.update" })
   @ApiOperation({ summary: "Update an issue (status, priority, assignee, sprint, estimate, due date)" })
   async updateIssue(
     @CurrentUser() user: AuthenticatedUser,
@@ -123,6 +133,7 @@ export class FlowController {
   }
 
   @Post("issues/:issueId/move")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.transition" })
   @ApiOperation({ summary: "Move an issue to a status column (board drag-and-drop)" })
   async moveIssue(
     @CurrentUser() user: AuthenticatedUser,
@@ -134,6 +145,7 @@ export class FlowController {
   }
 
   @Delete("issues/:issueId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.delete" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Soft-delete an issue" })
   async deleteIssue(
@@ -147,6 +159,7 @@ export class FlowController {
   // ---------------- Board ----------------
 
   @Get("projects/:projectId/board")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "Get the kanban board grouped by status" })
   async getBoard(
     @CurrentOrganization() organization: OrganizationContext,
@@ -158,6 +171,7 @@ export class FlowController {
   // ---------------- Sprints ----------------
 
   @Get("projects/:projectId/sprints")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "List sprints in a project" })
   async listSprints(
     @CurrentOrganization() organization: OrganizationContext,
@@ -167,6 +181,7 @@ export class FlowController {
   }
 
   @Post("projects/:projectId/sprints")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.update" })
   @ApiOperation({ summary: "Create a sprint" })
   async createSprint(
     @CurrentUser() user: AuthenticatedUser,
@@ -178,6 +193,7 @@ export class FlowController {
   }
 
   @Patch("projects/:projectId/sprints/:sprintId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.update" })
   @ApiOperation({ summary: "Update a sprint; activating it deactivates other sprints in the project" })
   async updateSprint(
     @CurrentUser() user: AuthenticatedUser,
@@ -192,6 +208,7 @@ export class FlowController {
   // ---------------- Board columns ----------------
 
   @Get("boards/:boardId/columns")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "List board columns in order" })
   async listColumns(
     @CurrentOrganization() organization: OrganizationContext,
@@ -201,6 +218,7 @@ export class FlowController {
   }
 
   @Post("boards/:boardId/columns")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.update" })
   @ApiOperation({ summary: "Add a column to a board" })
   async createColumn(
     @CurrentUser() user: AuthenticatedUser,
@@ -212,6 +230,7 @@ export class FlowController {
   }
 
   @Patch("boards/:boardId/columns/:columnId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.update" })
   @ApiOperation({ summary: "Update a board column (name, order, WIP limit)" })
   async updateColumn(
     @CurrentUser() user: AuthenticatedUser,
@@ -224,6 +243,7 @@ export class FlowController {
   }
 
   @Delete("boards/:boardId/columns/:columnId")
+  @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a board column" })
   async deleteColumn(

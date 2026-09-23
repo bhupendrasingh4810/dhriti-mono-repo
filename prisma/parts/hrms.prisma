@@ -1,3 +1,234 @@
+model HrmsEmployee {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  employeeNumber String
+  status         String
+  employmentType String?
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  attendanceRecords HrmsAttendanceRecord[]
+  leaveRequests HrmsLeaveRequest[]
+  performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
+  conductedPerformanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewReviewer")
+  payrollRecords HrmsPayrollRecord[]
+  trainingEnrollments HrmsTrainingEnrollment[]
+  assignedAssets HrmsAsset[] @relation("HrmsAssetAssignee")
+  benefitEnrollments HrmsBenefitEnrollment[]
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, employeeNumber])
+  @@index([organizationId, status])
+  @@map("hrms_employees")
+}
+
+model HrmsAttendanceRecord {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  legacyAttendanceId String?      @db.Uuid
+  employeeId     String           @db.Uuid
+  date           DateTime         @db.Date
+  checkIn        DateTime?
+  checkOut       DateTime?
+  status         AttendanceStatus @default(PRESENT)
+  workHours      Float?
+  notes          String?          @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@unique([organizationId, legacyAttendanceId])
+  @@index([organizationId, date])
+  @@index([employeeId, date])
+  @@map("hrms_attendance_records")
+}
+
+model HrmsLeaveRequest {
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @db.Uuid
+  legacyLeaveRequestId String? @db.Uuid
+  employeeId     String      @db.Uuid
+  leaveType      LeaveType
+  startDate      DateTime    @db.Date
+  endDate        DateTime    @db.Date
+  totalDays      Float
+  reason         String?     @db.Text
+  status         LeaveStatus @default(PENDING)
+  approvedByUserId String?   @db.Uuid
+  approvedAt     DateTime?
+  rejectedByUserId String?   @db.Uuid
+  rejectedAt     DateTime?
+  rejectionReason String?    @db.Text
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@unique([organizationId, legacyLeaveRequestId])
+  @@index([employeeId, startDate])
+  @@map("hrms_leave_requests")
+}
+
+model HrmsPerformanceReview {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  legacyPerformanceReviewId String? @db.Uuid
+  employeeId     String       @db.Uuid
+  reviewerEmployeeId String   @db.Uuid
+  reviewType     ReviewType
+  cycle          String
+  startDate      DateTime     @db.Date
+  dueDate        DateTime     @db.Date
+  completedAt    DateTime?
+  status         ReviewStatus @default(PENDING)
+  overallRating  Int?
+  comments       String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation("HrmsPerformanceReviewEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewer     HrmsEmployee  @relation("HrmsPerformanceReviewReviewer", fields: [reviewerEmployeeId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, status])
+  @@unique([organizationId, legacyPerformanceReviewId])
+  @@index([employeeId, dueDate])
+  @@index([reviewerEmployeeId, dueDate])
+  @@map("hrms_performance_reviews")
+}
+
+model HrmsPayrollRecord {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  legacyPayrollRecordId String? @db.Uuid
+  employeeId     String        @db.Uuid
+  period         String
+  periodStart    DateTime      @db.Date
+  periodEnd      DateTime      @db.Date
+  payDate        DateTime      @db.Date
+  grossSalary    Float
+  totalDeductions Float
+  netPay         Float
+  currency       String        @default("USD")
+  status         PayrollStatus @default(DRAFT)
+  approvedByUserId String?     @db.Uuid
+  approvedAt     DateTime?
+  paidAt         DateTime?
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, period])
+  @@unique([organizationId, legacyPayrollRecordId])
+  @@index([organizationId, status])
+  @@map("hrms_payroll_records")
+}
+
+model HrmsTraining {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  legacyTrainingId String?      @db.Uuid
+  title          String
+  description    String?        @db.Text
+  type           TrainingType
+  startDate      DateTime?
+  endDate        DateTime?
+  status         TrainingStatus @default(SCHEDULED)
+  maxParticipants Int?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  enrollments  HrmsTrainingEnrollment[]
+
+  @@index([organizationId, status])
+  @@unique([organizationId, legacyTrainingId])
+  @@map("hrms_trainings")
+}
+
+model HrmsTrainingEnrollment {
+  id             String                   @id @default(uuid()) @db.Uuid
+  organizationId String                   @db.Uuid
+  legacyTrainingEnrollmentId String?      @db.Uuid
+  trainingId     String                   @db.Uuid
+  employeeId     String                   @db.Uuid
+  status         TrainingEnrollmentStatus @default(ENROLLED)
+  enrolledAt     DateTime                 @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  training     HrmsTraining @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingId, employeeId])
+  @@unique([organizationId, legacyTrainingEnrollmentId])
+  @@index([organizationId, status])
+  @@map("hrms_training_enrollments")
+}
+
+model HrmsAsset {
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @db.Uuid
+  legacyAssetId  String?     @db.Uuid
+  name           String
+  type           AssetType
+  serialNumber   String?
+  status         AssetStatus @default(AVAILABLE)
+  assignedEmployeeId String? @db.Uuid
+  assignedAt     DateTime?
+  location       String?
+  notes          String?     @db.Text
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedEmployee HrmsEmployee? @relation("HrmsAssetAssignee", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, serialNumber])
+  @@unique([organizationId, legacyAssetId])
+  @@index([organizationId, status])
+  @@map("hrms_assets")
+}
+
+model HrmsBenefitEnrollment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  legacyHealthInsuranceId String? @db.Uuid
+  employeeId     String   @db.Uuid
+  provider       String
+  planName       String
+  policyNumber   String?
+  coverageStarts DateTime @db.Date
+  coverageEnds   DateTime? @db.Date
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@unique([organizationId, legacyHealthInsuranceId])
+  @@index([employeeId, isActive])
+  @@map("hrms_benefit_enrollments")
+}
+
 model AttendanceRecord {
   id              String   @id @default(uuid()) @db.Uuid
   userId          String   @db.Uuid

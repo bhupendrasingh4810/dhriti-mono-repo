@@ -19,6 +19,18 @@ export class UpdateMemberRoleDto {
   role!: UserRole;
 }
 
+export class UpdateMemberLifecycleDto {
+  @ApiProperty({ enum: ["ACTIVE", "SUSPENDED"] })
+  @IsEnum(["ACTIVE", "SUSPENDED"])
+  status!: "ACTIVE" | "SUSPENDED";
+}
+
+export class TransferOwnershipDto {
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
+  memberId!: string;
+}
+
 export class MemberParamDto {
   @ApiProperty({ format: "uuid" })
   @IsUUID()

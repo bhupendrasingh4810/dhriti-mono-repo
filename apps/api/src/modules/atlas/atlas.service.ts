@@ -198,7 +198,7 @@ export class AtlasService {
     }
     if (dto.parentId) {
       const parent = await this.getPageInSpace(organizationId, existing.spaceId, dto.parentId);
-      if (await this.isDescendant(pageId, parent.id)) {
+      if (await this.isDescendant(organizationId, pageId, parent.id)) {
         throw new AppError(ErrorCode.PAGE_CYCLE, "Cannot move a page under its own descendant", HttpStatus.BAD_REQUEST);
       }
     }
@@ -320,15 +320,15 @@ export class AtlasService {
   }
 
   /** True if `candidateId` is in the subtree rooted at `rootId`. */
-  private async isDescendant(rootId: string, candidateId: string): Promise<boolean> {
+  private async isDescendant(organizationId: string, rootId: string, candidateId: string): Promise<boolean> {
     let current: string | null = candidateId;
     let depth = 0;
     while (current && depth < 100) {
       if (current === rootId) {
         return true;
       }
-      const node: { parentId: string | null } | null = await this.prisma.atlasPage.findUnique({
-        where: { id: current },
+      const node: { parentId: string | null } | null = await this.prisma.atlasPage.findFirst({
+        where: { id: current, organizationId, deletedAt: null },
         select: { parentId: true },
       });
       current = node?.parentId ?? null;

@@ -54,6 +54,7 @@ export class AuthGuard implements CanActivate {
         message: "Missing access token",
       });
     }
+    this.assertCookieRequestOrigin(request);
 
     let payload: AccessTokenPayload;
     try {
@@ -94,5 +95,13 @@ export class AuthGuard implements CanActivate {
     }
 
     return request.cookies?.access_token ?? null;
+  }
+
+  private assertCookieRequestOrigin(request: Request): void {
+    if (request.headers.authorization || !request.cookies?.access_token || ["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+    const origin = request.headers.origin;
+    if (!origin || !this.config.corsOrigins.includes(origin)) {
+      throw new UnauthorizedException({ code: "UNAUTHORIZED", message: "Cookie-authenticated requests require a trusted origin" });
+    }
   }
 }

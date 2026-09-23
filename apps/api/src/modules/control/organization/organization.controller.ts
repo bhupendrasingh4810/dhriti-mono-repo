@@ -18,9 +18,9 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../../common/decorators/organization.decorator";
-import { OrgRoles } from "../../../common/decorators/org-roles.decorator";
+import { RequirePermission } from "../../../common/decorators/access.decorator";
+import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
-import { OrgRolesGuard } from "../../../common/guards/org-roles.guard";
 
 import { OrganizationAdminService, type OrgDashboard } from "./organization.service";
 import {
@@ -31,13 +31,13 @@ import {
 
 @ApiTags("control/organization")
 @ApiBearerAuth()
-@UseGuards(TenantGuard, OrgRolesGuard)
-@OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("control/organization")
 export class OrganizationAdminController {
   constructor(private readonly admin: OrganizationAdminService) {}
 
   @Get("dashboard")
+  @RequirePermission("organization.members.read")
   @ApiOperation({ summary: "Org dashboard: members, teams, products, storage, activity counts" })
   async dashboard(@CurrentOrganization() organization: OrganizationContext): Promise<OrgDashboard> {
     return this.admin.dashboard(organization.organizationId);
@@ -46,12 +46,14 @@ export class OrganizationAdminController {
   // ---------------- Settings ----------------
 
   @Get("settings")
+  @RequirePermission("organization.settings.manage")
   @ApiOperation({ summary: "Get organization settings" })
   async getSettings(@CurrentOrganization() organization: OrganizationContext) {
     return this.admin.getSettings(organization.organizationId);
   }
 
   @Patch("settings")
+  @RequirePermission("organization.settings.manage")
   @ApiOperation({ summary: "Update org profile/branding/security/retention settings" })
   async updateSettings(
     @CurrentUser() user: AuthenticatedUser,
@@ -64,12 +66,14 @@ export class OrganizationAdminController {
   // ---------------- Application access (entitlements) ----------------
 
   @Get("entitlements")
+  @RequirePermission("billing.subscription.read")
   @ApiOperation({ summary: "List which products are enabled for the org" })
   async listEntitlements(@CurrentOrganization() organization: OrganizationContext) {
     return this.admin.listEntitlements(organization.organizationId);
   }
 
   @Post("entitlements")
+  @RequirePermission("billing.subscription.manage")
   @ApiOperation({ summary: "Enable or disable a product for the org" })
   async setEntitlement(
     @CurrentUser() user: AuthenticatedUser,
@@ -82,12 +86,14 @@ export class OrganizationAdminController {
   // ---------------- Feature flags ----------------
 
   @Get("feature-flags")
+  @RequirePermission("organization.settings.manage")
   @ApiOperation({ summary: "List org feature flags" })
   async listFeatureFlags(@CurrentOrganization() organization: OrganizationContext) {
     return this.admin.listFeatureFlags(organization.organizationId);
   }
 
   @Post("feature-flags")
+  @RequirePermission("organization.settings.manage")
   @ApiOperation({ summary: "Upsert a feature flag for the org" })
   async upsertFeatureFlag(
     @CurrentUser() user: AuthenticatedUser,
@@ -100,6 +106,7 @@ export class OrganizationAdminController {
   // ---------------- Subscription ----------------
 
   @Get("subscription")
+  @RequirePermission("billing.subscription.read")
   @ApiOperation({ summary: "View the org's subscription (plan, seats, status)" })
   async getSubscription(@CurrentOrganization() organization: OrganizationContext) {
     return this.admin.getSubscription(organization.organizationId);
@@ -108,6 +115,7 @@ export class OrganizationAdminController {
   // ---------------- Audit export ----------------
 
   @Get("audit-logs/export")
+  @RequirePermission("organization.members.read")
   @ApiOperation({ summary: "Export org audit logs as CSV" })
   async exportAuditLogs(
     @CurrentOrganization() organization: OrganizationContext,

@@ -20,28 +20,29 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
-import { OrgRoles } from "../../common/decorators/org-roles.decorator";
+import { RequirePermission } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
-import { OrgRolesGuard } from "../../common/guards/org-roles.guard";
 
 import { WebhookService } from "./webhook.service";
 import { CreateWebhookDto, UpdateWebhookDto } from "./dto/webhook.dto";
 
 @ApiTags("webhooks")
 @ApiBearerAuth()
-@UseGuards(TenantGuard, OrgRolesGuard)
-@OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/webhooks")
 export class WebhookController {
   constructor(private readonly webhooks: WebhookService) {}
 
   @Get()
+  @RequirePermission("webhook.read")
   @ApiOperation({ summary: "List webhooks (secrets redacted) — OWNER/ADMIN" })
   async list(@CurrentOrganization() organization: OrganizationContext) {
     return this.webhooks.list(organization.organizationId);
   }
 
   @Post()
+  @RequirePermission("webhook.manage")
   @ApiOperation({ summary: "Create a webhook; returns the signing secret once" })
   async create(
     @CurrentUser() user: AuthenticatedUser,
@@ -52,6 +53,7 @@ export class WebhookController {
   }
 
   @Patch(":webhookId")
+  @RequirePermission("webhook.manage")
   @ApiOperation({ summary: "Update a webhook (url, events, active, description)" })
   async update(
     @CurrentUser() user: AuthenticatedUser,
@@ -63,6 +65,7 @@ export class WebhookController {
   }
 
   @Post(":webhookId/rotate-secret")
+  @RequirePermission("webhook.manage")
   @ApiOperation({ summary: "Rotate the webhook signing secret" })
   async rotateSecret(
     @CurrentUser() user: AuthenticatedUser,
@@ -74,6 +77,7 @@ export class WebhookController {
 
   @Delete(":webhookId")
   @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission("webhook.manage")
   @ApiOperation({ summary: "Soft-delete a webhook" })
   async delete(
     @CurrentUser() user: AuthenticatedUser,
@@ -84,6 +88,7 @@ export class WebhookController {
   }
 
   @Get(":webhookId/deliveries")
+  @RequirePermission("webhook.read")
   @ApiOperation({ summary: "List recent delivery attempts for a webhook" })
   async listDeliveries(
     @CurrentOrganization() organization: OrganizationContext,

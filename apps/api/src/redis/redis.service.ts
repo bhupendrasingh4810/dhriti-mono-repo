@@ -20,11 +20,13 @@ import { ApiConfigService } from "../config/config.service";
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private readonly client: Redis;
+  private readonly config: ApiConfigService;
 
   constructor(config: ApiConfigService) {
+    this.config = config;
     this.client = new Redis(config.redisUrl, {
       lazyConnect: true,
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
       enableOfflineQueue: false,
     });
 
@@ -81,7 +83,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     let cursor = "0";
     let deleted = 0;
     do {
-      const [nextCursor, keys] = await this.client.scan(cursor, "MATCH", pattern, "COUNT", 200);
+      const [nextCursor, keys] = await this.client.scan(cursor, "MATCH", pattern, "COUNT", this.config.redis.scanCount);
       cursor = nextCursor;
       if (keys.length > 0) {
         deleted += await this.client.del(...keys);

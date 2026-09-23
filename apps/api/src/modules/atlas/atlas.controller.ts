@@ -20,6 +20,8 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
+import { RequireAccess } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { AtlasService } from "./atlas.service";
@@ -28,7 +30,7 @@ import { CreateCommentDto, CreatePageDto, UpdatePageDto } from "./dto/page.dto";
 
 @ApiTags("atlas")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/atlas")
 export class AtlasController {
   constructor(private readonly atlas: AtlasService) {}
@@ -36,12 +38,14 @@ export class AtlasController {
   // ---------------- Spaces ----------------
 
   @Get("spaces")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.space.read" })
   @ApiOperation({ summary: "List spaces in the active organization" })
   async listSpaces(@CurrentOrganization() organization: OrganizationContext) {
     return this.atlas.listSpaces(organization.organizationId);
   }
 
   @Post("spaces")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.space.create" })
   @ApiOperation({ summary: "Create a space (unique uppercase key)" })
   async createSpace(
     @CurrentUser() user: AuthenticatedUser,
@@ -52,6 +56,7 @@ export class AtlasController {
   }
 
   @Patch("spaces/:spaceId")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.space.create" })
   @ApiOperation({ summary: "Update a space" })
   async updateSpace(
     @CurrentUser() user: AuthenticatedUser,
@@ -63,6 +68,7 @@ export class AtlasController {
   }
 
   @Delete("spaces/:spaceId")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.space.create" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Soft-delete a space and its pages" })
   async deleteSpace(
@@ -76,6 +82,7 @@ export class AtlasController {
   // ---------------- Pages ----------------
 
   @Get("spaces/:spaceId/pages")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.read" })
   @ApiOperation({ summary: "List pages in a space (ordered tree data)" })
   async listPages(
     @CurrentOrganization() organization: OrganizationContext,
@@ -85,6 +92,7 @@ export class AtlasController {
   }
 
   @Post("spaces/:spaceId/pages")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.create" })
   @ApiOperation({ summary: "Create a page (supports parentId for nesting)" })
   async createPage(
     @CurrentUser() user: AuthenticatedUser,
@@ -96,6 +104,7 @@ export class AtlasController {
   }
 
   @Get("pages/:pageId")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.read" })
   @ApiOperation({ summary: "Get a page" })
   async getPage(
     @CurrentOrganization() organization: OrganizationContext,
@@ -105,6 +114,7 @@ export class AtlasController {
   }
 
   @Patch("pages/:pageId")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.update" })
   @ApiOperation({ summary: "Update a page; content change bumps version" })
   async updatePage(
     @CurrentUser() user: AuthenticatedUser,
@@ -116,6 +126,7 @@ export class AtlasController {
   }
 
   @Delete("pages/:pageId")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Soft-delete a page and its subtree" })
   async deletePage(
@@ -129,6 +140,7 @@ export class AtlasController {
   // ---------------- Comments ----------------
 
   @Get("pages/:pageId/comments")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.read" })
   @ApiOperation({ summary: "List comments on a page" })
   async listComments(
     @CurrentOrganization() organization: OrganizationContext,
@@ -138,6 +150,7 @@ export class AtlasController {
   }
 
   @Post("pages/:pageId/comments")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.update" })
   @ApiOperation({ summary: "Add a comment to a page" })
   async addComment(
     @CurrentUser() user: AuthenticatedUser,
@@ -149,6 +162,7 @@ export class AtlasController {
   }
 
   @Patch("comments/:commentId/resolve")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.update" })
   @ApiOperation({ summary: "Mark a comment resolved or unresolved" })
   async resolveComment(
     @CurrentUser() user: AuthenticatedUser,
@@ -160,6 +174,7 @@ export class AtlasController {
   }
 
   @Delete("comments/:commentId")
+  @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a comment (author only)" })
   async deleteComment(

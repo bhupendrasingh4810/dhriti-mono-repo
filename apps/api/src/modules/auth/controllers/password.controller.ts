@@ -6,6 +6,7 @@ import {
     Ip,
     Post,
     Req,
+    UseGuards,
 } from "@nestjs/common";
 import {
     ApiBearerAuth,
@@ -15,6 +16,7 @@ import {
 import type { Request } from "express";
 
 import { Public } from "../../../common/decorators/public.decorator";
+import { PublicAuthRateLimitGuard } from "../../../common/guards/public-auth-rate-limit.guard";
 import {
     CurrentUser,
     type AuthenticatedUser,
@@ -35,6 +37,7 @@ export class PasswordController {
     ) { }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("forgot-password")
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: "Request a password reset email (always succeeds)" })
@@ -43,6 +46,7 @@ export class PasswordController {
     }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("reset-password")
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: "Reset password with the emailed token; revokes all sessions" })
@@ -51,7 +55,6 @@ export class PasswordController {
         @Ip() ipAddress: string,
         @Req() request: Request,
     ): Promise<void> {
-        console.log(dto, ipAddress, request);
         return this.passwordService.resetPassword(dto.token, dto.newPassword, ipAddress, request.get("user-agent") ?? "Unknown device");
     }
 

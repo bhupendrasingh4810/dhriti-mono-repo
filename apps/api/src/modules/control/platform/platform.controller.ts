@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -23,9 +24,11 @@ import {
   CreateProductDto,
   CreateTicketDto,
   UpdateProductDto,
+  CreatePlatformRoleDto,
   UpdateSubscriptionDto,
   UpdateTicketDto,
 } from "./dto/platform.dto";
+import { PlatformRoleService } from "../../authorization/platform-role.service";
 
 @ApiTags("control/platform")
 @ApiBearerAuth()
@@ -33,7 +36,54 @@ import {
 @PlatformRoles("SUPER_ADMIN", "SUPPORT", "BILLING", "SECURITY", "ENGINEERING")
 @Controller("control/platform")
 export class PlatformController {
-  constructor(private readonly platform: PlatformService) {}
+  constructor(
+    private readonly platform: PlatformService,
+    private readonly platformRoles: PlatformRoleService,
+  ) {}
+
+  // ---------------- Platform roles ----------------
+
+  @Get("roles")
+  @PlatformRoles("SUPER_ADMIN")
+  @ApiOperation({ summary: "List explicit platform roles and their permissions" })
+  listRoles() {
+    return this.platformRoles.list();
+  }
+
+  @Post("roles")
+  @PlatformRoles("SUPER_ADMIN")
+  @ApiOperation({ summary: "Create an explicit platform role" })
+  createRole(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePlatformRoleDto) {
+    return this.platformRoles.create(user.userId, dto);
+  }
+
+  @Put("roles/:roleId/permissions/:permissionId")
+  @PlatformRoles("SUPER_ADMIN")
+  @ApiOperation({ summary: "Attach a permission to a platform role" })
+  attachRolePermission(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("permissionId") permissionId: string): Promise<void> {
+    return this.platformRoles.attachPermission(roleId, permissionId, user.userId);
+  }
+
+  @Delete("roles/:roleId/permissions/:permissionId")
+  @PlatformRoles("SUPER_ADMIN")
+  @ApiOperation({ summary: "Remove a permission from a platform role" })
+  removeRolePermission(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("permissionId") permissionId: string): Promise<void> {
+    return this.platformRoles.removePermission(roleId, permissionId, user.userId);
+  }
+
+  @Post("roles/:roleId/users/:userId")
+  @PlatformRoles("SUPER_ADMIN")
+  @ApiOperation({ summary: "Assign a platform role to a user" })
+  assignRole(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("userId") userId: string) {
+    return this.platformRoles.assign(roleId, userId, user.userId);
+  }
+
+  @Patch("roles/:roleId/users/:userId/revoke")
+  @PlatformRoles("SUPER_ADMIN")
+  @ApiOperation({ summary: "Revoke a platform role from a user" })
+  revokeRole(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("userId") userId: string): Promise<void> {
+    return this.platformRoles.revoke(roleId, userId, user.userId);
+  }
 
   @Get("dashboard")
   @ApiOperation({ summary: "Platform dashboard: orgs, users, subscriptions, support" })

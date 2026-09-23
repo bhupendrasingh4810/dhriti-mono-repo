@@ -240,7 +240,9 @@ enum CadenceSessionType {
   CHECKIN
 }
 
-enum PlatformRole {
+// Legacy authorization enums are retained during the data migration. New
+// authorization is represented by PlatformRole and Permission models.
+enum LegacyPlatformRole {
   SUPER_ADMIN
   SUPPORT
   BILLING
@@ -248,6 +250,7 @@ enum PlatformRole {
   ENGINEERING
 }
 
+// Deprecated after backfill to Subscription.planId; retained for legacy API and data compatibility.
 enum SubscriptionPlan {
   FREE
   STARTER
@@ -255,11 +258,38 @@ enum SubscriptionPlan {
   ENTERPRISE
 }
 
+enum OrganizationPermissionScope {
+  ORGANIZATION
+  DEPARTMENT
+  TEAM
+  FLOW_PROJECT
+}
+
+enum EntitlementKind {
+  FEATURE
+  LIMIT
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+  CUSTOM
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
   PAST_DUE
   CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+enum BillingWebhookEventStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  DEAD_LETTER
 }
 
 enum SupportTicketStatus {
@@ -417,6 +447,13 @@ enum InvitationStatus {
   CANCELLED
 }
 
+enum OrganizationMemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
 enum NotificationType {
   MENTION
   ASSIGNMENT
@@ -441,6 +478,237 @@ enum AppExperience {
 enum LegalDocumentType {
   TERMS_OF_SERVICE
   PRIVACY_POLICY
+}
+
+model HrmsEmployee {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  employeeNumber String
+  status         String
+  employmentType String?
+  startDate      DateTime?
+  endDate        DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  attendanceRecords HrmsAttendanceRecord[]
+  leaveRequests HrmsLeaveRequest[]
+  performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
+  conductedPerformanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewReviewer")
+  payrollRecords HrmsPayrollRecord[]
+  trainingEnrollments HrmsTrainingEnrollment[]
+  assignedAssets HrmsAsset[] @relation("HrmsAssetAssignee")
+  benefitEnrollments HrmsBenefitEnrollment[]
+
+  @@unique([organizationId, userId])
+  @@unique([organizationId, employeeNumber])
+  @@index([organizationId, status])
+  @@map("hrms_employees")
+}
+
+model HrmsAttendanceRecord {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  legacyAttendanceId String?      @db.Uuid
+  employeeId     String           @db.Uuid
+  date           DateTime         @db.Date
+  checkIn        DateTime?
+  checkOut       DateTime?
+  status         AttendanceStatus @default(PRESENT)
+  workHours      Float?
+  notes          String?          @db.Text
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@unique([organizationId, legacyAttendanceId])
+  @@index([organizationId, date])
+  @@index([employeeId, date])
+  @@map("hrms_attendance_records")
+}
+
+model HrmsLeaveRequest {
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @db.Uuid
+  legacyLeaveRequestId String? @db.Uuid
+  employeeId     String      @db.Uuid
+  leaveType      LeaveType
+  startDate      DateTime    @db.Date
+  endDate        DateTime    @db.Date
+  totalDays      Float
+  reason         String?     @db.Text
+  status         LeaveStatus @default(PENDING)
+  approvedByUserId String?   @db.Uuid
+  approvedAt     DateTime?
+  rejectedByUserId String?   @db.Uuid
+  rejectedAt     DateTime?
+  rejectionReason String?    @db.Text
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@unique([organizationId, legacyLeaveRequestId])
+  @@index([employeeId, startDate])
+  @@map("hrms_leave_requests")
+}
+
+model HrmsPerformanceReview {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  legacyPerformanceReviewId String? @db.Uuid
+  employeeId     String       @db.Uuid
+  reviewerEmployeeId String   @db.Uuid
+  reviewType     ReviewType
+  cycle          String
+  startDate      DateTime     @db.Date
+  dueDate        DateTime     @db.Date
+  completedAt    DateTime?
+  status         ReviewStatus @default(PENDING)
+  overallRating  Int?
+  comments       String?      @db.Text
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation("HrmsPerformanceReviewEmployee", fields: [employeeId], references: [id], onDelete: Cascade)
+  reviewer     HrmsEmployee  @relation("HrmsPerformanceReviewReviewer", fields: [reviewerEmployeeId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, status])
+  @@unique([organizationId, legacyPerformanceReviewId])
+  @@index([employeeId, dueDate])
+  @@index([reviewerEmployeeId, dueDate])
+  @@map("hrms_performance_reviews")
+}
+
+model HrmsPayrollRecord {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  legacyPayrollRecordId String? @db.Uuid
+  employeeId     String        @db.Uuid
+  period         String
+  periodStart    DateTime      @db.Date
+  periodEnd      DateTime      @db.Date
+  payDate        DateTime      @db.Date
+  grossSalary    Float
+  totalDeductions Float
+  netPay         Float
+  currency       String        @default("USD")
+  status         PayrollStatus @default(DRAFT)
+  approvedByUserId String?     @db.Uuid
+  approvedAt     DateTime?
+  paidAt         DateTime?
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, period])
+  @@unique([organizationId, legacyPayrollRecordId])
+  @@index([organizationId, status])
+  @@map("hrms_payroll_records")
+}
+
+model HrmsTraining {
+  id             String         @id @default(uuid()) @db.Uuid
+  organizationId String         @db.Uuid
+  legacyTrainingId String?      @db.Uuid
+  title          String
+  description    String?        @db.Text
+  type           TrainingType
+  startDate      DateTime?
+  endDate        DateTime?
+  status         TrainingStatus @default(SCHEDULED)
+  maxParticipants Int?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  organization Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  enrollments  HrmsTrainingEnrollment[]
+
+  @@index([organizationId, status])
+  @@unique([organizationId, legacyTrainingId])
+  @@map("hrms_trainings")
+}
+
+model HrmsTrainingEnrollment {
+  id             String                   @id @default(uuid()) @db.Uuid
+  organizationId String                   @db.Uuid
+  legacyTrainingEnrollmentId String?      @db.Uuid
+  trainingId     String                   @db.Uuid
+  employeeId     String                   @db.Uuid
+  status         TrainingEnrollmentStatus @default(ENROLLED)
+  enrolledAt     DateTime                 @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  training     HrmsTraining @relation(fields: [trainingId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([trainingId, employeeId])
+  @@unique([organizationId, legacyTrainingEnrollmentId])
+  @@index([organizationId, status])
+  @@map("hrms_training_enrollments")
+}
+
+model HrmsAsset {
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @db.Uuid
+  legacyAssetId  String?     @db.Uuid
+  name           String
+  type           AssetType
+  serialNumber   String?
+  status         AssetStatus @default(AVAILABLE)
+  assignedEmployeeId String? @db.Uuid
+  assignedAt     DateTime?
+  location       String?
+  notes          String?     @db.Text
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  assignedEmployee HrmsEmployee? @relation("HrmsAssetAssignee", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, serialNumber])
+  @@unique([organizationId, legacyAssetId])
+  @@index([organizationId, status])
+  @@map("hrms_assets")
+}
+
+model HrmsBenefitEnrollment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  legacyHealthInsuranceId String? @db.Uuid
+  employeeId     String   @db.Uuid
+  provider       String
+  planName       String
+  policyNumber   String?
+  coverageStarts DateTime @db.Date
+  coverageEnds   DateTime? @db.Date
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, isActive])
+  @@unique([organizationId, legacyHealthInsuranceId])
+  @@index([employeeId, isActive])
+  @@map("hrms_benefit_enrollments")
 }
 
 model AttendanceRecord {
@@ -803,6 +1071,19 @@ model Organization {
 
   members  OrganizationMember[]
   teams    Team[]
+  organizationTeams OrganizationTeam[]
+  departments OrganizationDepartment[]
+  permissionGroups OrganizationPermissionGroup[]
+  permissionGroupAssignments OrganizationPermissionGroupAssignment[]
+  hrmsEmployees HrmsEmployee[]
+  hrmsAttendanceRecords HrmsAttendanceRecord[]
+  hrmsLeaveRequests HrmsLeaveRequest[]
+  hrmsPerformanceReviews HrmsPerformanceReview[]
+  hrmsPayrollRecords HrmsPayrollRecord[]
+  hrmsTrainings HrmsTraining[]
+  hrmsTrainingEnrollments HrmsTrainingEnrollment[]
+  hrmsAssets HrmsAsset[]
+  hrmsBenefitEnrollments HrmsBenefitEnrollment[]
   auditLogs AuditLog[]
   files     StoredFile[]
   channels  Channel[]
@@ -819,6 +1100,9 @@ model Organization {
   cadenceSessions CadenceSession[]
   webhooks      Webhook[]
   subscription  Subscription?
+  subscriptionHistory SubscriptionHistory[]
+  billingWebhookEvents BillingWebhookEvent[]
+  organizationEntitlements OrganizationEntitlement[]
   entitlements  ProductEntitlement[]
   featureFlags  FeatureFlag[]
   supportTickets SupportTicket[]
@@ -840,14 +1124,146 @@ model OrganizationMember {
   id             String           @id @default(uuid()) @db.Uuid
   organizationId String           @db.Uuid
   userId         String           @db.Uuid
+  status         OrganizationMemberStatus @default(ACTIVE)
+  isOwner        Boolean          @default(false)
   createdAt      DateTime         @default(now())
+  joinedAt       DateTime         @default(now())
+  suspendedAt    DateTime?
+  removedAt      DateTime?
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
+  @@index([organizationId, status, isOwner])
   @@index([userId])
   @@map("organization_members")
+}
+
+model OrganizationTeam {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      OrganizationTeamMember[]
+  assignments  OrganizationPermissionGroupAssignment[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("organization_teams")
+}
+
+model OrganizationTeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  team OrganizationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("organization_team_members")
+}
+
+model OrganizationDepartment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  parentId       String?  @db.Uuid
+  name           String
+  code           String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       OrganizationDepartment?  @relation("OrganizationDepartmentTree", fields: [parentId], references: [id])
+  children     OrganizationDepartment[] @relation("OrganizationDepartmentTree")
+  members      OrganizationDepartmentMember[]
+  assignments  OrganizationPermissionGroupAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, parentId])
+  @@map("organization_departments")
+}
+
+model OrganizationDepartmentMember {
+  departmentId String   @db.Uuid
+  userId       String   @db.Uuid
+  isPrimary    Boolean  @default(false)
+  joinedAt     DateTime @default(now())
+
+  department OrganizationDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([departmentId, userId])
+  @@index([userId])
+  @@map("organization_department_members")
+}
+
+model OrganizationPermissionGroup {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization                                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  OrganizationPermissionGroupPermission[]
+  assignments  OrganizationPermissionGroupAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("organization_permission_groups")
+}
+
+model OrganizationPermissionGroupPermission {
+  permissionGroupId String @db.Uuid
+  permissionId      String @db.Uuid
+
+  permissionGroup OrganizationPermissionGroup @relation(fields: [permissionGroupId], references: [id], onDelete: Cascade)
+  permission      Permission                  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([permissionGroupId, permissionId])
+  @@map("organization_permission_group_permissions")
+}
+
+model OrganizationPermissionGroupAssignment {
+  id                String                      @id @default(uuid()) @db.Uuid
+  organizationId    String                      @db.Uuid
+  permissionGroupId String                      @db.Uuid
+  userId            String                      @db.Uuid
+  scopeType         OrganizationPermissionScope @default(ORGANIZATION)
+  departmentId      String?                     @db.Uuid
+  teamId            String?                     @db.Uuid
+  flowProjectId     String?                     @db.Uuid
+  assignedByUserId  String?                     @db.Uuid
+  createdAt         DateTime                    @default(now())
+  revokedAt         DateTime?
+
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissionGroup OrganizationPermissionGroup @relation(fields: [permissionGroupId], references: [id], onDelete: Cascade)
+  user            User                        @relation("OrganizationPermissionGroupAssignee", fields: [userId], references: [id], onDelete: Cascade)
+  department      OrganizationDepartment?     @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  team            OrganizationTeam?           @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, userId, revokedAt])
+  @@index([permissionGroupId, userId])
+  @@map("organization_permission_group_assignments")
 }
 
 // ==================== Core User Model ====================
@@ -885,6 +1301,11 @@ model User {
   notificationPrefs     NotificationPreference[]
   sentInvitations       Invitation[]
   groupMemberships      GroupMember[]
+  organizationTeamMemberships OrganizationTeamMember[]
+  organizationDepartmentMemberships OrganizationDepartmentMember[]
+  organizationPermissionAssignments OrganizationPermissionGroupAssignment[] @relation("OrganizationPermissionGroupAssignee")
+  platformRoleAssignments PlatformUserRoleAssignment[]
+  hrmsEmployees HrmsEmployee[]
   
   // Extensions
   auth                  UserAuth?
@@ -944,6 +1365,7 @@ model UserAuth {
   // Security
   mfaEnabled            Boolean     @default(false)
   mfaSecret             String?
+  mfaSecretEncrypted    String?
   mfaBackupCodesUsed    Int         @default(0)
   failedLoginAttempts   Int         @default(0)
   lockedUntil           DateTime?
@@ -960,7 +1382,7 @@ model UserAuth {
   sourceMetadata        Json?       @db.JsonB
   externalId            String?     @unique @map("external_id")
   
-  platformRole        PlatformRole?
+  platformRole        LegacyPlatformRole?
 
   // Relation
   user                  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1353,20 +1775,223 @@ model Product {
   @@map("products")
 }
 
+model Permission {
+  id           String   @id @default(uuid()) @db.Uuid
+  key          String   @unique
+  resource     String
+  action       String
+  description  String?
+  productKey   String?
+  isAssignable Boolean  @default(true)
+  isSystemOnly Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  organizationGroupPermissions OrganizationPermissionGroupPermission[]
+  platformRolePermissions       PlatformRolePermission[]
+
+  @@index([productKey])
+  @@map("permissions")
+}
+
+model PlatformRole {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  isSystem    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  permissions PlatformRolePermission[]
+  assignments PlatformUserRoleAssignment[]
+
+  @@map("platform_roles")
+}
+
+model PlatformRolePermission {
+  platformRoleId String @db.Uuid
+  permissionId   String @db.Uuid
+
+  platformRole PlatformRole @relation(fields: [platformRoleId], references: [id], onDelete: Cascade)
+  permission   Permission   @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([platformRoleId, permissionId])
+  @@map("platform_role_permissions")
+}
+
+model PlatformUserRoleAssignment {
+  userId         String   @db.Uuid
+  platformRoleId String   @db.Uuid
+  assignedById   String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  revokedAt      DateTime?
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platformRole PlatformRole @relation(fields: [platformRoleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, platformRoleId])
+  @@index([userId, revokedAt])
+  @@map("platform_user_role_assignments")
+}
+
+model Plan {
+  id          String   @id @default(uuid()) @db.Uuid
+  key         String   @unique
+  name        String
+  description String?
+  isPublic    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  prices       PlanPrice[]
+  entitlements PlanEntitlement[]
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model PlanPrice {
+  id              String          @id @default(uuid()) @db.Uuid
+  planId          String          @db.Uuid
+  currency        String
+  interval        BillingInterval
+  amountMinor     Int
+  provider        String?
+  providerPriceId String?
+  isActive        Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, currency, interval])
+  @@map("plan_prices")
+}
+
+model Entitlement {
+  id          String          @id @default(uuid()) @db.Uuid
+  key         String          @unique
+  name        String
+  description String?
+  kind        EntitlementKind
+  productKey  String?
+  unit        String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  planEntitlements PlanEntitlement[]
+  overrides        OrganizationEntitlement[]
+
+  @@index([productKey])
+  @@map("entitlements")
+}
+
+model PlanEntitlement {
+  planId        String  @db.Uuid
+  entitlementId String  @db.Uuid
+  enabled       Boolean @default(false)
+  value         Int?
+
+  plan        Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  entitlement Entitlement @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+
+  @@id([planId, entitlementId])
+  @@map("plan_entitlements")
+}
+
+model OrganizationEntitlement {
+  organizationId String   @db.Uuid
+  entitlementId  String   @db.Uuid
+  enabled        Boolean?
+  value          Int?
+  reason         String?
+  expiresAt      DateTime?
+  createdById    String?  @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entitlement  Entitlement  @relation(fields: [entitlementId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, entitlementId])
+  @@index([organizationId, expiresAt])
+  @@map("organization_entitlements")
+}
+
 model Subscription {
   id             String             @id @default(uuid()) @db.Uuid
   organizationId String             @unique @db.Uuid
-  plan           SubscriptionPlan   @default(FREE)
+  plan           SubscriptionPlan @default(FREE)
+  planId         String?            @db.Uuid
   status         SubscriptionStatus @default(TRIALING)
   seats          Int                @default(5)
+  currentPeriodStart DateTime?
+  provider       String?
+  providerCustomerId String?
+  providerSubscriptionId String?
   currentPeriodEnd DateTime?
+  trialEndsAt    DateTime?
+  gracePeriodEndsAt DateTime?
   cancelAtPeriodEnd Boolean         @default(false)
+  cancelledAt     DateTime?
+  suspendedAt     DateTime?
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planRecord Plan? @relation(fields: [planId], references: [id], onDelete: Restrict)
+  history SubscriptionHistory[]
 
+  @@index([planId, status])
   @@map("subscriptions")
+}
+
+model SubscriptionHistory {
+  id             String             @id @default(uuid()) @db.Uuid
+  organizationId String             @db.Uuid
+  subscriptionId String             @db.Uuid
+  previousPlanId String?            @db.Uuid
+  planId         String?            @db.Uuid
+  previousStatus SubscriptionStatus?
+  status         SubscriptionStatus
+  reason         String?
+  actorUserId    String?            @db.Uuid
+  providerEventId String?
+  createdAt      DateTime           @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Restrict)
+
+  @@unique([providerEventId])
+  @@index([organizationId, createdAt])
+  @@map("subscription_history")
+}
+
+model BillingWebhookEvent {
+  id              String                    @id @default(uuid()) @db.Uuid
+  provider        String
+  providerEventId String
+  organizationId  String?                   @db.Uuid
+  providerCreatedAt DateTime
+  status          BillingWebhookEventStatus @default(PROCESSING)
+  payloadHash     String
+  eventData       Json
+  attemptCount    Int                       @default(1)
+  processingStartedAt DateTime?
+  nextRetryAt     DateTime?
+  processedAt     DateTime?
+  failedAt        DateTime?
+  deadLetteredAt  DateTime?
+  errorCode       String?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerEventId])
+  @@index([organizationId, status])
+  @@index([status, nextRetryAt])
+  @@map("billing_webhook_events")
 }
 
 model ProductEntitlement {
@@ -1540,7 +2165,8 @@ model Webhook {
   id             String    @id @default(uuid()) @db.Uuid
   organizationId String    @db.Uuid
   url            String
-  secret         String
+  secret         String?
+  secretEncrypted String?
   events         String[]
   isActive       Boolean   @default(true)
   description    String?

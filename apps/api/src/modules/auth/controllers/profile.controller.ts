@@ -1,8 +1,12 @@
 import {
     Body,
+    CallHandler,
     Controller,
+    ExecutionContext,
     Get,
     HttpStatus,
+    Injectable,
+    NestInterceptor,
     Patch,
     Post,
     UploadedFile,
@@ -21,6 +25,7 @@ import {
 } from "../../../common/decorators/current-user.decorator";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
+import { ApiConfigService } from "../../../config/config.service";
 
 import { ProfileService } from "../services/profile.service";
 import { UpdateProfileDto, type UserProfileResponse } from "../dto/profile.dto";
@@ -32,13 +37,25 @@ interface UploadedProfilePhoto {
 }
 
 const PROFILE_PHOTO_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
-const MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024;
+@Injectable()
+class ProfilePhotoUploadInterceptor implements NestInterceptor {
+    private readonly delegate: NestInterceptor;
+
+    constructor(config: ApiConfigService) {
+        this.delegate = new (FileInterceptor("file", { limits: { files: 1, fileSize: config.profilePhotoMaxSizeBytes } }))();
+    }
+
+    intercept(context: ExecutionContext, next: CallHandler) {
+        return this.delegate.intercept(context, next);
+    }
+}
 
 @ApiTags("auth")
 @Controller("auth")
 export class ProfileController {
     constructor(
         private readonly profileService: ProfileService,
+        private readonly config: ApiConfigService,
     ) { }
 
     @Get("me")
@@ -62,13 +79,16 @@ export class ProfileController {
     @ApiBearerAuth()
     @ApiOperation({ summary: "Upload a profile photo" })
     @ApiConsumes("multipart/form-data")
-    @UseInterceptors(FileInterceptor("file", { limits: { files: 1, fileSize: MAX_PROFILE_PHOTO_BYTES } }))
+    @UseInterceptors(ProfilePhotoUploadInterceptor)
     async uploadAvatar(
         @CurrentUser() user: AuthenticatedUser,
         @UploadedFile() file: UploadedProfilePhoto | undefined,
     ): Promise<UserProfileResponse> {
         if (!file || file.size === 0) {
             throw new AppError(ErrorCode.FILE_EMPTY, "No profile photo provided in the \"file\" field", HttpStatus.BAD_REQUEST);
+        }
+        if (file.size > this.config.profilePhotoMaxSizeBytes) {
+            throw new AppError(ErrorCode.FILE_TOO_LARGE, "Profile photo exceeds the configured size limit", HttpStatus.PAYLOAD_TOO_LARGE);
         }
         if (!PROFILE_PHOTO_CONTENT_TYPES.has(file.mimetype)) {
             throw new AppError(ErrorCode.FILE_TYPE_NOT_ALLOWED, "Profile photo must be a JPEG, PNG, WebP, or GIF image", HttpStatus.UNSUPPORTED_MEDIA_TYPE);

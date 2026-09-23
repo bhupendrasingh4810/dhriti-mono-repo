@@ -6,6 +6,7 @@ import {
     Ip,
     Post,
     Req,
+    UseGuards,
 } from "@nestjs/common";
 import {
     ApiBearerAuth,
@@ -16,6 +17,7 @@ import {
 import type { Request } from "express";
 
 import { Public } from "../../../common/decorators/public.decorator";
+import { PublicAuthRateLimitGuard } from "../../../common/guards/public-auth-rate-limit.guard";
 import {
     CurrentUser,
     type AuthenticatedUser,
@@ -40,6 +42,7 @@ export class LoginController {
 
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("login")
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: "Login with email and password" })
@@ -56,6 +59,7 @@ export class LoginController {
     }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("mfa/verify")
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: "Complete MFA login with a TOTP code" })
@@ -69,6 +73,7 @@ export class LoginController {
     }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("mfa/recovery")
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: "Complete MFA login with a one-time recovery code" })
@@ -81,6 +86,7 @@ export class LoginController {
     }
 
     @Public()
+    @UseGuards(PublicAuthRateLimitGuard)
     @Post("refresh")
     @HttpCode(HttpStatus.OK)
     @ApiOperation({ summary: "Rotate the refresh token and issue a new access token" })

@@ -81,10 +81,13 @@ function makePrismaMock() {
       create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     organizationMember: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
+  prisma.$transaction.mockImplementation(async (callback: (transaction: typeof prisma) => unknown) => callback(prisma));
+  return prisma;
 }
 
 type PrismaMock = ReturnType<typeof makePrismaMock>;
@@ -96,6 +99,7 @@ function makeSut(prisma: PrismaMock) {
     lockoutDurationMinutes: 15,
     jwtAccessTtlSeconds: 900,
     jwtMfaTtlSeconds: 300,
+    emailVerificationTokenTtlSeconds: 1200,
     webAppUrl: "http://localhost:3000",
   };
   const tokens = {
@@ -159,7 +163,7 @@ describe("AuthService.register", () => {
       isTermsAccepted: true,
     });
 
-    expect(result).toEqual({ userId: "user-1", email: "jane@acme.com", token: "opaque-token" });
+    expect(result).toEqual({ email: "jane@acme.com" });
     expect(prisma.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -351,122 +355,6 @@ describe("AuthService MFA completion", () => {
   });
 });
 
-describe("AuthService password flows", () => {
-  it("forgotPassword creates a reset token and emails it", async () => {
-    const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(makeUser());
-    prisma.verificationToken.create.mockResolvedValue({});
-    const { service, emailSender } = makeSut(prisma);
-
-    await service.forgotPassword("Jane@Acme.com");
-
-    expect(prisma.verificationToken.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ type: "PASSWORD_RESET" }),
-      }),
-    );
-    expect(emailSender.sendPasswordResetEmail).toHaveBeenCalledWith(
-      "jane@acme.com",
-      "Jane Doe",
-      expect.stringContaining("http://localhost:3000/reset?token="),
-    );
-  });
-
-  it("forgotPassword succeeds for unknown emails without sending a reset email", async () => {
-    const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(null);
-    const { service, emailSender } = makeSut(prisma);
-
-    await expect(service.forgotPassword("ghost@acme.com")).resolves.toBeUndefined();
-    expect(prisma.verificationToken.create).not.toHaveBeenCalled();
-    expect(emailSender.sendPasswordResetEmail).not.toHaveBeenCalled();
-  });
-
-  it("resetPassword updates the hash, unlocks, and revokes sessions", async () => {
-    const prisma = makePrismaMock();
-    prisma.verificationToken.findUnique.mockResolvedValue({
-      id: "tok-1",
-      userId: "user-1",
-      type: "PASSWORD_RESET",
-      usedAt: null,
-      expiresAt: new Date(Date.now() + 60_000),
-    });
-    prisma.verificationToken.update.mockResolvedValue({
-      userId: "user-1",
-      user: { email: "jane@acme.com", name: "Jane Doe" },
-    });
-    prisma.user.update.mockResolvedValue(makeUser());
-    const { service, sessions, emailSender } = makeSut(prisma);
-
-    await service.resetPassword("raw-token", "N3wSup3rSecure!", "203.0.113.42", "Test browser");
-
-    expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        update: expect.objectContaining({
-          passwordHash: "hashed:N3wSup3rSecure!",
-          failedLoginAttempts: 0,
-          lockedUntil: null,
-        }),
-      }),
-    );
-    expect(emailSender.sendResetPasswordConfirmationEmail).toHaveBeenCalledWith(
-      "jane@acme.com",
-      "Jane Doe",
-      expect.any(String),
-      expect.any(String),
-      "203.0.113.42",
-      "Test browser",
-    );
-    expect(sessions.revokeAllUserSessions).toHaveBeenCalledWith("user-1");
-  });
-
-  it("resetPassword rejects expired tokens", async () => {
-    const prisma = makePrismaMock();
-    prisma.verificationToken.findUnique.mockResolvedValue({
-      id: "tok-1",
-      userId: "user-1",
-      type: "PASSWORD_RESET",
-      usedAt: null,
-      expiresAt: new Date(Date.now() - 1000),
-    });
-    const { service } = makeSut(prisma);
-
-    await expect(service.resetPassword("raw-token", "N3wSup3rSecure!")).rejects.toMatchObject({
-      code: ErrorCode.TOKEN_EXPIRED,
-    });
-  });
-
-  it("changePassword verifies the current password and revokes other sessions", async () => {
-    const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(makeUser());
-    prisma.user.update.mockResolvedValue(makeUser());
-    const { service, sessions } = makeSut(prisma);
-
-    await service.changePassword(
-      { userId: "user-1", sessionId: "session-1", organizationId: null, email: "jane@acme.com" },
-      "Sup3rSecure!",
-      "N3wSup3rSecure!",
-    );
-
-    expect(sessions.revokeAllUserSessions).toHaveBeenCalledWith("user-1", "session-1");
-  });
-
-  it("changePassword rejects a wrong current password", async () => {
-    const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(makeUser());
-    (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
-    const { service } = makeSut(prisma);
-
-    await expect(
-      service.changePassword(
-        { userId: "user-1", sessionId: "session-1", organizationId: null, email: "jane@acme.com" },
-        "wr0ng!",
-        "N3wSup3rSecure!",
-      ),
-    ).rejects.toMatchObject({ code: ErrorCode.PASSWORD_INCORRECT });
-  });
-});
-
 describe("AuthService email verification", () => {
   it("verifyEmail marks the user verified and active", async () => {
     const prisma = makePrismaMock();
@@ -479,7 +367,10 @@ describe("AuthService email verification", () => {
       usedAt: null,
       expiresAt: new Date(Date.now() + 60_000),
     });
-    prisma.verificationToken.update.mockResolvedValue({ userId: "user-1" });
+    prisma.verificationToken.update.mockResolvedValue({
+      userId: "user-1",
+      user: { email: "jane@acme.com", name: "Jane Doe" },
+    });
     prisma.user.update.mockResolvedValue(makeUser());
     prisma.user.findUnique.mockResolvedValue(makeUser());
     const { service, emailSender } = makeSut(prisma);

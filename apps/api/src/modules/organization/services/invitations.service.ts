@@ -13,6 +13,7 @@ import { ApiConfigService } from "../../../config/config.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
+import { EntitlementService } from "../../authorization/entitlement.service";
 import { AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
 import { OrganizationContext } from "../../../common/decorators/organization.decorator";
 
@@ -27,6 +28,7 @@ export class InvitationsService {
         private readonly audit: AuditService,
         private readonly email: EmailService,
         private readonly config: ApiConfigService,
+        private readonly entitlements: EntitlementService,
     ) { }
 
     // ---------------- Invitations ----------------
@@ -47,7 +49,7 @@ export class InvitationsService {
         organization: OrganizationContext,
         user: AuthenticatedUser,
         email: string,
-    ): Promise<{ invitation: Invitation; token: string } | null> {
+    ): Promise<Invitation | null> {
         const [result] = await this.createInvitations(organization, user, [email]);
         return result ?? null;
     }
@@ -56,8 +58,7 @@ export class InvitationsService {
         organization: OrganizationContext,
         user: AuthenticatedUser,
         emails: string[],
-    ): Promise<{ invitation: Invitation; token: string }[]> {
-        const results: { invitation: Invitation; token: string }[] = [];
+    ): Promise<Invitation[]> {
         return this.createInvitations(organization, user, emails);
     }
 
@@ -65,7 +66,7 @@ export class InvitationsService {
         organization: OrganizationContext,
         user: AuthenticatedUser,
         emails: string[],
-    ): Promise<{ invitation: Invitation; token: string }[]> {
+    ): Promise<Invitation[]> {
         const normalizedEmails = [...new Set(
             emails.map((email) => email.trim().toLowerCase()).filter((email) => email.length > 0),
         )];
@@ -80,7 +81,7 @@ export class InvitationsService {
                     email: true,
                     name: true,
                     memberships: {
-                        where: { organizationId: organization.organizationId },
+                        where: { organizationId: organization.organizationId, deletedAt: null },
                         select: { id: true },
                     },
                 },
@@ -110,7 +111,7 @@ export class InvitationsService {
         );
         const expiryDays = 7;
         const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000);
-        const results: { invitation: Invitation; token: string }[] = [];
+        const results: Invitation[] = [];
 
         for (const email of eligibleEmails) {
             const token = randomBytes(32).toString("base64url");
@@ -143,7 +144,7 @@ export class InvitationsService {
                 resourceId: invitation.id,
                 metadata: { email },
             });
-            results.push({ invitation, token });
+            results.push(invitation);
         }
 
         return results;
@@ -154,9 +155,15 @@ export class InvitationsService {
             where: { tokenHash: createHash("sha256").update(token).digest("hex") },
         });
 
-        if (!invitation || invitation.status !== "PENDING") {
+        if (!invitation) {
             throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation is invalid or already used", HttpStatus.BAD_REQUEST);
         }
+        if (invitation.status === "ACCEPTED") {
+            const existing = await this.prisma.organizationMember.findFirst({ where: { organizationId: invitation.organizationId, userId, status: "ACTIVE", deletedAt: null }, select: { id: true } });
+            if (existing) return;
+            throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation has already been accepted", HttpStatus.BAD_REQUEST);
+        }
+        if (invitation.status !== "PENDING") throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation is invalid or already used", HttpStatus.BAD_REQUEST);
         if (invitation.expiresAt <= new Date()) {
             await this.prisma.invitation.update({ where: { id: invitation.id }, data: { status: "EXPIRED" } });
             throw new AppError(ErrorCode.INVITATION_EXPIRED, "Invitation has expired", HttpStatus.BAD_REQUEST);
@@ -167,17 +174,32 @@ export class InvitationsService {
             throw new AppError(ErrorCode.FORBIDDEN, "This invitation was sent to a different email", HttpStatus.FORBIDDEN);
         }
 
-        await this.prisma.$transaction([
-            this.prisma.invitation.update({
-                where: { id: invitation.id },
-                data: { status: "ACCEPTED", acceptedAt: new Date() },
-            }),
-            this.prisma.organizationMember.upsert({
+        const membership = await this.prisma.organizationMember.findFirst({
+            where: { organizationId: invitation.organizationId, userId, deletedAt: null },
+            select: { id: true },
+        });
+        if (!membership) {
+            const memberCount = await this.prisma.organizationMember.count({
+                where: { organizationId: invitation.organizationId, deletedAt: null },
+            });
+            await this.entitlements.assertWithinLimit(invitation.organizationId, "max_users", memberCount + 1);
+        }
+
+        const acceptedAt = new Date();
+        await this.prisma.$transaction(async (transaction) => {
+            const claim = await transaction.invitation.updateMany({
+                where: { id: invitation.id, status: "PENDING", expiresAt: { gt: acceptedAt } },
+                data: { status: "ACCEPTED", acceptedAt },
+            });
+            if (claim.count !== 1) {
+                throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation is invalid or already used", HttpStatus.BAD_REQUEST);
+            }
+            await transaction.organizationMember.upsert({
                 where: { organizationId_userId: { organizationId: invitation.organizationId, userId } },
-                create: { organizationId: invitation.organizationId, userId },
-                update: {},
-            }),
-        ]);
+                create: { organizationId: invitation.organizationId, userId, status: "ACTIVE", joinedAt: new Date() },
+                update: { status: "ACTIVE", joinedAt: new Date(), suspendedAt: null, removedAt: null, deletedAt: null },
+            });
+        });
 
         await this.audit.record({
             action: "iam.invitation.accepted",

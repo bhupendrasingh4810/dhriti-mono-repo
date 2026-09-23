@@ -19,12 +19,27 @@ export const envSchema = z
     JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
     JWT_MFA_SECRET: z.string().min(32),
     JWT_MFA_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+    SECRETS_ENCRYPTION_KEY: z.string().optional(),
 
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
     BCRYPT_ROUNDS: z.coerce.number().int().min(12).default(12),
 
     LOCKOUT_THRESHOLD: z.coerce.number().int().positive().default(10),
     LOCKOUT_DURATION_MINUTES: z.coerce.number().int().positive().default(15),
+    TRUST_PROXY: z.enum(["true", "false"]).transform((value) => value === "true").default("false"),
+    PUBLIC_AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+    PUBLIC_AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(20),
+    EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(1200),
+    PASSWORD_RESET_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+    MFA_PENDING_SECRET_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+    MFA_RECOVERY_CODE_COUNT: z.coerce.number().int().min(1).max(100).default(10),
+    PROFILE_PHOTO_MAX_SIZE_MB: z.coerce.number().int().positive().default(2),
+    REDIS_MAX_RETRIES_PER_REQUEST: z.coerce.number().int().min(0).default(3),
+    REDIS_SCAN_COUNT: z.coerce.number().int().positive().default(200),
+    ENTITLEMENT_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
+    WEBHOOK_DELIVERY_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(10),
+    WEBHOOK_DELIVERY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),
+    WEBHOOK_DELIVERY_RETRY_BASE_DELAY_SECONDS: z.coerce.number().int().positive().default(1),
 
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -49,6 +64,19 @@ export const envSchema = z
     BREVO_API_KEY: z.string().optional(),
     BREVO_SENDER_EMAIL: z.string().email().optional(),
     BREVO_SENDER_NAME: z.string().min(1).optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().min(32).optional(),
+    BILLING_WEBHOOK_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
+    BILLING_WEBHOOK_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(120),
+    BILLING_WEBHOOK_SIGNATURE_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
+    BILLING_WEBHOOK_MAX_RETRY_ATTEMPTS: z.coerce.number().int().positive().default(8),
+    BILLING_WEBHOOK_PROCESSING_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(600),
+    BILLING_WEBHOOK_RETRY_BASE_DELAY_SECONDS: z.coerce.number().int().positive().default(60),
+    BILLING_WEBHOOK_RETRY_MAX_DELAY_SECONDS: z.coerce.number().int().positive().default(3600),
+    BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
+    BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS: z.coerce.number().int().positive().default(55),
+    BILLING_IDEMPOTENCY_LOCK_TTL_SECONDS: z.coerce.number().int().positive().default(60),
+    BILLING_IDEMPOTENCY_RESULT_TTL_SECONDS: z.coerce.number().int().positive().default(86400),
+    BILLING_WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().max(1000).default(100),
   })
   .superRefine((env, ctx) => {
     const providers: Array<[string, Array<string | undefined>]> = [
@@ -71,6 +99,16 @@ export const envSchema = z
         code: z.ZodIssueCode.custom,
         message: "BREVO_API_KEY requires BREVO_SENDER_EMAIL and BREVO_SENDER_NAME",
       });
+    }
+    if (env.NODE_ENV === "production" && (!env.SECRETS_ENCRYPTION_KEY || Buffer.from(env.SECRETS_ENCRYPTION_KEY, "base64").length !== 32)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "SECRETS_ENCRYPTION_KEY must be a base64-encoded 32-byte key in production" });
+    }
+
+    if (env.BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS >= env.BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS must be less than BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS" });
+    }
+    if (env.BILLING_WEBHOOK_RETRY_BASE_DELAY_SECONDS > env.BILLING_WEBHOOK_RETRY_MAX_DELAY_SECONDS) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BILLING_WEBHOOK_RETRY_BASE_DELAY_SECONDS must not exceed BILLING_WEBHOOK_RETRY_MAX_DELAY_SECONDS" });
     }
   });
 

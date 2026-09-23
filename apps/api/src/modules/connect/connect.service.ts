@@ -45,6 +45,16 @@ export class ConnectService {
     creatorUserId: string,
     dto: CreateChannelDto,
   ): Promise<Channel> {
+    if (dto.teamId) {
+      const team = await this.prisma.team.findFirst({
+        where: { id: dto.teamId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!team) {
+        throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.BAD_REQUEST);
+      }
+    }
+
     if (dto.slug) {
       const slugTaken = await this.prisma.channel.findUnique({
         where: { organizationId_slug: { organizationId, slug: dto.slug } },
@@ -123,6 +133,13 @@ export class ConnectService {
 
   async addMember(organizationId: string, channelId: string, actorUserId: string, userId: string): Promise<void> {
     await this.getChannelForMember(organizationId, channelId, actorUserId);
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { organizationId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);
+    }
     await this.prisma.channelMember.upsert({
       where: { channelId_userId: { channelId, userId } },
       create: { channelId, userId },
@@ -277,6 +294,7 @@ export class ConnectService {
     userId: string,
     emoji: string,
   ): Promise<void> {
+    await this.getMessage(organizationId, messageId);
     await this.prisma.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
   }
 
@@ -336,7 +354,7 @@ export class ConnectService {
       select: { organizationId: true },
     });
     const valid = await this.prisma.organizationMember.findMany({
-      where: { organizationId: channel?.organizationId, userId: { in: [...ids] } },
+      where: { organizationId: channel?.organizationId, userId: { in: [...ids] }, deletedAt: null },
       select: { userId: true },
     });
     return valid.map((row) => row.userId);

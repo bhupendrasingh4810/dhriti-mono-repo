@@ -4,6 +4,9 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
     ignores: ["dist/**", "node_modules/**", "coverage/**", "jest.config.cjs", "*.config.*"],
+    linterOptions: {
+      reportUnusedDisableDirectives: "error",
+    },
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -18,9 +21,18 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-      "@typescript-eslint/consistent-type-imports": ["warn", { prefer: "type-imports" }],
-      "@typescript-eslint/no-floating-promises": "warn",
-      "@typescript-eslint/no-misused-promises": "warn",
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/no-non-null-assertion": "error",
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      "@typescript-eslint/switch-exhaustiveness-check": "error",
+      "curly": ["error", "all"],
+      "eqeqeq": ["error", "always"],
+      "no-eval": "error",
+      "no-implied-eval": "error",
+      "no-new-func": "error",
+      "no-restricted-globals": ["error", "event", "fdescribe"],
       "no-console": "off",
     },
   },

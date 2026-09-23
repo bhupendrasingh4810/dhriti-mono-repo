@@ -104,7 +104,9 @@ enum CadenceSessionType {
   CHECKIN
 }
 
-enum PlatformRole {
+// Legacy authorization enums are retained during the data migration. New
+// authorization is represented by PlatformRole and Permission models.
+enum LegacyPlatformRole {
   SUPER_ADMIN
   SUPPORT
   BILLING
@@ -112,6 +114,7 @@ enum PlatformRole {
   ENGINEERING
 }
 
+// Deprecated after backfill to Subscription.planId; retained for legacy API and data compatibility.
 enum SubscriptionPlan {
   FREE
   STARTER
@@ -119,11 +122,38 @@ enum SubscriptionPlan {
   ENTERPRISE
 }
 
+enum OrganizationPermissionScope {
+  ORGANIZATION
+  DEPARTMENT
+  TEAM
+  FLOW_PROJECT
+}
+
+enum EntitlementKind {
+  FEATURE
+  LIMIT
+}
+
+enum BillingInterval {
+  MONTH
+  YEAR
+  CUSTOM
+}
+
 enum SubscriptionStatus {
   TRIALING
   ACTIVE
   PAST_DUE
   CANCELLED
+  EXPIRED
+  SUSPENDED
+}
+
+enum BillingWebhookEventStatus {
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  DEAD_LETTER
 }
 
 enum SupportTicketStatus {
@@ -279,6 +309,13 @@ enum InvitationStatus {
   REJECTED
   EXPIRED
   CANCELLED
+}
+
+enum OrganizationMemberStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
 }
 
 enum NotificationType {

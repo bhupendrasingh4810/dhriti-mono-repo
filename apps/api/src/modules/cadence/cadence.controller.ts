@@ -20,6 +20,8 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
+import { RequireAccess } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { CadenceService } from "./cadence.service";
@@ -33,18 +35,20 @@ import {
 
 @ApiTags("cadence")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/cadence")
 export class CadenceController {
   constructor(private readonly cadence: CadenceService) {}
 
   @Get("sessions")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.session.read" })
   @ApiOperation({ summary: "List retrospective/estimation sessions" })
   async listSessions(@CurrentOrganization() organization: OrganizationContext) {
     return this.cadence.listSessions(organization.organizationId);
   }
 
   @Post("sessions")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.session.create" })
   @ApiOperation({ summary: "Create a session; the creator becomes facilitator" })
   async createSession(
     @CurrentUser() user: AuthenticatedUser,
@@ -55,6 +59,7 @@ export class CadenceController {
   }
 
   @Get("sessions/:sessionId")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.session.read" })
   @ApiOperation({ summary: "Get a session with cards and vote counts (authors hidden when anonymous)" })
   async getSession(
     @CurrentUser() user: AuthenticatedUser,
@@ -65,6 +70,7 @@ export class CadenceController {
   }
 
   @Patch("sessions/:sessionId/phase")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.session.update" })
   @ApiOperation({ summary: "Move the session to a new phase (facilitator only)" })
   async setPhase(
     @CurrentUser() user: AuthenticatedUser,
@@ -78,6 +84,7 @@ export class CadenceController {
   // ---------------- Cards ----------------
 
   @Post("sessions/:sessionId/cards")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.card.create" })
   @ApiOperation({ summary: "Add a card during the collect phase" })
   async addCard(
     @CurrentUser() user: AuthenticatedUser,
@@ -89,6 +96,7 @@ export class CadenceController {
   }
 
   @Patch("sessions/:sessionId/cards/:cardId/group")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.card.update" })
   @ApiOperation({ summary: "Group/ungroup a card (facilitator only)" })
   async groupCard(
     @CurrentUser() user: AuthenticatedUser,
@@ -101,6 +109,7 @@ export class CadenceController {
   }
 
   @Delete("sessions/:sessionId/cards/:cardId")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.card.delete" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a card (author or facilitator)" })
   async deleteCard(
@@ -115,6 +124,7 @@ export class CadenceController {
   // ---------------- Voting ----------------
 
   @Post("sessions/:sessionId/votes")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.vote.create" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Vote for a card during the vote phase (one per user per card)" })
   async vote(
@@ -127,6 +137,7 @@ export class CadenceController {
   }
 
   @Delete("sessions/:sessionId/votes/:cardId")
+  @RequireAccess({ entitlement: "cadence.enabled", permission: "cadence.vote.delete" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Remove your vote from a card" })
   async unvote(

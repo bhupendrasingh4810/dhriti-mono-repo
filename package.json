@@ -11,7 +11,8 @@
     "typecheck": "turbo typecheck",
     "dev:web": "pnpm --dir apps/web dev",
     "dev:api": "pnpm --dir apps/api dev",
-    "dev:worker": "pnpm --dir apps/worker dev"
+    "dev:worker": "pnpm --dir apps/worker dev",
+    "secrets:migrate": "node scripts/encrypt-legacy-secrets.mjs"
   },
   "keywords": [],
   "author": "",

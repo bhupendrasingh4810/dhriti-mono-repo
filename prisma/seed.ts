@@ -33,12 +33,218 @@ async function main(): Promise<void> {
     create: { organizationId: org.id, timezone: "Asia/Kolkata", locale: "en" },
   });
 
+  // ---------- Authorization and billing catalog ----------
+  const systemPermissions = [
+    "organization.members.read",
+    "organization.members.invite",
+    "organization.members.remove",
+    "organization.permissions.manage",
+    "organization.settings.manage",
+    "billing.subscription.read",
+    "billing.subscription.manage",
+    "analytics.read",
+    "webhook.read",
+    "webhook.manage",
+    "connect.channel.read",
+    "connect.channel.create",
+    "connect.channel.update",
+    "connect.channel.delete",
+    "connect.message.create",
+    "connect.message.delete",
+    "flow.project.read",
+    "flow.project.create",
+    "flow.project.update",
+    "flow.project.delete",
+    "flow.issue.read",
+    "flow.issue.create",
+    "flow.issue.update",
+    "flow.issue.delete",
+    "flow.issue.transition",
+    "atlas.space.read",
+    "atlas.space.create",
+    "atlas.page.read",
+    "atlas.page.create",
+    "atlas.page.update",
+    "pulse.calendar.read",
+    "pulse.calendar.create",
+    "pulse.calendar.update",
+    "cadence.session.read",
+    "cadence.session.create",
+    "cadence.session.update",
+    "cadence.card.create",
+    "cadence.card.update",
+    "cadence.card.delete",
+    "cadence.vote.create",
+    "cadence.vote.delete",
+    "nexus.conversation.read",
+    "nexus.conversation.create",
+    "nexus.task.read",
+    "nexus.task.create",
+    "hrms.employee.read",
+    "hrms.employee.manage",
+    "hrms.attendance.read",
+    "hrms.attendance.manage",
+    "hrms.leave.read",
+    "hrms.leave.manage",
+    "hrms.leave.approve",
+    "hrms.performance.read",
+    "hrms.performance.manage",
+    "hrms.payroll.read",
+    "hrms.payroll.manage",
+    "hrms.payroll.approve",
+    "hrms.training.read",
+    "hrms.training.manage",
+    "hrms.asset.read",
+    "hrms.asset.manage",
+    "hrms.benefit.read",
+    "hrms.benefit.manage",
+  ];
+  const permissions = await Promise.all(systemPermissions.map((key) => {
+    const [resource, action] = key.split(".");
+    return prisma.permission.upsert({
+      where: { key },
+      update: { resource, action },
+      create: { key, resource, action },
+    });
+  }));
+
+  const legacyPlatformRoles = [
+    { legacyRole: "SUPER_ADMIN", key: "super_admin", name: "Super administrator" },
+    { legacyRole: "SUPPORT", key: "support", name: "Support" },
+    { legacyRole: "BILLING", key: "billing", name: "Billing" },
+    { legacyRole: "SECURITY", key: "security", name: "Security" },
+    { legacyRole: "ENGINEERING", key: "engineering", name: "Engineering" },
+  ] as const;
+  const platformRoles = new Map<string, { id: string }>();
+  for (const role of legacyPlatformRoles) {
+    const platformRole = await prisma.platformRole.upsert({
+      where: { key: role.key },
+      update: { name: role.name, isSystem: true },
+      create: { key: role.key, name: role.name },
+    });
+    platformRoles.set(role.legacyRole, platformRole);
+  }
+  const platformAdminRole = platformRoles.get("SUPER_ADMIN");
+  if (!platformAdminRole) throw new Error("Super administrator platform role is missing");
+  await prisma.platformRolePermission.createMany({
+    data: permissions.map((permission) => ({
+      platformRoleId: platformAdminRole.id,
+      permissionId: permission.id,
+    })),
+    skipDuplicates: true,
+  });
+  await prisma.platformUserRoleAssignment.upsert({
+    where: { userId_platformRoleId: { userId: admin.id, platformRoleId: platformAdminRole.id } },
+    update: { revokedAt: null },
+    create: { userId: admin.id, platformRoleId: platformAdminRole.id },
+  });
+  const legacyPlatformAssignments = await prisma.userAuth.findMany({
+    where: { platformRole: { not: null }, user: { deletedAt: null } },
+    select: { userId: true, platformRole: true },
+  });
+  for (const assignment of legacyPlatformAssignments) {
+    if (!assignment.platformRole) continue;
+    const role = platformRoles.get(assignment.platformRole);
+    if (!role) continue;
+    await prisma.platformUserRoleAssignment.upsert({
+      where: { userId_platformRoleId: { userId: assignment.userId, platformRoleId: role.id } },
+      update: { revokedAt: null },
+      create: { userId: assignment.userId, platformRoleId: role.id },
+    });
+  }
+
+  const legacyPlans = [
+    { legacyPlan: "FREE", key: "free", name: "Free" },
+    { legacyPlan: "STARTER", key: "starter", name: "Starter" },
+    { legacyPlan: "PRO", key: "pro", name: "Pro" },
+    { legacyPlan: "ENTERPRISE", key: "enterprise", name: "Enterprise" },
+  ] as const;
+  const plansByLegacyPlan = new Map<string, { id: string }>();
+  for (const plan of legacyPlans) {
+    const record = await prisma.plan.upsert({
+      where: { key: plan.key },
+      update: { name: plan.name, isActive: true },
+      create: { key: plan.key, name: plan.name },
+    });
+    plansByLegacyPlan.set(plan.legacyPlan, record);
+  }
+  const proPlan = plansByLegacyPlan.get("PRO");
+  if (!proPlan) throw new Error("Pro plan is missing");
+  const planEntitlements = [
+    { key: "connect.enabled", name: "Connect", kind: "FEATURE" as const, enabled: true },
+    { key: "flow.enabled", name: "Flow", kind: "FEATURE" as const, enabled: true },
+    { key: "atlas.enabled", name: "Atlas", kind: "FEATURE" as const, enabled: true },
+    { key: "pulse.enabled", name: "Pulse", kind: "FEATURE" as const, enabled: true },
+    { key: "cadence.enabled", name: "Cadence", kind: "FEATURE" as const, enabled: true },
+    { key: "nexus.enabled", name: "Nexus", kind: "FEATURE" as const, enabled: true },
+    { key: "hrms.enabled", name: "HRMS", kind: "FEATURE" as const, enabled: true },
+    { key: "max_users", name: "Maximum users", kind: "LIMIT" as const, value: 25 },
+    { key: "max_teams", name: "Maximum teams", kind: "LIMIT" as const, value: 10 },
+    { key: "max_projects", name: "Maximum projects", kind: "LIMIT" as const, value: 50 },
+  ];
+  for (const item of planEntitlements) {
+    const entitlement = await prisma.entitlement.upsert({
+      where: { key: item.key },
+      update: { name: item.name, kind: item.kind },
+      create: { key: item.key, name: item.name, kind: item.kind },
+    });
+    await prisma.planEntitlement.upsert({
+      where: { planId_entitlementId: { planId: proPlan.id, entitlementId: entitlement.id } },
+      update: { enabled: item.enabled ?? true, value: item.value ?? null },
+      create: { planId: proPlan.id, entitlementId: entitlement.id, enabled: item.enabled ?? true, value: item.value ?? null },
+    });
+  }
+
+  const legacySubscriptions = await prisma.subscription.findMany({
+    where: { planId: null },
+    select: { id: true, plan: true },
+  });
+  for (const subscription of legacySubscriptions) {
+    const plan = plansByLegacyPlan.get(subscription.plan);
+    if (!plan) continue;
+    await prisma.subscription.update({
+      where: { id: subscription.id },
+      data: { planId: plan.id },
+    });
+  }
+
+  const legacyProductEntitlements = await prisma.productEntitlement.findMany({
+    include: { product: { select: { key: true } } },
+  });
+  for (const legacyEntitlement of legacyProductEntitlements) {
+    const entitlement = await prisma.entitlement.findUnique({
+      where: { key: `${legacyEntitlement.product.key}.enabled` },
+      select: { id: true },
+    });
+    if (!entitlement) continue;
+    const existingOverride = await prisma.organizationEntitlement.findUnique({
+      where: {
+        organizationId_entitlementId: {
+          organizationId: legacyEntitlement.organizationId,
+          entitlementId: entitlement.id,
+        },
+      },
+      select: { organizationId: true },
+    });
+    if (!existingOverride) {
+      await prisma.organizationEntitlement.create({
+        data: {
+          organizationId: legacyEntitlement.organizationId,
+          entitlementId: entitlement.id,
+          enabled: legacyEntitlement.isEnabled,
+          reason: "Migrated from legacy product entitlement",
+        },
+      });
+    }
+  }
+
   await prisma.subscription.upsert({
     where: { organizationId: org.id },
-    update: { plan: "PRO", status: "ACTIVE", seats: 25 },
+    update: { plan: "PRO", planId: proPlan.id, status: "ACTIVE", seats: 25 },
     create: {
       organizationId: org.id,
       plan: "PRO",
+      planId: proPlan.id,
       status: "ACTIVE",
       seats: 25,
       currentPeriodEnd: new Date("2026-10-01T00:00:00.000Z"),
@@ -51,6 +257,113 @@ async function main(): Promise<void> {
       update: {},
       create: { organizationId: org.id, userId: user.id },
     });
+  }
+
+  // Backfill legacy tenant administrators into an explicit, organization-scoped
+  // permission group. The reads keep this idempotent for existing databases.
+  const administratorPermissionKeys = [
+    "organization.members.read",
+    "organization.members.invite",
+    "organization.members.remove",
+    "organization.permissions.manage",
+    "organization.settings.manage",
+    "billing.subscription.read",
+    "billing.subscription.manage",
+    "analytics.read",
+    "webhook.read",
+    "webhook.manage",
+  ];
+  const permissionsByKey = new Map(permissions.map((permission) => [permission.key, permission]));
+  const administratorPermissionIds = administratorPermissionKeys.map((key) => {
+    const permission = permissionsByKey.get(key);
+    if (!permission) throw new Error(`Missing system permission: ${key}`);
+    return permission.id;
+  });
+  const organizations = await prisma.organization.findMany({
+    where: { deletedAt: null },
+    select: { id: true },
+  });
+  for (const organization of organizations) {
+    const administrators = await prisma.organizationMember.findMany({
+      where: {
+        organizationId: organization.id,
+        deletedAt: null,
+        user: { deletedAt: null, role: { in: ["PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN"] } },
+      },
+      select: { userId: true },
+    });
+    if (administrators.length === 0) continue;
+
+    const group = await prisma.organizationPermissionGroup.upsert({
+      where: { organizationId_name: { organizationId: organization.id, name: "Legacy administrators" } },
+      update: { isActive: true, deletedAt: null, isSystem: true },
+      create: {
+        organizationId: organization.id,
+        name: "Legacy administrators",
+        description: "Compatibility permissions for legacy organization administrators",
+        isSystem: true,
+      },
+    });
+    await prisma.organizationPermissionGroupPermission.createMany({
+      data: administratorPermissionIds.map((permissionId) => ({ permissionGroupId: group.id, permissionId })),
+      skipDuplicates: true,
+    });
+    for (const administrator of administrators) {
+      const assignment = await prisma.organizationPermissionGroupAssignment.findFirst({
+        where: { organizationId: organization.id, permissionGroupId: group.id, userId: administrator.userId },
+        select: { id: true, revokedAt: true },
+      });
+      if (!assignment) {
+        await prisma.organizationPermissionGroupAssignment.create({
+          data: { organizationId: organization.id, permissionGroupId: group.id, userId: administrator.userId, scopeType: "ORGANIZATION" },
+        });
+      } else if (assignment.revokedAt) {
+        await prisma.organizationPermissionGroupAssignment.update({
+          where: { id: assignment.id },
+          data: { revokedAt: null },
+        });
+      }
+    }
+  }
+
+  const legacyHrmsProfiles = await prisma.userHRMSProfile.findMany({
+    where: { user: { deletedAt: null } },
+    select: {
+      id: true,
+      userId: true,
+      employeeId: true,
+      employmentType: true,
+      employmentStartDate: true,
+      employmentEndDate: true,
+      user: {
+        select: {
+          memberships: {
+            where: { deletedAt: null, organization: { deletedAt: null } },
+            select: { organizationId: true },
+          },
+        },
+      },
+    },
+  });
+  for (const profile of legacyHrmsProfiles) {
+    for (const membership of profile.user.memberships) {
+      const existingEmployee = await prisma.hrmsEmployee.findUnique({
+        where: { organizationId_userId: { organizationId: membership.organizationId, userId: profile.userId } },
+        select: { id: true },
+      });
+      if (existingEmployee) continue;
+      await prisma.hrmsEmployee.create({
+        data: {
+          organizationId: membership.organizationId,
+          userId: profile.userId,
+          employeeNumber: profile.employeeId ?? `LEGACY-${profile.id}`,
+          status: "ACTIVE",
+          employmentType: profile.employmentType,
+          startDate: profile.employmentStartDate,
+          endDate: profile.employmentEndDate,
+        },
+      });
+    }
   }
 
   const userProfiles = [
@@ -108,6 +421,18 @@ async function main(): Promise<void> {
         experience: 5,
       },
     });
+    await prisma.hrmsEmployee.upsert({
+      where: { organizationId_userId: { organizationId: org.id, userId: profile.user.id } },
+      update: { employeeNumber: profile.employeeId, status: "ACTIVE", employmentType: "FULL_TIME", endDate: null },
+      create: {
+        organizationId: org.id,
+        userId: profile.user.id,
+        employeeNumber: profile.employeeId,
+        status: "ACTIVE",
+        employmentType: "FULL_TIME",
+        startDate: new Date("2024-01-01T00:00:00.000Z"),
+      },
+    });
     await prisma.userWorkOSProfile.upsert({
       where: { userId: profile.user.id },
       update: { workingHoursStart: "09:30", workingHoursEnd: "18:30" },
@@ -121,6 +446,8 @@ async function main(): Promise<void> {
       },
     });
   }
+
+  await backfillLegacyHrmsRecords();
 
   // ---------- Team ----------
   const team = await prisma.team.upsert({
@@ -340,7 +667,7 @@ async function main(): Promise<void> {
       },
     });
   }
-  for (const attendee of [{ user: alice, status: "ACCEPTED", isOrganizer: true }, { user: bob, status: "ACCEPTED", isOrganizer: false }, { user: priya, status: "TENTATIVE", isOrganizer: false }]) {
+  for (const attendee of [{ user: alice, status: "ACCEPTED", isOrganizer: true }, { user: bob, status: "ACCEPTED", isOrganizer: false }, { user: priya, status: "TENTATIVE", isOrganizer: false }] as const) {
     await prisma.eventAttendee.upsert({
       where: { eventId_userId: { eventId: standup.id, userId: attendee.user.id } },
       update: { status: attendee.status, isOrganizer: attendee.isOrganizer },
@@ -466,6 +793,65 @@ async function main(): Promise<void> {
   console.log(`         priya@acme.com / ${PASSWORD} (MEMBER)`);
   console.log(`         admin@dhriti.dev / ${PASSWORD} (platform SUPER_ADMIN)`);
   console.log(`  Org slug: acme  (id=${org.id})`);
+}
+
+async function backfillLegacyHrmsRecords(): Promise<void> {
+  const [profiles, employees] = await Promise.all([
+    prisma.userHRMSProfile.findMany({ select: { id: true, userId: true } }),
+    prisma.hrmsEmployee.findMany({ where: { deletedAt: null }, select: { id: true, organizationId: true, userId: true } }),
+  ]);
+  const userIdByProfileId = new Map(profiles.map((profile) => [profile.id, profile.userId]));
+  const employeesByUserId = new Map<string, typeof employees>();
+  for (const employee of employees) employeesByUserId.set(employee.userId, [...(employeesByUserId.get(employee.userId) ?? []), employee]);
+  const tenantEmployees = (profileId: string) => employeesByUserId.get(userIdByProfileId.get(profileId) ?? "") ?? [];
+
+  for (const record of await prisma.attendanceRecord.findMany()) {
+    for (const employee of tenantEmployees(record.userId)) {
+      const existing = await prisma.hrmsAttendanceRecord.findFirst({ where: { organizationId: employee.organizationId, OR: [{ legacyAttendanceId: record.id }, { employeeId: employee.id, date: record.date }] }, select: { id: true } });
+      if (!existing) await prisma.hrmsAttendanceRecord.create({ data: { organizationId: employee.organizationId, legacyAttendanceId: record.id, employeeId: employee.id, date: record.date, checkIn: record.checkIn, checkOut: record.checkOut, status: record.status, workHours: record.workHours, notes: record.notes } });
+    }
+  }
+
+  for (const record of await prisma.leaveRequest.findMany()) {
+    for (const employee of tenantEmployees(record.userId)) {
+      await prisma.hrmsLeaveRequest.upsert({ where: { organizationId_legacyLeaveRequestId: { organizationId: employee.organizationId, legacyLeaveRequestId: record.id } }, update: {}, create: { organizationId: employee.organizationId, legacyLeaveRequestId: record.id, employeeId: employee.id, leaveType: record.leaveType, startDate: record.startDate, endDate: record.endDate, totalDays: record.totalDays, reason: record.reason, status: record.status, approvedByUserId: record.approvedBy, approvedAt: record.approvedAt, rejectedByUserId: record.rejectedBy, rejectedAt: record.rejectedAt, rejectionReason: record.rejectionReason } });
+    }
+  }
+
+  for (const record of await prisma.performanceReview.findMany()) {
+    for (const employee of tenantEmployees(record.userId)) {
+      const reviewer = tenantEmployees(record.reviewerId).find((candidate) => candidate.organizationId === employee.organizationId);
+      if (!reviewer) continue;
+      await prisma.hrmsPerformanceReview.upsert({ where: { organizationId_legacyPerformanceReviewId: { organizationId: employee.organizationId, legacyPerformanceReviewId: record.id } }, update: {}, create: { organizationId: employee.organizationId, legacyPerformanceReviewId: record.id, employeeId: employee.id, reviewerEmployeeId: reviewer.id, reviewType: record.reviewType, cycle: record.cycle, startDate: record.startDate, dueDate: record.dueDate, completedAt: record.completedAt, status: record.status, overallRating: record.overallRating, comments: record.comments } });
+    }
+  }
+
+  for (const record of await prisma.payrollRecord.findMany()) {
+    for (const employee of tenantEmployees(record.userId)) {
+      const existing = await prisma.hrmsPayrollRecord.findFirst({ where: { organizationId: employee.organizationId, OR: [{ legacyPayrollRecordId: record.id }, { employeeId: employee.id, period: record.period }] }, select: { id: true } });
+      if (!existing) await prisma.hrmsPayrollRecord.create({ data: { organizationId: employee.organizationId, legacyPayrollRecordId: record.id, employeeId: employee.id, period: record.period, periodStart: record.periodStart, periodEnd: record.periodEnd, payDate: record.payDate, grossSalary: record.grossSalary, totalDeductions: record.totalDeductions, netPay: record.netPay, currency: record.currency, status: record.status, paidAt: record.paidAt, notes: record.notes } });
+    }
+  }
+
+  const enrollments = await prisma.trainingEnrollment.findMany({ include: { training: true } });
+  for (const enrollment of enrollments) {
+    for (const employee of tenantEmployees(enrollment.userId)) {
+      const training = await prisma.hrmsTraining.upsert({ where: { organizationId_legacyTrainingId: { organizationId: employee.organizationId, legacyTrainingId: enrollment.trainingId } }, update: {}, create: { organizationId: employee.organizationId, legacyTrainingId: enrollment.trainingId, title: enrollment.training.title, description: enrollment.training.description, type: enrollment.training.type, startDate: enrollment.training.startDate, endDate: enrollment.training.endDate, status: enrollment.training.status, maxParticipants: enrollment.training.maxParticipants } });
+      await prisma.hrmsTrainingEnrollment.upsert({ where: { organizationId_legacyTrainingEnrollmentId: { organizationId: employee.organizationId, legacyTrainingEnrollmentId: enrollment.id } }, update: {}, create: { organizationId: employee.organizationId, legacyTrainingEnrollmentId: enrollment.id, trainingId: training.id, employeeId: employee.id, status: enrollment.status, enrolledAt: enrollment.enrolledAt, completedAt: enrollment.completedAt } });
+    }
+  }
+
+  for (const asset of await prisma.asset.findMany({ where: { assignedTo: { not: null } } })) {
+    for (const employee of tenantEmployees(asset.assignedTo!)) {
+      await prisma.hrmsAsset.upsert({ where: { organizationId_legacyAssetId: { organizationId: employee.organizationId, legacyAssetId: asset.id } }, update: {}, create: { organizationId: employee.organizationId, legacyAssetId: asset.id, name: asset.name, type: asset.type, serialNumber: asset.serialNumber, status: asset.status, assignedEmployeeId: employee.id, assignedAt: asset.assignedAt, location: asset.location, notes: asset.notes } });
+    }
+  }
+
+  for (const benefit of await prisma.healthInsurance.findMany()) {
+    for (const employee of tenantEmployees(benefit.userId).filter((candidate) => candidate.organizationId === benefit.organizationId)) {
+      await prisma.hrmsBenefitEnrollment.upsert({ where: { organizationId_legacyHealthInsuranceId: { organizationId: employee.organizationId, legacyHealthInsuranceId: benefit.id } }, update: {}, create: { organizationId: employee.organizationId, legacyHealthInsuranceId: benefit.id, employeeId: employee.id, provider: benefit.provider, planName: benefit.planName, policyNumber: benefit.policyNumber, coverageStarts: benefit.coverageStarts, coverageEnds: benefit.coverageEnds, isActive: benefit.isActive } });
+    }
+  }
 }
 
 async function upsertUser(

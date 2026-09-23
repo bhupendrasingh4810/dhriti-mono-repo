@@ -2,7 +2,8 @@ model Webhook {
   id             String    @id @default(uuid()) @db.Uuid
   organizationId String    @db.Uuid
   url            String
-  secret         String
+  secret         String?
+  secretEncrypted String?
   events         String[]
   isActive       Boolean   @default(true)
   description    String?

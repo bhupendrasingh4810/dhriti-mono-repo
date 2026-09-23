@@ -21,6 +21,8 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
+import { RequireAccess } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { ConnectService } from "./connect.service";
@@ -34,7 +36,7 @@ import {
 
 @ApiTags("connect")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/connect")
 export class ConnectController {
   constructor(private readonly connect: ConnectService) {}
@@ -42,6 +44,7 @@ export class ConnectController {
   // ---------------- Channels ----------------
 
   @Get("channels")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @ApiOperation({ summary: "List channels visible to the current user" })
   async listChannels(
     @CurrentUser() user: AuthenticatedUser,
@@ -51,6 +54,7 @@ export class ConnectController {
   }
 
   @Post("channels")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.create" })
   @ApiOperation({ summary: "Create a channel" })
   async createChannel(
     @CurrentUser() user: AuthenticatedUser,
@@ -61,6 +65,7 @@ export class ConnectController {
   }
 
   @Patch("channels/:channelId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @ApiOperation({ summary: "Update a channel (name, topic, description, archive)" })
   async updateChannel(
     @CurrentUser() user: AuthenticatedUser,
@@ -72,6 +77,7 @@ export class ConnectController {
   }
 
   @Post("channels/:channelId/members")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Add a member to a channel" })
   async addMember(
@@ -84,6 +90,7 @@ export class ConnectController {
   }
 
   @Delete("channels/:channelId/members/:userId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Remove a member from a channel" })
   async removeMember(
@@ -98,6 +105,7 @@ export class ConnectController {
   // ---------------- Messages ----------------
 
   @Get("channels/:channelId/messages")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @ApiOperation({ summary: "List channel messages (cursor-paginated, newest first)" })
   async listMessages(
     @CurrentUser() user: AuthenticatedUser,
@@ -112,6 +120,7 @@ export class ConnectController {
   }
 
   @Post("channels/:channelId/messages")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
   @ApiOperation({ summary: "Post a message; supports parentId for threads and mentions" })
   async createMessage(
     @CurrentUser() user: AuthenticatedUser,
@@ -123,6 +132,7 @@ export class ConnectController {
   }
 
   @Patch("messages/:messageId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
   @ApiOperation({ summary: "Edit a message (author only)" })
   async updateMessage(
     @CurrentUser() user: AuthenticatedUser,
@@ -134,6 +144,7 @@ export class ConnectController {
   }
 
   @Delete("messages/:messageId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.delete" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a message (author only)" })
   async deleteMessage(
@@ -147,6 +158,7 @@ export class ConnectController {
   // ---------------- Reactions ----------------
 
   @Post("messages/:messageId/reactions")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Add an emoji reaction to a message" })
   async addReaction(
@@ -159,6 +171,7 @@ export class ConnectController {
   }
 
   @Delete("messages/:messageId/reactions/:emoji")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Remove an emoji reaction from a message" })
   async removeReaction(

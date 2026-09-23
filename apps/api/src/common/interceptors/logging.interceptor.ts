@@ -11,7 +11,7 @@ import { ClsService } from "nestjs-cls";
 import type { Request, Response } from "express";
 import { Observable, tap } from "rxjs";
 
-const PII_KEYS = new Set(["password", "token", "secret", "authorization", "cookie", "refreshToken", "accessToken"]);
+const PII_KEY_PATTERN = /(password|token|secret|authorization|cookie|api[-_]?key|signature|idempotency[-_]?key)/i;
 
 function mask(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -20,7 +20,7 @@ function mask(value: unknown): unknown {
   if (value && typeof value === "object") {
     const out: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = PII_KEYS.has(key.toLowerCase()) ? "[REDACTED]" : mask(val);
+      out[key] = PII_KEY_PATTERN.test(key) ? "[REDACTED]" : mask(val);
     }
     return out;
   }

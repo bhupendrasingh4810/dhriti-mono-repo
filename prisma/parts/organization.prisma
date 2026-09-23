@@ -8,6 +8,19 @@ model Organization {
 
   members  OrganizationMember[]
   teams    Team[]
+  organizationTeams OrganizationTeam[]
+  departments OrganizationDepartment[]
+  permissionGroups OrganizationPermissionGroup[]
+  permissionGroupAssignments OrganizationPermissionGroupAssignment[]
+  hrmsEmployees HrmsEmployee[]
+  hrmsAttendanceRecords HrmsAttendanceRecord[]
+  hrmsLeaveRequests HrmsLeaveRequest[]
+  hrmsPerformanceReviews HrmsPerformanceReview[]
+  hrmsPayrollRecords HrmsPayrollRecord[]
+  hrmsTrainings HrmsTraining[]
+  hrmsTrainingEnrollments HrmsTrainingEnrollment[]
+  hrmsAssets HrmsAsset[]
+  hrmsBenefitEnrollments HrmsBenefitEnrollment[]
   auditLogs AuditLog[]
   files     StoredFile[]
   channels  Channel[]
@@ -24,6 +37,9 @@ model Organization {
   cadenceSessions CadenceSession[]
   webhooks      Webhook[]
   subscription  Subscription?
+  subscriptionHistory SubscriptionHistory[]
+  billingWebhookEvents BillingWebhookEvent[]
+  organizationEntitlements OrganizationEntitlement[]
   entitlements  ProductEntitlement[]
   featureFlags  FeatureFlag[]
   supportTickets SupportTicket[]
@@ -45,12 +61,144 @@ model OrganizationMember {
   id             String           @id @default(uuid()) @db.Uuid
   organizationId String           @db.Uuid
   userId         String           @db.Uuid
+  status         OrganizationMemberStatus @default(ACTIVE)
+  isOwner        Boolean          @default(false)
   createdAt      DateTime         @default(now())
+  joinedAt       DateTime         @default(now())
+  suspendedAt    DateTime?
+  removedAt      DateTime?
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, userId])
+  @@index([organizationId, status, isOwner])
   @@index([userId])
   @@map("organization_members")
+}
+
+model OrganizationTeam {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members      OrganizationTeamMember[]
+  assignments  OrganizationPermissionGroupAssignment[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+  @@map("organization_teams")
+}
+
+model OrganizationTeamMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  teamId    String   @db.Uuid
+  userId    String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  team OrganizationTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([userId])
+  @@map("organization_team_members")
+}
+
+model OrganizationDepartment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  parentId       String?  @db.Uuid
+  name           String
+  code           String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parent       OrganizationDepartment?  @relation("OrganizationDepartmentTree", fields: [parentId], references: [id])
+  children     OrganizationDepartment[] @relation("OrganizationDepartmentTree")
+  members      OrganizationDepartmentMember[]
+  assignments  OrganizationPermissionGroupAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, parentId])
+  @@map("organization_departments")
+}
+
+model OrganizationDepartmentMember {
+  departmentId String   @db.Uuid
+  userId       String   @db.Uuid
+  isPrimary    Boolean  @default(false)
+  joinedAt     DateTime @default(now())
+
+  department OrganizationDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([departmentId, userId])
+  @@index([userId])
+  @@map("organization_department_members")
+}
+
+model OrganizationPermissionGroup {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  description    String?
+  isSystem       Boolean  @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization                                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissions  OrganizationPermissionGroupPermission[]
+  assignments  OrganizationPermissionGroupAssignment[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("organization_permission_groups")
+}
+
+model OrganizationPermissionGroupPermission {
+  permissionGroupId String @db.Uuid
+  permissionId      String @db.Uuid
+
+  permissionGroup OrganizationPermissionGroup @relation(fields: [permissionGroupId], references: [id], onDelete: Cascade)
+  permission      Permission                  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([permissionGroupId, permissionId])
+  @@map("organization_permission_group_permissions")
+}
+
+model OrganizationPermissionGroupAssignment {
+  id                String                      @id @default(uuid()) @db.Uuid
+  organizationId    String                      @db.Uuid
+  permissionGroupId String                      @db.Uuid
+  userId            String                      @db.Uuid
+  scopeType         OrganizationPermissionScope @default(ORGANIZATION)
+  departmentId      String?                     @db.Uuid
+  teamId            String?                     @db.Uuid
+  flowProjectId     String?                     @db.Uuid
+  assignedByUserId  String?                     @db.Uuid
+  createdAt         DateTime                    @default(now())
+  revokedAt         DateTime?
+
+  organization    Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  permissionGroup OrganizationPermissionGroup @relation(fields: [permissionGroupId], references: [id], onDelete: Cascade)
+  user            User                        @relation("OrganizationPermissionGroupAssignee", fields: [userId], references: [id], onDelete: Cascade)
+  department      OrganizationDepartment?     @relation(fields: [departmentId], references: [id], onDelete: Restrict)
+  team            OrganizationTeam?           @relation(fields: [teamId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, userId, revokedAt])
+  @@index([permissionGroupId, userId])
+  @@map("organization_permission_group_assignments")
 }

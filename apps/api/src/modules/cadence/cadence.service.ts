@@ -35,6 +35,16 @@ export class CadenceService {
     facilitatorId: string,
     dto: CreateSessionDto,
   ): Promise<CadenceSession> {
+    await this.assertOrganizationMember(organizationId, facilitatorId);
+    if (dto.teamId) {
+      const team = await this.prisma.team.findFirst({
+        where: { id: dto.teamId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!team) {
+        throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.BAD_REQUEST);
+      }
+    }
     const session = await this.prisma.cadenceSession.create({
       data: {
         organizationId,
@@ -216,6 +226,16 @@ export class CadenceService {
       throw new AppError(ErrorCode.SESSION_NOT_FOUND, "Session not found", HttpStatus.NOT_FOUND);
     }
     return session;
+  }
+
+  private async assertOrganizationMember(organizationId: string, userId: string): Promise<void> {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { organizationId, userId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!member) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.FORBIDDEN);
+    }
   }
 
   private assertFacilitator(session: CadenceSession, userId: string): void {

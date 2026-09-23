@@ -21,6 +21,8 @@ import {
   CurrentOrganization,
   type OrganizationContext,
 } from "../../common/decorators/organization.decorator";
+import { RequireAccess } from "../../common/decorators/access.decorator";
+import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { PulseService, type SchedulingConflict } from "./pulse.service";
@@ -35,7 +37,7 @@ import {
 
 @ApiTags("pulse")
 @ApiBearerAuth()
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/pulse")
 export class PulseController {
   constructor(private readonly pulse: PulseService) {}
@@ -43,12 +45,14 @@ export class PulseController {
   // ---------------- Calendars ----------------
 
   @Get("calendars")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "List calendars in the active organization" })
   async listCalendars(@CurrentOrganization() organization: OrganizationContext) {
     return this.pulse.listCalendars(organization.organizationId);
   }
 
   @Post("calendars")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.create" })
   @ApiOperation({ summary: "Create a calendar; marking default clears other defaults" })
   async createCalendar(
     @CurrentUser() user: AuthenticatedUser,
@@ -59,6 +63,7 @@ export class PulseController {
   }
 
   @Patch("calendars/:calendarId")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
   @ApiOperation({ summary: "Update a calendar" })
   async updateCalendar(
     @CurrentUser() user: AuthenticatedUser,
@@ -70,6 +75,7 @@ export class PulseController {
   }
 
   @Delete("calendars/:calendarId")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a calendar and its events (owner only)" })
   async deleteCalendar(
@@ -83,6 +89,7 @@ export class PulseController {
   // ---------------- Events ----------------
 
   @Get("events")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "List events overlapping a time range (from/to ISO 8601)" })
   async listEvents(
     @CurrentOrganization() organization: OrganizationContext,
@@ -92,6 +99,7 @@ export class PulseController {
   }
 
   @Post("calendars/:calendarId/events")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.create" })
   @ApiOperation({ summary: "Create an event; creator becomes organizer (accepted), others pending" })
   async createEvent(
     @CurrentUser() user: AuthenticatedUser,
@@ -103,6 +111,7 @@ export class PulseController {
   }
 
   @Get("events/:eventId")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "Get an event with attendees" })
   async getEvent(
     @CurrentOrganization() organization: OrganizationContext,
@@ -112,6 +121,7 @@ export class PulseController {
   }
 
   @Patch("events/:eventId")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
   @ApiOperation({ summary: "Update an event (organizer only)" })
   async updateEvent(
     @CurrentUser() user: AuthenticatedUser,
@@ -123,6 +133,7 @@ export class PulseController {
   }
 
   @Delete("events/:eventId")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete an event (organizer only)" })
   async deleteEvent(
@@ -136,6 +147,7 @@ export class PulseController {
   // ---------------- RSVP & attendees ----------------
 
   @Post("events/:eventId/rsvp")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "Respond to an event invitation (accepted/declined/tentative)" })
   async rsvp(
     @CurrentUser() user: AuthenticatedUser,
@@ -147,6 +159,7 @@ export class PulseController {
   }
 
   @Post("events/:eventId/attendees")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Add an attendee (organizer only)" })
   async addAttendee(
@@ -159,6 +172,7 @@ export class PulseController {
   }
 
   @Delete("events/:eventId/attendees/:userId")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Remove an attendee (organizer only)" })
   async removeAttendee(
@@ -173,6 +187,7 @@ export class PulseController {
   // ---------------- Scheduling ----------------
 
   @Get("events/conflicts")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "Find events that conflict for the current user in a time range" })
   async findConflicts(
     @CurrentUser() user: AuthenticatedUser,

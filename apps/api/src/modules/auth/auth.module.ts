@@ -18,6 +18,7 @@ import { MfaService } from "./services/mfa.service";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { GithubStrategy } from "./strategies/github.strategy";
 import { PasswordService } from "./services/password.service";
+import { PublicAuthRateLimitGuard } from "../../common/guards/public-auth-rate-limit.guard";
 
 /**
  * OAuth strategies are instantiated only when the provider's credentials are
@@ -50,8 +51,6 @@ const conditionalStrategyProviders: Provider[] = [
     PasswordController,
     ProfileController,
     MfaController,
-    PasswordController,
-    ProfileController,
   ],
   providers: [
     AuthService,
@@ -60,6 +59,7 @@ const conditionalStrategyProviders: Provider[] = [
     MfaService,
     PasswordService,
     ProfileService,
+    PublicAuthRateLimitGuard,
     ...conditionalStrategyProviders,
   ],
   exports: [AuthService, SessionService, TokenService, MfaService, JwtModule],

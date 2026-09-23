@@ -6,6 +6,7 @@ import {
 } from "@nestjs/common";
 import type { Request } from "express";
 import type { UserRole } from "@prisma/client";
+import { isUUID } from "class-validator";
 
 import { PrismaService } from "../../database/prisma.service";
 import type { AuthenticatedUser } from "../decorators/current-user.decorator";
@@ -38,19 +39,32 @@ export class TenantGuard implements CanActivate {
     }
 
     const headerValue = request.headers[ORG_HEADER];
-    const organizationId =
-      (Array.isArray(headerValue) ? headerValue[0] : headerValue) ?? user.organizationId;
+    const headerOrganizationId = Array.isArray(headerValue) ? headerValue[0] : headerValue;
+    const session = await this.prisma.userSession.findFirst({
+      where: { id: user.sessionId, userId: user.userId, revokedAt: null, expiresAt: { gt: new Date() } },
+      select: { organizationId: true },
+    });
+    if (!session) {
+      throw new ForbiddenException({ code: "SESSION_REVOKED", message: "Session is no longer active" });
+    }
+    if (!headerOrganizationId && user.organizationId && session.organizationId && user.organizationId !== session.organizationId) {
+      throw new ForbiddenException({ code: "ORGANIZATION_FORBIDDEN", message: "Session organization context is stale" });
+    }
+    const organizationId = headerOrganizationId ?? session.organizationId ?? user.organizationId;
 
-    if (!organizationId) {
+    if (!organizationId || !isUUID(organizationId)) {
       throw new ForbiddenException({
         code: "ORGANIZATION_REQUIRED",
-        message: "No active organization; select one or join an organization first",
+        message: "A valid active organization is required",
       });
     }
 
-    const membership = await this.prisma.organizationMember.findUnique({
+    const membership = await this.prisma.organizationMember.findFirst({
       where: {
-        organizationId_userId: { organizationId, userId: user.userId },
+        organizationId,
+        userId: user.userId,
+        status: "ACTIVE",
+        deletedAt: null,
       },
       select: { id: true, user: { select: { role: true } }, organization: { select: { deletedAt: true } } },
     });
@@ -69,7 +83,10 @@ export class TenantGuard implements CanActivate {
     };
     request.organization = contextValue;
 
-    // Keep the JWT org in sync when the caller switched via header.
+    if (headerOrganizationId && session.organizationId !== organizationId) {
+      await this.prisma.userSession.update({ where: { id: user.sessionId }, data: { organizationId } });
+    }
+    // Keep the request principal in sync after a validated session switch.
     user.organizationId = organizationId;
     return true;
   }

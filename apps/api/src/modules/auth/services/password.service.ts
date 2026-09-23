@@ -12,8 +12,6 @@ import type { AuthenticatedUser } from "../../../common/decorators/current-user.
 import { TokenService } from "./token.service";
 import { SessionService } from "./session.service";
 
-const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
-
 type UserWithRelations = User & { auth: UserAuth | null; profile: UserProfile | null };
 
 const withAuthAndProfile = { auth: true, profile: true } as const;
@@ -44,17 +42,23 @@ export class PasswordService {
         }
 
         const token = this.tokens.generateOpaqueToken();
-        await this.prisma.verificationToken.create({
-            data: {
-                userId: user.id,
-                tokenHash: this.tokens.hashToken(token),
-                type: "PASSWORD_RESET",
-                expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
-            },
+        await this.prisma.$transaction(async (transaction) => {
+            await transaction.verificationToken.updateMany({
+                where: { userId: user.id, type: "PASSWORD_RESET", usedAt: null },
+                data: { usedAt: new Date() },
+            });
+            await transaction.verificationToken.create({
+                data: {
+                    userId: user.id,
+                    tokenHash: this.tokens.hashToken(token),
+                    type: "PASSWORD_RESET",
+                    expiresAt: new Date(Date.now() + this.config.passwordResetTokenTtlSeconds * 1000),
+                },
+            });
         });
 
         const resetUrl = `${this.config.webAppUrl}/reset-password?token=${encodeURIComponent(token)}`;
-        await this.email.sendResetPasswordEmail(user.email, resetUrl, PASSWORD_RESET_TOKEN_TTL_MS);
+        await this.email.sendResetPasswordEmail(user.email, resetUrl, this.config.passwordResetTokenTtlSeconds * 1000);
     }
 
     /**
@@ -72,6 +76,7 @@ export class PasswordService {
         deviceInfo = "Unknown device",
     ): Promise<void> {
         const record = await this.consumeToken(token, "PASSWORD_RESET");
+        this.assertBcryptPasswordLength(newPassword);
         const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
 
         await this.prisma.userAuth.upsert({
@@ -116,6 +121,7 @@ export class PasswordService {
         newPassword: string,
     ): Promise<void> {
         const user = await this.requireUser(current.userId);
+        this.assertBcryptPasswordLength(newPassword);
         if (!user.auth?.passwordHash) {
             throw new AppError(
                 ErrorCode.OAUTH_ACCOUNT_EXISTS,
@@ -204,11 +210,15 @@ export class PasswordService {
             throw new AppError(ErrorCode.TOKEN_EXPIRED, "Token has expired", HttpStatus.BAD_REQUEST);
         }
 
-        return this.prisma.verificationToken.update({
-            where: { id: record.id },
-            data: { usedAt: new Date() },
-            include: { user: { select: { email: true, name: true } } },
+        const usedAt = new Date();
+        const consumed = await this.prisma.verificationToken.updateMany({
+            where: { id: record.id, usedAt: null, expiresAt: { gt: usedAt } },
+            data: { usedAt },
         });
+        if (consumed.count !== 1) {
+            throw new AppError(ErrorCode.TOKEN_ALREADY_USED, "Token was already used", HttpStatus.BAD_REQUEST);
+        }
+        return { ...record, usedAt };
     }
 
     /**
@@ -226,5 +236,11 @@ export class PasswordService {
             throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
         }
         return user;
+    }
+
+    private assertBcryptPasswordLength(password: string): void {
+        if (Buffer.byteLength(password, "utf8") > 72) {
+            throw new AppError(ErrorCode.VALIDATION_FAILED, "Password must not exceed 72 UTF-8 bytes", HttpStatus.BAD_REQUEST);
+        }
     }
 }

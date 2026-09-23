@@ -10,11 +10,10 @@ import { ApiConfigService } from "../../../config/config.service";
 import { TokenService } from "./token.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
+import { SecretEncryptionService } from "../../../common/crypto/secret-encryption.service";
 import type { MfaConfirmResponse, MfaSetupResponse } from "../dto/mfa.dto";
 
-const PENDING_SECRET_TTL_SECONDS = 600;
 const pendingSecretKey = (userId: string): string => `auth:mfa:pending:${userId}`;
-const RECOVERY_CODE_COUNT = 10;
 
 @Injectable()
 export class MfaService {
@@ -23,6 +22,7 @@ export class MfaService {
     private readonly redis: RedisService,
     private readonly tokens: TokenService,
     private readonly config: ApiConfigService,
+    private readonly secrets: SecretEncryptionService,
   ) {}
 
   /**
@@ -49,7 +49,7 @@ export class MfaService {
     }
 
     const secret = authenticator.generateSecret();
-    await this.redis.setJson(pendingSecretKey(userId), { secret }, PENDING_SECRET_TTL_SECONDS);
+    await this.redis.setJson(pendingSecretKey(userId), { secretEncrypted: this.secrets.encrypt(secret) }, this.config.mfa.pendingSecretTtlSeconds);
 
     const otpauthUrl = authenticator.keyuri(email, "Dhriti", secret);
     const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
@@ -65,7 +65,7 @@ export class MfaService {
    * @throws AppError if no MFA setup is pending or the provided code is invalid.
    */
   async confirmSetup(userId: string, code: string): Promise<MfaConfirmResponse> {
-    const pending = await this.redis.getJson<{ secret: string }>(pendingSecretKey(userId));
+    const pending = await this.redis.getJson<{ secretEncrypted?: string; secret?: string }>(pendingSecretKey(userId));
     if (!pending) {
       throw new AppError(
         ErrorCode.MFA_SETUP_NOT_PENDING,
@@ -74,7 +74,8 @@ export class MfaService {
       );
     }
 
-    if (!this.verifyTotp(pending.secret, code)) {
+    const secret = pending.secretEncrypted ? this.secrets.decrypt(pending.secretEncrypted) : pending.secret;
+    if (!secret || !this.verifyTotp(secret, code)) {
       throw new AppError(ErrorCode.MFA_CODE_INVALID, "Invalid authenticator code", HttpStatus.BAD_REQUEST);
     }
 
@@ -82,8 +83,8 @@ export class MfaService {
     await this.prisma.$transaction([
       this.prisma.userAuth.upsert({
         where: { userId },
-        create: { userId, mfaEnabled: true, mfaSecret: pending.secret },
-        update: { mfaEnabled: true, mfaSecret: pending.secret },
+        create: { userId, mfaEnabled: true, mfaSecretEncrypted: this.secrets.encrypt(secret) },
+        update: { mfaEnabled: true, mfaSecret: null, mfaSecretEncrypted: this.secrets.encrypt(secret) },
       }),
       this.prisma.mfaRecoveryCode.deleteMany({ where: { userId, usedAt: null } }),
       this.prisma.mfaRecoveryCode.createMany({
@@ -106,12 +107,22 @@ export class MfaService {
   async verifyTotpForUser(userId: string, code: string): Promise<boolean> {
     const auth = await this.prisma.userAuth.findUnique({
       where: { userId },
-      select: { mfaEnabled: true, mfaSecret: true },
+      select: { mfaEnabled: true, mfaSecret: true, mfaSecretEncrypted: true },
     });
-    if (!auth?.mfaEnabled || !auth.mfaSecret) {
+    if (!auth?.mfaEnabled) {
       return false;
     }
-    return this.verifyTotp(auth.mfaSecret, code);
+    const secret = auth.mfaSecretEncrypted
+      ? this.secrets.decrypt(auth.mfaSecretEncrypted)
+      : auth.mfaSecret;
+    if (!secret) return false;
+    if (!auth.mfaSecretEncrypted) {
+      await this.prisma.userAuth.update({
+        where: { userId },
+        data: { mfaSecret: null, mfaSecretEncrypted: this.secrets.encrypt(secret) },
+      });
+    }
+    return this.verifyTotp(secret, code);
   }
 
   /**
@@ -137,17 +148,18 @@ export class MfaService {
    */
   async disable(userId: string, code: string): Promise<void> {
     const auth = await this.prisma.userAuth.findUnique({ where: { userId } });
-    if (!auth || !auth.mfaEnabled || !auth.mfaSecret) {
+    if (!auth || !auth.mfaEnabled || (!auth.mfaSecret && !auth.mfaSecretEncrypted)) {
       throw new AppError(ErrorCode.MFA_NOT_ENABLED, "MFA is not enabled", HttpStatus.BAD_REQUEST);
     }
-    if (!this.verifyTotp(auth.mfaSecret, code)) {
+    const secret = auth.mfaSecretEncrypted ? this.secrets.decrypt(auth.mfaSecretEncrypted) : auth.mfaSecret;
+    if (!secret || !this.verifyTotp(secret, code)) {
       throw new AppError(ErrorCode.MFA_CODE_INVALID, "Invalid authenticator code", HttpStatus.BAD_REQUEST);
     }
 
     await this.prisma.$transaction([
       this.prisma.userAuth.update({
         where: { userId },
-        data: { mfaEnabled: false, mfaSecret: null },
+        data: { mfaEnabled: false, mfaSecret: null, mfaSecretEncrypted: null },
       }),
       this.prisma.mfaRecoveryCode.deleteMany({ where: { userId } }),
     ]);
@@ -168,7 +180,7 @@ export class MfaService {
    * @returns An array of recovery codes.
    */
   private generateRecoveryCodes(): string[] {
-    return Array.from({ length: RECOVERY_CODE_COUNT }, () => {
+    return Array.from({ length: this.config.mfa.recoveryCodeCount }, () => {
       const raw = randomBytes(6).toString("hex");
       return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
     });

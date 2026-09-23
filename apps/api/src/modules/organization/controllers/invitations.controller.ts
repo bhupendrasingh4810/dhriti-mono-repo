@@ -19,9 +19,9 @@ import {
     CurrentOrganization,
     type OrganizationContext,
 } from "../../../common/decorators/organization.decorator";
-import { OrgRoles } from "../../../common/decorators/org-roles.decorator";
+import { RequirePermission } from "../../../common/decorators/access.decorator";
+import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
-import { OrgRolesGuard } from "../../../common/guards/org-roles.guard";
 
 import { InvitationsService } from "../services/invitations.service";
 import { SessionService } from "../../auth/services/session.service";
@@ -41,17 +41,17 @@ export class InvitationsController {
     // ---------------- Invitations ----------------
 
     @Get("organization/invitations")
-    @UseGuards(TenantGuard, OrgRolesGuard)
-    @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+    @UseGuards(TenantGuard, AccessGuard)
+    @RequirePermission("organization.members.read")
     @ApiOperation({ summary: "List invitations (auto-expires stale pending ones)" })
     async listInvitations(@CurrentOrganization() organization: OrganizationContext) {
         return this.invitations.listInvitations(organization.organizationId);
     }
 
     @Post("organization/invitations")
-    @UseGuards(TenantGuard, OrgRolesGuard)
-    @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
-    @ApiOperation({ summary: "Invite a user by email; returns the invite token once" })
+    @UseGuards(TenantGuard, AccessGuard)
+    @RequirePermission("organization.members.invite")
+    @ApiOperation({ summary: "Invite a user by email" })
     async createInvitation(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentOrganization() organization: OrganizationContext,
@@ -65,9 +65,9 @@ export class InvitationsController {
     }
 
     @Post("organization/invitations/bulk")
-    @UseGuards(TenantGuard, OrgRolesGuard)
-    @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
-    @ApiOperation({ summary: "Invite multiple users by email; returns the invite tokens once" })
+    @UseGuards(TenantGuard, AccessGuard)
+    @RequirePermission("organization.members.invite")
+    @ApiOperation({ summary: "Invite multiple users by email" })
     async bulkInvitation(
         @CurrentUser() user: AuthenticatedUser,
         @CurrentOrganization() organization: OrganizationContext,
@@ -92,8 +92,8 @@ export class InvitationsController {
 
     @Delete("organization/invitations/:invitationId")
     @HttpCode(HttpStatus.NO_CONTENT)
-    @UseGuards(TenantGuard, OrgRolesGuard)
-    @OrgRoles("PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN")
+    @UseGuards(TenantGuard, AccessGuard)
+    @RequirePermission("organization.members.invite")
     @ApiOperation({ summary: "Cancel a pending invitation" })
     async cancelInvitation(
         @CurrentUser() user: AuthenticatedUser,

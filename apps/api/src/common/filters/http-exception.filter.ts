@@ -34,7 +34,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
-    const correlationId = randomUUID();
+    const responseCorrelationId = response.getHeader("x-correlation-id");
+    const correlationId = typeof responseCorrelationId === "string" ? responseCorrelationId : randomUUID();
 
     const { status, code, message, details } = this.normalize(exception);
 

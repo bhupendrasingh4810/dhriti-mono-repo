@@ -20,7 +20,7 @@ import { UserService, type UserDetail, type UserSummary } from "./user.service";
 @ApiTags("users")
 @ApiBearerAuth()
 @UseGuards(PlatformRolesGuard)
-// @PlatformRoles("SUPER_ADMIN", "SUPPORT", "SECURITY", "ORG_ADMIN")
+@PlatformRoles("SUPER_ADMIN", "SUPPORT", "SECURITY")
 @Controller("users")
 export class UserController {
 	constructor(private readonly users: UserService) {}
