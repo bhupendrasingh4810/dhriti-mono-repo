@@ -132,7 +132,7 @@ describe("BillingWebhookService", () => {
     const service = new BillingWebhookService(prisma as never, config as never, { invalidate: jest.fn() } as never, metrics as never);
 
     await expect(service.retryFailedEvents()).resolves.toEqual({ attempted: 0, succeeded: 0 });
-    expect(prisma.billingWebhookEvent.updateMany).toHaveBeenFirstCalledWith(expect.objectContaining({
+    expect(prisma.billingWebhookEvent.updateMany).toHaveBeenNthCalledWith(1, expect.objectContaining({
       where: expect.objectContaining({ status: "PROCESSING", attemptCount: { gte: config.billing.webhookMaxRetryAttempts } }),
       data: expect.objectContaining({ status: "DEAD_LETTER", deadLetteredAt: expect.any(Date) }),
     }));

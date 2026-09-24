@@ -35,6 +35,7 @@ model Message {
   organizationId   String    @db.Uuid
   channelId        String    @db.Uuid
   authorId         String    @db.Uuid
+  clientMessageId  String?   @db.Uuid
   parentId         String?   @db.Uuid
   content          String    @db.Text
   contentHtml      String?   @db.Text
@@ -54,6 +55,7 @@ model Message {
   @@index([channelId, createdAt])
   @@index([parentId])
   @@index([organizationId, channelId])
+  @@unique([organizationId, channelId, clientMessageId])
   @@map("messages")
 }
 

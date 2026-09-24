@@ -121,6 +121,26 @@ export class ApiConfigService {
     };
   }
 
+  get connectSocket(): {
+    allowedOrigins: string[];
+    presenceTtlSeconds: number;
+    typingTtlSeconds: number;
+    rateLimitWindowSeconds: number;
+    rateLimitMaxEvents: number;
+  } {
+    const configuredOrigins = this.config.get("CONNECT_SOCKET_ALLOWED_ORIGINS", { infer: true });
+    return {
+      allowedOrigins: (configuredOrigins ?? this.corsOrigins.join(","))
+        .split(",")
+        .map((origin) => origin.trim())
+        .filter((origin) => origin.length > 0),
+      presenceTtlSeconds: this.config.get("CONNECT_SOCKET_PRESENCE_TTL_SECONDS", { infer: true }),
+      typingTtlSeconds: this.config.get("CONNECT_SOCKET_TYPING_TTL_SECONDS", { infer: true }),
+      rateLimitWindowSeconds: this.config.get("CONNECT_SOCKET_RATE_LIMIT_WINDOW_SECONDS", { infer: true }),
+      rateLimitMaxEvents: this.config.get("CONNECT_SOCKET_RATE_LIMIT_MAX_EVENTS", { infer: true }),
+    };
+  }
+
   get entitlementCacheTtlSeconds(): number {
     return this.config.get("ENTITLEMENT_CACHE_TTL_SECONDS", { infer: true });
   }

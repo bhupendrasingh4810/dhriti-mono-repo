@@ -1,4 +1,4 @@
-import { ErrorCode } from "../../common/errors/error-codes";
+import { ErrorCode } from "../../../common/errors/error-codes";
 import { HrmsEmployeeService } from "./hrms-employee.service";
 
 function makePrisma() {

@@ -12,6 +12,11 @@ import {
 import { Type } from "class-transformer";
 
 export class CreateMessageDto {
+  @ApiPropertyOptional({ description: "Client-generated UUID used to make retries idempotent" })
+  @IsOptional()
+  @IsUUID()
+  clientMessageId?: string;
+
   @ApiProperty({ example: "Shipping the fix in [ENG-123]" })
   @IsString()
   @MinLength(1)

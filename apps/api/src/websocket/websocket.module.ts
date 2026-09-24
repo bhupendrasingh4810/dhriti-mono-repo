@@ -10,6 +10,10 @@ import { FlowModule } from "../modules/flow/flow.module";
 
 import { WsAuthService } from "./ws-auth";
 import { ConnectGateway } from "./connect.gateway";
+import { ConnectAdapterLifecycleService } from "./connect/connect-adapter-lifecycle.service";
+import { ConnectPresenceService } from "./connect/connect-presence.service";
+import { ConnectPublisherService } from "./connect/connect-publisher.service";
+import { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
 import { PulseGateway } from "./pulse.gateway";
 import { AtlasGateway } from "./atlas.gateway";
 import { NexusGateway } from "./nexus.gateway";
@@ -22,6 +26,10 @@ import { FlowGateway } from "./flow.gateway";
   providers: [
     WsAuthService,
     ConnectGateway,
+    ConnectAdapterLifecycleService,
+    ConnectPresenceService,
+    ConnectPublisherService,
+    ConnectRateLimitService,
     PulseGateway,
     AtlasGateway,
     NexusGateway,

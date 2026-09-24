@@ -1,4 +1,4 @@
-import { Logger, UsePipes, ValidationPipe } from "@nestjs/common";
+import { HttpException, HttpStatus, Logger, UsePipes, ValidationPipe } from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
@@ -10,69 +10,39 @@ import {
   WebSocketServer,
 } from "@nestjs/websockets";
 import type { Server, Socket } from "socket.io";
-import { createAdapter } from "@socket.io/redis-adapter";
-import { IsBoolean, IsIn, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
 
 import { WsAuthService, type WsPrincipal } from "./ws-auth";
+import { AppError } from "../common/errors/app-error";
+import { ErrorCode } from "../common/errors/error-codes";
 import { ConnectService } from "../modules/connect/connect.service";
-import { RedisService } from "../redis/redis.service";
+import { MetricsService } from "../common/metrics/metrics.service";
+import { ConnectAdapterLifecycleService } from "./connect/connect-adapter-lifecycle.service";
+import { ConnectPresenceService } from "./connect/connect-presence.service";
+import { ConnectPublisherService } from "./connect/connect-publisher.service";
+import { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
+import {
+  ChannelRoomEventDto,
+  MarkChannelReadEventDto,
+  PresenceSetEventDto,
+  SendMessageEventDto,
+  TypingEventDto,
+} from "./connect/dto/connect-events.dto";
+import { channelRoom, organizationRoom } from "./connect/rooms";
 
-// ------------------------------------------------------------------
-// Event payloads (validated)
-// ------------------------------------------------------------------
-
-class JoinChannelPayload {
-  @IsUUID()
-  channelId!: string;
-}
-
-class TypingPayload {
-  @IsUUID()
-  channelId!: string;
-
-  @IsBoolean()
-  isTyping!: boolean;
-}
-
-class SendMessagePayload {
-  @IsUUID()
-  channelId!: string;
-
-  @IsString()
-  @MinLength(1)
-  @MaxLength(10000)
-  content!: string;
-
-  @IsUUID()
-  parentId?: string;
-}
-
-class PresencePayload {
-  @IsIn(["online", "away", "dnd", "in-meeting", "offline"])
-  status!: "online" | "away" | "dnd" | "in-meeting" | "offline";
-}
-
-// ------------------------------------------------------------------
-// Room naming helpers
-// ------------------------------------------------------------------
-
-const channelRoom = (channelId: string): string => `channel:${channelId}`;
-const orgRoom = (organizationId: string): string => `org:${organizationId}`;
-
-type PresenceStatus = "online" | "away" | "dnd" | "in-meeting" | "offline";
+const allowedOrigins = (process.env.CONNECT_SOCKET_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
 
 @WebSocketGateway({
   namespace: "/connect",
-  cors: { origin: true, credentials: true },
+  cors: { origin: allowedOrigins, credentials: true },
+  transports: ["websocket", "polling"],
+  allowEIO3: false,
 })
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(ConnectGateway.name);
-
-  /** userId -> set of connected socket ids (supports multi-tab). */
-  private readonly onlineSockets = new Map<string, Set<string>>();
-  /** userId -> presence status. */
-  private readonly presence = new Map<string, PresenceStatus>();
 
   @WebSocketServer()
   private server!: Server;
@@ -80,40 +50,28 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   constructor(
     private readonly wsAuth: WsAuthService,
     private readonly connect: ConnectService,
-    private readonly redis: RedisService,
+    private readonly adapterLifecycle: ConnectAdapterLifecycleService,
+    private readonly presence: ConnectPresenceService,
+    private readonly publisher: ConnectPublisherService,
+    private readonly rateLimit: ConnectRateLimitService,
+    private readonly metrics: MetricsService,
   ) {}
 
-  afterInit(): void {
+  async afterInit(): Promise<void> {
     this.logger.log("Connect WebSocket gateway initialised at namespace /connect");
-    this.attachRedisAdapter();
-  }
-
-  /**
-   * Attach the Redis pub/sub adapter so multiple API replicas share rooms and
-   * broadcasts. Falls back to in-memory if Redis is briefly unavailable.
-   */
-  private attachRedisAdapter(): void {
-    try {
-      const pubClient = this.redis.raw.duplicate({ lazyConnect: false });
-      const subClient = this.redis.raw.duplicate({ lazyConnect: false });
-      this.server.adapter(createAdapter(pubClient, subClient));
-      this.logger.log("Socket.io Redis adapter attached");
-    } catch (error) {
-      this.logger.warn(
-        `Redis adapter not attached (in-memory only): ${(error as Error).message}`,
-      );
-    }
+    this.publisher.bind(this.server);
+    await this.adapterLifecycle.attach(this.server);
   }
 
   async handleConnection(socket: Socket): Promise<void> {
     try {
       const principal = await this.wsAuth.authenticate(socket);
-      this.trackConnection(principal, socket);
-
       if (principal.organizationId) {
-        await socket.join(orgRoom(principal.organizationId));
-        this.broadcastPresence(principal.organizationId, principal.userId, this.presenceOf(principal.userId));
+        const status = await this.presence.connected(principal.organizationId, principal.userId, socket.id);
+        await socket.join(organizationRoom(principal.organizationId));
+        this.publisher.presenceChanged(principal.organizationId, principal.userId, status);
       }
+      this.metrics.wsConnected();
     } catch (error) {
       this.logger.warn(`Connection rejected: ${(error as Error).message}`);
       socket.emit("error", { code: "UNAUTHORIZED", message: "Authentication failed" });
@@ -127,11 +85,13 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       return;
     }
 
-    this.untrackConnection(principal, socket);
-    if (principal.organizationId && !this.onlineSockets.has(principal.userId)) {
-      this.presence.set(principal.userId, "offline");
-      this.broadcastPresence(principal.organizationId, principal.userId, "offline");
+    if (principal.organizationId) {
+      const status = await this.presence.disconnected(principal.organizationId, principal.userId, socket.id);
+      if (status) {
+        this.publisher.presenceChanged(principal.organizationId, principal.userId, status);
+      }
     }
+    this.metrics.wsDisconnected();
   }
 
   // ---------------- Channels ----------------
@@ -139,26 +99,25 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage("channel:join")
   async joinChannel(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: JoinChannelPayload,
-  ): Promise<{ ok: true }> {
-    const principal = this.wsAuth.getPrincipal(socket);
-    this.assertOrg(principal);
-    await this.connect.getChannelForMember(
-      principal.organizationId as string,
-      payload.channelId,
-      principal.userId,
-    );
-    await socket.join(channelRoom(payload.channelId));
-    return { ok: true };
+    @MessageBody() payload: ChannelRoomEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "channel:join", async (principal, organizationId) => {
+      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId);
+      await socket.join(channelRoom(organizationId, payload.channelId));
+      return { ok: true };
+    });
   }
 
   @SubscribeMessage("channel:leave")
   async leaveChannel(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: JoinChannelPayload,
-  ): Promise<{ ok: true }> {
-    await socket.leave(channelRoom(payload.channelId));
-    return { ok: true };
+    @MessageBody() payload: ChannelRoomEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "channel:leave", async (principal, organizationId) => {
+      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId);
+      await socket.leave(channelRoom(organizationId, payload.channelId));
+      return { ok: true };
+    });
   }
 
   // ---------------- Typing ----------------
@@ -166,13 +125,13 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage("typing")
   async typing(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: TypingPayload,
-  ): Promise<void> {
-    const principal = this.wsAuth.getPrincipal(socket);
-    socket.to(channelRoom(payload.channelId)).emit("typing", {
-      channelId: payload.channelId,
-      userId: principal.userId,
-      isTyping: payload.isTyping,
+    @MessageBody() payload: TypingEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "typing", async (principal, organizationId) => {
+      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId);
+      await this.presence.setTyping(organizationId, payload.channelId, principal.userId, payload.isTyping);
+      this.publisher.typingChanged(organizationId, payload.channelId, socket.id, principal.userId, payload.isTyping);
+      return { ok: true };
     });
   }
 
@@ -181,66 +140,50 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage("message:send")
   async sendMessage(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: SendMessagePayload,
-  ): Promise<{ ok: true; message: unknown }> {
-    const principal = this.wsAuth.getPrincipal(socket);
-    const organizationId = this.assertOrg(principal);
-
-    const message = await this.connect.createMessage(organizationId, payload.channelId, principal.userId, {
-      content: payload.content,
-      parentId: payload.parentId,
+    @MessageBody() payload: SendMessageEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "message:send", async (principal, organizationId) => {
+      const message = await this.connect.createMessage(organizationId, payload.channelId, principal.userId, {
+        content: payload.content,
+        parentId: payload.parentId,
+        clientMessageId: payload.clientMessageId,
+      });
+      this.publisher.messageCreated(organizationId, payload.channelId, message);
+      return { ok: true, message };
     });
-
-    this.server.to(channelRoom(payload.channelId)).emit("message:created", message);
-    return { ok: true, message };
   }
 
   // ---------------- Presence ----------------
 
   @SubscribeMessage("presence:set")
-  setPresence(
+  async setPresence(
     @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: PresencePayload,
-  ): void {
-    const principal = this.wsAuth.getPrincipal(socket);
-    const organizationId = this.assertOrg(principal);
-    this.presence.set(principal.userId, payload.status);
-    this.broadcastPresence(organizationId, principal.userId, payload.status);
+    @MessageBody() payload: PresenceSetEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "presence:set", async (principal, organizationId) => {
+      await this.presence.setStatus(organizationId, principal.userId, payload.status);
+      this.publisher.presenceChanged(organizationId, principal.userId, payload.status);
+      return { ok: true };
+    });
+  }
+
+  @SubscribeMessage("channel:mark-read")
+  async markChannelRead(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: MarkChannelReadEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "channel:mark-read", async (principal, organizationId) => {
+      await this.connect.markChannelRead(organizationId, payload.channelId, principal.userId);
+      this.publisher.channelRead(organizationId, payload.channelId, principal.userId);
+      return { ok: true };
+    });
   }
 
   // ---------------- Internals ----------------
 
-  private trackConnection(principal: WsPrincipal, socket: Socket): void {
-    const sockets = this.onlineSockets.get(principal.userId) ?? new Set<string>();
-    sockets.add(socket.id);
-    this.onlineSockets.set(principal.userId, sockets);
-    if (!this.presence.has(principal.userId)) {
-      this.presence.set(principal.userId, "online");
-    }
-  }
-
-  private untrackConnection(principal: WsPrincipal, socket: Socket): void {
-    const sockets = this.onlineSockets.get(principal.userId);
-    if (!sockets) {
-      return;
-    }
-    sockets.delete(socket.id);
-    if (sockets.size === 0) {
-      this.onlineSockets.delete(principal.userId);
-    }
-  }
-
-  private presenceOf(userId: string): PresenceStatus {
-    return this.onlineSockets.has(userId) ? (this.presence.get(userId) ?? "online") : "offline";
-  }
-
-  private broadcastPresence(organizationId: string, userId: string, status: PresenceStatus): void {
-    this.server.to(orgRoom(organizationId)).emit("presence:changed", { userId, status });
-  }
-
   private assertOrg(principal: WsPrincipal): string {
     if (!principal.organizationId) {
-      throw new Error("No active organization on this connection");
+      throw new AppError(ErrorCode.ORGANIZATION_REQUIRED, "An active organization is required", HttpStatus.BAD_REQUEST);
     }
     return principal.organizationId;
   }
@@ -252,4 +195,46 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       return null;
     }
   }
+
+  private async execute(
+    socket: Socket,
+    eventName: string,
+    action: (principal: WsPrincipal, organizationId: string) => Promise<SocketAck>,
+  ): Promise<SocketAck> {
+    try {
+      const principal = this.wsAuth.getPrincipal(socket);
+      const organizationId = this.assertOrg(principal);
+      await this.rateLimit.assertAllowed(organizationId, principal.userId, eventName);
+      this.metrics.wsMessage();
+      return await action(principal, organizationId);
+    } catch (error) {
+      const response = this.errorAck(error);
+      socket.emit("connect:error", response.error);
+      return response;
+    }
+  }
+
+  private errorAck(error: unknown): SocketErrorAck {
+    if (error instanceof AppError) {
+      return { ok: false, error: { code: error.code, message: error.message, status: error.getStatus() } };
+    }
+    if (error instanceof HttpException) {
+      return {
+        ok: false,
+        error: { code: ErrorCode.VALIDATION_FAILED, message: error.message, status: error.getStatus() },
+      };
+    }
+    this.logger.error("Connect Socket.IO event failed", error instanceof Error ? error.stack : undefined);
+    return {
+      ok: false,
+      error: { code: ErrorCode.INTERNAL_ERROR, message: "Unable to process Connect event", status: HttpStatus.INTERNAL_SERVER_ERROR },
+    };
+  }
 }
+
+type SocketErrorAck = {
+  ok: false;
+  error: { code: ErrorCode; message: string; status: number };
+};
+
+type SocketAck = { ok: true; message?: unknown } | SocketErrorAck;

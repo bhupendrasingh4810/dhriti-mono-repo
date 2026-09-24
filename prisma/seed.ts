@@ -3,7 +3,7 @@ import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-const PASSWORD = "Sup3rSecure!";
+const PASSWORD = "Password@123";
 
 async function main(): Promise<void> {
   console.log("Seeding Dhriti database...");
@@ -19,6 +19,12 @@ async function main(): Promise<void> {
     upsertUser("elena@acme.com", "Elena Rodriguez", passwordHash),
     upsertUser("admin@dhriti.dev", "Platform Admin", passwordHash, "SUPER_ADMIN"),
   ]);
+  const additionalUsers = await Promise.all(
+    Array.from({ length: 5 }, (_, index) => {
+      const number = String(index + 1).padStart(2, "0");
+      return upsertUser(`team.member${number}@acme.com`, `Team Member ${number}`, passwordHash);
+    }),
+  );
 
   // ---------- Organization ----------
   const org = await prisma.organization.upsert({
@@ -32,6 +38,62 @@ async function main(): Promise<void> {
     update: {},
     create: { organizationId: org.id, timezone: "Asia/Kolkata", locale: "en" },
   });
+
+  const additionalOrganizations = [
+    { slug: "northstar", name: "Northstar Labs", timezone: "America/New_York" },
+    { slug: "brightworks", name: "Brightworks Studio", timezone: "Europe/London" },
+    { slug: "sakura", name: "Sakura Systems", timezone: "Asia/Tokyo" },
+    { slug: "summit", name: "Summit Operations", timezone: "Australia/Sydney" },
+  ];
+  for (const tenant of additionalOrganizations) {
+    const tenantOrganization = await prisma.organization.upsert({
+      where: { slug: tenant.slug },
+      update: { name: tenant.name },
+      create: { name: tenant.name, slug: tenant.slug },
+    });
+    await prisma.organizationSettings.upsert({
+      where: { organizationId: tenantOrganization.id },
+      update: { timezone: tenant.timezone, locale: "en" },
+      create: { organizationId: tenantOrganization.id, timezone: tenant.timezone, locale: "en" },
+    });
+
+    const tenantUsers = await Promise.all(
+      Array.from({ length: 10 }, (_, index) => {
+        const number = String(index + 1).padStart(2, "0");
+        return upsertUser(`${tenant.slug}.member${number}@example.test`, `${tenant.name} Member ${number}`, passwordHash, index === 0 ? "ORG_ADMIN" : "EMPLOYEE");
+      }),
+    );
+    for (const [index, user] of tenantUsers.entries()) {
+      await prisma.organizationMember.upsert({
+        where: { organizationId_userId: { organizationId: tenantOrganization.id, userId: user.id } },
+        update: {},
+        create: { organizationId: tenantOrganization.id, userId: user.id },
+      });
+      await prisma.userProfile.upsert({
+        where: { userId: user.id },
+        update: { jobTitle: index === 0 ? "Organization Administrator" : "Team Member", timezone: tenant.timezone },
+        create: {
+          userId: user.id,
+          firstName: tenant.name,
+          lastName: `Member ${String(index + 1).padStart(2, "0")}`,
+          jobTitle: index === 0 ? "Organization Administrator" : "Team Member",
+          department: index % 2 === 0 ? "Operations" : "Engineering",
+          timezone: tenant.timezone,
+          locale: "en",
+        },
+      });
+    }
+    const channel = await prisma.channel.upsert({
+      where: { organizationId_slug: { organizationId: tenantOrganization.id, slug: "general" } },
+      update: {},
+      create: { organizationId: tenantOrganization.id, name: "General", slug: "general", createdById: tenantUsers[0]!.id },
+    });
+    await prisma.channelMember.createMany({
+      data: tenantUsers.map((user) => ({ channelId: channel.id, userId: user.id })),
+      skipDuplicates: true,
+    });
+    await ensureMessage(tenantOrganization.id, channel.id, tenantUsers[0]!.id, `Welcome to ${tenant.name}.`);
+  }
 
   // ---------- Authorization and billing catalog ----------
   const systemPermissions = [
@@ -180,7 +242,7 @@ async function main(): Promise<void> {
     { key: "cadence.enabled", name: "Cadence", kind: "FEATURE" as const, enabled: true },
     { key: "nexus.enabled", name: "Nexus", kind: "FEATURE" as const, enabled: true },
     { key: "hrms.enabled", name: "HRMS", kind: "FEATURE" as const, enabled: true },
-    { key: "max_users", name: "Maximum users", kind: "LIMIT" as const, value: 25 },
+    { key: "max_users", name: "Maximum users", kind: "LIMIT" as const, value: 100 },
     { key: "max_teams", name: "Maximum teams", kind: "LIMIT" as const, value: 10 },
     { key: "max_projects", name: "Maximum projects", kind: "LIMIT" as const, value: 50 },
   ];
@@ -242,18 +304,18 @@ async function main(): Promise<void> {
 
   await prisma.subscription.upsert({
     where: { organizationId: org.id },
-    update: { plan: "PRO", planId: proPlan.id, status: "ACTIVE", seats: 25 },
+    update: { plan: "PRO", planId: proPlan.id, status: "ACTIVE", seats: 60 },
     create: {
       organizationId: org.id,
       plan: "PRO",
       planId: proPlan.id,
       status: "ACTIVE",
-      seats: 25,
+      seats: 60,
       currentPeriodEnd: new Date("2026-10-01T00:00:00.000Z"),
     },
   });
 
-  for (const user of [alice, bob, priya, marcus, elena]) {
+  for (const user of [alice, bob, priya, marcus, elena, ...additionalUsers]) {
     await prisma.organizationMember.upsert({
       where: { organizationId_userId: { organizationId: org.id, userId: user.id } },
       update: {},
@@ -374,6 +436,18 @@ async function main(): Promise<void> {
     { user: priya, firstName: "Priya", lastName: "Singh", jobTitle: "Product Manager", department: "Product", employeeId: "ACME-1003", skills: ["Discovery", "Roadmaps", "Analytics"] },
     { user: marcus, firstName: "Marcus", lastName: "Chen", jobTitle: "Product Designer", department: "Design", employeeId: "ACME-1004", skills: ["Research", "UX", "Design systems"] },
     { user: elena, firstName: "Elena", lastName: "Rodriguez", jobTitle: "People Operations Manager", department: "People", employeeId: "ACME-1005", skills: ["HR Operations", "Recruiting", "Benefits"] },
+    ...additionalUsers.map((user, index) => {
+      const number = String(index + 6).padStart(4, "0");
+      return {
+        user,
+        firstName: "Team",
+        lastName: `Member ${number}`,
+        jobTitle: "Team Member",
+        department: index % 3 === 0 ? "Engineering" : index % 3 === 1 ? "Product" : "Operations",
+        employeeId: `ACME-${number}`,
+        skills: ["Collaboration"],
+      };
+    }),
   ];
 
   for (const profile of userProfiles) {
@@ -901,7 +975,7 @@ async function ensureMessage(
 main()
   .catch((error) => {
     console.error("Seed failed:", error);
-    process.exitCode = 1;
+    throw error;
   })
   .finally(() => {
     void prisma.$disconnect();

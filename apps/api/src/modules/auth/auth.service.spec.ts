@@ -61,7 +61,7 @@ function makeUser(overrides: Partial<UserAuth & User> = {}): UserWithRelations {
 }
 
 function makePrismaMock() {
-  return {
+  const prisma = {
     user: {
       findUnique: jest.fn(),
       create: jest.fn(),

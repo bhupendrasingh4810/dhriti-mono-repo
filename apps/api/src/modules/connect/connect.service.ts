@@ -15,6 +15,29 @@ export type MessageWithMeta = Message & {
   _count: { replies: number };
 };
 
+interface IdempotentMessageDelegate {
+  upsert(args: {
+    where: {
+      organizationId_channelId_clientMessageId: {
+        organizationId: string;
+        channelId: string;
+        clientMessageId: string;
+      };
+    };
+    create: {
+      organizationId: string;
+      channelId: string;
+      authorId: string;
+      clientMessageId: string;
+      parentId: string | null;
+      content: string;
+      mentions: { create: Array<{ userId: string }> };
+    };
+    update: Record<string, never>;
+    include: object;
+  }): Promise<MessageWithMeta>;
+}
+
 @Injectable()
 export class ConnectService {
   constructor(
@@ -199,17 +222,42 @@ export class ConnectService {
 
     const mentionUserIds = await this.resolveMentions(channelId, dto.content, dto.mentionUserIds);
 
-    const message = await this.prisma.message.create({
-      data: {
-        organizationId,
-        channelId,
-        authorId,
-        parentId: dto.parentId ?? null,
-        content: dto.content,
-        mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
-      },
-      include: this.messageInclude,
-    });
+    const message = dto.clientMessageId
+      ? await (this.prisma.message as unknown as IdempotentMessageDelegate).upsert({
+          where: {
+            organizationId_channelId_clientMessageId: {
+              organizationId,
+              channelId,
+              clientMessageId: dto.clientMessageId,
+            },
+          },
+          create: {
+            organizationId,
+            channelId,
+            authorId,
+            clientMessageId: dto.clientMessageId,
+            parentId: dto.parentId ?? null,
+            content: dto.content,
+            mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
+          },
+          update: {},
+          include: this.messageInclude,
+        })
+      : await this.prisma.message.create({
+          data: {
+            organizationId,
+            channelId,
+            authorId,
+            parentId: dto.parentId ?? null,
+            content: dto.content,
+            mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
+          },
+          include: this.messageInclude,
+        });
+
+    if (message.authorId !== authorId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Message idempotency key belongs to another user", HttpStatus.FORBIDDEN);
+    }
 
     await this.audit.record({
       action: "connect.message.created",
@@ -296,6 +344,14 @@ export class ConnectService {
   ): Promise<void> {
     await this.getMessage(organizationId, messageId);
     await this.prisma.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
+  }
+
+  async markChannelRead(organizationId: string, channelId: string, userId: string): Promise<void> {
+    await this.getChannelForMember(organizationId, channelId, userId);
+    await this.prisma.channelMember.update({
+      where: { channelId_userId: { channelId, userId } },
+      data: { lastReadAt: new Date() },
+    });
   }
 
   // ---------------- Internals ----------------

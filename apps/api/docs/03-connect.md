@@ -35,16 +35,17 @@ Organization ── Channel ──┬─ ChannelMember ── User
 ## WebSocket — namespace `/connect`
 
 Authenticate with the access token: `io("/connect", { auth: { token } })`.
+The server accepts only the comma-separated origins in `CONNECT_SOCKET_ALLOWED_ORIGINS` (or, when omitted, `CORS_ORIGINS`); it never reflects arbitrary origins.
 
 | Event (client → server) | Payload | Broadcast |
 | --- | --- | --- |
-| `channel:join` / `channel:leave` | `{ channelId }` | joins/leaves room `channel:{id}` (join is authorized) |
+| `channel:join` / `channel:leave` | `{ channelId }` | joins/leaves the organization-scoped channel room (both actions are authorized) |
 | `typing` | `{ channelId, isTyping }` | `typing` to others in the room |
-| `message:send` | `{ channelId, content, parentId? }` | persists + `message:created` to the room |
+| `message:send` | `{ channelId, content, parentId?, clientMessageId? }` | persists + `message:created` to the room |
 | `presence:set` | `{ status: online|away|dnd|in-meeting|offline }` | `presence:changed` to the org |
+| `channel:mark-read` | `{ channelId }` | persists the caller's read timestamp + `channel:marked-read` to the room |
 
-Presence is tracked across sockets (multi-tab) and auto-broadcasts `offline` when
-the user's last connection closes.
+Every event is rate-limited per organization, user, and event name through Redis. Presence, multi-tab socket membership, and typing state are Redis-backed and expire automatically. The server returns `{ ok: true, ... }` or `{ ok: false, error: { code, message, status } }` to event acknowledgements, and emits the same safe error body as `connect:error`.
 
 ### WebRTC (same namespace)
 - `call:join` / `call:leave` `{ channelId }` — join/leave a call room (`call:{id}`); join returns current peers.
