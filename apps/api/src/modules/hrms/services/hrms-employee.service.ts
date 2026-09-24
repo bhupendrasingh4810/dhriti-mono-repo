@@ -51,7 +51,7 @@ export class HrmsEmployeeService {
       where: { id: employeeId, organizationId, deletedAt: null },
       include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
     });
-    if (!employee) throw new AppError(ErrorCode.EMPLOYEE_NOT_FOUND, "Employee not found", HttpStatus.NOT_FOUND);
+    if (!employee) {throw new AppError(ErrorCode.EMPLOYEE_NOT_FOUND, "Employee not found", HttpStatus.NOT_FOUND);}
     return employee;
   }
 
@@ -60,6 +60,6 @@ export class HrmsEmployeeService {
       where: { organizationId, userId, deletedAt: null, user: { deletedAt: null } },
       select: { id: true },
     });
-    if (!membership) throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Employee must be an active organization member", HttpStatus.BAD_REQUEST);
+    if (!membership) {throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Employee must be an active organization member", HttpStatus.BAD_REQUEST);}
   }
 }

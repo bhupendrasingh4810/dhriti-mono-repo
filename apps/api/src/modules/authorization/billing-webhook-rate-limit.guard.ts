@@ -25,13 +25,12 @@ export class BillingWebhookRateLimitGuard implements CanActivate {
     const key = `rate-limit:billing-webhook:${provider}:${clientIp}`;
     const billing = this.config.billing;
     try {
-      const count = await this.redis.raw.incr(key);
-      if (count === 1) await this.redis.raw.expire(key, billing.webhookRateLimitWindowSeconds);
+      const count = await this.redis.incrementWithExpiry(key, billing.webhookRateLimitWindowSeconds);
       if (count > billing.webhookRateLimitMaxRequests) {
         throw new AppError(ErrorCode.FORBIDDEN, "Billing webhook rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS);
       }
     } catch (error) {
-      if (error instanceof AppError) throw error;
+      if (error instanceof AppError) {throw error;}
       this.metrics.billingWebhookRateLimitUnavailable();
       this.logger.warn(`Billing webhook rate limiting unavailable for provider=${provider}; accepting request after signature verification`);
     }

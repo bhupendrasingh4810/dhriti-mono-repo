@@ -196,7 +196,7 @@ export class PasswordService {
         if (!record || record.type !== type) {
             throw new AppError(ErrorCode.TOKEN_INVALID, "Token is invalid", HttpStatus.BAD_REQUEST);
         }
-        const otpHash = (record as typeof record & { otpHash: string | null }).otpHash;
+        const otpHash = (record).otpHash;
         if (type === "EMAIL_VERIFICATION" && (!otp || otpHash !== this.tokens.hashToken(otp))) {
             throw new AppError(ErrorCode.TOKEN_INVALID, "Verification code is invalid", HttpStatus.BAD_REQUEST);
         }

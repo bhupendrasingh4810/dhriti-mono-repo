@@ -30,7 +30,7 @@ export class PlatformRoleService {
   async attachPermission(roleId: string, permissionId: string, actorUserId: string): Promise<void> {
     await this.requireRole(roleId);
     const permission = await this.prisma.permission.findFirst({ where: { id: permissionId }, select: { id: true } });
-    if (!permission) throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Permission not found", HttpStatus.NOT_FOUND);
+    if (!permission) {throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Permission not found", HttpStatus.NOT_FOUND);}
     await this.prisma.platformRolePermission.upsert({ where: { platformRoleId_permissionId: { platformRoleId: roleId, permissionId } }, update: {}, create: { platformRoleId: roleId, permissionId } });
     await this.audit.record({ action: "iam.platform-role.permission-attached", actorUserId, resourceType: "Permission", resourceId: permissionId, metadata: { roleId } });
   }
@@ -44,7 +44,7 @@ export class PlatformRoleService {
   async assign(roleId: string, userId: string, actorUserId: string) {
     await this.requireRole(roleId);
     const user = await this.prisma.user.findFirst({ where: { id: userId, deletedAt: null }, select: { id: true } });
-    if (!user) throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
+    if (!user) {throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);}
     const assignment = await this.prisma.platformUserRoleAssignment.upsert({
       where: { userId_platformRoleId: { userId, platformRoleId: roleId } },
       update: { revokedAt: null, assignedById: actorUserId },
@@ -62,7 +62,7 @@ export class PlatformRoleService {
 
   private async requireRole(roleId: string) {
     const role = await this.prisma.platformRole.findUnique({ where: { id: roleId } });
-    if (!role) throw new AppError(ErrorCode.PLATFORM_ROLE_NOT_FOUND, "Platform role not found", HttpStatus.NOT_FOUND);
+    if (!role) {throw new AppError(ErrorCode.PLATFORM_ROLE_NOT_FOUND, "Platform role not found", HttpStatus.NOT_FOUND);}
     return role;
   }
 }

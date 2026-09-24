@@ -187,7 +187,7 @@ export class OrganizationService {
     await this.prisma.$transaction(async (transaction) => {
       if (member.isOwner) {
         const ownerCount = await transaction.organizationMember.count({ where: { organizationId, isOwner: true, status: "ACTIVE", deletedAt: null } });
-        if (ownerCount <= 1) throw new AppError(ErrorCode.LAST_OWNER, "Transfer ownership before removing the last active owner", HttpStatus.CONFLICT);
+        if (ownerCount <= 1) {throw new AppError(ErrorCode.LAST_OWNER, "Transfer ownership before removing the last active owner", HttpStatus.CONFLICT);}
       }
       const removedAt = new Date();
       await transaction.teamMember.deleteMany({ where: { userId: member.userId, team: { organizationId } } });
@@ -199,7 +199,7 @@ export class OrganizationService {
 
   async updateMemberLifecycle(organizationId: string, memberId: string, actorUserId: string, status: "ACTIVE" | "SUSPENDED"): Promise<MemberWithUser> {
     const member = await this.getMember(organizationId, memberId);
-    if (member.isOwner && status !== "ACTIVE") await this.assertOwnerCanBeDeactivated(organizationId);
+    if (member.isOwner && status !== "ACTIVE") {await this.assertOwnerCanBeDeactivated(organizationId);}
     const updated = await this.prisma.organizationMember.update({
       where: { id: member.id },
       data: { status, suspendedAt: status === "SUSPENDED" ? new Date() : null },
@@ -210,13 +210,13 @@ export class OrganizationService {
   }
 
   async transferOwnership(organizationId: string, fromMemberId: string, toMemberId: string, actorUserId: string): Promise<void> {
-    if (fromMemberId === toMemberId) return;
+    if (fromMemberId === toMemberId) {return;}
     await this.prisma.$transaction(async (transaction) => {
       const [from, to] = await Promise.all([
         transaction.organizationMember.findFirst({ where: { id: fromMemberId, organizationId, status: "ACTIVE", isOwner: true, deletedAt: null }, select: { id: true } }),
         transaction.organizationMember.findFirst({ where: { id: toMemberId, organizationId, status: "ACTIVE", deletedAt: null }, select: { id: true } }),
       ]);
-      if (!from || !to) throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Active ownership transfer members not found", HttpStatus.NOT_FOUND);
+      if (!from || !to) {throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Active ownership transfer members not found", HttpStatus.NOT_FOUND);}
       await transaction.organizationMember.update({ where: { id: to.id }, data: { isOwner: true } });
       await transaction.organizationMember.update({ where: { id: from.id }, data: { isOwner: false } });
     });
@@ -529,7 +529,7 @@ export class OrganizationService {
 
   private async assertOwnerCanBeDeactivated(organizationId: string): Promise<void> {
     const ownerCount = await this.prisma.organizationMember.count({ where: { organizationId, isOwner: true, status: "ACTIVE", deletedAt: null } });
-    if (ownerCount <= 1) throw new AppError(ErrorCode.LAST_OWNER, "Transfer ownership before changing the last active owner", HttpStatus.CONFLICT);
+    if (ownerCount <= 1) {throw new AppError(ErrorCode.LAST_OWNER, "Transfer ownership before changing the last active owner", HttpStatus.CONFLICT);}
   }
 
 }

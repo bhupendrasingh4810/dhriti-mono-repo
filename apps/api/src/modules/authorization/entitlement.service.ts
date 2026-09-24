@@ -130,18 +130,18 @@ export class EntitlementService {
   ): EffectiveEntitlement {
     const enabled = override?.enabled ?? plan?.enabled ?? false;
     const value = override?.value ?? plan?.value ?? null;
-    if (kind === "FEATURE") return { enabled, value: null };
+    if (kind === "FEATURE") {return { enabled, value: null };}
 
     // A null, negative, or non-integer LIMIT is never interpreted as unlimited access.
-    if (!enabled || value === null || !Number.isSafeInteger(value) || value < 0) return { enabled: false, value: null };
+    if (!enabled || value === null || !Number.isSafeInteger(value) || value < 0) {return { enabled: false, value: null };}
     return { enabled: true, value };
   }
 
   private hasPaidAccess(subscription: { status: SubscriptionStatus; currentPeriodEnd: Date | null; trialEndsAt: Date | null; gracePeriodEndsAt: Date | null }): boolean {
     const now = new Date();
-    if (subscription.status === "ACTIVE") return subscription.currentPeriodEnd === null || subscription.currentPeriodEnd > now;
-    if (subscription.status === "TRIALING") return subscription.trialEndsAt !== null && subscription.trialEndsAt > now;
-    if (subscription.status === "PAST_DUE") return subscription.gracePeriodEndsAt !== null && subscription.gracePeriodEndsAt > now;
+    if (subscription.status === "ACTIVE") {return subscription.currentPeriodEnd === null || subscription.currentPeriodEnd > now;}
+    if (subscription.status === "TRIALING") {return subscription.trialEndsAt !== null && subscription.trialEndsAt > now;}
+    if (subscription.status === "PAST_DUE") {return subscription.gracePeriodEndsAt !== null && subscription.gracePeriodEndsAt > now;}
     return subscription.status === "CANCELLED" && subscription.currentPeriodEnd !== null && subscription.currentPeriodEnd > now;
   }
 

@@ -34,14 +34,14 @@ export class SubscriptionService {
     const key = `idempotency:billing:${organizationId}:${userId}:${createHash("sha256").update(idempotencyKey).digest("hex")}`;
     const fingerprint = createHash("sha256").update(JSON.stringify({ scope, input })).digest("hex");
     const completed = this.readIdempotencyRecord<T>(await this.redis.getJson<unknown>(key), fingerprint);
-    if (completed !== null) return completed;
+    if (completed !== null) {return completed;}
 
     const token = randomUUID();
     const lock = JSON.stringify({ fingerprint, state: "PROCESSING", token });
     const acquired = await this.redis.raw.set(key, lock, "EX", this.config.billing.idempotencyLockTtlSeconds, "NX");
     if (acquired !== "OK") {
       const cached = this.readIdempotencyRecord<T>(await this.redis.getJson<unknown>(key), fingerprint);
-      if (cached !== null) return cached;
+      if (cached !== null) {return cached;}
       throw new AppError(ErrorCode.VALIDATION_FAILED, "A request with this Idempotency-Key is already in progress", HttpStatus.CONFLICT);
     }
     try {
@@ -106,7 +106,7 @@ export class SubscriptionService {
     const subscription = await this.requireSubscription(organizationId);
     if (providerEventId) {
       const processed = await this.prisma.subscriptionHistory.findUnique({ where: { providerEventId }, select: { id: true } });
-      if (processed) return subscription;
+      if (processed) {return subscription;}
     }
     const updated = await this.prisma.subscription.update({ where: { id: subscription.id }, data: { ...input, ...(input.status === "SUSPENDED" ? { suspendedAt: new Date() } : {}) } });
     await this.recordTransition(updated, subscription, null, "provider_update", providerEventId);
@@ -116,13 +116,13 @@ export class SubscriptionService {
 
   private async requirePlan(key: string) {
     const plan = await this.prisma.plan.findFirst({ where: { key: key.toLowerCase(), isActive: true } });
-    if (!plan) throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Active plan not found", HttpStatus.NOT_FOUND);
+    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Active plan not found", HttpStatus.NOT_FOUND);}
     return plan;
   }
 
   private async requireSubscription(organizationId: string) {
     const subscription = await this.prisma.subscription.findFirst({ where: { organizationId } });
-    if (!subscription) throw new AppError(ErrorCode.SUBSCRIPTION_NOT_FOUND, "Organization subscription not found", HttpStatus.NOT_FOUND);
+    if (!subscription) {throw new AppError(ErrorCode.SUBSCRIPTION_NOT_FOUND, "Organization subscription not found", HttpStatus.NOT_FOUND);}
     return subscription;
   }
 
@@ -141,11 +141,11 @@ export class SubscriptionService {
   }
 
   private readIdempotencyRecord<T>(value: unknown, fingerprint: string): T | null {
-    if (value === null) return null;
+    if (value === null) {return null;}
     if (typeof value !== "object" || value === null || !("fingerprint" in value) || value.fingerprint !== fingerprint) {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "Idempotency-Key was already used for a different request", HttpStatus.CONFLICT);
     }
-    if ("state" in value && value.state === "SUCCEEDED" && "response" in value) return value.response as T;
+    if ("state" in value && value.state === "SUCCEEDED" && "response" in value) {return value.response as T;}
     throw new AppError(ErrorCode.VALIDATION_FAILED, "A request with this Idempotency-Key is already in progress", HttpStatus.CONFLICT);
   }
 

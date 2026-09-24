@@ -38,7 +38,7 @@ export class NotificationService {
         await this.sendEmail(organizationId, dto);
       }
       // Return a non-persisted placeholder shape for the caller.
-      return { id: "", organizationId, userId: dto.userId, type: dto.type, title: dto.title, body: dto.body ?? null, linkUrl: dto.linkUrl ?? null, metadata: null, isRead: false, readAt: null, createdAt: new Date() } as Notification;
+      return { id: "", organizationId, userId: dto.userId, type: dto.type, title: dto.title, body: dto.body ?? null, linkUrl: dto.linkUrl ?? null, metadata: null, isRead: false, readAt: null, createdAt: new Date() };
     }
 
     const notification = await this.prisma.notification.create({

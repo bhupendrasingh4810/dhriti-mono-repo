@@ -84,9 +84,9 @@ export class OrganizationAccessController {
   @Patch("subscription") @RequirePermission("billing.subscription.manage")
   async updateSubscription(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Headers("idempotency-key") idempotencyKey: string | undefined, @Body() dto: UpdateSubscriptionDto) {
     return this.subscriptions.executeIdempotent(organization.organizationId, user.userId, idempotencyKey, "subscription.update", dto, async () => {
-      if (dto.planKey) return this.subscriptions.changePlan(organization.organizationId, user.userId, dto.planKey);
-      if (dto.seatCount) return this.subscriptions.updateSeatCount(organization.organizationId, user.userId, dto.seatCount);
-      if (dto.cancelAtPeriodEnd !== undefined) return dto.cancelAtPeriodEnd ? this.subscriptions.cancelSubscription(organization.organizationId, user.userId) : this.subscriptions.reactivateSubscription(organization.organizationId, user.userId);
+      if (dto.planKey) {return this.subscriptions.changePlan(organization.organizationId, user.userId, dto.planKey);}
+      if (dto.seatCount) {return this.subscriptions.updateSeatCount(organization.organizationId, user.userId, dto.seatCount);}
+      if (dto.cancelAtPeriodEnd !== undefined) {return dto.cancelAtPeriodEnd ? this.subscriptions.cancelSubscription(organization.organizationId, user.userId) : this.subscriptions.reactivateSubscription(organization.organizationId, user.userId);}
       return this.subscriptions.getOrganizationSubscription(organization.organizationId);
     });
   }

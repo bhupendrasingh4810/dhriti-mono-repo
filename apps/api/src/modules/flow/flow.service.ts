@@ -83,7 +83,7 @@ export class FlowService {
           });
         }, { isolationLevel: "Serializable" });
       } catch (error) {
-        if (!this.isSerializationFailure(error) || attempt === 2) throw error;
+        if (!this.isSerializationFailure(error) || attempt === 2) {throw error;}
       }
     }
     throw new AppError(ErrorCode.INTERNAL_ERROR, "Project quota transaction failed", HttpStatus.SERVICE_UNAVAILABLE);

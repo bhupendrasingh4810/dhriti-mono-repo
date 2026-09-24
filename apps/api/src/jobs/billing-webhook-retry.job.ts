@@ -19,15 +19,15 @@ export class BillingWebhookRetryJob implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleDestroy(): void {
-    if (this.timer) clearInterval(this.timer);
+    if (this.timer) {clearInterval(this.timer);}
   }
 
   private async run(): Promise<void> {
     try {
       const acquired = await this.redis.raw.set(RETRY_LEASE_KEY, "1", "EX", this.config.billing.webhookRetryLeaseTtlSeconds, "NX");
-      if (acquired !== "OK") return;
+      if (acquired !== "OK") {return;}
       const result = await this.billingWebhooks.retryFailedEvents();
-      if (result.attempted > 0) this.logger.log(`Retried ${result.attempted} billing webhook events; ${result.succeeded} succeeded`);
+      if (result.attempted > 0) {this.logger.log(`Retried ${result.attempted} billing webhook events; ${result.succeeded} succeeded`);}
     } catch (error) {
       this.logger.error("Billing webhook retry job failed", error instanceof Error ? error.stack : undefined);
     }

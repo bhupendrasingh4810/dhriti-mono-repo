@@ -160,10 +160,10 @@ export class InvitationsService {
         }
         if (invitation.status === "ACCEPTED") {
             const existing = await this.prisma.organizationMember.findFirst({ where: { organizationId: invitation.organizationId, userId, status: "ACTIVE", deletedAt: null }, select: { id: true } });
-            if (existing) return;
+            if (existing) {return;}
             throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation has already been accepted", HttpStatus.BAD_REQUEST);
         }
-        if (invitation.status !== "PENDING") throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation is invalid or already used", HttpStatus.BAD_REQUEST);
+        if (invitation.status !== "PENDING") {throw new AppError(ErrorCode.INVITATION_INVALID, "Invitation is invalid or already used", HttpStatus.BAD_REQUEST);}
         if (invitation.expiresAt <= new Date()) {
             await this.prisma.invitation.update({ where: { id: invitation.id }, data: { status: "EXPIRED" } });
             throw new AppError(ErrorCode.INVITATION_EXPIRED, "Invitation has expired", HttpStatus.BAD_REQUEST);

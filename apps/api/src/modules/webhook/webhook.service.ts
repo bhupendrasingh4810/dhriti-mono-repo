@@ -167,7 +167,7 @@ export class WebhookService {
             "X-Dhriti-Event": event,
             "X-Dhriti-Signature": `sha256=${signature}`,
             "X-Dhriti-Timestamp": timestamp,
-            "X-Dhriti-Delivery": payload["id" as keyof typeof payload] as string,
+            "X-Dhriti-Delivery": payload["id" as keyof typeof payload],
           },
           body,
           signal: AbortSignal.timeout(delivery.timeoutSeconds * 1000),
@@ -231,8 +231,8 @@ export class WebhookService {
   }
 
   private async resolveSecret(webhook: Webhook): Promise<string> {
-    if (webhook.secretEncrypted) return this.secrets.decrypt(webhook.secretEncrypted);
-    if (!webhook.secret) throw new AppError(ErrorCode.WEBHOOK_NOT_FOUND, "Webhook secret is unavailable", HttpStatus.INTERNAL_SERVER_ERROR);
+    if (webhook.secretEncrypted) {return this.secrets.decrypt(webhook.secretEncrypted);}
+    if (!webhook.secret) {throw new AppError(ErrorCode.WEBHOOK_NOT_FOUND, "Webhook secret is unavailable", HttpStatus.INTERNAL_SERVER_ERROR);}
     await this.prisma.webhook.update({
       where: { id: webhook.id },
       data: { secret: null, secretEncrypted: this.secrets.encrypt(webhook.secret) },

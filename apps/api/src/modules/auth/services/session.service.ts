@@ -67,7 +67,12 @@ export class SessionService {
     });
 
     await this.cacheSession(session);
-    await this.redis.raw.sadd(userSessionsKey(userId), session.id);
+    const sessionTtlSeconds = Math.max(1, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
+    await this.redis.raw
+      .multi()
+      .sadd(userSessionsKey(userId), session.id)
+      .expire(userSessionsKey(userId), sessionTtlSeconds)
+      .exec();
 
     return { sessionId: session.id, refreshToken, expiresAt };
   }
@@ -170,8 +175,13 @@ export class SessionService {
       data: { revokedAt: new Date() },
     });
 
-    await this.redis.deleteByPattern("auth:session:*");
-    await this.redis.delete(userSessionsKey(userId));
+    const sessionsKey = userSessionsKey(userId);
+    const sessionIds = await this.redis.raw.smembers(sessionsKey);
+    const revokedSessionIds = sessionIds.filter((sessionId) => sessionId !== exceptSessionId);
+    if (revokedSessionIds.length > 0) {
+      await this.redis.delete(...revokedSessionIds.map(sessionKey));
+      await this.redis.raw.srem(sessionsKey, ...revokedSessionIds);
+    }
     return result.count;
   }
 

@@ -113,10 +113,11 @@ export class ApiConfigService {
     return this.config.get("PROFILE_PHOTO_MAX_SIZE_MB", { infer: true }) * 1024 * 1024;
   }
 
-  get redis(): { maxRetriesPerRequest: number; scanCount: number } {
+  get redis(): { maxRetriesPerRequest: number; scanCount: number; metricsIntervalSeconds: number } {
     return {
       maxRetriesPerRequest: this.config.get("REDIS_MAX_RETRIES_PER_REQUEST", { infer: true }),
       scanCount: this.config.get("REDIS_SCAN_COUNT", { infer: true }),
+      metricsIntervalSeconds: this.config.get("REDIS_METRICS_INTERVAL_SECONDS", { infer: true }),
     };
   }
 
@@ -220,13 +221,9 @@ export class ApiConfigService {
   private oauthProviderConfig(
     provider: "GOOGLE" | "GITHUB",
   ): { clientId: string; clientSecret: string; callbackUrl: string } | null {
-    const clientId = this.config.get(`${provider}_CLIENT_ID`, { infer: true }) as string | undefined;
-    const clientSecret = this.config.get(`${provider}_CLIENT_SECRET`, { infer: true }) as
-      | string
-      | undefined;
-    const callbackUrl = this.config.get(`${provider}_CALLBACK_URL`, { infer: true }) as
-      | string
-      | undefined;
+    const clientId = this.config.get(`${provider}_CLIENT_ID`, { infer: true });
+    const clientSecret = this.config.get(`${provider}_CLIENT_SECRET`, { infer: true });
+    const callbackUrl = this.config.get(`${provider}_CALLBACK_URL`, { infer: true });
 
     if (!clientId || !clientSecret || !callbackUrl) {
       return null;

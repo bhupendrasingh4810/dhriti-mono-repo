@@ -39,6 +39,7 @@ export const envSchema = z
     PROFILE_PHOTO_MAX_SIZE_MB: z.coerce.number().int().positive().default(2),
     REDIS_MAX_RETRIES_PER_REQUEST: z.coerce.number().int().min(0).default(3),
     REDIS_SCAN_COUNT: z.coerce.number().int().positive().default(200),
+    REDIS_METRICS_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
     ENTITLEMENT_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
     WEBHOOK_DELIVERY_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(10),
     WEBHOOK_DELIVERY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),

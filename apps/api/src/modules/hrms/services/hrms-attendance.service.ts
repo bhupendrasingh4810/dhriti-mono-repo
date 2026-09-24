@@ -51,7 +51,7 @@ export class HrmsAttendanceService {
 
   private async requireEmployee(organizationId: string, employeeId: string) {
     const employee = await this.prisma.hrmsEmployee.findFirst({ where: { id: employeeId, organizationId, status: "ACTIVE", deletedAt: null }, select: { id: true } });
-    if (!employee) throw new AppError(ErrorCode.EMPLOYEE_NOT_FOUND, "Employee not found", HttpStatus.NOT_FOUND);
+    if (!employee) {throw new AppError(ErrorCode.EMPLOYEE_NOT_FOUND, "Employee not found", HttpStatus.NOT_FOUND);}
     return employee;
   }
 }

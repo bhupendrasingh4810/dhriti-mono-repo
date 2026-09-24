@@ -45,7 +45,7 @@ export class HrmsHolidayCalendarService {
 
   private async requireCalendar(organizationId: string, calendarId: string): Promise<void> {
     const calendar = await this.prisma.holidayCalendar.findFirst({ where: { id: calendarId, organizationId }, select: { id: true } });
-    if (!calendar) throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Holiday calendar not found", HttpStatus.NOT_FOUND);
+    if (!calendar) {throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Holiday calendar not found", HttpStatus.NOT_FOUND);}
   }
 
   private clean(value: string | undefined): string | null {

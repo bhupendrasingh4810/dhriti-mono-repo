@@ -98,7 +98,7 @@ export class AuthGuard implements CanActivate {
   }
 
   private assertCookieRequestOrigin(request: Request): void {
-    if (request.headers.authorization || !request.cookies?.access_token || ["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
+    if (request.headers.authorization || !request.cookies?.access_token || ["GET", "HEAD", "OPTIONS"].includes(request.method)) {return;}
     const origin = request.headers.origin;
     if (!origin || !this.config.corsOrigins.includes(origin)) {
       throw new UnauthorizedException({ code: "UNAUTHORIZED", message: "Cookie-authenticated requests require a trusted origin" });

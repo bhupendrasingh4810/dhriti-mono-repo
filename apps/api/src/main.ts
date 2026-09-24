@@ -17,7 +17,7 @@ async function bootstrap(): Promise<void> {
   });
   const config = app.get(ApiConfigService);
 
-  if (config.trustProxy) app.set("trust proxy", 1);
+  if (config.trustProxy) {app.set("trust proxy", 1);}
   app.use(helmet());
   app.enableCors({
     origin: config.corsOrigins,

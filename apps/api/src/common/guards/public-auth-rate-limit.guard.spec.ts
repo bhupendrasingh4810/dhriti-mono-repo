@@ -12,14 +12,15 @@ function context() {
 
 describe("PublicAuthRateLimitGuard", () => {
   it("rejects requests beyond the configured limit", async () => {
-    const redis = { raw: { incr: jest.fn().mockResolvedValue(3), expire: jest.fn() } };
+    const redis = { incrementWithExpiry: jest.fn().mockResolvedValue(3) };
     const guard = new PublicAuthRateLimitGuard(redis as never, { publicAuthRateLimit: { windowSeconds: 60, maxRequests: 2 } } as never);
 
     await expect(guard.canActivate(context() as never)).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+    expect(redis.incrementWithExpiry).toHaveBeenCalledWith("rate-limit:public-auth:/auth/login:203.0.113.10", 60);
   });
 
   it("fails closed when Redis is unavailable", async () => {
-    const redis = { raw: { incr: jest.fn().mockRejectedValue(new Error("unavailable")), expire: jest.fn() } };
+    const redis = { incrementWithExpiry: jest.fn().mockRejectedValue(new Error("unavailable")) };
     const guard = new PublicAuthRateLimitGuard(redis as never, { publicAuthRateLimit: { windowSeconds: 60, maxRequests: 2 } } as never);
 
     await expect(guard.canActivate(context() as never)).rejects.toMatchObject({ status: HttpStatus.SERVICE_UNAVAILABLE });

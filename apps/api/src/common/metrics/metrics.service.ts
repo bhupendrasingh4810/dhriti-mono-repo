@@ -15,6 +15,13 @@ export class MetricsService {
   private readonly httpDurationBuckets: Record<string, number[]> = {};
   private billingWebhookRateLimitFailures = 0;
   private billingWebhookDeadLetters = 0;
+  private redisCacheHits = 0;
+  private redisCacheMisses = 0;
+  private redisErrors = 0;
+  private redisCommandDurationMsTotal = 0;
+  private redisCommandCount = 0;
+  private redisUsedMemoryBytes = 0;
+  private redisEvictedKeys = 0;
   private wsConnections = 0;
   private wsMessages = 0;
 
@@ -40,6 +47,28 @@ export class MetricsService {
 
   billingWebhookDeadLettered(count = 1): void {
     this.billingWebhookDeadLetters += count;
+  }
+
+  redisCacheHit(): void {
+    this.redisCacheHits += 1;
+  }
+
+  redisCacheMiss(): void {
+    this.redisCacheMisses += 1;
+  }
+
+  redisError(): void {
+    this.redisErrors += 1;
+  }
+
+  recordRedisCommand(durationMs: number): void {
+    this.redisCommandDurationMsTotal += durationMs;
+    this.redisCommandCount += 1;
+  }
+
+  setRedisResourceStats(usedMemoryBytes: number, evictedKeys: number): void {
+    this.redisUsedMemoryBytes = usedMemoryBytes;
+    this.redisEvictedKeys = evictedKeys;
   }
 
   wsMessage(): void {
@@ -80,6 +109,27 @@ export class MetricsService {
       "# HELP billing_webhook_dead_letters_total Billing webhook events moved to the dead-letter state",
       "# TYPE billing_webhook_dead_letters_total counter",
       `billing_webhook_dead_letters_total ${this.billingWebhookDeadLetters}`,
+      "# HELP redis_cache_hits_total Redis cache hits",
+      "# TYPE redis_cache_hits_total counter",
+      `redis_cache_hits_total ${this.redisCacheHits}`,
+      "# HELP redis_cache_misses_total Redis cache misses",
+      "# TYPE redis_cache_misses_total counter",
+      `redis_cache_misses_total ${this.redisCacheMisses}`,
+      "# HELP redis_errors_total Redis command and connection errors",
+      "# TYPE redis_errors_total counter",
+      `redis_errors_total ${this.redisErrors}`,
+      "# HELP redis_command_duration_ms_sum Redis command latency in milliseconds",
+      "# TYPE redis_command_duration_ms_sum counter",
+      `redis_command_duration_ms_sum ${this.redisCommandDurationMsTotal}`,
+      "# HELP redis_command_duration_ms_count Redis commands observed",
+      "# TYPE redis_command_duration_ms_count counter",
+      `redis_command_duration_ms_count ${this.redisCommandCount}`,
+      "# HELP redis_used_memory_bytes Redis used memory",
+      "# TYPE redis_used_memory_bytes gauge",
+      `redis_used_memory_bytes ${this.redisUsedMemoryBytes}`,
+      "# HELP redis_evicted_keys_total Redis evicted keys",
+      "# TYPE redis_evicted_keys_total counter",
+      `redis_evicted_keys_total ${this.redisEvictedKeys}`,
     );
 
     return `${lines.join("\n")}\n`;
@@ -96,5 +146,12 @@ export class MetricsService {
     this.wsMessages = 0;
     this.billingWebhookRateLimitFailures = 0;
     this.billingWebhookDeadLetters = 0;
+    this.redisCacheHits = 0;
+    this.redisCacheMisses = 0;
+    this.redisErrors = 0;
+    this.redisCommandDurationMsTotal = 0;
+    this.redisCommandCount = 0;
+    this.redisUsedMemoryBytes = 0;
+    this.redisEvictedKeys = 0;
   }
 }

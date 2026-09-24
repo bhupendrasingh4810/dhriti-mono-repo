@@ -16,12 +16,11 @@ export class PublicAuthRateLimitGuard implements CanActivate {
     const key = `rate-limit:public-auth:${route}:${request.ip || "unknown"}`;
     const limit = this.config.publicAuthRateLimit;
     try {
-      const count = await this.redis.raw.incr(key);
-      if (count === 1) await this.redis.raw.expire(key, limit.windowSeconds);
-      if (count > limit.maxRequests) throw new AppError(ErrorCode.RATE_LIMITED, "Too many requests", HttpStatus.TOO_MANY_REQUESTS);
+      const count = await this.redis.incrementWithExpiry(key, limit.windowSeconds);
+      if (count > limit.maxRequests) {throw new AppError(ErrorCode.RATE_LIMITED, "Too many requests", HttpStatus.TOO_MANY_REQUESTS);}
       return true;
     } catch (error) {
-      if (error instanceof AppError) throw error;
+      if (error instanceof AppError) {throw error;}
       throw new AppError(ErrorCode.INTERNAL_ERROR, "Authentication service is temporarily unavailable", HttpStatus.SERVICE_UNAVAILABLE);
     }
   }

@@ -41,7 +41,7 @@ export class OrganizationTeamService {
   async addMember(organizationId: string, teamId: string, userId: string, actorUserId: string): Promise<void> {
     await this.requireTeam(organizationId, teamId);
     const member = await this.prisma.organizationMember.findFirst({ where: { organizationId, userId, deletedAt: null }, select: { id: true } });
-    if (!member) throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);
+    if (!member) {throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);}
     await this.prisma.organizationTeamMember.upsert({ where: { teamId_userId: { teamId, userId } }, update: {}, create: { teamId, userId } });
     await this.audit.record({ action: "iam.organization-team.member-added", organizationId, actorUserId, resourceType: "OrganizationTeam", resourceId: teamId, metadata: { userId } });
   }
@@ -54,7 +54,7 @@ export class OrganizationTeamService {
 
   private async requireTeam(organizationId: string, teamId: string) {
     const team = await this.prisma.organizationTeam.findFirst({ where: { id: teamId, organizationId, deletedAt: null } });
-    if (!team) throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+    if (!team) {throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);}
     return team;
   }
 }

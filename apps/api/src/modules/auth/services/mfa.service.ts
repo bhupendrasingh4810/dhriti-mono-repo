@@ -115,7 +115,7 @@ export class MfaService {
     const secret = auth.mfaSecretEncrypted
       ? this.secrets.decrypt(auth.mfaSecretEncrypted)
       : auth.mfaSecret;
-    if (!secret) return false;
+    if (!secret) {return false;}
     if (!auth.mfaSecretEncrypted) {
       await this.prisma.userAuth.update({
         where: { userId },

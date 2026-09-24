@@ -54,7 +54,7 @@ export class OrganizationPermissionGroupService {
   async attachPermission(organizationId: string, groupId: string, permissionId: string, actorUserId: string): Promise<void> {
     await this.requireGroup(organizationId, groupId);
     const permission = await this.prisma.permission.findFirst({ where: { id: permissionId, isAssignable: true } });
-    if (!permission) throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Assignable permission not found", HttpStatus.NOT_FOUND);
+    if (!permission) {throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Assignable permission not found", HttpStatus.NOT_FOUND);}
     await this.prisma.organizationPermissionGroupPermission.upsert({ where: { permissionGroupId_permissionId: { permissionGroupId: groupId, permissionId } }, update: {}, create: { permissionGroupId: groupId, permissionId } });
     await this.audit.record({ action: "iam.permission-group.permission-attached", organizationId, actorUserId, resourceType: "Permission", resourceId: permissionId, metadata: { groupId } });
   }
@@ -87,20 +87,20 @@ export class OrganizationPermissionGroupService {
 
   private async requireGroup(organizationId: string, groupId: string) {
     const group = await this.prisma.organizationPermissionGroup.findFirst({ where: { id: groupId, organizationId, deletedAt: null }, include: { permissions: { include: { permission: true } } } });
-    if (!group) throw new AppError(ErrorCode.PERMISSION_GROUP_NOT_FOUND, "Permission group not found", HttpStatus.NOT_FOUND);
+    if (!group) {throw new AppError(ErrorCode.PERMISSION_GROUP_NOT_FOUND, "Permission group not found", HttpStatus.NOT_FOUND);}
     return group;
   }
 
   private async assertMember(organizationId: string, userId: string) {
     const member = await this.prisma.organizationMember.findFirst({ where: { organizationId, userId, status: "ACTIVE", deletedAt: null }, select: { id: true } });
-    if (!member) throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);
+    if (!member) {throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);}
   }
 
   private async validateScope(organizationId: string, scopeType: OrganizationPermissionScope, departmentId?: string, teamId?: string, flowProjectId?: string) {
-    if (scopeType === "ORGANIZATION" && !departmentId && !teamId && !flowProjectId) return;
-    if (scopeType === "DEPARTMENT" && departmentId && !teamId && !flowProjectId && await this.prisma.organizationDepartment.findFirst({ where: { id: departmentId, organizationId, deletedAt: null } })) return;
-    if (scopeType === "TEAM" && teamId && !departmentId && !flowProjectId && await this.prisma.organizationTeam.findFirst({ where: { id: teamId, organizationId, deletedAt: null } })) return;
-    if (scopeType === "FLOW_PROJECT" && flowProjectId && !departmentId && !teamId && await this.prisma.project.findFirst({ where: { id: flowProjectId, organizationId, deletedAt: null } })) return;
+    if (scopeType === "ORGANIZATION" && !departmentId && !teamId && !flowProjectId) {return;}
+    if (scopeType === "DEPARTMENT" && departmentId && !teamId && !flowProjectId && await this.prisma.organizationDepartment.findFirst({ where: { id: departmentId, organizationId, deletedAt: null } })) {return;}
+    if (scopeType === "TEAM" && teamId && !departmentId && !flowProjectId && await this.prisma.organizationTeam.findFirst({ where: { id: teamId, organizationId, deletedAt: null } })) {return;}
+    if (scopeType === "FLOW_PROJECT" && flowProjectId && !departmentId && !teamId && await this.prisma.project.findFirst({ where: { id: flowProjectId, organizationId, deletedAt: null } })) {return;}
     throw new AppError(ErrorCode.INVALID_PERMISSION_SCOPE, "Permission scope must reference an active resource in this organization", HttpStatus.BAD_REQUEST);
   }
 }
