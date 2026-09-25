@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 import { authService } from "@/services/auth.server";
-import { setAuthCookies } from '@/lib/auth/cookie-helpers';
+import { setAuthCookies } from "@/lib/auth/cookie-helpers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,10 +8,7 @@ export async function POST(request: NextRequest) {
     const loginResponse = await authService.login({ email, password });
     if (!loginResponse.ok) {
       const error = await loginResponse.json();
-      return NextResponse.json(
-        error,
-        { status: loginResponse.status },
-      );
+      return NextResponse.json(error, { status: loginResponse.status });
     }
 
     const tokens = await loginResponse.json();

@@ -12,7 +12,7 @@ interface ControlLayoutProps {
   mode: ControlMode;
 }
 
-const NAVIGATION: Record<ControlMode, Array<{ href: string; label: string, enabled: boolean }>> = {
+const NAVIGATION: Record<ControlMode, Array<{ href: string; label: string; enabled: boolean }>> = {
   platform: [
     { href: "platform/dashboard", label: "Overview", enabled: true },
     { href: "platform/orgs", label: "Organizations", enabled: true },
@@ -63,7 +63,10 @@ export function ControlLayout({ children, mode }: ControlLayoutProps) {
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden bg-slate-50 p-4">
-      <aside className="mr-2 flex min-h-0 w-60 shrink-0 flex-col border-r border-slate-200 bg-white" style={{borderRadius: "12px"}}>
+      <aside
+        className="mr-2 flex min-h-0 w-60 shrink-0 flex-col border-r border-slate-200 bg-white"
+        style={{ borderRadius: "12px" }}
+      >
         <div className="border-b border-slate-200 p-4">
           <p className="text-sm font-semibold text-slate-900">Control Panel</p>
           <p className="mt-1 text-xs text-slate-500">{modeLabel} administration</p>
@@ -82,8 +85,8 @@ export function ControlLayout({ children, mode }: ControlLayoutProps) {
                   !item.enabled
                     ? "text-slate-400 cursor-not-allowed"
                     : isActive
-                    ? "bg-emerald-50 font-semibold text-emerald-800"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      ? "bg-emerald-50 font-semibold text-emerald-800"
+                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
                 aria-disabled={!item.enabled}
               >
@@ -94,13 +97,26 @@ export function ControlLayout({ children, mode }: ControlLayoutProps) {
         </nav>
       </aside>
       <div className="ml-2 flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-6 text-sm text-slate-500" style={{borderRadius: "12px"}} >
+        <header
+          className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-6 text-sm text-slate-500"
+          style={{ borderRadius: "12px" }}
+        >
           <span>Admin</span>
           <span className="mx-2 text-slate-300">/</span>
           <span>{modeLabel}</span>
-          {activeItem ? <><span className="mx-2 text-slate-300">/</span><span className="font-semibold text-slate-900">{activeItem.label}</span></> : null}
+          {activeItem ? (
+            <>
+              <span className="mx-2 text-slate-300">/</span>
+              <span className="font-semibold text-slate-900">{activeItem.label}</span>
+            </>
+          ) : null}
         </header>
-        <main ref={mainRef} className={`-mr-4 mt-4 flex-1 overflow-y-auto pb-3 pl-0 pt-3 ${hasVerticalScrollbar ? "pr-2" : "pr-4"}`}>{children}</main>
+        <main
+          ref={mainRef}
+          className={`-mr-4 mt-4 flex-1 overflow-y-auto pb-3 pl-0 pt-3 ${hasVerticalScrollbar ? "pr-2" : "pr-4"}`}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

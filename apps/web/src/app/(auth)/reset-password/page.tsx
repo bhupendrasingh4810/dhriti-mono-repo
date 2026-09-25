@@ -38,11 +38,7 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <AuthLayout
-      title="Reset your password"
-      subtitle="Choose a new password for your account"
-      illustration="reset"
-    >
+    <AuthLayout title="Reset your password" subtitle="Choose a new password for your account" illustration="reset">
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
@@ -61,12 +57,31 @@ export default function ResetPasswordPage() {
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
             >
               {showPw ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
                   <path d="M9.75 12a2.25 2.25 0 1 0 4.5 0 2.25 2.25 0 0 0-4.5 0z" />
                 </svg>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)" }}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ transform: "rotate(180deg)" }}
+                >
                   <path d="M3 13.5c2.35-2.1 5.25-3.15 9-3.15s6.65 1.05 9 3.15" />
                   <path d="M6.5 11.75 5 9.5" />
                   <path d="M12 10.35V7.75" />

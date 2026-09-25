@@ -18,13 +18,23 @@ export class HrmsAttendanceController {
 
   @Get()
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.attendance.read" })
-  list(@CurrentOrganization() organization: OrganizationContext, @Param("employeeId") employeeId: string, @Query("from") from?: string, @Query("to") to?: string) {
+  list(
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("employeeId") employeeId: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
     return this.attendance.list(organization.organizationId, employeeId, from, to);
   }
 
   @Post()
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.attendance.manage" })
-  upsert(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Param("employeeId") employeeId: string, @Body() dto: UpsertHrmsAttendanceDto) {
+  upsert(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("employeeId") employeeId: string,
+    @Body() dto: UpsertHrmsAttendanceDto,
+  ) {
     return this.attendance.upsert(organization.organizationId, employeeId, user.userId, dto);
   }
 }

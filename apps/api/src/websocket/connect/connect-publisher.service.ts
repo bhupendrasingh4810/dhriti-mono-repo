@@ -16,13 +16,7 @@ export class ConnectPublisherService {
     this.serverOrThrow().to(organizationRoom(organizationId)).emit("presence:changed", { userId, status });
   }
 
-  typingChanged(
-    organizationId: string,
-    channelId: string,
-    socketId: string,
-    userId: string,
-    isTyping: boolean,
-  ): void {
+  typingChanged(organizationId: string, channelId: string, socketId: string, userId: string, isTyping: boolean): void {
     this.serverOrThrow()
       .except(socketId)
       .to(channelRoom(organizationId, channelId))

@@ -1,614 +1,624 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Email Verified - Welcome to Dhriti</title>
-  <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
-  <style>
-    /* Reset styles */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background-color: #f4f6f8;
-      color: #1a1a1a;
-      line-height: 1.6;
-    }
-
-    .email-container {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: #ffffff;
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    .header {
-      background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
-      padding: 50px 30px;
-      text-align: center;
-    }
-
-    .success-icon {
-      width: 80px;
-      height: 80px;
-      background-color: #ffffff;
-      border-radius: 50%;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 24px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .header h1 {
-      color: #ffffff;
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-
-    .header p {
-      color: rgba(255, 255, 255, 0.95);
-      font-size: 18px;
-      font-weight: 500;
-    }
-
-    .content {
-      padding: 50px 40px;
-    }
-
-    .greeting {
-      font-size: 26px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .message {
-      font-size: 16px;
-      color: #4a5568;
-      margin-bottom: 32px;
-      line-height: 1.8;
-      text-align: center;
-    }
-
-    .success-box {
-      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-      border: 2px solid #036c5f;
-      border-radius: 12px;
-      padding: 30px;
-      text-align: center;
-      margin-bottom: 40px;
-    }
-
-    .success-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 64px;
-      height: 64px;
-      background-color: #036c5f;
-      border-radius: 50%;
-      margin-bottom: 16px;
-    }
-
-    .success-text {
-      font-size: 20px;
-      font-weight: 700;
-      color: #036c5f;
-      margin-bottom: 8px;
-    }
-
-    .success-subtext {
-      font-size: 14px;
-      color: #059669;
-    }
-
-    .cta-button {
-      display: inline-block;
-      background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
-      color: #ffffff;
-      text-decoration: none;
-      padding: 18px 56px;
-      border-radius: 10px;
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 40px;
-      box-shadow: 0 6px 12px rgba(3, 108, 95, 0.35);
-      transition: all 0.3s ease;
-    }
-
-    .cta-button:hover {
-      background: linear-gradient(135deg, #048c7b 0%, #05a893 100%);
-      box-shadow: 0 8px 16px rgba(3, 108, 95, 0.45);
-      transform: translateY(-2px);
-    }
-
-    .cta-subtext {
-      font-size: 14px;
-      color: #718096;
-      text-align: center;
-      margin-top: -24px;
-      margin-bottom: 40px;
-    }
-
-    .divider {
-      height: 1px;
-      background-color: #e2e8f0;
-      margin: 40px 0;
-    }
-
-    .next-steps {
-      margin-bottom: 40px;
-    }
-
-    .next-steps-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 24px;
-      text-align: center;
-    }
-
-    .step-item {
-      display: table;
-      width: 100%;
-      margin-bottom: 24px;
-    }
-
-    .step-number {
-      display: table-cell;
-      width: 50px;
-      vertical-align: top;
-    }
-
-    .step-number-circle {
-      width: 40px;
-      height: 40px;
-      background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
-      color: #ffffff;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 700;
-      margin-right: 12px;
-    }
-
-    .step-content {
-      display: table-cell;
-      vertical-align: top;
-      padding-top: 4px;
-    }
-
-    .step-title {
-      font-size: 16px;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 6px;
-    }
-
-    .step-description {
-      font-size: 14px;
-      color: #718096;
-      line-height: 1.6;
-    }
-
-    .apps-preview {
-      background-color: #f7fafc;
-      border-radius: 12px;
-      padding: 30px;
-      margin-bottom: 40px;
-    }
-
-    .apps-title {
-      font-size: 18px;
-      font-weight: 700;
-      color: #1a1a1a;
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    .apps-grid {
-      display: table;
-      width: 100%;
-      table-layout: fixed;
-    }
-
-    .app-item {
-      display: table-cell;
-      text-align: center;
-      padding: 12px;
-      vertical-align: top;
-    }
-
-    .app-icon {
-      width: 56px;
-      height: 56px;
-      background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
-      border-radius: 12px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-      font-size: 24px;
-    }
-
-    .app-name {
-      font-size: 13px;
-      font-weight: 600;
-      color: #1a1a1a;
-      margin-bottom: 4px;
-    }
-
-    .app-desc {
-      font-size: 11px;
-      color: #718096;
-      line-height: 1.4;
-    }
-
-    .tips-section {
-      background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
-      border-left: 4px solid #9333ea;
-      border-radius: 8px;
-      padding: 24px;
-      margin-bottom: 32px;
-    }
-
-    .tips-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #6b21a8;
-      margin-bottom: 12px;
-    }
-
-    .tips-list {
-      list-style: none;
-      padding: 0;
-    }
-
-    .tips-list li {
-      font-size: 14px;
-      color: #581c87;
-      margin-bottom: 10px;
-      padding-left: 24px;
-      position: relative;
-    }
-
-    .tips-list li:before {
-      content: "✓";
-      position: absolute;
-      left: 0;
-      color: #9333ea;
-      font-weight: 700;
-    }
-
-    .footer {
-      background-color: #f7fafc;
-      padding: 40px 30px;
-      text-align: center;
-      border-top: 1px solid #e2e8f0;
-    }
-
-    .footer-text {
-      font-size: 14px;
-      color: #718096;
-      margin-bottom: 20px;
-    }
-
-    .footer-links {
-      margin-bottom: 20px;
-    }
-
-    .footer-links a {
-      color: #036c5f;
-      text-decoration: none;
-      margin: 0 12px;
-      font-size: 13px;
-    }
-
-    .footer-links a:hover {
-      text-decoration: underline;
-    }
-
-    .social-links {
-      margin-bottom: 20px;
-    }
-
-    .social-links a {
-      display: inline-block;
-      margin: 0 8px;
-      text-decoration: none;
-    }
-
-    .copyright {
-      font-size: 12px;
-      color: #a0aec0;
-    }
-
-    .account-info {
-      background-color: #f0f4f8;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 32px;
-      text-align: left;
-    }
-
-    .account-info-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #4a5568;
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .account-detail {
-      font-size: 14px;
-      color: #1a1a1a;
-      margin-bottom: 8px;
-    }
-
-    .account-detail strong {
-      color: #036c5f;
-    }
-
-    /* Mobile responsive */
-    @media only screen and (max-width: 600px) {
-      .email-container {
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Email Verified - Welcome to Dhriti</title>
+    <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+    <![endif]-->
+    <style>
+      /* Reset styles */
+      * {
         margin: 0;
-        border-radius: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #f4f6f8;
+        color: #1a1a1a;
+        line-height: 1.6;
+      }
+
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
       }
 
       .header {
-        padding: 40px 20px;
+        background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
+        padding: 50px 30px;
+        text-align: center;
       }
 
-      .content {
-        padding: 30px 20px;
+      .success-icon {
+        width: 80px;
+        height: 80px;
+        background-color: #ffffff;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
 
-      .greeting {
-        font-size: 22px;
-      }
-
-      .cta-button {
-        padding: 16px 40px;
-        font-size: 16px;
-        display: block;
-        width: 100%;
-      }
-
-      .app-item {
-        display: block;
-        width: 100%;
-        margin-bottom: 20px;
-      }
-
-      .step-item {
-        display: block;
-      }
-
-      .step-number {
-        display: block;
+      .header h1 {
+        color: #ffffff;
+        font-size: 32px;
+        font-weight: 700;
         margin-bottom: 12px;
       }
 
-      .step-content {
-        display: block;
+      .header p {
+        color: rgba(255, 255, 255, 0.95);
+        font-size: 18px;
+        font-weight: 500;
       }
-    }
-  </style>
-</head>
 
-<body>
-  <div style="background-color: #f4f6f8; padding: 40px 20px;">
-    <div class="email-container">
-      <!-- Header -->
-      <div class="header">
-        <div class="success-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20 6L9 17L4 12" stroke="#036c5f" stroke-width="3" stroke-linecap="round"
-              stroke-linejoin="round" />
-          </svg>
-        </div>
-        <h1>Email Verified!</h1>
-        <p>You're all set to get started</p>
-      </div>
+      .content {
+        padding: 50px 40px;
+      }
 
-      <!-- Content -->
-      <div class="content">
-        <div class="greeting">Welcome to Dhriti, {{receiver_name}}! 🎉</div>
+      .greeting {
+        font-size: 26px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 20px;
+        text-align: center;
+      }
 
-        <div class="message">
-          Your email has been successfully verified. You're now one step away from transforming how your team
-          collaborates and gets work done.
-        </div>
+      .message {
+        font-size: 16px;
+        color: #4a5568;
+        margin-bottom: 32px;
+        line-height: 1.8;
+        text-align: center;
+      }
 
-        <!-- Success Box -->
-        <div class="success-box">
-          <div class="success-badge">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M20 6L9 17L4 12" stroke="white" stroke-width="3" stroke-linecap="round"
-                stroke-linejoin="round" />
+      .success-box {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border: 2px solid #036c5f;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 40px;
+      }
+
+      .success-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 64px;
+        height: 64px;
+        background-color: #036c5f;
+        border-radius: 50%;
+        margin-bottom: 16px;
+      }
+
+      .success-text {
+        font-size: 20px;
+        font-weight: 700;
+        color: #036c5f;
+        margin-bottom: 8px;
+      }
+
+      .success-subtext {
+        font-size: 14px;
+        color: #059669;
+      }
+
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 18px 56px;
+        border-radius: 10px;
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 40px;
+        box-shadow: 0 6px 12px rgba(3, 108, 95, 0.35);
+        transition: all 0.3s ease;
+      }
+
+      .cta-button:hover {
+        background: linear-gradient(135deg, #048c7b 0%, #05a893 100%);
+        box-shadow: 0 8px 16px rgba(3, 108, 95, 0.45);
+        transform: translateY(-2px);
+      }
+
+      .cta-subtext {
+        font-size: 14px;
+        color: #718096;
+        text-align: center;
+        margin-top: -24px;
+        margin-bottom: 40px;
+      }
+
+      .divider {
+        height: 1px;
+        background-color: #e2e8f0;
+        margin: 40px 0;
+      }
+
+      .next-steps {
+        margin-bottom: 40px;
+      }
+
+      .next-steps-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 24px;
+        text-align: center;
+      }
+
+      .step-item {
+        display: table;
+        width: 100%;
+        margin-bottom: 24px;
+      }
+
+      .step-number {
+        display: table-cell;
+        width: 50px;
+        vertical-align: top;
+      }
+
+      .step-number-circle {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
+        color: #ffffff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        margin-right: 12px;
+      }
+
+      .step-content {
+        display: table-cell;
+        vertical-align: top;
+        padding-top: 4px;
+      }
+
+      .step-title {
+        font-size: 16px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 6px;
+      }
+
+      .step-description {
+        font-size: 14px;
+        color: #718096;
+        line-height: 1.6;
+      }
+
+      .apps-preview {
+        background-color: #f7fafc;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 40px;
+      }
+
+      .apps-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .apps-grid {
+        display: table;
+        width: 100%;
+        table-layout: fixed;
+      }
+
+      .app-item {
+        display: table-cell;
+        text-align: center;
+        padding: 12px;
+        vertical-align: top;
+      }
+
+      .app-icon {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        font-size: 24px;
+      }
+
+      .app-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 4px;
+      }
+
+      .app-desc {
+        font-size: 11px;
+        color: #718096;
+        line-height: 1.4;
+      }
+
+      .tips-section {
+        background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+        border-left: 4px solid #9333ea;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 32px;
+      }
+
+      .tips-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #6b21a8;
+        margin-bottom: 12px;
+      }
+
+      .tips-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .tips-list li {
+        font-size: 14px;
+        color: #581c87;
+        margin-bottom: 10px;
+        padding-left: 24px;
+        position: relative;
+      }
+
+      .tips-list li:before {
+        content: "✓";
+        position: absolute;
+        left: 0;
+        color: #9333ea;
+        font-weight: 700;
+      }
+
+      .footer {
+        background-color: #f7fafc;
+        padding: 40px 30px;
+        text-align: center;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .footer-text {
+        font-size: 14px;
+        color: #718096;
+        margin-bottom: 20px;
+      }
+
+      .footer-links {
+        margin-bottom: 20px;
+      }
+
+      .footer-links a {
+        color: #036c5f;
+        text-decoration: none;
+        margin: 0 12px;
+        font-size: 13px;
+      }
+
+      .footer-links a:hover {
+        text-decoration: underline;
+      }
+
+      .social-links {
+        margin-bottom: 20px;
+      }
+
+      .social-links a {
+        display: inline-block;
+        margin: 0 8px;
+        text-decoration: none;
+      }
+
+      .copyright {
+        font-size: 12px;
+        color: #a0aec0;
+      }
+
+      .account-info {
+        background-color: #f0f4f8;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 32px;
+        text-align: left;
+      }
+
+      .account-info-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .account-detail {
+        font-size: 14px;
+        color: #1a1a1a;
+        margin-bottom: 8px;
+      }
+
+      .account-detail strong {
+        color: #036c5f;
+      }
+
+      /* Mobile responsive */
+      @media only screen and (max-width: 600px) {
+        .email-container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .header {
+          padding: 40px 20px;
+        }
+
+        .content {
+          padding: 30px 20px;
+        }
+
+        .greeting {
+          font-size: 22px;
+        }
+
+        .cta-button {
+          padding: 16px 40px;
+          font-size: 16px;
+          display: block;
+          width: 100%;
+        }
+
+        .app-item {
+          display: block;
+          width: 100%;
+          margin-bottom: 20px;
+        }
+
+        .step-item {
+          display: block;
+        }
+
+        .step-number {
+          display: block;
+          margin-bottom: 12px;
+        }
+
+        .step-content {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div style="background-color: #f4f6f8; padding: 40px 20px">
+      <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+          <div class="success-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M20 6L9 17L4 12"
+                stroke="#036c5f"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
             </svg>
           </div>
-          <div class="success-text">Verification Successful</div>
-          <div class="success-subtext">Your account is now active</div>
+          <h1>Email Verified!</h1>
+          <p>You're all set to get started</p>
         </div>
 
-        <!-- CTA Button -->
-        <div style="text-align: center;">
-          <a href="{{onboarding_url}}" class="cta-button" style="color: #ffffff !important;">
-            Create Your Workspace
-          </a>
-          <div class="cta-subtext">or visit <a href="{{onboarding_url}}"
-              style="color: #036c5f; text-decoration: underline;">app.dhriti.com</a></div>
-        </div>
+        <!-- Content -->
+        <div class="content">
+          <div class="greeting">Welcome to Dhriti, {{receiver_name}}! 🎉</div>
 
-        <!-- Account Info -->
-        <div class="account-info">
-          <div class="account-info-title">Your Account Details</div>
-          <div class="account-detail">Email: <strong>{{receiver_email}}</strong></div>
-          <div class="account-detail">Account Status: <strong>Verified ✓</strong></div>
-        </div>
+          <div class="message">
+            Your email has been successfully verified. You're now one step away from transforming how your team
+            collaborates and gets work done.
+          </div>
 
-        <div class="divider"></div>
-
-        <!-- Next Steps -->
-        <div class="next-steps">
-          <div class="next-steps-title">What's Next?</div>
-
-          <div class="step-item">
-            <div class="step-number">
-              <div class="step-number-circle">1</div>
+          <!-- Success Box -->
+          <div class="success-box">
+            <div class="success-badge">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M20 6L9 17L4 12"
+                  stroke="white"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
             </div>
-            <div class="step-content">
-              <div class="step-title">Create or Join an Organization</div>
-              <div class="step-description">Set up your workspace or join an existing team to start
-                collaborating</div>
+            <div class="success-text">Verification Successful</div>
+            <div class="success-subtext">Your account is now active</div>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="text-align: center">
+            <a href="{{onboarding_url}}" class="cta-button" style="color: #ffffff !important">
+              Create Your Workspace
+            </a>
+            <div class="cta-subtext">
+              or visit
+              <a href="{{onboarding_url}}" style="color: #036c5f; text-decoration: underline">app.dhriti.com</a>
             </div>
           </div>
 
-          <div class="step-item">
-            <div class="step-number">
-              <div class="step-number-circle">2</div>
+          <!-- Account Info -->
+          <div class="account-info">
+            <div class="account-info-title">Your Account Details</div>
+            <div class="account-detail">Email: <strong>{{receiver_email}}</strong></div>
+            <div class="account-detail">Account Status: <strong>Verified ✓</strong></div>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Next Steps -->
+          <div class="next-steps">
+            <div class="next-steps-title">What's Next?</div>
+
+            <div class="step-item">
+              <div class="step-number">
+                <div class="step-number-circle">1</div>
+              </div>
+              <div class="step-content">
+                <div class="step-title">Create or Join an Organization</div>
+                <div class="step-description">
+                  Set up your workspace or join an existing team to start collaborating
+                </div>
+              </div>
             </div>
-            <div class="step-content">
-              <div class="step-title">Complete Your Profile</div>
-              <div class="step-description">Add a profile photo and update your bio to help your team
-                recognize you</div>
+
+            <div class="step-item">
+              <div class="step-number">
+                <div class="step-number-circle">2</div>
+              </div>
+              <div class="step-content">
+                <div class="step-title">Complete Your Profile</div>
+                <div class="step-description">
+                  Add a profile photo and update your bio to help your team recognize you
+                </div>
+              </div>
+            </div>
+
+            <div class="step-item">
+              <div class="step-number">
+                <div class="step-number-circle">3</div>
+              </div>
+              <div class="step-content">
+                <div class="step-title">Invite Your Team</div>
+                <div class="step-description">Bring your teammates on board and start collaborating in one place</div>
+              </div>
+            </div>
+
+            <div class="step-item">
+              <div class="step-number">
+                <div class="step-number-circle">4</div>
+              </div>
+              <div class="step-content">
+                <div class="step-title">Explore the Apps</div>
+                <div class="step-description">Discover all the powerful tools Dhriti offers for your organization</div>
+              </div>
             </div>
           </div>
 
-          <div class="step-item">
-            <div class="step-number">
-              <div class="step-number-circle">3</div>
-            </div>
-            <div class="step-content">
-              <div class="step-title">Invite Your Team</div>
-              <div class="step-description">Bring your teammates on board and start collaborating in one
-                place</div>
-            </div>
-          </div>
-
-          <div class="step-item">
-            <div class="step-number">
-              <div class="step-number-circle">4</div>
-            </div>
-            <div class="step-content">
-              <div class="step-title">Explore the Apps</div>
-              <div class="step-description">Discover all the powerful tools Dhriti offers for your
-                organization</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Apps Preview -->
-        <div class="apps-preview">
-          <div class="apps-title">Everything You Need in One Place</div>
-          <div class="apps-grid">
-            <div class="app-item">
-              <div class="app-icon">💬</div>
-              <div class="app-name">Connect</div>
-              <div class="app-desc">Chat & Calls</div>
-            </div>
-            <div class="app-item">
-              <div class="app-icon">📋</div>
-              <div class="app-name">Flow</div>
-              <div class="app-desc">Projects</div>
-            </div>
-            <div class="app-item">
-              <div class="app-icon">📚</div>
-              <div class="app-name">Atlas</div>
-              <div class="app-desc">Docs</div>
-            </div>
-            <div class="app-item">
-              <div class="app-icon">📅</div>
-              <div class="app-name">Pulse</div>
-              <div class="app-desc">Calendar</div>
-            </div>
-            <div class="app-item">
-              <div class="app-icon">✨</div>
-              <div class="app-name">Nexus</div>
-              <div class="app-desc">AI Assistant</div>
+          <!-- Apps Preview -->
+          <div class="apps-preview">
+            <div class="apps-title">Everything You Need in One Place</div>
+            <div class="apps-grid">
+              <div class="app-item">
+                <div class="app-icon">💬</div>
+                <div class="app-name">Connect</div>
+                <div class="app-desc">Chat & Calls</div>
+              </div>
+              <div class="app-item">
+                <div class="app-icon">📋</div>
+                <div class="app-name">Flow</div>
+                <div class="app-desc">Projects</div>
+              </div>
+              <div class="app-item">
+                <div class="app-icon">📚</div>
+                <div class="app-name">Atlas</div>
+                <div class="app-desc">Docs</div>
+              </div>
+              <div class="app-item">
+                <div class="app-icon">📅</div>
+                <div class="app-name">Pulse</div>
+                <div class="app-desc">Calendar</div>
+              </div>
+              <div class="app-item">
+                <div class="app-icon">✨</div>
+                <div class="app-name">Nexus</div>
+                <div class="app-desc">AI Assistant</div>
+              </div>
             </div>
           </div>
+
+          <!-- Tips Section -->
+          <div class="tips-section">
+            <div class="tips-title">💡 Quick Tips to Get Started</div>
+            <ul class="tips-list">
+              <li>Start by creating your organization workspace</li>
+              <li>Invite team members to collaborate from day one</li>
+              <li>Check out our Help Center for tutorials and guides</li>
+              <li>Customize your workspace to match your team's workflow</li>
+            </ul>
+          </div>
+
+          <div class="message">
+            We're excited to have you on board! If you have any questions or need assistance, our support team is here
+            to help 24/7.
+          </div>
+
+          <div class="message">
+            Here's to productive collaboration,<br />
+            <strong>The Dhriti Team</strong>
+          </div>
         </div>
 
-        <!-- Tips Section -->
-        <div class="tips-section">
-          <div class="tips-title">💡 Quick Tips to Get Started</div>
-          <ul class="tips-list">
-            <li>Start by creating your organization workspace</li>
-            <li>Invite team members to collaborate from day one</li>
-            <li>Check out our Help Center for tutorials and guides</li>
-            <li>Customize your workspace to match your team's workflow</li>
-          </ul>
-        </div>
+        <!-- Footer -->
+        <div class="footer">
+          <div class="footer-text">
+            You're receiving this email because you signed up for Dhriti. If you didn't create an account, you can
+            safely ignore this email.
+          </div>
 
-        <div class="message">
-          We're excited to have you on board! If you have any questions or need assistance, our support team
-          is here to help 24/7.
-        </div>
+          <div class="footer-links">
+            <a href="{{help_center_url}}">Help Center</a>
+            <a href="{{privacy_url}}">Privacy Policy</a>
+            <a href="{{terms_url}}">Terms of Service</a>
+            <a href="{{contact_url}}">Contact Us</a>
+          </div>
 
-        <div class="message">
-          Here's to productive collaboration,<br>
-          <strong>The Dhriti Team</strong>
-        </div>
-      </div>
+          <div class="social-links">
+            <a href="{{twitter_url}}">
+              <img src="https://cdn-icons-png.flaticon.com/32/5968/5968764.png" alt="Twitter" width="24" height="24" />
+            </a>
+            <a href="{{linkedin_url}}">
+              <img src="https://cdn-icons-png.flaticon.com/32/145/145807.png" alt="LinkedIn" width="24" height="24" />
+            </a>
+            <a href="{{github_url}}">
+              <img src="https://cdn-icons-png.flaticon.com/32/733/733553.png" alt="GitHub" width="24" height="24" />
+            </a>
+          </div>
 
-      <!-- Footer -->
-      <div class="footer">
-        <div class="footer-text">
-          You're receiving this email because you signed up for Dhriti. If you didn't create an account, you
-          can safely ignore this email.
-        </div>
-
-        <div class="footer-links">
-          <a href="{{help_center_url}}">Help Center</a>
-          <a href="{{privacy_url}}">Privacy Policy</a>
-          <a href="{{terms_url}}">Terms of Service</a>
-          <a href="{{contact_url}}">Contact Us</a>
-        </div>
-
-        <div class="social-links">
-          <a href="{{twitter_url}}">
-            <img src="https://cdn-icons-png.flaticon.com/32/5968/5968764.png" alt="Twitter" width="24" height="24" />
-          </a>
-          <a href="{{linkedin_url}}">
-            <img src="https://cdn-icons-png.flaticon.com/32/145/145807.png" alt="LinkedIn" width="24" height="24" />
-          </a>
-          <a href="{{github_url}}">
-            <img src="https://cdn-icons-png.flaticon.com/32/733/733553.png" alt="GitHub" width="24" height="24" />
-          </a>
-        </div>
-
-        <div class="copyright">
-          © 2026 Dhriti. All rights reserved.<br>
-          Made with ❤️ for modern teams
+          <div class="copyright">
+            © 2026 Dhriti. All rights reserved.<br />
+            Made with ❤️ for modern teams
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</body>
-
+  </body>
 </html>

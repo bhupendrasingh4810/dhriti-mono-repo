@@ -13,11 +13,7 @@ interface ThemeProviderProps {
   density?: DensityMode;
 }
 
-export function ThemeProvider({
-  children,
-  mode = "system",
-  density = "comfortable",
-}: ThemeProviderProps) {
+export function ThemeProvider({ children, mode = "system", density = "comfortable" }: ThemeProviderProps) {
   const [resolvedMode, setResolvedMode] = React.useState<PaletteMode>("light");
 
   React.useEffect(() => {
@@ -34,10 +30,7 @@ export function ThemeProvider({
     return undefined;
   }, [mode]);
 
-  const theme = React.useMemo(
-    () => createAppTheme({ mode: resolvedMode, density }),
-    [resolvedMode, density],
-  );
+  const theme = React.useMemo(() => createAppTheme({ mode: resolvedMode, density }), [resolvedMode, density]);
 
   return (
     <MuiThemeProvider theme={theme}>

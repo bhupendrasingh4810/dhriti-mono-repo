@@ -7,9 +7,9 @@ import { UserController } from "./user.controller";
 import { UserService } from "./user.service";
 
 @Module({
-	imports: [AuthModule],
-	controllers: [UserController, OnboardingController],
-	providers: [UserService, OnboardingService],
-	exports: [UserService],
+  imports: [AuthModule],
+  controllers: [UserController, OnboardingController],
+  providers: [UserService, OnboardingService],
+  exports: [UserService],
 })
 export class UserModule {}

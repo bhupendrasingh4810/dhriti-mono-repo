@@ -1,14 +1,8 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { RequirePermission } from "../../common/decorators/access.decorator";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
@@ -36,7 +30,9 @@ export class AnalyticsController {
 
   @Get("overview")
   @RequirePermission("analytics.read")
-  @ApiOperation({ summary: "Analytics overview: usage by app, daily activity, DAU/WAU/MAU, team velocity (OWNER/ADMIN)" })
+  @ApiOperation({
+    summary: "Analytics overview: usage by app, daily activity, DAU/WAU/MAU, team velocity (OWNER/ADMIN)",
+  })
   async overview(
     @CurrentOrganization() organization: OrganizationContext,
     @Query() query: AnalyticsQueryDto,

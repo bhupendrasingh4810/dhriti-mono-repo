@@ -13,13 +13,11 @@ describe("LoggingInterceptor", () => {
       ip: "203.0.113.10",
     };
 
-    (interceptor as unknown as { log: (request: unknown, response: unknown, correlationId: string, startedAt: bigint, error: unknown) => void }).log(
-      request,
-      { statusCode: 200 },
-      "correlation-id",
-      process.hrtime.bigint(),
-      null,
-    );
+    (
+      interceptor as unknown as {
+        log: (request: unknown, response: unknown, correlationId: string, startedAt: bigint, error: unknown) => void;
+      }
+    ).log(request, { statusCode: 200 }, "correlation-id", process.hrtime.bigint(), null);
 
     expect(logger.log).toHaveBeenCalledWith(expect.stringContaining('"access_token":"[REDACTED]"'));
     expect(logger.log).toHaveBeenCalledWith(expect.stringContaining('"refreshToken":"[REDACTED]"'));

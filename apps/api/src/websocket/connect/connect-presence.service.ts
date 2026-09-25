@@ -49,12 +49,7 @@ export class ConnectPresenceService {
     );
   }
 
-  async setTyping(
-    organizationId: string,
-    channelId: string,
-    userId: string,
-    isTyping: boolean,
-  ): Promise<void> {
+  async setTyping(organizationId: string, channelId: string, userId: string, isTyping: boolean): Promise<void> {
     const key = `connect:typing:${organizationId}:${channelId}:${userId}`;
     if (!isTyping) {
       await this.redis.raw.del(key);

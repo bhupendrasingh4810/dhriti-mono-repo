@@ -1,11 +1,11 @@
-export type OAuthProvider = 'google' | 'microsoft' | 'github' | 'linkedin';
+export type OAuthProvider = "google" | "microsoft" | "github" | "linkedin";
 
-export type OAuthMode = 'login' | 'signup';
+export type OAuthMode = "login" | "signup";
 
 export interface OAuthButtonProps {
-    provider?: OAuthProvider;
-    mode?: OAuthMode;
-    onClick?: (provider: OAuthProvider) => void;
-    disabled?: boolean;
-    className?: string;
+  provider?: OAuthProvider;
+  mode?: OAuthMode;
+  onClick?: (provider: OAuthProvider) => void;
+  disabled?: boolean;
+  className?: string;
 }

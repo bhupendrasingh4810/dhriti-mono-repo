@@ -126,10 +126,7 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   @SubscribeMessage("call:leave")
-  async leaveCall(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: JoinCallPayload,
-  ): Promise<{ ok: true }> {
+  async leaveCall(@ConnectedSocket() socket: Socket, @MessageBody() payload: JoinCallPayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     await socket.leave(callRoom(payload.channelId));
     const room = this.calls.get(payload.channelId);
@@ -145,10 +142,7 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   /** Relay SDP offer/answer to a specific peer. */
   @SubscribeMessage("call:signal")
-  signal(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: SignalPayload,
-  ): void {
+  signal(@ConnectedSocket() socket: Socket, @MessageBody() payload: SignalPayload): void {
     const principal = this.wsAuth.getPrincipal(socket);
     this.server.to(payload.to).emit("call:signal", {
       channelId: payload.channelId,
@@ -160,10 +154,7 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   /** Broadcast mute/video/screen-share state to the call room. */
   @SubscribeMessage("call:media-state")
-  mediaState(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: MediaStatePayload,
-  ): void {
+  mediaState(@ConnectedSocket() socket: Socket, @MessageBody() payload: MediaStatePayload): void {
     const principal = this.wsAuth.getPrincipal(socket);
     socket.to(callRoom(payload.channelId)).emit("call:media-state", {
       channelId: payload.channelId,

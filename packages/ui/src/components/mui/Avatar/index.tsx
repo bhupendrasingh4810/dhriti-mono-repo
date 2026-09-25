@@ -1,6 +1,6 @@
 /**
  * Avatar Component for Dhriti UI
- * 
+ *
  * Enterprise-grade avatar component with:
  * - Image avatars
  * - Letter/initial avatars
@@ -129,8 +129,7 @@ interface StyledAvatarProps {
 }
 
 const StyledAvatar = styled(AvatarMui, {
-  shouldForwardProp: (prop) =>
-    prop !== "variant" && prop !== "size" && prop !== "customColor" && prop !== "textColor",
+  shouldForwardProp: (prop) => prop !== "variant" && prop !== "size" && prop !== "customColor" && prop !== "textColor",
 })<StyledAvatarProps>(({ theme, variant, size, customColor, textColor }) => {
   const sizeConfig = avatarSizes[size];
 
@@ -141,12 +140,7 @@ const StyledAvatar = styled(AvatarMui, {
     fontWeight: 600,
     backgroundColor: customColor || theme.palette.primary.main,
     color: textColor || theme.palette.primary.contrastText,
-    borderRadius:
-      variant === "circular"
-        ? "50%"
-        : variant === "rounded"
-          ? (theme.shape?.borderRadius ?? 8)
-          : 0,
+    borderRadius: variant === "circular" ? "50%" : variant === "rounded" ? (theme.shape?.borderRadius ?? 8) : 0,
     transition: theme.transitions.create(["transform", "box-shadow"], {
       duration: theme.transitions.duration.standard,
     }),
@@ -286,57 +280,47 @@ export interface AvatarGroupCustomProps extends Omit<AvatarGroupProps, "children
   total?: number;
 }
 
-export const AvatarGroupCustom = forwardRef<HTMLDivElement, AvatarGroupCustomProps>(
-  function AvatarGroupCustom(
-    {
-      children,
-      max = 3,
-      size = "md",
-      variant = "circular",
-      total,
-      sx,
-      ...props
-    },
-    ref,
-  ) {
-    const avatarArray = React.Children.toArray(children);
-    const visibleAvatars = avatarArray.slice(0, max);
-    const remainingCount = total ? total - max : avatarArray.length - max;
+export const AvatarGroupCustom = forwardRef<HTMLDivElement, AvatarGroupCustomProps>(function AvatarGroupCustom(
+  { children, max = 3, size = "md", variant = "circular", total, sx, ...props },
+  ref,
+) {
+  const avatarArray = React.Children.toArray(children);
+  const visibleAvatars = avatarArray.slice(0, max);
+  const remainingCount = total ? total - max : avatarArray.length - max;
 
-    return (
-      <AvatarGroupWrapper max={max} total={total || avatarArray.length} ref={ref}>
-        <AvatarGroup
-          max={max}
-          sx={[
-            {
-              "& .MuiAvatarGroup-avatar": {
-                width: avatarSizes[size].width,
-                height: avatarSizes[size].height,
-                fontSize: avatarSizes[size].fontSize,
-                borderRadius: variant === "circular" ? "50%" : variant === "rounded" ? "8px" : "0",
-              },
+  return (
+    <AvatarGroupWrapper max={max} total={total || avatarArray.length} ref={ref}>
+      <AvatarGroup
+        max={max}
+        sx={[
+          {
+            "& .MuiAvatarGroup-avatar": {
+              width: avatarSizes[size].width,
+              height: avatarSizes[size].height,
+              fontSize: avatarSizes[size].fontSize,
+              borderRadius: variant === "circular" ? "50%" : variant === "rounded" ? "8px" : "0",
             },
-            ...(Array.isArray(sx) ? sx : [sx]),
-          ]}
-          {...props}
-        >
-          {visibleAvatars}
-          {remainingCount > 0 && (
-            <AvatarMui
-              sx={{
-                width: avatarSizes[size].width,
-                height: avatarSizes[size].height,
-                fontSize: avatarSizes[size].fontSize,
-                fontWeight: 600,
-              }}
-            >
-              +{remainingCount}
-            </AvatarMui>
-          )}
-        </AvatarGroup>
-      </AvatarGroupWrapper>
-    );
-  }
-);
+          },
+          ...(Array.isArray(sx) ? sx : [sx]),
+        ]}
+        {...props}
+      >
+        {visibleAvatars}
+        {remainingCount > 0 && (
+          <AvatarMui
+            sx={{
+              width: avatarSizes[size].width,
+              height: avatarSizes[size].height,
+              fontSize: avatarSizes[size].fontSize,
+              fontWeight: 600,
+            }}
+          >
+            +{remainingCount}
+          </AvatarMui>
+        )}
+      </AvatarGroup>
+    </AvatarGroupWrapper>
+  );
+});
 
 AvatarGroupCustom.displayName = "AvatarGroupCustom";

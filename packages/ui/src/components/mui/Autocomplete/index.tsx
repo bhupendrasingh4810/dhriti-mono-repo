@@ -1,6 +1,6 @@
 /**
  * AutoComplete Component for Dhriti UI
- * 
+ *
  * Enterprise-grade autocomplete component with:
  * - Combobox (single select)
  * - Country select with flags
@@ -28,11 +28,7 @@ import Chip from "@mui/material/Chip";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import CircularProgress from "@mui/material/CircularProgress";
-import {
-  Check as CheckIcon,
-  Clear as ClearIcon,
-  ExpandMore as ExpandMoreIcon,
-} from "@mui/icons-material";
+import { Check as CheckIcon, Clear as ClearIcon, ExpandMore as ExpandMoreIcon } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 
 export interface AutoCompleteOption {
@@ -50,11 +46,10 @@ export interface CountryOption extends AutoCompleteOption {
   flag: string;
 }
 
-export interface AutoCompleteProps
-  extends Omit<
-    HTMLAttributes<HTMLDivElement>,
-    "onChange" | "onSelect" | "defaultValue"
-  > {
+export interface AutoCompleteProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "onChange" | "onSelect" | "defaultValue"
+> {
   /**
    * Options to display.
    */
@@ -73,21 +68,12 @@ export interface AutoCompleteProps
   /**
    * Change handler.
    */
-  onChange?: (
-    event: any,
-    value: any,
-    reason?: string,
-    details?: any,
-  ) => void;
+  onChange?: (event: any, value: any, reason?: string, details?: any) => void;
 
   /**
    * Input value change handler.
    */
-  onInputChange?: (
-    event: any,
-    value: string,
-    reason?: string,
-  ) => void;
+  onInputChange?: (event: any, value: string, reason?: string) => void;
 
   /**
    * Input label.
@@ -159,11 +145,7 @@ export interface AutoCompleteProps
   /**
    * Custom option renderer.
    */
-  renderOption?: (
-    props: any,
-    option: any,
-    state: AutocompleteRenderOptionState,
-  ) => ReactNode;
+  renderOption?: (props: any, option: any, state: AutocompleteRenderOptionState) => ReactNode;
 
   /**
    * Filter options function.
@@ -227,8 +209,7 @@ export interface AutoCompleteProps
 // STYLED COMPONENTS
 // ============================================================================
 
-const StyledAutocomplete = styled(MuiAutocomplete<any, boolean, boolean, boolean>)(
-  ({ theme }) => ({
+const StyledAutocomplete = styled(MuiAutocomplete<any, boolean, boolean, boolean>)(({ theme }) => ({
   width: "100%",
   "& .MuiAutocomplete-clearIndicator": {
     marginRight: theme.spacing(0.5),
@@ -254,8 +235,7 @@ const StyledAutocomplete = styled(MuiAutocomplete<any, boolean, boolean, boolean
   "& .MuiChip-root": {
     margin: theme.spacing(0.25),
   },
-  }),
-);
+}));
 
 // ============================================================================
 // OPTION RENDERER
@@ -343,32 +323,19 @@ const renderOptionContent = ({
 
       {/* Content */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: selected ? "fontWeightMedium" : "fontWeightRegular" }}
-          noWrap
-        >
+        <Typography variant="body2" sx={{ fontWeight: selected ? "fontWeightMedium" : "fontWeightRegular" }} noWrap>
           {option.label}
         </Typography>
 
         {showDescriptions && option.description && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            noWrap
-            sx={{ display: "block", mt: 0.25 }}
-          >
+          <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block", mt: 0.25 }}>
             {option.description}
           </Typography>
         )}
 
         {/* Dial code for country options */}
         {showFlags && isCountry && (
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: "block", mt: 0.25 }}
-          >
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.25 }}>
             {(option as CountryOption).dialCode}
           </Typography>
         )}
@@ -418,11 +385,7 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
   const hasValue = multiple ? Array.isArray(value) && value.length > 0 : Boolean(value);
 
   // Handle option rendering
-  const handleRenderOption = (
-    props: any,
-    option: any,
-    state: AutocompleteRenderOptionState,
-  ) => {
+  const handleRenderOption = (props: any, option: any, state: AutocompleteRenderOptionState) => {
     if (customRenderOption) {
       if (customRenderOption.length >= 3) {
         return (customRenderOption as any)(props, option, state);
@@ -459,9 +422,7 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
             ...params.slotProps?.input,
             startAdornment: (
               <>
-                {loading ? (
-                  <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} />
-                ) : null}
+                {loading ? <CircularProgress color="inherit" size={20} sx={{ mr: 1 }} /> : null}
                 {params.slotProps?.input?.startAdornment}
               </>
             ),
@@ -480,34 +441,35 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
 
   // Handle tag rendering for multi-select
   const handleRenderTags = (selectedOptions: any[]) => {
-    const formattedOptions = selectedOptions.map((opt) =>
-      typeof opt === "string" ? { value: opt, label: opt } : opt
-    );
+    const formattedOptions = selectedOptions.map((opt) => (typeof opt === "string" ? { value: opt, label: opt } : opt));
     if (formattedOptions.length <= maxDisplayedTags) {
       return formattedOptions.map((option) => (
         <Chip
           key={option.value ?? option.label ?? String(option)}
           label={option.label ?? String(option)}
           size="small"
-          {...(!disableClearable ? {
-            onDelete: () => {
-              // Handled by Autocomplete
-            },
-          } : {})}
+          {...(!disableClearable
+            ? {
+                onDelete: () => {
+                  // Handled by Autocomplete
+                },
+              }
+            : {})}
         />
       ));
     }
 
     return [
-      ...formattedOptions.slice(0, maxDisplayedTags).map((option) => (
-        <Chip key={option.value ?? option.label ?? String(option)} label={option.label ?? String(option)} size="small" />
-      )),
-      <Chip
-        key="more"
-        label={`+${formattedOptions.length - maxDisplayedTags}`}
-        size="small"
-        color="default"
-      />,
+      ...formattedOptions
+        .slice(0, maxDisplayedTags)
+        .map((option) => (
+          <Chip
+            key={option.value ?? option.label ?? String(option)}
+            label={option.label ?? String(option)}
+            size="small"
+          />
+        )),
+      <Chip key="more" label={`+${formattedOptions.length - maxDisplayedTags}`} size="small" color="default" />,
     ];
   };
 
@@ -515,8 +477,10 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
     <StyledAutocomplete
       ref={ref}
       options={options}
-      getOptionLabel={(option: any) => (typeof option === "string" ? option : option?.label ?? String(option ?? ""))}
-      getOptionKey={(option: any) => (typeof option === "string" ? option : String(option?.value ?? option?.label ?? option))}
+      getOptionLabel={(option: any) => (typeof option === "string" ? option : (option?.label ?? String(option ?? "")))}
+      getOptionKey={(option: any) =>
+        typeof option === "string" ? option : String(option?.value ?? option?.label ?? option)
+      }
       value={value}
       onChange={(event, nextValue, reason, details) => onChange?.(event, nextValue, reason, details)}
       onInputChange={onInputChange}
@@ -526,7 +490,9 @@ export const AutoComplete = forwardRef<HTMLDivElement, AutoCompleteProps>(functi
       loading={loading}
       loadingText={loadingText}
       noOptionsText={noOptionsText}
-      groupBy={typeof groupBy === "function" ? groupBy : groupBy ? (option: any) => String(option?.[groupBy] ?? "") : undefined}
+      groupBy={
+        typeof groupBy === "function" ? groupBy : groupBy ? (option: any) => String(option?.[groupBy] ?? "") : undefined
+      }
       filterOptions={filterOptions as any}
       renderInput={handleRenderInput}
       renderOption={handleRenderOption as any}

@@ -5,12 +5,7 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import { useAlert } from "@/components/shared/alert";
 import { register } from "@/services/auth.service";
 
-export type Page =
-  | "login"
-  | "signup"
-  | "reset-password"
-  | "verify-email"
-  | "dashboard";
+export type Page = "login" | "signup" | "reset-password" | "verify-email" | "dashboard";
 
 type FieldErrors = {
   name: string | null;
@@ -41,9 +36,12 @@ export default function SignupPage() {
     setForm((currentValue) => ({ ...currentValue, [field]: value }));
     setFieldErrors((currentValue) => ({
       ...currentValue,
-      [field]: field === "email"
-        ? getEmailError(value)
-        : value.trim() ? null : `${field === "name" ? "Name" : "Password"} is required`,
+      [field]:
+        field === "email"
+          ? getEmailError(value)
+          : value.trim()
+            ? null
+            : `${field === "name" ? "Name" : "Password"} is required`,
     }));
   };
 
@@ -98,8 +96,7 @@ export default function SignupPage() {
       <form noValidate onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Name {" "}
-            <span className="text-red-600">*</span>
+            Name <span className="text-red-600">*</span>
           </label>
           <input
             type="text"
@@ -110,19 +107,16 @@ export default function SignupPage() {
             placeholder="Jane Smith"
             className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
             style={{
-              borderColor: fieldErrors.name ? '#dc2626' : '#036c5f',
-              boxShadow: fieldErrors.name ? '0 0 0 3px rgba(220,38,38,0.12)' : '0 0 0 3px rgba(3,108,95,0.12)',
+              borderColor: fieldErrors.name ? "#dc2626" : "#036c5f",
+              boxShadow: fieldErrors.name ? "0 0 0 3px rgba(220,38,38,0.12)" : "0 0 0 3px rgba(3,108,95,0.12)",
             }}
           />
-          {fieldErrors.name && (
-            <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
-          )}
+          {fieldErrors.name && <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Work email {" "}
-            <span className="text-red-600">*</span>
+            Work email <span className="text-red-600">*</span>
           </label>
           <input
             type="email"
@@ -134,20 +128,15 @@ export default function SignupPage() {
             className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
             style={{
               borderColor: fieldErrors.email ? "#dc2626" : "#036c5f",
-              boxShadow: fieldErrors.email
-                ? "0 0 0 3px rgba(220,38,38,0.12)"
-                : "0 0 0 3px rgba(3,108,95,0.12)",
+              boxShadow: fieldErrors.email ? "0 0 0 3px rgba(220,38,38,0.12)" : "0 0 0 3px rgba(3,108,95,0.12)",
             }}
           />
-          {fieldErrors.email && (
-            <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
-          )}
+          {fieldErrors.email && <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>}
         </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Password {" "}
-            <span className="text-red-600">*</span>
+            Password <span className="text-red-600">*</span>
           </label>
           <div className="relative">
             <input
@@ -159,8 +148,8 @@ export default function SignupPage() {
               placeholder="Min. 8 characters"
               className="w-full px-4 py-2.5 pr-11 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
               style={{
-                borderColor: fieldErrors.password ? '#dc2626' : '#036c5f',
-                boxShadow: fieldErrors.password ? '0 0 0 3px rgba(220,38,38,0.12)' : '0 0 0 3px rgba(3,108,95,0.12)',
+                borderColor: fieldErrors.password ? "#dc2626" : "#036c5f",
+                boxShadow: fieldErrors.password ? "0 0 0 3px rgba(220,38,38,0.12)" : "0 0 0 3px rgba(3,108,95,0.12)",
               }}
             />
             <button
@@ -170,12 +159,31 @@ export default function SignupPage() {
               className="absolute z-10 right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
             >
               {showPw ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
                   <path d="M9.75 12a2.25 2.25 0 1 0 4.5 0 2.25 2.25 0 0 0-4.5 0z" />
                 </svg>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)" }}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ transform: "rotate(180deg)" }}
+                >
                   <path d="M3 13.5c2.35-2.1 5.25-3.15 9-3.15s6.65 1.05 9 3.15" />
                   <path d="M6.5 11.75 5 9.5" />
                   <path d="M12 10.35V7.75" />
@@ -200,9 +208,7 @@ export default function SignupPage() {
               </span>
             </div>
           )}
-          {fieldErrors.password && (
-            <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
-          )}
+          {fieldErrors.password && <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>}
         </div>
 
         <div className="flex items-start gap-3 pt-1">
@@ -226,8 +232,8 @@ export default function SignupPage() {
               }}
             >
               Terms of Service
-            </button>
-            {" "}and{" "}
+            </button>{" "}
+            and{" "}
             <button
               type="button"
               className="text-[#036c5f] font-medium cursor-pointer hover:underline"

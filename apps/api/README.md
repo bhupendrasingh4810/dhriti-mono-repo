@@ -4,25 +4,25 @@ Enterprise multi-app SaaS API for Dhriti — NestJS 11, Prisma/PostgreSQL, Redis
 
 ## What's inside
 
-| Area | Path | Notes |
-| --- | --- | --- |
-| Auth | `src/modules/auth` | Register/login, JWT (15m) + refresh rotation (7d), OAuth (Google/GitHub), MFA (TOTP + recovery codes), password reset, account lockout |
-| IAM | `src/modules/organization` | Orgs, members, teams, invitations lifecycle, groups (manual + dynamic rules) |
-| Audit | `src/modules/audit` | Global audit logging (fail-safe) |
-| Files | `src/modules/file` | S3-compatible upload, presigned download, quota/type validation |
-| Connect | `src/modules/connect` | Channels, messages, threads, mentions, reactions |
-| Flow | `src/modules/flow` | Projects, issues, sprints, kanban board + columns |
-| Atlas | `src/modules/atlas` | Spaces, page tree (versioned), comments |
-| Pulse | `src/modules/pulse` | Calendars, events, RSVP, scheduling conflicts |
-| Nexus | `src/modules/nexus` | AI summarization, task extraction, ask (LLM or local fallback) |
-| Cadence | `src/modules/cadence` | Retrospectives, anonymous cards, dot voting, phases |
-| Control | `src/modules/control` | `platform/` (staff admin) + `organization/` (org admin) |
-| Notifications | `src/modules/notification` | In-app center, preferences, email |
-| Search | `src/modules/search` | Cross-app full-text search (tsvector) |
-| Analytics | `src/modules/analytics` | Usage events, DAU/WAU/MAU, team velocity |
-| Webhooks | `src/modules/webhook` | HMAC-signed event delivery with retries |
-| WebSocket | `src/websocket` | Connect, Flow, Atlas, Pulse, Nexus, Cadence, WebRTC signaling (Redis adapter) |
-| Observability | `src/common` | Structured JSON logs (correlation IDs, PII masking), Prometheus `/metrics`, health `/health/*`, OTel tracing (`src/tracing.ts`) |
+| Area          | Path                       | Notes                                                                                                                                  |
+| ------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth          | `src/modules/auth`         | Register/login, JWT (15m) + refresh rotation (7d), OAuth (Google/GitHub), MFA (TOTP + recovery codes), password reset, account lockout |
+| IAM           | `src/modules/organization` | Orgs, members, teams, invitations lifecycle, groups (manual + dynamic rules)                                                           |
+| Audit         | `src/modules/audit`        | Global audit logging (fail-safe)                                                                                                       |
+| Files         | `src/modules/file`         | S3-compatible upload, presigned download, quota/type validation                                                                        |
+| Connect       | `src/modules/connect`      | Channels, messages, threads, mentions, reactions                                                                                       |
+| Flow          | `src/modules/flow`         | Projects, issues, sprints, kanban board + columns                                                                                      |
+| Atlas         | `src/modules/atlas`        | Spaces, page tree (versioned), comments                                                                                                |
+| Pulse         | `src/modules/pulse`        | Calendars, events, RSVP, scheduling conflicts                                                                                          |
+| Nexus         | `src/modules/nexus`        | AI summarization, task extraction, ask (LLM or local fallback)                                                                         |
+| Cadence       | `src/modules/cadence`      | Retrospectives, anonymous cards, dot voting, phases                                                                                    |
+| Control       | `src/modules/control`      | `platform/` (staff admin) + `organization/` (org admin)                                                                                |
+| Notifications | `src/modules/notification` | In-app center, preferences, email                                                                                                      |
+| Search        | `src/modules/search`       | Cross-app full-text search (tsvector)                                                                                                  |
+| Analytics     | `src/modules/analytics`    | Usage events, DAU/WAU/MAU, team velocity                                                                                               |
+| Webhooks      | `src/modules/webhook`      | HMAC-signed event delivery with retries                                                                                                |
+| WebSocket     | `src/websocket`            | Connect, Flow, Atlas, Pulse, Nexus, Cadence, WebRTC signaling (Redis adapter)                                                          |
+| Observability | `src/common`               | Structured JSON logs (correlation IDs, PII masking), Prometheus `/metrics`, health `/health/*`, OTel tracing (`src/tracing.ts`)        |
 
 ## Prerequisites
 
@@ -65,11 +65,11 @@ pnpm dev
 
 ### Demo logins (from seed)
 
-| Email | Password | Role |
-| --- | --- | --- |
-| alice@acme.com | Sup3rSecure! | OWNER |
-| bob@acme.com | Sup3rSecure! | ADMIN |
-| priya@acme.com | Sup3rSecure! | EMPLOYEE |
+| Email            | Password     | Role                 |
+| ---------------- | ------------ | -------------------- |
+| alice@acme.com   | Sup3rSecure! | OWNER                |
+| bob@acme.com     | Sup3rSecure! | ADMIN                |
+| priya@acme.com   | Sup3rSecure! | EMPLOYEE             |
 | admin@dhriti.dev | Sup3rSecure! | platform SUPER_ADMIN |
 
 Org slug: `acme`. Tenant-scoped endpoints take `x-organization-id: <orgId>` or use the org in the JWT.

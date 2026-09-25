@@ -10,9 +10,7 @@ interface InvitationAcceptPageProps {
   searchParams: Promise<{ token?: string | string[] }>;
 }
 
-export default async function InvitationAcceptPage({
-  searchParams,
-}: InvitationAcceptPageProps) {
+export default async function InvitationAcceptPage({ searchParams }: InvitationAcceptPageProps) {
   const { token: tokenParameter } = await searchParams;
   const token = typeof tokenParameter === "string" ? tokenParameter.trim() : "";
 
@@ -30,7 +28,5 @@ export default async function InvitationAcceptPage({
     );
   }
 
-  return (
-    <InvitationAcceptanceForm token={token} />
-  );
+  return <InvitationAcceptanceForm token={token} />;
 }

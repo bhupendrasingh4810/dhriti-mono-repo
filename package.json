@@ -9,6 +9,8 @@
     "lint": "turbo lint",
     "test": "turbo test",
     "typecheck": "turbo typecheck",
+    "format": "prettier --write --ignore-unknown .",
+    "format:check": "prettier --check --ignore-unknown .",
     "dev:web": "pnpm --dir apps/web dev",
     "dev:api": "pnpm --dir apps/api dev",
     "dev:worker": "pnpm --dir apps/worker dev",
@@ -30,9 +32,10 @@
   },
   "devDependencies": {
     "@prisma/client": "^6.19.2",
+    "bcryptjs": "^3.0.3",
+    "prettier": "^3.9.6",
     "prisma": "^6.19.2",
     "ts-node": "^10.9.2",
-    "bcryptjs": "^3.0.3",
     "turbo": "^2.10.11"
   }
 }

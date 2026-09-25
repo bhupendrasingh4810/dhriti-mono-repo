@@ -44,7 +44,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly mfa: MfaService,
     private readonly email: EmailService,
-  ) { }
+  ) {}
 
   // ------------------------------------------------------------------
   // Registration
@@ -90,7 +90,7 @@ export class AuthService {
           },
         },
         auth: {
-          create: { passwordHash }
+          create: { passwordHash },
         },
       },
     });
@@ -199,11 +199,7 @@ export class AuthService {
     });
 
     if (!auth.emailVerifiedAt) {
-      throw new AppError(
-        ErrorCode.EMAIL_NOT_VERIFIED,
-        "Verify your email before signing in",
-        HttpStatus.FORBIDDEN,
-      );
+      throw new AppError(ErrorCode.EMAIL_NOT_VERIFIED, "Verify your email before signing in", HttpStatus.FORBIDDEN);
     }
 
     if (auth.mfaEnabled) {
@@ -474,11 +470,7 @@ export class AuthService {
       const payload = await this.tokens.verifyMfaToken(mfaToken);
       return payload.sub;
     } catch {
-      throw new AppError(
-        ErrorCode.TOKEN_INVALID,
-        "MFA challenge is invalid or expired",
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new AppError(ErrorCode.TOKEN_INVALID, "MFA challenge is invalid or expired", HttpStatus.UNAUTHORIZED);
     }
   }
 
@@ -505,7 +497,7 @@ export class AuthService {
     if (!record || record.type !== type) {
       throw new AppError(ErrorCode.TOKEN_INVALID, "Token is invalid", HttpStatus.BAD_REQUEST);
     }
-    const otpHash = (record).otpHash;
+    const otpHash = record.otpHash;
     if (type === "EMAIL_VERIFICATION" && (!otp || otpHash !== this.tokens.hashToken(otp))) {
       throw new AppError(ErrorCode.TOKEN_INVALID, "Verification code is invalid", HttpStatus.BAD_REQUEST);
     }
@@ -578,7 +570,11 @@ export class AuthService {
 
   private assertBcryptPasswordLength(password: string): void {
     if (Buffer.byteLength(password, "utf8") > 72) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Password must not exceed 72 UTF-8 bytes", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Password must not exceed 72 UTF-8 bytes",
+        HttpStatus.BAD_REQUEST,
+      );
     }
   }
 
@@ -589,9 +585,7 @@ export class AuthService {
   private async registerFailedAttempt(user: UserWithAuth): Promise<void> {
     const attempts = (user.auth?.failedLoginAttempts ?? 0) + 1;
     const shouldLock = attempts >= this.config.lockoutThreshold;
-    const lockedUntil = shouldLock
-      ? new Date(Date.now() + this.config.lockoutDurationMinutes * 60 * 1000)
-      : null;
+    const lockedUntil = shouldLock ? new Date(Date.now() + this.config.lockoutDurationMinutes * 60 * 1000) : null;
 
     await this.prisma.userAuth.upsert({
       where: { userId: user.id },
@@ -610,11 +604,7 @@ export class AuthService {
    * @returns An AppError representing invalid credentials.
    */
   private invalidCredentials(): AppError {
-    return new AppError(
-      ErrorCode.INVALID_CREDENTIALS,
-      "Email or password is incorrect",
-      HttpStatus.UNAUTHORIZED,
-    );
+    return new AppError(ErrorCode.INVALID_CREDENTIALS, "Email or password is incorrect", HttpStatus.UNAUTHORIZED);
   }
 
   /**

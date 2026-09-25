@@ -11,16 +11,8 @@
 
 "use client";
 
-import {
-  forwardRef,
-  type ReactNode,
-  type ReactElement,
-  type CSSProperties,
-} from "react";
-import MuiTooltip, {
-  type TooltipProps as MuiTooltipProps,
-  tooltipClasses,
-} from "@mui/material/Tooltip";
+import { forwardRef, type ReactNode, type ReactElement, type CSSProperties } from "react";
+import MuiTooltip, { type TooltipProps as MuiTooltipProps, tooltipClasses } from "@mui/material/Tooltip";
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
@@ -31,22 +23,13 @@ import { alpha, styled, useTheme } from "@mui/material/styles";
 // ============================================================================
 
 export type TooltipVariant =
-  | "dark"
-  | "light"
-  | "white"
-  | "black"
-  | "primary"
-  | "info"
-  | "success"
-  | "warning"
-  | "error";
+  "dark" | "light" | "white" | "black" | "primary" | "info" | "success" | "warning" | "error";
 
 export type TooltipSize = "small" | "medium" | "large" | "sm" | "md" | "lg";
 
 export type TooltipPlacement = MuiTooltipProps["placement"];
 
-export interface TooltipProps
-  extends Omit<MuiTooltipProps, "title" | "size"> {
+export interface TooltipProps extends Omit<MuiTooltipProps, "title" | "size"> {
   /**
    * Tooltip main title or content
    */
@@ -173,11 +156,7 @@ interface StyledTooltipOwnerProps {
 }
 
 const StyledMuiTooltip = styled(
-  ({
-    className,
-    ownerState,
-    ...props
-  }: MuiTooltipProps & { ownerState: StyledTooltipOwnerProps }) => (
+  ({ className, ownerState, ...props }: MuiTooltipProps & { ownerState: StyledTooltipOwnerProps }) => (
     <MuiTooltip
       {...props}
       classes={{
@@ -297,11 +276,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
   const isLight = resolvedVariant === "light" || resolvedVariant === "white";
 
   // Shortcut pills formatting
-  const shortcuts = Array.isArray(shortcut)
-    ? shortcut
-    : shortcut
-    ? [shortcut]
-    : [];
+  const shortcuts = Array.isArray(shortcut) ? shortcut : shortcut ? [shortcut] : [];
 
   const hasRichContent = Boolean(description || shortcuts.length > 0 || icon || action);
 
@@ -363,9 +338,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
                   border: isLight
                     ? `1px solid ${alpha(theme.palette.divider, 0.9)}`
                     : "1px solid rgba(255, 255, 255, 0.2)",
-                  bgcolor: isLight
-                    ? alpha(theme.palette.action.hover, 0.08)
-                    : "rgba(255, 255, 255, 0.12)",
+                  bgcolor: isLight ? alpha(theme.palette.action.hover, 0.08) : "rgba(255, 255, 255, 0.12)",
                   color: "inherit",
                   lineHeight: 1.2,
                 }}
@@ -393,11 +366,7 @@ export const Tooltip = forwardRef<HTMLDivElement, TooltipProps>(function Tooltip
       )}
 
       {/* Action Slot */}
-      {action && (
-        <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 1 }}>
-          {action}
-        </Box>
-      )}
+      {action && <Box sx={{ mt: 0.5, display: "flex", alignItems: "center", gap: 1 }}>{action}</Box>}
     </Box>
   ) : (
     title
@@ -431,13 +400,10 @@ Tooltip.displayName = "Tooltip";
 /**
  * Convenience helper for light/white styled tooltips
  */
-export const LightTooltip = forwardRef<HTMLDivElement, TooltipProps>(
-  function LightTooltip(props, ref) {
-    return <Tooltip ref={ref} variant="light" {...props} />;
-  },
-);
+export const LightTooltip = forwardRef<HTMLDivElement, TooltipProps>(function LightTooltip(props, ref) {
+  return <Tooltip ref={ref} variant="light" {...props} />;
+});
 
 LightTooltip.displayName = "LightTooltip";
 
 export const WhiteTooltip = LightTooltip;
-

@@ -5,6 +5,7 @@ You are an expert backend architect specializing in enterprise-grade NestJS appl
 ## 🏗️ Architecture Overview
 
 ### Applications
+
 1. **Connect** - Enterprise communications (chat, audio, video, WebRTC)
 2. **Flow** - Agile project management (Jira-like)
 3. **Atlas** - Knowledge management (Confluence-like)
@@ -14,6 +15,7 @@ You are an expert backend architect specializing in enterprise-grade NestJS appl
 7. **Control** - Platform & organization admin
 
 ### Tech Stack Requirements
+
 - **Framework**: NestJS 10+ with TypeScript strict mode
 - **Database**: PostgreSQL 15+ with TypeORM
 - **Cache**: Redis 7+ for sessions, pub/sub, rate limiting
@@ -26,6 +28,7 @@ You are an expert backend architect specializing in enterprise-grade NestJS appl
 - **Documentation**: OpenAPI/Swagger
 
 ## 📁 Project Structure
+
 apps/api/
 ├── src/
 │ ├── main.ts
@@ -78,6 +81,7 @@ text
 ## 🔐 Authentication & Authorization Requirements
 
 ### Multi-Tenant Auth Flow
+
 1. User authenticates (email/password or OAuth)
 2. System resolves organization memberships
 3. User selects active organization (or auto-select)
@@ -85,6 +89,7 @@ text
 5. Every request validates tenant isolation
 
 ### Security Requirements
+
 - Passwords: bcrypt with cost 12+ or Argon2id
 - JWT: Short-lived (15 min access, 7 day refresh)
 - Sessions: Redis-backed with rotation
@@ -97,6 +102,7 @@ text
 - CSRF: Token-based protection
 
 ### RBAC + ReBAC Model
+
 - Platform roles: SUPER_ADMIN, SUPPORT, BILLING, SECURITY, ENGINEERING
 - Organization roles: OWNER, ADMIN, MEMBER, GUEST
 - Resource-level permissions with ABAC filters
@@ -105,6 +111,7 @@ text
 ## 🗄️ Database Design Principles
 
 ### Multi-Tenancy Pattern
+
 - Shared database, shared schema
 - Every table has `organization_id` (except platform tables)
 - PostgreSQL RLS policies as safety net
@@ -112,6 +119,7 @@ text
 - Soft deletes with `deleted_at`
 
 ### Core Entities
+
 User (platform-wide identity)
 ├── UserIdentity (OAuth providers)
 ├── UserSession (active sessions)
@@ -130,6 +138,7 @@ text
 ## 💬 Real-Time Requirements (WebSocket Gateway)
 
 ### Connect Gateway
+
 - Instant messaging with typing indicators
 - User presence (online, away, DND, in-meeting)
 - WebRTC signaling for audio/video calls
@@ -137,32 +146,38 @@ text
 - Message reactions, mentions, threads
 
 ### Flow Gateway
+
 - Kanban board drag-and-drop sync
 - Issue updates (status, assignee, priority)
 - Sprint burndown live updates
 - Collaborative editing locks
 
 ### Atlas Gateway
+
 - Real-time co-authoring (cursor positions, selections)
 - Live comments and mentions
 - Page version updates
 
 ### Pulse Gateway
+
 - Calendar conflict warnings
 - RSVP count updates
 - Meeting poll results
 
 ### Cadence Gateway
+
 - Anonymous voting synchronization
 - Card grouping in retrospectives
 - Facilitator phase transitions
 
 ### Nexus Gateway
+
 - Token-by-token AI response streaming
 - Live transcription feeds
 - AI suggestion broadcasts
 
 ### Global Requirements
+
 - Connection lifecycle management (connect, disconnect, cleanup)
 - Authentication at WebSocket handshake
 - Authorization per message/action
@@ -174,6 +189,7 @@ text
 ## 📋 Code Quality Standards
 
 ### General
+
 - **Strict TypeScript**: No `any`, explicit types, strict null checks
 - **Modular monolith**: One module per business domain
 - **Clean architecture**: Domain logic isolated from frameworks
@@ -181,24 +197,28 @@ text
 - **Immutability**: Prefer readonly, immutable data structures
 
 ### Validation & DTOs
+
 - All inputs validated with class-validator
 - DTOs for every endpoint (CreateXDto, UpdateXDto, XQueryDto)
 - Automatic transformation with class-transformer
 - Global ValidationPipe with whitelist, forbidNonWhitelisted
 
 ### Error Handling
+
 - Custom exception filters (HttpExceptionFilter)
 - Consistent error response format
 - Error codes for client-side handling
 - Audit logging for security events
 
 ### Testing
+
 - Unit tests: 80%+ coverage for services, repositories
 - E2E tests: Critical user journeys
 - Integration tests: Auth, multi-tenancy, permissions
 - Test isolation: Separate test database
 
 ### Performance
+
 - Database: Connection pooling (PgBouncer), read replicas
 - Cache: Redis for sessions, permissions, frequently accessed data
 - Pagination: Cursor-based for large datasets
@@ -206,6 +226,7 @@ text
 - N+1 prevention: Eager loading, DataLoader pattern
 
 ### Observability
+
 - Structured logging (JSON, correlation IDs)
 - Request/response logging (PII masking)
 - Metrics: Prometheus (request latency, error rates, WebSocket connections)
@@ -215,6 +236,7 @@ text
 ## 🎯 Implementation Priorities
 
 ### Phase 1: Platform Foundation (Week 1-4)
+
 1. ✅ Auth module (register, login, JWT, sessions, OAuth)
 2. ✅ IAM module (organizations, members, teams, roles)
 3. ✅ Multi-tenancy guards and decorators
@@ -222,6 +244,7 @@ text
 5. ✅ File upload (S3-compatible)
 
 ### Phase 2: Work OS MVP (Week 5-12)
+
 1. ✅ Connect (channels, messages, threads, mentions, WebSocket)
 2. ✅ Flow (projects, issues, boards, sprints, WebSocket)
 3. ✅ Atlas (pages, spaces, comments, real-time editing)
@@ -229,6 +252,7 @@ text
 5. ✅ Nexus AI (conversation summarization, task extraction)
 
 ### Phase 3: Advanced Features (Week 13-20)
+
 1. ✅ Cadence (retrospectives, estimation)
 2. ✅ WebRTC (audio/video calls, screen sharing)
 3. ✅ Advanced permissions (ABAC, resource-level)
@@ -280,11 +304,14 @@ When I ask for a feature (e.g., "Create Issue endpoint in Flow"), provide:
 ## 🎯 Current Task
 
 <!-- [INSERT YOUR SPECIFIC TASK HERE] -->
+
 Auth Module
 text
+
 ## 🎯 Current Task
 
 Generate the complete Auth module with:
+
 - User registration (email, password, name) with email verification
 - Login with JWT access tokens (15 min) + refresh tokens (7 days)
 - Session management with Redis (store, rotate, invalidate)
@@ -298,11 +325,13 @@ Generate the complete Auth module with:
 - Update profile (name, avatar, timezone, locale)
 - Change password with validation
 - All with production-grade error handling, validation, and unit tests
-IAM Module
-text
+  IAM Module
+  text
+
 ## 🎯 Current Task
 
 Generate the complete IAM module with:
+
 - Organization CRUD (create, read, update, soft delete)
 - OrganizationMember management (invite, accept, remove, suspend)
 - Team CRUD with members (add, remove, transfer ownership)
@@ -315,11 +344,13 @@ Generate the complete IAM module with:
 - Bulk member operations (import CSV, bulk role changes)
 - Audit logging for all IAM operations
 - All with multi-tenancy guards and production-grade tests
-Multi-Tenancy & Security
-text
+  Multi-Tenancy & Security
+  text
+
 ## 🎯 Current Task
 
 Generate the multi-tenancy and security infrastructure:
+
 - TenantGuard (extract and validate organization_id from JWT)
 - OrganizationGuard (verify user is member of org)
 - PermissionGuard (check specific permission before action)
@@ -335,11 +366,13 @@ Generate the multi-tenancy and security infrastructure:
 - Rate limiting (global + per-endpoint with Redis)
 - CSRF protection with double-submit cookie pattern
 - All with comprehensive unit and E2E tests
-Audit & Logging
-text
+  Audit & Logging
+  text
+
 ## 🎯 Current Task
 
 Generate the audit logging and observability system:
+
 - AuditLog entity with organization context
 - AuditService (log, query, export)
 - @AuditLog() decorator (automatic logging for decorated methods)
@@ -351,11 +384,13 @@ Generate the audit logging and observability system:
 - OpenTelemetry tracing setup (distributed traces across modules)
 - Log aggregation configuration (Winston + Elasticsearch)
 - All with production-grade error handling and tests
-File & Storage
-text
+  File & Storage
+  text
+
 ## 🎯 Current Task
 
 Generate the file upload and storage system:
+
 - File entity (metadata, owner, organization, size, type)
 - FileUploadService (S3-compatible storage with presigned URLs)
 - FileUploadController (upload, download, delete, list)
@@ -372,9 +407,11 @@ Generate the file upload and storage system:
 Phase 2: Work OS MVP (Week 5-12)
 Connect Module
 text
+
 ## 🎯 Current Task
 
 Generate the Connect WebSocket gateway and REST API:
+
 - Channel entity (public, private, direct, archived)
 - Channel CRUD (create, update, archive, delete)
 - Channel membership (join, leave, invite members)
@@ -395,11 +432,13 @@ Generate the Connect WebSocket gateway and REST API:
 - Pinned messages per channel
 - Channel notifications settings (all, mentions, none)
 - All with production-grade error handling, validation, and tests
-Connect - Audio/Video (WebRTC)
-text
+  Connect - Audio/Video (WebRTC)
+  text
+
 ## 🎯 Current Task
 
 Generate the Connect WebRTC signaling and call management:
+
 - Call entity (type, participants, status, recording)
 - Signaling server (offer, answer, ICE candidates via WebSocket)
 - Call initiation (1:1, group calls)
@@ -414,11 +453,13 @@ Generate the Connect WebRTC signaling and call management:
 - WebSocket events: call:incoming, call:accepted, call:rejected, call:ended
 - WebSocket events: participant:joined, participant:left, participant:muted
 - All with production-grade error handling and tests
-Flow Module
-text
+  Flow Module
+  text
+
 ## 🎯 Current Task
 
 Generate the Flow project management module:
+
 - Project entity (key, name, description, lead, avatar)
 - Project CRUD (create, update, archive, delete)
 - Project membership and roles
@@ -443,11 +484,13 @@ Generate the Flow project management module:
 - Bulk operations (edit, transition, delete)
 - Issue templates
 - All with production-grade error handling and tests
-Flow - Boards & Sprints
-text
+  Flow - Boards & Sprints
+  text
+
 ## 🎯 Current Task
 
 Generate the Flow boards and sprints WebSocket integration:
+
 - Kanban board real-time updates (drag-and-drop sync)
 - Scrum board with sprint selection
 - Board configuration WebSocket events
@@ -462,11 +505,13 @@ Generate the Flow boards and sprints WebSocket integration:
 - Board permissions (view, edit, configure)
 - WebSocket events: issue:moved, issue:updated, sprint:started, sprint:completed
 - All with production-grade error handling and tests
-Flow - Automation
-text
+  Flow - Automation
+  text
+
 ## 🎯 Current Task
 
 Generate the Flow no-code automation engine:
+
 - Automation rule entity (trigger, conditions, actions)
 - Trigger types (issue created, updated, transitioned, commented)
 - Condition builder (field comparisons, status checks)
@@ -477,11 +522,13 @@ Generate the Flow no-code automation engine:
 - Rule testing interface (dry run)
 - Automation metrics (rules fired, time saved)
 - All with production-grade error handling and tests
-Atlas Module
-text
+  Atlas Module
+  text
+
 ## 🎯 Current Task
 
 Generate the Atlas knowledge management module:
+
 - Space entity (name, key, description, permissions)
 - Space CRUD (create, update, archive, delete)
 - Page entity (title, content, parent, version, status)
@@ -504,11 +551,13 @@ Generate the Atlas knowledge management module:
 - Macros (Jira issues, tables, status, code blocks)
 - Smart links (auto-embed external URLs)
 - All with production-grade error handling and tests
-Atlas - Real-Time Collaboration
-text
+  Atlas - Real-Time Collaboration
+  text
+
 ## 🎯 Current Task
 
 Generate the Atlas real-time collaborative editing:
+
 - WebSocket gateway for collaborative editing
 - Yjs integration for CRDT-based sync
 - Cursor position broadcasting
@@ -522,11 +571,13 @@ Generate the Atlas real-time collaborative editing:
 - Real-time mention notifications
 - WebSocket events: page:editing, page:saved, comment:added
 - All with production-grade error handling and tests
-Pulse Module
-text
+  Pulse Module
+  text
+
 ## 🎯 Current Task
 
 Generate the Pulse calendar and scheduling module:
+
 - Calendar entity (personal, team, company, resource)
 - Calendar CRUD and sharing settings
 - Event entity (title, description, start, end, timezone, recurrence)
@@ -548,11 +599,13 @@ Generate the Pulse calendar and scheduling module:
 - Meeting links (auto-generate Connect meeting URLs)
 - Event attachments and agenda
 - All with production-grade error handling and tests
-Pulse - Real-Time Features
-text
+  Pulse - Real-Time Features
+  text
+
 ## 🎯 Current Task
 
 Generate the Pulse real-time features:
+
 - WebSocket gateway for calendar updates
 - Real-time booking conflict warnings
 - RSVP count updates
@@ -562,11 +615,13 @@ Generate the Pulse real-time features:
 - Scheduling assistant live availability
 - WebSocket events: event:created, event:updated, event:deleted, rsvp:updated
 - All with production-grade error handling and tests
-Cadence Module
-text
+  Cadence Module
+  text
+
 ## 🎯 Current Task
 
 Generate the Cadence meeting facilitation module:
+
 - Retrospective entity (type, status, facilitator, participants)
 - Retrospective templates (Start-Stop-Continue, 4Ls, Sailboat)
 - Multi-phase facilitation flow (Reflect, Group, Vote, Discuss, Action Items)
@@ -584,11 +639,13 @@ Generate the Cadence meeting facilitation module:
 - Meeting recording and transcript
 - Retrospective history and trends
 - All with production-grade error handling and tests
-Cadence - Real-Time Features
-text
+  Cadence - Real-Time Features
+  text
+
 ## 🎯 Current Task
 
 Generate the Cadence real-time facilitation:
+
 - WebSocket gateway for retrospective synchronization
 - Anonymous card creation and broadcasting
 - Real-time card grouping (multi-user drag-and-drop)
@@ -602,9 +659,11 @@ Generate the Cadence real-time facilitation:
 Phase 3: Advanced Features (Week 13-20)
 Nexus AI Module
 text
+
 ## 🎯 Current Task
 
 Generate the Nexus AI integration module:
+
 - AIConversation entity (context, messages, metadata)
 - Conversation summarization (Connect channels, threads)
 - Task extraction from conversations (create Flow issues)
@@ -623,11 +682,13 @@ Generate the Nexus AI integration module:
 - Retrospective insights and patterns
 - Code review assistance (integrate with GitHub/GitLab)
 - All with production-grade error handling, rate limiting, and tests
-Nexus - AI Streaming
-text
+  Nexus - AI Streaming
+  text
+
 ## 🎯 Current Task
 
 Generate the Nexus AI streaming WebSocket gateway:
+
 - Token-by-token response streaming
 - Live transcription feeds during meetings
 - Real-time AI suggestions during conversations
@@ -638,11 +699,13 @@ Generate the Nexus AI streaming WebSocket gateway:
 - Fallback to cached responses
 - WebSocket events: ai:token, ai:complete, ai:error
 - All with production-grade error handling and tests
-Control Module - Platform Admin
-text
+  Control Module - Platform Admin
+  text
+
 ## 🎯 Current Task
 
 Generate the Control platform administration module:
+
 - Platform dashboard (total orgs, users, revenue, health)
 - Organization management (view, suspend, reactivate, delete)
 - Platform user management (internal staff)
@@ -657,11 +720,13 @@ Generate the Control platform administration module:
 - System health monitoring (uptime, latency, errors)
 - Platform settings (global config, rate limits, maintenance mode)
 - All with production-grade error handling and tests
-Control Module - Organization Admin
-text
+  Control Module - Organization Admin
+  text
+
 ## 🎯 Current Task
 
 Generate the Control organization administration module:
+
 - Organization dashboard (users, products, usage, costs)
 - Organization profile (name, domain, branding, settings)
 - People management (add, remove, suspend, role changes)
@@ -679,11 +744,13 @@ Generate the Control organization administration module:
 - Data retention policies (auto-archive, deletion schedules)
 - Organization settings (timezone, locale, preferences)
 - All with production-grade error handling and tests
-Notifications Module
-text
+  Notifications Module
+  text
+
 ## 🎯 Current Task
 
 Generate the unified notifications module:
+
 - Notification entity (type, title, message, link, metadata)
 - Notification preferences (per type, per channel, per org)
 - In-app notification center (list, mark read, mark all read)
@@ -699,11 +766,13 @@ Generate the unified notifications module:
 - Real-time notification updates (WebSocket)
 - Notification analytics (open rates, engagement)
 - All with production-grade error handling and tests
-Search Module
-text
+  Search Module
+  text
+
 ## 🎯 Current Task
 
 Generate the unified search module:
+
 - SearchIndex entity (entity type, entity id, content, metadata)
 - Indexing service (messages, issues, pages, decisions, users)
 - Full-text search with PostgreSQL tsvector/tsquery
@@ -716,11 +785,13 @@ Generate the unified search module:
 - Search analytics (popular queries, zero results)
 - Search permissions (only show results user can access)
 - All with production-grade error handling and tests
-Integrations Module
-text
+  Integrations Module
+  text
+
 ## 🎯 Current Task
 
 Generate the integrations and webhooks module:
+
 - Integration entity (type, config, status)
 - OAuth app management (register, credentials, scopes)
 - Webhook entity (URL, events, secret, status)
@@ -735,11 +806,13 @@ Generate the integrations and webhooks module:
 - Public API documentation (OpenAPI/Swagger)
 - SDK generation (TypeScript, Python, Go)
 - All with production-grade error handling and tests
-Analytics Module
-text
+  Analytics Module
+  text
+
 ## 🎯 Current Task
 
 Generate the analytics and reporting module:
+
 - Workspace utilization dashboards (adoption rates per app)
 - Activity analytics (messages sent, issues created, docs edited)
 - User engagement metrics (DAU, WAU, MAU)
@@ -755,9 +828,11 @@ Generate the analytics and reporting module:
 Infrastructure & DevOps
 Database Migrations
 text
+
 ## 🎯 Current Task
 
 Generate the complete database migration set:
+
 - Auth module migrations (users, identities, sessions, roles)
 - IAM module migrations (orgs, members, teams, groups, permissions)
 - Connect module migrations (channels, messages, threads, reactions)
@@ -771,11 +846,13 @@ Generate the complete database migration set:
 - Seed data for development and testing
 - Migration rollback scripts
 - All with production-grade error handling and tests
-Testing Infrastructure
-text
+  Testing Infrastructure
+  text
+
 ## 🎯 Current Task
 
 Generate the testing infrastructure:
+
 - Jest configuration (unit, integration, E2E)
 - Test database setup and teardown
 - Test utilities (factory functions, fixtures, mocks)
@@ -787,11 +864,13 @@ Generate the testing infrastructure:
 - Performance tests (load testing with k6)
 - Security tests (OWASP Top 10 scenarios)
 - All with comprehensive coverage and documentation
-CI/CD Pipeline
-text
+  CI/CD Pipeline
+  text
+
 ## 🎯 Current Task
 
 Generate the CI/CD pipeline configuration:
+
 - GitHub Actions workflow (lint, test, build, deploy)
 - Dockerfile for API (multi-stage, optimized)
 - Docker Compose for local development (API, DB, Redis)
@@ -803,9 +882,11 @@ Generate the CI/CD pipeline configuration:
 - Environment promotion (dev → staging → prod)
 - Secrets management (GitHub Secrets, AWS Secrets Manager)
 - All with production-grade best practices
+
 <!--  -->
 
 Examples:
+
 - "Generate the complete Auth module with login, register, OAuth"
 - "Create the Connect WebSocket gateway with channels and messages"
 - "Build the multi-tenant permission checker with RBAC + ReBAC"

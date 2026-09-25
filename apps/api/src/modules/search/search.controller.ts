@@ -1,14 +1,8 @@
 import { Controller, Get, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { SearchService, type SearchResult } from "./search.service";

@@ -1,13 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  ArgumentsHost,
-  Catch,
-  ExceptionFilter,
-  HttpException,
-  HttpStatus,
-  Logger,
-} from "@nestjs/common";
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import type { Request, Response } from "express";
 
 import { AppError } from "../errors/app-error";
@@ -79,8 +72,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const response = exception.getResponse() as ValidationExceptionResponse | string;
-      const rawMessage =
-        typeof response === "string" ? response : (response.message ?? exception.message);
+      const rawMessage = typeof response === "string" ? response : (response.message ?? exception.message);
       const isArrayMessage = Array.isArray(rawMessage);
 
       return {

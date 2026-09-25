@@ -1,6 +1,6 @@
 /**
  * Chip Component for Dhriti UI
- * 
+ *
  * Enterprise-grade chip component with:
  * - Filled and outlined variants
  * - Custom icons
@@ -259,12 +259,13 @@ const StyledChip = styled(MuiChip, {
     },
 
     // Clickable chip hover
-    ...(chipvariant === "outlined" && !chipdisabled && {
-      "&:hover": {
-        backgroundColor: theme.palette.action.hover,
-        borderColor: colorStyles.borderColor,
-      },
-    }),
+    ...(chipvariant === "outlined" &&
+      !chipdisabled && {
+        "&:hover": {
+          backgroundColor: theme.palette.action.hover,
+          borderColor: colorStyles.borderColor,
+        },
+      }),
 
     // Disabled state
     ...(chipdisabled && {

@@ -5,11 +5,7 @@ import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
-import type {
-  UpdateOrgEntitlementDto,
-  UpdateOrgSettingsDto,
-  UpsertOrgFeatureFlagDto,
-} from "./dto/organization.dto";
+import type { UpdateOrgEntitlementDto, UpdateOrgSettingsDto, UpsertOrgFeatureFlagDto } from "./dto/organization.dto";
 
 export interface OrgDashboard {
   members: { total: number; active: number; orgAdmins: number; admins: number };
@@ -32,35 +28,24 @@ export class OrganizationAdminService {
   // ---------------- Dashboard ----------------
 
   async dashboard(organizationId: string): Promise<OrgDashboard> {
-    const [
-      members,
-      orgAdmins,
-      admins,
-      teams,
-      entitlements,
-      products,
-      subscription,
-      filesAgg,
-      messages,
-      issues,
-      pages,
-    ] = await Promise.all([
-      this.prisma.organizationMember.count({ where: { organizationId } }),
-      this.prisma.organizationMember.count({ where: { organizationId, user: { role: "ORG_ADMIN" } } }),
-      this.prisma.organizationMember.count({ where: { organizationId, user: { role: "ADMIN" } } }),
-      this.prisma.team.count({ where: { organizationId, deletedAt: null } }),
-      this.prisma.productEntitlement.count({ where: { organizationId, isEnabled: true } }),
-      this.prisma.product.count({ where: { isActive: true } }),
-      this.prisma.subscription.findUnique({ where: { organizationId } }),
-      this.prisma.storedFile.aggregate({
-        where: { organizationId, deletedAt: null },
-        _count: true,
-        _sum: { sizeBytes: true },
-      }),
-      this.prisma.message.count({ where: { organizationId, deletedAt: null } }),
-      this.prisma.issue.count({ where: { organizationId, deletedAt: null } }),
-      this.prisma.atlasPage.count({ where: { organizationId, deletedAt: null } }),
-    ]);
+    const [members, orgAdmins, admins, teams, entitlements, products, subscription, filesAgg, messages, issues, pages] =
+      await Promise.all([
+        this.prisma.organizationMember.count({ where: { organizationId } }),
+        this.prisma.organizationMember.count({ where: { organizationId, user: { role: "ORG_ADMIN" } } }),
+        this.prisma.organizationMember.count({ where: { organizationId, user: { role: "ADMIN" } } }),
+        this.prisma.team.count({ where: { organizationId, deletedAt: null } }),
+        this.prisma.productEntitlement.count({ where: { organizationId, isEnabled: true } }),
+        this.prisma.product.count({ where: { isActive: true } }),
+        this.prisma.subscription.findUnique({ where: { organizationId } }),
+        this.prisma.storedFile.aggregate({
+          where: { organizationId, deletedAt: null },
+          _count: true,
+          _sum: { sizeBytes: true },
+        }),
+        this.prisma.message.count({ where: { organizationId, deletedAt: null } }),
+        this.prisma.issue.count({ where: { organizationId, deletedAt: null } }),
+        this.prisma.atlasPage.count({ where: { organizationId, deletedAt: null } }),
+      ]);
 
     return {
       members: { total: members, active: members, orgAdmins, admins },

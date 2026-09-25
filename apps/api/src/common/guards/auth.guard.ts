@@ -1,17 +1,10 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import type { Request } from "express";
 
 import { ApiConfigService } from "../../config/config.service";
-import {
-  IS_PUBLIC_KEY,
-} from "../decorators/public.decorator";
+import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import type { AuthenticatedUser } from "../decorators/current-user.decorator";
 import { SessionService } from "../../modules/auth/services/session.service";
 
@@ -98,10 +91,19 @@ export class AuthGuard implements CanActivate {
   }
 
   private assertCookieRequestOrigin(request: Request): void {
-    if (request.headers.authorization || !request.cookies?.access_token || ["GET", "HEAD", "OPTIONS"].includes(request.method)) {return;}
+    if (
+      request.headers.authorization ||
+      !request.cookies?.access_token ||
+      ["GET", "HEAD", "OPTIONS"].includes(request.method)
+    ) {
+      return;
+    }
     const origin = request.headers.origin;
     if (!origin || !this.config.corsOrigins.includes(origin)) {
-      throw new UnauthorizedException({ code: "UNAUTHORIZED", message: "Cookie-authenticated requests require a trusted origin" });
+      throw new UnauthorizedException({
+        code: "UNAUTHORIZED",
+        message: "Cookie-authenticated requests require a trusted origin",
+      });
     }
   }
 }

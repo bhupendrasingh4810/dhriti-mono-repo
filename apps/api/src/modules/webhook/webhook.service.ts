@@ -214,7 +214,10 @@ export class WebhookService {
         },
       });
     } catch (recordError) {
-      this.logger.error("Failed to record webhook delivery", recordError instanceof Error ? recordError.stack : String(recordError));
+      this.logger.error(
+        "Failed to record webhook delivery",
+        recordError instanceof Error ? recordError.stack : String(recordError),
+      );
     }
   }
 
@@ -231,8 +234,16 @@ export class WebhookService {
   }
 
   private async resolveSecret(webhook: Webhook): Promise<string> {
-    if (webhook.secretEncrypted) {return this.secrets.decrypt(webhook.secretEncrypted);}
-    if (!webhook.secret) {throw new AppError(ErrorCode.WEBHOOK_NOT_FOUND, "Webhook secret is unavailable", HttpStatus.INTERNAL_SERVER_ERROR);}
+    if (webhook.secretEncrypted) {
+      return this.secrets.decrypt(webhook.secretEncrypted);
+    }
+    if (!webhook.secret) {
+      throw new AppError(
+        ErrorCode.WEBHOOK_NOT_FOUND,
+        "Webhook secret is unavailable",
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
     await this.prisma.webhook.update({
       where: { id: webhook.id },
       data: { secret: null, secretEncrypted: this.secrets.encrypt(webhook.secret) },

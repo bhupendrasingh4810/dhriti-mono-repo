@@ -13,26 +13,15 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { RequireAccess } from "../../common/decorators/access.decorator";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { FlowService } from "./flow.service";
 import { CreateProjectDto, UpdateProjectDto } from "./dto/project.dto";
-import {
-  CreateIssueDto,
-  ListIssuesQueryDto,
-  MoveIssueDto,
-  UpdateIssueDto,
-} from "./dto/issue.dto";
+import { CreateIssueDto, ListIssuesQueryDto, MoveIssueDto, UpdateIssueDto } from "./dto/issue.dto";
 import { CreateSprintDto, UpdateSprintDto } from "./dto/sprint.dto";
 import { CreateColumnDto, UpdateColumnDto } from "./dto/board.dto";
 
@@ -66,10 +55,7 @@ export class FlowController {
   @Get("projects/:projectId")
   @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "Get a project" })
-  async getProject(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("projectId") projectId: string,
-  ) {
+  async getProject(@CurrentOrganization() organization: OrganizationContext, @Param("projectId") projectId: string) {
     return this.flow.getProject(organization.organizationId, projectId);
   }
 
@@ -113,10 +99,7 @@ export class FlowController {
   @Get("issues/:issueId")
   @RequireAccess({ entitlement: "flow.enabled", permission: "flow.issue.read" })
   @ApiOperation({ summary: "Get an issue" })
-  async getIssue(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("issueId") issueId: string,
-  ) {
+  async getIssue(@CurrentOrganization() organization: OrganizationContext, @Param("issueId") issueId: string) {
     return this.flow.getIssue(organization.organizationId, issueId);
   }
 
@@ -161,10 +144,7 @@ export class FlowController {
   @Get("projects/:projectId/board")
   @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "Get the kanban board grouped by status" })
-  async getBoard(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("projectId") projectId: string,
-  ) {
+  async getBoard(@CurrentOrganization() organization: OrganizationContext, @Param("projectId") projectId: string) {
     return this.flow.getBoard(organization.organizationId, projectId);
   }
 
@@ -173,10 +153,7 @@ export class FlowController {
   @Get("projects/:projectId/sprints")
   @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "List sprints in a project" })
-  async listSprints(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("projectId") projectId: string,
-  ) {
+  async listSprints(@CurrentOrganization() organization: OrganizationContext, @Param("projectId") projectId: string) {
     return this.flow.listSprints(organization.organizationId, projectId);
   }
 
@@ -210,10 +187,7 @@ export class FlowController {
   @Get("boards/:boardId/columns")
   @RequireAccess({ entitlement: "flow.enabled", permission: "flow.project.read" })
   @ApiOperation({ summary: "List board columns in order" })
-  async listColumns(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("boardId") boardId: string,
-  ) {
+  async listColumns(@CurrentOrganization() organization: OrganizationContext, @Param("boardId") boardId: string) {
     return this.flow.listColumns(organization.organizationId, boardId);
   }
 

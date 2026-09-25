@@ -16,10 +16,10 @@ const ILLUS_CONFIG: Record<Illustration, { bg: string; accent: string; icon: Rea
     tagline: "Your unified workspace for every team workflow.",
     icon: (
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12"/>
-        <path d="M14 20h28M14 28h20M14 36h16" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-        <circle cx="42" cy="36" r="7" fill="#04b89a"/>
-        <path d="M39 36l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12" />
+        <path d="M14 20h28M14 28h20M14 36h16" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx="42" cy="36" r="7" fill="#04b89a" />
+        <path d="M39 36l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -29,10 +29,10 @@ const ILLUS_CONFIG: Record<Illustration, { bg: string; accent: string; icon: Rea
     tagline: "Join thousands of teams who ship work faster.",
     icon: (
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12"/>
-        <circle cx="24" cy="22" r="7" stroke="white" strokeWidth="2.5"/>
-        <path d="M12 42c0-6.627 5.373-12 12-12" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-        <path d="M38 30v12M32 36h12" stroke="#04b89a" strokeWidth="2.5" strokeLinecap="round"/>
+        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12" />
+        <circle cx="24" cy="22" r="7" stroke="white" strokeWidth="2.5" />
+        <path d="M12 42c0-6.627 5.373-12 12-12" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M38 30v12M32 36h12" stroke="#04b89a" strokeWidth="2.5" strokeLinecap="round" />
       </svg>
     ),
   },
@@ -42,10 +42,10 @@ const ILLUS_CONFIG: Record<Illustration, { bg: string; accent: string; icon: Rea
     tagline: "Secure access. We've got you covered.",
     icon: (
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12"/>
-        <rect x="16" y="26" width="24" height="16" rx="4" stroke="white" strokeWidth="2.5"/>
-        <path d="M20 26v-5a8 8 0 0 1 16 0v5" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-        <circle cx="28" cy="34" r="3" fill="#04b89a"/>
+        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12" />
+        <rect x="16" y="26" width="24" height="16" rx="4" stroke="white" strokeWidth="2.5" />
+        <path d="M20 26v-5a8 8 0 0 1 16 0v5" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx="28" cy="34" r="3" fill="#04b89a" />
       </svg>
     ),
   },
@@ -55,9 +55,9 @@ const ILLUS_CONFIG: Record<Illustration, { bg: string; accent: string; icon: Rea
     tagline: "One last step to your workspace.",
     icon: (
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12"/>
-        <rect x="12" y="18" width="32" height="22" rx="4" stroke="white" strokeWidth="2.5"/>
-        <path d="M12 22l16 11 16-11" stroke="#04b89a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <rect width="56" height="56" rx="16" fill="white" fillOpacity="0.12" />
+        <rect x="12" y="18" width="32" height="22" rx="4" stroke="white" strokeWidth="2.5" />
+        <path d="M12 22l16 11 16-11" stroke="#04b89a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -93,10 +93,10 @@ export default function AuthLayout({ title, subtitle, illustration, children }: 
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <rect x="2" y="2" width="7" height="7" rx="2" fill="white"/>
-                <rect x="11" y="2" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
-                <rect x="2" y="11" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
-                <rect x="11" y="11" width="7" height="7" rx="2" fill="white"/>
+                <rect x="2" y="2" width="7" height="7" rx="2" fill="white" />
+                <rect x="11" y="2" width="7" height="7" rx="2" fill="white" fillOpacity="0.7" />
+                <rect x="2" y="11" width="7" height="7" rx="2" fill="white" fillOpacity="0.7" />
+                <rect x="11" y="11" width="7" height="7" rx="2" fill="white" />
               </svg>
             </div>
             <span className="text-white font-semibold text-lg" style={{ fontFamily: "var(--font-display)" }}>
@@ -159,10 +159,10 @@ export default function AuthLayout({ title, subtitle, illustration, children }: 
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
             <div className="w-8 h-8 rounded-xl bg-[#036c5f] flex items-center justify-center">
               <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                <rect x="2" y="2" width="7" height="7" rx="2" fill="white"/>
-                <rect x="11" y="2" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
-                <rect x="2" y="11" width="7" height="7" rx="2" fill="white" fillOpacity="0.7"/>
-                <rect x="11" y="11" width="7" height="7" rx="2" fill="white"/>
+                <rect x="2" y="2" width="7" height="7" rx="2" fill="white" />
+                <rect x="11" y="2" width="7" height="7" rx="2" fill="white" fillOpacity="0.7" />
+                <rect x="2" y="11" width="7" height="7" rx="2" fill="white" fillOpacity="0.7" />
+                <rect x="11" y="11" width="7" height="7" rx="2" fill="white" />
               </svg>
             </div>
             <span className="text-slate-900 font-semibold text-lg" style={{ fontFamily: "var(--font-display)" }}>
@@ -172,10 +172,7 @@ export default function AuthLayout({ title, subtitle, illustration, children }: 
 
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-100">
             <div className="mb-8">
-              <h1
-                className="text-2xl font-bold text-slate-900 mb-1"
-                style={{ fontFamily: "var(--font-display)" }}
-              >
+              <h1 className="text-2xl font-bold text-slate-900 mb-1" style={{ fontFamily: "var(--font-display)" }}>
                 {title}
               </h1>
               <p className="text-sm text-slate-500">{subtitle}</p>

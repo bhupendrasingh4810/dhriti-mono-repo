@@ -1,6 +1,25 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { AssetType, LeaveStatus, LeaveType, ReviewStatus, ReviewType, TrainingEnrollmentStatus, TrainingStatus, TrainingType } from "@prisma/client";
-import { IsBoolean, IsDateString, IsEnum, IsNumber, IsOptional, IsString, IsUUID, MaxLength, Min } from "class-validator";
+import {
+  AssetType,
+  LeaveStatus,
+  LeaveType,
+  ReviewStatus,
+  ReviewType,
+  TrainingEnrollmentStatus,
+  TrainingStatus,
+  TrainingType,
+} from "@prisma/client";
+import {
+  IsBoolean,
+  IsDateString,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+} from "class-validator";
 
 export class CreateHrmsLeaveDto {
   @ApiProperty() @IsUUID() employeeId!: string;
@@ -53,7 +72,10 @@ export class CreateHrmsTrainingDto {
 
 export class EnrollHrmsTrainingDto {
   @ApiProperty() @IsUUID() employeeId!: string;
-  @ApiPropertyOptional({ enum: TrainingEnrollmentStatus }) @IsOptional() @IsEnum(TrainingEnrollmentStatus) status?: TrainingEnrollmentStatus;
+  @ApiPropertyOptional({ enum: TrainingEnrollmentStatus })
+  @IsOptional()
+  @IsEnum(TrainingEnrollmentStatus)
+  status?: TrainingEnrollmentStatus;
 }
 
 export class CreateHrmsAssetDto {

@@ -26,7 +26,11 @@ export async function DesignSystemPage() {
     <Box sx={{ minHeight: "100vh", bgcolor: "background.default", py: 4 }}>
       <Container maxWidth="lg">
         <Stack spacing={3}>
-          <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", md: "center" } }}>
+          <Stack
+            direction={{ xs: "column", md: "row" }}
+            spacing={2}
+            sx={{ justifyContent: "space-between", alignItems: { xs: "flex-start", md: "center" } }}
+          >
             <Box>
               <Typography variant="h3" sx={{ fontWeight: "fontWeightBold" }}>
                 Dhriti Enterprise UI
@@ -46,12 +50,25 @@ export async function DesignSystemPage() {
                     Work Item Cards
                   </Typography>
                   {workItems.map((item) => (
-                    <Box key={item.title} sx={{ p: 2, border: 1, borderColor: "borders.borderSubtle", borderRadius: (theme) => theme.tokens.radius.md, bgcolor: "surfaces.surfaceHover" }}>
+                    <Box
+                      key={item.title}
+                      sx={{
+                        p: 2,
+                        border: 1,
+                        borderColor: "borders.borderSubtle",
+                        borderRadius: (theme) => theme.tokens.radius.md,
+                        bgcolor: "surfaces.surfaceHover",
+                      }}
+                    >
                       <Stack direction="row" spacing={1} sx={{ justifyContent: "space-between", alignItems: "center" }}>
-                        <Typography variant="body2" sx={{ fontWeight: 700 }}>{item.title}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                          {item.title}
+                        </Typography>
                         <Chip label={item.priority} size="small" />
                       </Stack>
-                      <Typography variant="caption" color="text.secondary">{item.status}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {item.status}
+                      </Typography>
                     </Box>
                   ))}
                 </Stack>

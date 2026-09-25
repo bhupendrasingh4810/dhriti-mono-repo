@@ -5,15 +5,15 @@ monolith backed by PostgreSQL (Prisma) and Redis, with Socket.io for real-time.
 
 ## Applications
 
-| App | Purpose | REST base | WebSocket |
-| --- | --- | --- | --- |
-| Connect | Chat, threads, audio/video calls | `/v1/organization/connect` | `/connect` |
-| Flow | Projects, issues, sprints, kanban | `/v1/organization/flow` | `/flow` |
-| Atlas | Knowledge base (spaces, pages) | `/v1/organization/atlas` | `/atlas` |
-| Pulse | Calendars, events, scheduling | `/v1/organization/pulse` | `/pulse` |
-| Nexus | AI summaries, task extraction, ask | `/v1/organization/nexus` | `/nexus` |
-| Cadence | Retrospectives, estimation | `/v1/organization/cadence` | `/cadence` |
-| Control | Platform + organization admin | `/v1/control/...` | — |
+| App     | Purpose                            | REST base                  | WebSocket  |
+| ------- | ---------------------------------- | -------------------------- | ---------- |
+| Connect | Chat, threads, audio/video calls   | `/v1/organization/connect` | `/connect` |
+| Flow    | Projects, issues, sprints, kanban  | `/v1/organization/flow`    | `/flow`    |
+| Atlas   | Knowledge base (spaces, pages)     | `/v1/organization/atlas`   | `/atlas`   |
+| Pulse   | Calendars, events, scheduling      | `/v1/organization/pulse`   | `/pulse`   |
+| Nexus   | AI summaries, task extraction, ask | `/v1/organization/nexus`   | `/nexus`   |
+| Cadence | Retrospectives, estimation         | `/v1/organization/cadence` | `/cadence` |
+| Control | Platform + organization admin      | `/v1/control/...`          | —          |
 
 Plus platform services: Auth, IAM, Files, Notifications, Search, Analytics,
 Webhooks, Audit.
@@ -21,6 +21,7 @@ Webhooks, Audit.
 ## Conventions
 
 ### Authentication
+
 Every request (except `@Public()` routes) needs a short-lived JWT:
 
 ```
@@ -32,16 +33,19 @@ Access tokens expire in 15 minutes; refresh tokens (opaque, 7 days) rotate on
 each use. Reuse of a rotated refresh token revokes all sessions.
 
 ### Multi-tenancy
+
 All tenant-scoped routes run through `TenantGuard`. The active organization is
 resolved from the `x-organization-id` header, falling back to the JWT's `org`.
 The guard verifies the caller is a member; `@CurrentOrganization()` injects
 `{ organizationId, memberId, role }`.
 
 ### Roles
+
 - **Organization roles** (`@OrgRoles`): `OWNER`, `ADMIN`, `MEMBER`, `GUEST` — checked within the active org.
 - **Platform roles** (`@PlatformRoles`): `SUPER_ADMIN`, `SUPPORT`, `BILLING`, `SECURITY`, `ENGINEERING` — internal staff only (Control platform admin).
 
 ### Error shape
+
 All errors use a consistent envelope:
 
 ```json
@@ -59,10 +63,12 @@ All errors use a consistent envelope:
 `code` is a stable `ErrorCode` for client-side handling.
 
 ### Pagination
+
 List endpoints use cursor pagination where data grows unbounded (messages,
 notifications): pass `cursor` (last item id) + `limit`, read `nextCursor`.
 
 ### Observability
+
 - Structured JSON logs with a `correlationId` (also returned as `x-correlation-id`).
 - `GET /v1/health/live` and `GET /v1/health/ready` (DB + Redis).
 - `GET /metrics` (Prometheus text format).

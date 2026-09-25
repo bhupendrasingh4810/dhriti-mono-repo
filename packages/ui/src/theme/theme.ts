@@ -1,16 +1,11 @@
 /**
  * Dhriti Theme
- * 
+ *
  * Enhanced version with critical fixes and enterprise features.
  * Based on your original architecture with improvements.
  */
 
-import {
-  createTheme,
-  type PaletteMode,
-  type ThemeOptions,
-  type Theme as MuiTheme,
-} from "@mui/material/styles";
+import { createTheme, type PaletteMode, type ThemeOptions, type Theme as MuiTheme } from "@mui/material/styles";
 
 import { breakpoints } from "./breakpoints";
 import { createComponentOverrides } from "./components";
@@ -105,13 +100,7 @@ export type CreateThemeOptions = {
 
 export function createAppTheme(options: CreateThemeOptions = {}): MuiTheme {
   // Destructure with defaults
-  const {
-    mode = "light",
-    density = "comfortable",
-    overrides = {},
-    accessibility = true,
-    componentOverrides,
-  } = options;
+  const { mode = "light", density = "comfortable", overrides = {}, accessibility = true, componentOverrides } = options;
 
   // Validate inputs
   if (!["light", "dark"].includes(mode)) {
@@ -119,9 +108,7 @@ export function createAppTheme(options: CreateThemeOptions = {}): MuiTheme {
   }
 
   if (!["compact", "comfortable", "spacious"].includes(density)) {
-    throw new Error(
-      `Invalid density: ${density}. Must be "compact", "comfortable", or "spacious".`
-    );
+    throw new Error(`Invalid density: ${density}. Must be "compact", "comfortable", or "spacious".`);
   }
 
   // Get design tokens
@@ -266,14 +253,10 @@ export const highContrastTheme = createAppTheme({
 
 export function getSystemPreferredMode(): PaletteMode {
   if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-export function createSystemTheme(
-  options: Omit<CreateThemeOptions, "mode"> = {}
-) {
+export function createSystemTheme(options: Omit<CreateThemeOptions, "mode"> = {}) {
   return createAppTheme({
     ...options,
     mode: getSystemPreferredMode(),
@@ -304,9 +287,7 @@ export class ThemeBuilder {
     return this;
   }
 
-  withComponentOverrides(
-    components: ThemeOptions["components"]
-  ): ThemeBuilder {
+  withComponentOverrides(components: ThemeOptions["components"]): ThemeBuilder {
     this.options.componentOverrides = components;
     return this;
   }

@@ -8,8 +8,7 @@ export interface AccessRequirements {
   limit?: string;
 }
 
-export const RequireAccess = (requirements: AccessRequirements) =>
-  SetMetadata(ACCESS_REQUIREMENTS_KEY, requirements);
+export const RequireAccess = (requirements: AccessRequirements) => SetMetadata(ACCESS_REQUIREMENTS_KEY, requirements);
 
 export const RequirePermission = (permission: string) => RequireAccess({ permission });
 export const RequireEntitlement = (entitlement: string) => RequireAccess({ entitlement });

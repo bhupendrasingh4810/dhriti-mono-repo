@@ -157,9 +157,27 @@ export const connectUserSettings: ConnectUserSettings = {
 };
 
 export const connectContacts: ConnectContact[] = [
-  { id: "contact_001", ownerId: "usr_001", contactUserId: "usr_002", favorite: true, createdAt: "2026-01-10T10:00:00Z" },
-  { id: "contact_002", ownerId: "usr_001", contactUserId: "usr_003", favorite: true, createdAt: "2026-01-11T10:00:00Z" },
-  { id: "contact_003", ownerId: "usr_001", contactUserId: "usr_004", favorite: false, createdAt: "2026-02-01T10:00:00Z" },
+  {
+    id: "contact_001",
+    ownerId: "usr_001",
+    contactUserId: "usr_002",
+    favorite: true,
+    createdAt: "2026-01-10T10:00:00Z",
+  },
+  {
+    id: "contact_002",
+    ownerId: "usr_001",
+    contactUserId: "usr_003",
+    favorite: true,
+    createdAt: "2026-01-11T10:00:00Z",
+  },
+  {
+    id: "contact_003",
+    ownerId: "usr_001",
+    contactUserId: "usr_004",
+    favorite: false,
+    createdAt: "2026-02-01T10:00:00Z",
+  },
 ];
 
 export const connectPinnedItems: ConnectPinnedItem[] = [

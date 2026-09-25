@@ -20,7 +20,10 @@ describe("EntitlementService", () => {
     const redis = makeRedis();
     redis.getJson.mockResolvedValue(null);
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "FEATURE" });
-    prisma.subscription.findFirst.mockResolvedValue({ planId: "plan-a", planRecord: { entitlements: [{ enabled: true, value: null }] } });
+    prisma.subscription.findFirst.mockResolvedValue({
+      planId: "plan-a",
+      planRecord: { entitlements: [{ enabled: true, value: null }] },
+    });
     prisma.organizationEntitlement.findFirst.mockResolvedValue(null);
     const service = new EntitlementService(prisma as never, redis as never, config as never);
 
@@ -37,7 +40,11 @@ describe("EntitlementService", () => {
     const service = new EntitlementService(prisma as never, redis as never, config as never);
 
     await expect(service.hasFeature("org-a", "hrms.enabled")).resolves.toBe(false);
-    expect(prisma.organizationEntitlement.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ OR: expect.arrayContaining([{ expiresAt: { gt: expect.any(Date) } }]) }) }));
+    expect(prisma.organizationEntitlement.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ OR: expect.arrayContaining([{ expiresAt: { gt: expect.any(Date) } }]) }),
+      }),
+    );
   });
 
   it("applies an organization limit override over the plan value", async () => {
@@ -45,7 +52,10 @@ describe("EntitlementService", () => {
     const redis = makeRedis();
     redis.getJson.mockResolvedValue(null);
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "LIMIT" });
-    prisma.subscription.findFirst.mockResolvedValue({ planId: "plan-a", planRecord: { entitlements: [{ enabled: true, value: 10 }] } });
+    prisma.subscription.findFirst.mockResolvedValue({
+      planId: "plan-a",
+      planRecord: { entitlements: [{ enabled: true, value: 10 }] },
+    });
     prisma.organizationEntitlement.findFirst.mockResolvedValue({ enabled: true, value: 25 });
     const service = new EntitlementService(prisma as never, redis as never, config as never);
 
@@ -58,7 +68,10 @@ describe("EntitlementService", () => {
     redis.getJson.mockRejectedValue(new Error("Redis unavailable"));
     redis.setJson.mockRejectedValue(new Error("Redis unavailable"));
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "FEATURE" });
-    prisma.subscription.findFirst.mockResolvedValue({ planId: "plan-a", planRecord: { entitlements: [{ enabled: true, value: null }] } });
+    prisma.subscription.findFirst.mockResolvedValue({
+      planId: "plan-a",
+      planRecord: { entitlements: [{ enabled: true, value: null }] },
+    });
     prisma.organizationEntitlement.findFirst.mockResolvedValue(null);
     const service = new EntitlementService(prisma as never, redis as never, config as never);
 
@@ -70,7 +83,10 @@ describe("EntitlementService", () => {
     const redis = makeRedis();
     redis.getJson.mockResolvedValue(null);
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "LIMIT" });
-    prisma.subscription.findFirst.mockResolvedValue({ planId: "plan-a", planRecord: { entitlements: [{ enabled: true, value: -1 }] } });
+    prisma.subscription.findFirst.mockResolvedValue({
+      planId: "plan-a",
+      planRecord: { entitlements: [{ enabled: true, value: -1 }] },
+    });
     prisma.organizationEntitlement.findFirst.mockResolvedValue(null);
     const service = new EntitlementService(prisma as never, redis as never, config as never);
 

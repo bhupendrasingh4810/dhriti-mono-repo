@@ -6,7 +6,9 @@ import { Public } from "../../common/decorators/public.decorator";
 import { BillingWebhookService } from "./billing-webhook.service";
 import { BillingWebhookRateLimitGuard } from "./billing-webhook-rate-limit.guard";
 
-interface RawBodyRequest extends Request { rawBody?: Buffer }
+interface RawBodyRequest extends Request {
+  rawBody?: Buffer;
+}
 
 @ApiTags("billing")
 @Controller("billing/webhooks")
@@ -18,7 +20,9 @@ export class BillingWebhookController {
   @Post(":provider")
   @HttpCode(200)
   async receive(@Req() request: RawBodyRequest, @Headers("stripe-signature") signature: string | undefined) {
-    if (!signature || !request.rawBody) {throw new BadRequestException("Invalid billing webhook request");}
+    if (!signature || !request.rawBody) {
+      throw new BadRequestException("Invalid billing webhook request");
+    }
     return this.webhooks.process(request.params.provider, signature, request.rawBody);
   }
 }

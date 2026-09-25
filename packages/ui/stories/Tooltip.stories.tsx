@@ -105,23 +105,33 @@ export const Placements: Story = {
     <Box sx={{ width: 440, p: 4, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 2 }}>
       <Box />
       <Tooltip title="Top tooltip" placement="top" variant="dark">
-        <Button fullWidth variant="outlined">Top</Button>
+        <Button fullWidth variant="outlined">
+          Top
+        </Button>
       </Tooltip>
       <Box />
 
       <Tooltip title="Left tooltip" placement="left" variant="dark">
-        <Button fullWidth variant="outlined">Left</Button>
+        <Button fullWidth variant="outlined">
+          Left
+        </Button>
       </Tooltip>
       <Tooltip title="Center target" placement="top" variant="light">
-        <Button fullWidth variant="contained">Center</Button>
+        <Button fullWidth variant="contained">
+          Center
+        </Button>
       </Tooltip>
       <Tooltip title="Right tooltip" placement="right" variant="dark">
-        <Button fullWidth variant="outlined">Right</Button>
+        <Button fullWidth variant="outlined">
+          Right
+        </Button>
       </Tooltip>
 
       <Box />
       <Tooltip title="Bottom tooltip" placement="bottom" variant="dark">
-        <Button fullWidth variant="outlined">Bottom</Button>
+        <Button fullWidth variant="outlined">
+          Bottom
+        </Button>
       </Tooltip>
       <Box />
     </Box>
@@ -184,23 +194,33 @@ export const SemanticColors: Story = {
   render: () => (
     <Stack direction="row" spacing={2} sx={{ alignItems: "center", flexWrap: "wrap", p: 4 }}>
       <Tooltip title="Primary Brand Tooltip" variant="primary">
-        <Button color="primary" variant="contained">Primary</Button>
+        <Button color="primary" variant="contained">
+          Primary
+        </Button>
       </Tooltip>
 
       <Tooltip title="Action completed successfully" variant="success">
-        <Button color="success" variant="contained">Success</Button>
+        <Button color="success" variant="contained">
+          Success
+        </Button>
       </Tooltip>
 
       <Tooltip title="Warning: API limit nearing quota" variant="warning">
-        <Button color="warning" variant="contained">Warning</Button>
+        <Button color="warning" variant="contained">
+          Warning
+        </Button>
       </Tooltip>
 
       <Tooltip title="Error: Authentication expired" variant="error">
-        <Button color="error" variant="contained">Error</Button>
+        <Button color="error" variant="contained">
+          Error
+        </Button>
       </Tooltip>
 
       <Tooltip title="Information: Synced 2m ago" variant="info">
-        <Button color="info" variant="contained">Info</Button>
+        <Button color="info" variant="contained">
+          Info
+        </Button>
       </Tooltip>
     </Stack>
   ),

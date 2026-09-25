@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
 import type { LegacyPlatformRole } from "@prisma/client";
@@ -25,10 +20,10 @@ export class PlatformRolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<LegacyPlatformRole[] | undefined>(
-      PLATFORM_ROLES_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const required = this.reflector.getAllAndOverride<LegacyPlatformRole[] | undefined>(PLATFORM_ROLES_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!required || required.length === 0) {
       return true;
     }

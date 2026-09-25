@@ -41,15 +41,15 @@ export class MfaService {
       throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
     }
     if (user.auth?.mfaEnabled) {
-      throw new AppError(
-        ErrorCode.MFA_ALREADY_ENABLED,
-        "MFA is already enabled on this account",
-        HttpStatus.CONFLICT,
-      );
+      throw new AppError(ErrorCode.MFA_ALREADY_ENABLED, "MFA is already enabled on this account", HttpStatus.CONFLICT);
     }
 
     const secret = authenticator.generateSecret();
-    await this.redis.setJson(pendingSecretKey(userId), { secretEncrypted: this.secrets.encrypt(secret) }, this.config.mfa.pendingSecretTtlSeconds);
+    await this.redis.setJson(
+      pendingSecretKey(userId),
+      { secretEncrypted: this.secrets.encrypt(secret) },
+      this.config.mfa.pendingSecretTtlSeconds,
+    );
 
     const otpauthUrl = authenticator.keyuri(email, "Dhriti", secret);
     const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl);
@@ -112,10 +112,10 @@ export class MfaService {
     if (!auth?.mfaEnabled) {
       return false;
     }
-    const secret = auth.mfaSecretEncrypted
-      ? this.secrets.decrypt(auth.mfaSecretEncrypted)
-      : auth.mfaSecret;
-    if (!secret) {return false;}
+    const secret = auth.mfaSecretEncrypted ? this.secrets.decrypt(auth.mfaSecretEncrypted) : auth.mfaSecret;
+    if (!secret) {
+      return false;
+    }
     if (!auth.mfaSecretEncrypted) {
       await this.prisma.userAuth.update({
         where: { userId },

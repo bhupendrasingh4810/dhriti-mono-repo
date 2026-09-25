@@ -21,8 +21,39 @@ import { HrmsAssetService } from "./services/hrms-asset.service";
 import { HrmsBenefitService } from "./services/hrms-benefit.service";
 
 @Module({
-  controllers: [HrmsEmployeeController, HrmsAttendanceController, HrmsHolidayCalendarController, HrmsLeaveController, HrmsPerformanceReviewController, HrmsPayrollController, HrmsTrainingController, HrmsAssetController, HrmsBenefitController],
-  providers: [HrmsEmployeeService, HrmsAttendanceService, HrmsOperationsService, HrmsHolidayCalendarService, HrmsLeaveService, HrmsPerformanceReviewService, HrmsPayrollService, HrmsTrainingService, HrmsAssetService, HrmsBenefitService],
-  exports: [HrmsEmployeeService, HrmsAttendanceService, HrmsHolidayCalendarService, HrmsLeaveService, HrmsPerformanceReviewService, HrmsPayrollService, HrmsTrainingService, HrmsAssetService, HrmsBenefitService],
+  controllers: [
+    HrmsEmployeeController,
+    HrmsAttendanceController,
+    HrmsHolidayCalendarController,
+    HrmsLeaveController,
+    HrmsPerformanceReviewController,
+    HrmsPayrollController,
+    HrmsTrainingController,
+    HrmsAssetController,
+    HrmsBenefitController,
+  ],
+  providers: [
+    HrmsEmployeeService,
+    HrmsAttendanceService,
+    HrmsOperationsService,
+    HrmsHolidayCalendarService,
+    HrmsLeaveService,
+    HrmsPerformanceReviewService,
+    HrmsPayrollService,
+    HrmsTrainingService,
+    HrmsAssetService,
+    HrmsBenefitService,
+  ],
+  exports: [
+    HrmsEmployeeService,
+    HrmsAttendanceService,
+    HrmsHolidayCalendarService,
+    HrmsLeaveService,
+    HrmsPerformanceReviewService,
+    HrmsPayrollService,
+    HrmsTrainingService,
+    HrmsAssetService,
+    HrmsBenefitService,
+  ],
 })
 export class HrmsModule {}

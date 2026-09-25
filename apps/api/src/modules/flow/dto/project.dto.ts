@@ -1,12 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import {
-  IsOptional,
-  IsString,
-  IsUUID,
-  Matches,
-  MaxLength,
-  MinLength,
-} from "class-validator";
+import { IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from "class-validator";
 
 export class CreateProjectDto {
   @ApiProperty({ example: "PAY", description: "Short uppercase key used in issue codes" })

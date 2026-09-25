@@ -1,0 +1,13 @@
+# Dependencies and package-manager artifacts
+**/node_modules
+
+# Build, test, and framework output
+**/.next
+**/dist
+**/coverage
+**/storybook-static
+**/*.tsbuildinfo
+
+# Generated and runtime data
+prisma/schema.prisma
+*.log

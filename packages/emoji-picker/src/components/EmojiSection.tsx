@@ -21,7 +21,14 @@ export function EmojiSection({ title, emojis, onSelect, onHover, disabled, anima
     <Box sx={{ mb: 1.5 }}>
       <Typography
         component="h3"
-        sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary", textTransform: "uppercase", letterSpacing: "0.04em", mb: 0.5 }}
+        sx={{
+          fontSize: 11,
+          fontWeight: 700,
+          color: "text.secondary",
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
+          mb: 0.5,
+        }}
       >
         {title}
       </Typography>

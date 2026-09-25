@@ -62,11 +62,41 @@ const FEATURES = [
 ];
 
 const PRODUCTS = [
-  { name: "Connect", emoji: "💬", text: "Real-time messaging, channels, and direct messages for your entire organization.", color: "#036c5f", bg: "#e6f4f2" },
-  { name: "Flow", emoji: "📋", text: "Kanban boards, sprints, roadmaps, and time tracking—all your project work in one place.", color: "#2563eb", bg: "#dbeafe" },
-  { name: "Atlas", emoji: "📄", text: "A living knowledge base where docs, wikis, and runbooks stay current and findable.", color: "#7c3aed", bg: "#ede9fe" },
-  { name: "Pulse", emoji: "📅", text: "Run better meetings with shared agendas, live notes, and automatic action items.", color: "#d97706", bg: "#fef3c7" },
-  { name: "Nexus AI", emoji: "✨", text: "Your intelligent work assistant that learns from your entire workspace graph.", color: "#059669", bg: "#d1fae5" },
+  {
+    name: "Connect",
+    emoji: "💬",
+    text: "Real-time messaging, channels, and direct messages for your entire organization.",
+    color: "#036c5f",
+    bg: "#e6f4f2",
+  },
+  {
+    name: "Flow",
+    emoji: "📋",
+    text: "Kanban boards, sprints, roadmaps, and time tracking—all your project work in one place.",
+    color: "#2563eb",
+    bg: "#dbeafe",
+  },
+  {
+    name: "Atlas",
+    emoji: "📄",
+    text: "A living knowledge base where docs, wikis, and runbooks stay current and findable.",
+    color: "#7c3aed",
+    bg: "#ede9fe",
+  },
+  {
+    name: "Pulse",
+    emoji: "📅",
+    text: "Run better meetings with shared agendas, live notes, and automatic action items.",
+    color: "#d97706",
+    bg: "#fef3c7",
+  },
+  {
+    name: "Nexus AI",
+    emoji: "✨",
+    text: "Your intelligent work assistant that learns from your entire workspace graph.",
+    color: "#059669",
+    bg: "#d1fae5",
+  },
 ];
 
 const STATS = [
@@ -78,21 +108,24 @@ const STATS = [
 
 const TESTIMONIALS = [
   {
-    quote: "Dhriti OS replaced six different tools we were juggling. Our team velocity went up 40% in the first month. It's genuinely the operating system for how we work.",
+    quote:
+      "Dhriti OS replaced six different tools we were juggling. Our team velocity went up 40% in the first month. It's genuinely the operating system for how we work.",
     author: "Priya Iyer",
     role: "VP Engineering, Nexora",
     initials: "PI",
     color: "#7c3aed",
   },
   {
-    quote: "The AI features alone are worth the switch. Nexus summarises long threads instantly and writes first drafts that actually sound like us. I didn't think this was possible.",
+    quote:
+      "The AI features alone are worth the switch. Nexus summarises long threads instantly and writes first drafts that actually sound like us. I didn't think this was possible.",
     author: "Alex Turner",
     role: "Head of Product, Velocity",
     initials: "AT",
     color: "#036c5f",
   },
   {
-    quote: "We evaluated Notion, Linear, and Slack separately. Dhriti OS does all three better and costs less. The onboarding took two hours, not two weeks.",
+    quote:
+      "We evaluated Notion, Linear, and Slack separately. Dhriti OS does all three better and costs less. The onboarding took two hours, not two weeks.",
     author: "Meera Krishnan",
     role: "COO, Pinnacle Labs",
     initials: "MK",
@@ -107,7 +140,13 @@ function CheckCircle({ color = "#036c5f" }: { color?: string }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="flex-shrink-0">
       <circle cx="12" cy="12" r="10" fill={color} fillOpacity="0.15" />
-      <polyline points="8 12 11 15 16 9" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <polyline
+        points="8 12 11 15 16 9"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -164,7 +203,10 @@ function DashboardMockup() {
       }}
     >
       {/* Window chrome */}
-      <div className="flex items-center gap-1.5 px-4 py-3 border-b" style={{ borderColor: "#f1f5f9", backgroundColor: "#f8fafc" }}>
+      <div
+        className="flex items-center gap-1.5 px-4 py-3 border-b"
+        style={{ borderColor: "#f1f5f9", backgroundColor: "#f8fafc" }}
+      >
         <div className="w-3 h-3 rounded-full bg-red-400" />
         <div className="w-3 h-3 rounded-full bg-amber-400" />
         <div className="w-3 h-3 rounded-full bg-green-400" />
@@ -174,7 +216,10 @@ function DashboardMockup() {
       {/* Body */}
       <div className="flex" style={{ height: 340 }}>
         {/* Sidebar */}
-        <div className="w-16 flex-shrink-0 border-r flex flex-col items-center py-4 gap-3" style={{ borderColor: "#f1f5f9", backgroundColor: "#fafafa" }}>
+        <div
+          className="w-16 flex-shrink-0 border-r flex flex-col items-center py-4 gap-3"
+          style={{ borderColor: "#f1f5f9", backgroundColor: "#fafafa" }}
+        >
           <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#036c5f" }}>
             <div className="w-4 h-4 rounded-sm bg-white opacity-80" />
           </div>
@@ -199,7 +244,11 @@ function DashboardMockup() {
 
           {/* Stats row */}
           <div className="grid grid-cols-3 gap-3 mb-5">
-            {[["#e6f4f2", "#036c5f"], ["#dbeafe", "#2563eb"], ["#fef3c7", "#d97706"]].map(([bg, fg], i) => (
+            {[
+              ["#e6f4f2", "#036c5f"],
+              ["#dbeafe", "#2563eb"],
+              ["#fef3c7", "#d97706"],
+            ].map(([bg, fg], i) => (
               <div key={i} className="rounded-xl p-3" style={{ backgroundColor: bg }}>
                 <div className="h-3 w-10 rounded mb-2" style={{ backgroundColor: fg, opacity: 0.4 }} />
                 <div className="h-5 w-14 rounded" style={{ backgroundColor: fg, opacity: 0.7 }} />
@@ -210,12 +259,18 @@ function DashboardMockup() {
           {/* Activity rows */}
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-3 mb-3">
-              <div className="w-7 h-7 rounded-full flex-shrink-0" style={{ backgroundColor: ["#e6f4f2", "#ede9fe", "#dbeafe", "#fef3c7", "#d1fae5"][i] }} />
+              <div
+                className="w-7 h-7 rounded-full flex-shrink-0"
+                style={{ backgroundColor: ["#e6f4f2", "#ede9fe", "#dbeafe", "#fef3c7", "#d1fae5"][i] }}
+              />
               <div className="flex-1">
                 <div className="h-2.5 rounded mb-1.5" style={{ backgroundColor: "#e2e8f0", width: `${60 + i * 7}%` }} />
                 <div className="h-2 rounded" style={{ backgroundColor: "#f1f5f9", width: `${40 + i * 5}%` }} />
               </div>
-              <div className="h-5 w-12 rounded-full flex-shrink-0" style={{ backgroundColor: i % 2 === 0 ? "#e6f4f2" : "#f1f5f9" }} />
+              <div
+                className="h-5 w-12 rounded-full flex-shrink-0"
+                style={{ backgroundColor: i % 2 === 0 ? "#e6f4f2" : "#f1f5f9" }}
+              />
             </div>
           ))}
         </div>
@@ -225,7 +280,10 @@ function DashboardMockup() {
           <div className="h-3 w-20 rounded bg-slate-300 mb-4" />
           {[...Array(4)].map((_, i) => (
             <div key={i} className="flex items-center gap-2 mb-3">
-              <div className="w-6 h-6 rounded-full flex-shrink-0" style={{ backgroundColor: ["#e6f4f2", "#dbeafe", "#ede9fe", "#fef3c7"][i] }} />
+              <div
+                className="w-6 h-6 rounded-full flex-shrink-0"
+                style={{ backgroundColor: ["#e6f4f2", "#dbeafe", "#ede9fe", "#fef3c7"][i] }}
+              />
               <div>
                 <div className="h-2 rounded mb-1" style={{ backgroundColor: "#e2e8f0", width: 60 }} />
                 <div className="h-1.5 rounded" style={{ backgroundColor: "#f1f5f9", width: 40 }} />
@@ -253,7 +311,10 @@ export default function LandingPage() {
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) { setSubmitted(true); router.push("get-started"); }
+    if (email) {
+      setSubmitted(true);
+      router.push("get-started");
+    }
   };
 
   return (
@@ -264,13 +325,33 @@ export default function LandingPage() {
         style={{ background: "linear-gradient(160deg, #f0fbf9 0%, #f8fafc 40%, #ede9fe10 100%)" }}
       >
         {/* Background layers */}
-        <div className="absolute inset-0 text-[#036c5f]"><DotGrid opacity={0.07} /></div>
-        <div className="absolute top-0 right-0 w-2/3 h-full pointer-events-none" style={{ background: "radial-gradient(ellipse at 80% 30%, rgba(3,108,95,0.07) 0%, transparent 60%)" }} />
-        <div className="absolute bottom-0 left-0 w-1/2 h-1/2 pointer-events-none" style={{ background: "radial-gradient(ellipse at 20% 80%, rgba(124,58,237,0.05) 0%, transparent 60%)" }} />
+        <div className="absolute inset-0 text-[#036c5f]">
+          <DotGrid opacity={0.07} />
+        </div>
+        <div
+          className="absolute top-0 right-0 w-2/3 h-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 80% 30%, rgba(3,108,95,0.07) 0%, transparent 60%)" }}
+        />
+        <div
+          className="absolute bottom-0 left-0 w-1/2 h-1/2 pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 20% 80%, rgba(124,58,237,0.05) 0%, transparent 60%)" }}
+        />
 
         {/* Floating accent blobs */}
-        <div className="absolute top-24 right-1/4 w-64 h-64 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(3,108,95,0.08) 0%, transparent 70%)", filter: "blur(40px)" }} />
-        <div className="absolute bottom-32 left-1/3 w-80 h-80 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 70%)", filter: "blur(60px)" }} />
+        <div
+          className="absolute top-24 right-1/4 w-64 h-64 rounded-full pointer-events-none"
+          style={{
+            background: "radial-gradient(circle, rgba(3,108,95,0.08) 0%, transparent 70%)",
+            filter: "blur(40px)",
+          }}
+        />
+        <div
+          className="absolute bottom-32 left-1/3 w-80 h-80 rounded-full pointer-events-none"
+          style={{
+            background: "radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 70%)",
+            filter: "blur(60px)",
+          }}
+        />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 py-24 w-full">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -289,7 +370,13 @@ export default function LandingPage() {
 
               <h1
                 className="mb-6 leading-none"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 900, fontSize: "clamp(44px, 7vw, 80px)", letterSpacing: "-0.035em", color: "#0f172a" }}
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontWeight: 900,
+                  fontSize: "clamp(44px, 7vw, 80px)",
+                  letterSpacing: "-0.035em",
+                  color: "#0f172a",
+                }}
               >
                 One System.
                 <br />
@@ -299,31 +386,69 @@ export default function LandingPage() {
               </h1>
 
               <p className="text-xl text-slate-500 leading-relaxed mb-10" style={{ maxWidth: 520 }}>
-                Dhriti OS unifies communication, projects, knowledge, meetings, and AI in one seamless platform—so your teams move faster and achieve more.
+                Dhriti OS unifies communication, projects, knowledge, meetings, and AI in one seamless platform—so your
+                teams move faster and achieve more.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-10">
                 <button
                   onClick={() => router.push("get-started")}
                   className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl text-white font-bold text-base transition-all"
-                  style={{ backgroundColor: "#036c5f", boxShadow: "0 8px 24px rgba(3,108,95,0.3)", fontFamily: "var(--font-display)" }}
-                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#024d44"; (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 32px rgba(3,108,95,0.4)"; }}
-                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#036c5f"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(3,108,95,0.3)"; }}
+                  style={{
+                    backgroundColor: "#036c5f",
+                    boxShadow: "0 8px 24px rgba(3,108,95,0.3)",
+                    fontFamily: "var(--font-display)",
+                  }}
+                  onMouseOver={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = "#024d44";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 12px 32px rgba(3,108,95,0.4)";
+                  }}
+                  onMouseOut={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = "#036c5f";
+                    (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(3,108,95,0.3)";
+                  }}
                 >
                   Get started free
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
                   </svg>
                 </button>
                 <button
                   onClick={() => router.push("contact-us")}
                   className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl font-bold text-base transition-all border"
-                  style={{ color: "#036c5f", borderColor: "#036c5f", backgroundColor: "white", fontFamily: "var(--font-display)" }}
-                  onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#e6f4f2"; }}
-                  onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "white"; }}
+                  style={{
+                    color: "#036c5f",
+                    borderColor: "#036c5f",
+                    backgroundColor: "white",
+                    fontFamily: "var(--font-display)",
+                  }}
+                  onMouseOver={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = "#e6f4f2";
+                  }}
+                  onMouseOut={(e) => {
+                    (e.currentTarget as HTMLElement).style.backgroundColor = "white";
+                  }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" />
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <polygon points="23 7 16 12 23 17 23 7" />
+                    <rect x="1" y="5" width="15" height="14" rx="2" />
                   </svg>
                   Book a demo
                 </button>
@@ -344,9 +469,18 @@ export default function LandingPage() {
               {/* Floating stat cards */}
               <div
                 className="absolute -top-6 -left-10 z-10 flex items-center gap-3 px-4 py-3 rounded-2xl"
-                style={{ backgroundColor: "white", border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
+                style={{
+                  backgroundColor: "white",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                }}
               >
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: "#e6f4f2" }}>💬</div>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                  style={{ backgroundColor: "#e6f4f2" }}
+                >
+                  💬
+                </div>
                 <div>
                   <p className="text-xs text-slate-400 font-medium">Messages today</p>
                   <p className="text-base font-bold text-slate-900">24,812</p>
@@ -355,9 +489,18 @@ export default function LandingPage() {
 
               <div
                 className="absolute -bottom-4 -right-6 z-10 flex items-center gap-3 px-4 py-3 rounded-2xl"
-                style={{ backgroundColor: "white", border: "1px solid #e2e8f0", boxShadow: "0 8px 24px rgba(0,0,0,0.08)" }}
+                style={{
+                  backgroundColor: "white",
+                  border: "1px solid #e2e8f0",
+                  boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
+                }}
               >
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg" style={{ backgroundColor: "#ede9fe" }}>✨</div>
+                <div
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+                  style={{ backgroundColor: "#ede9fe" }}
+                >
+                  ✨
+                </div>
                 <div>
                   <p className="text-xs text-slate-400 font-medium">AI tasks automated</p>
                   <p className="text-base font-bold text-slate-900">1,340 this week</p>
@@ -396,7 +539,11 @@ export default function LandingPage() {
               <span
                 key={brand.name}
                 className="text-xl font-black text-slate-300 hover:text-slate-400 transition-colors select-none"
-                style={{ fontStyle: brand.style === "italic" ? "italic" : "normal", fontFamily: "var(--font-display)", letterSpacing: "-0.02em" }}
+                style={{
+                  fontStyle: brand.style === "italic" ? "italic" : "normal",
+                  fontFamily: "var(--font-display)",
+                  letterSpacing: "-0.02em",
+                }}
               >
                 {brand.name}
               </span>
@@ -426,7 +573,9 @@ export default function LandingPage() {
 
       {/* ── Features ─────────────────────────────── */}
       <section className="py-24 relative overflow-hidden" style={{ backgroundColor: "#f8fafc" }}>
-        <div className="absolute inset-0 text-slate-400"><DotGrid opacity={0.04} /></div>
+        <div className="absolute inset-0 text-slate-400">
+          <DotGrid opacity={0.04} />
+        </div>
         <div className="relative z-10 max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <div
@@ -442,7 +591,8 @@ export default function LandingPage() {
               Designed to help your team thrive
             </h2>
             <p className="text-lg text-slate-500 max-w-xl mx-auto leading-relaxed">
-              Every feature is intentional. Every integration is seamless. Dhriti OS removes friction so great work happens naturally.
+              Every feature is intentional. Every integration is seamless. Dhriti OS removes friction so great work
+              happens naturally.
             </p>
           </div>
 
@@ -452,8 +602,12 @@ export default function LandingPage() {
                 key={feat.title}
                 className="group rounded-3xl p-8 bg-white border transition-all duration-300 hover:shadow-xl hover:-translate-y-1"
                 style={{ borderColor: "#e2e8f0" }}
-                onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.borderColor = feat.accent + "40"; }}
-                onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0"; }}
+                onMouseOver={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = feat.accent + "40";
+                }}
+                onMouseOut={(e) => {
+                  (e.currentTarget as HTMLElement).style.borderColor = "#e2e8f0";
+                }}
               >
                 <div
                   className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl mb-5 transition-all"
@@ -461,10 +615,7 @@ export default function LandingPage() {
                 >
                   {feat.icon}
                 </div>
-                <h3
-                  className="text-lg font-bold text-slate-900 mb-3"
-                  style={{ fontFamily: "var(--font-display)" }}
-                >
+                <h3 className="text-lg font-bold text-slate-900 mb-3" style={{ fontFamily: "var(--font-display)" }}>
                   {feat.title}
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed">{feat.text}</p>
@@ -480,14 +631,22 @@ export default function LandingPage() {
         style={{ background: "linear-gradient(135deg, #036c5f 0%, #024d44 60%, #01342e 100%)" }}
       >
         {/* Background hex pattern */}
-        <div className="absolute inset-0 text-white"><HexGrid opacity={0.06} /></div>
-        <div className="absolute top-0 right-0 w-1/2 h-full pointer-events-none" style={{ background: "radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.06) 0%, transparent 60%)" }} />
+        <div className="absolute inset-0 text-white">
+          <HexGrid opacity={0.06} />
+        </div>
+        <div
+          className="absolute top-0 right-0 w-1/2 h-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 80% 50%, rgba(255,255,255,0.06) 0%, transparent 60%)" }}
+        />
 
         <div className="relative z-10 max-w-7xl mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Left copy */}
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <p
+                className="text-xs font-bold uppercase tracking-widest mb-4"
+                style={{ color: "rgba(255,255,255,0.5)" }}
+              >
                 Built for the way teams work today
               </p>
               <h2
@@ -499,14 +658,27 @@ export default function LandingPage() {
                 Everything in context.
               </h2>
               <p className="text-lg mb-10 leading-relaxed" style={{ color: "rgba(255,255,255,0.7)" }}>
-                Dhriti OS creates a unified work graph — every conversation, task, and document is linked. Your team always has the full picture.
+                Dhriti OS creates a unified work graph — every conversation, task, and document is linked. Your team
+                always has the full picture.
               </p>
 
               <div className="space-y-4 mb-10">
                 {[
-                  { icon: "⚡", title: "Break down silos", desc: "All your tools talk to each other. Context flows automatically." },
-                  { icon: "🎯", title: "Keep everyone aligned", desc: "One source of truth for goals, progress, and decisions." },
-                  { icon: "✨", title: "Move faster with AI", desc: "Nexus AI surfaces insights before you need to ask." },
+                  {
+                    icon: "⚡",
+                    title: "Break down silos",
+                    desc: "All your tools talk to each other. Context flows automatically.",
+                  },
+                  {
+                    icon: "🎯",
+                    title: "Keep everyone aligned",
+                    desc: "One source of truth for goals, progress, and decisions.",
+                  },
+                  {
+                    icon: "✨",
+                    title: "Move faster with AI",
+                    desc: "Nexus AI surfaces insights before you need to ask.",
+                  },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-4">
                     <div
@@ -517,7 +689,9 @@ export default function LandingPage() {
                     </div>
                     <div>
                       <p className="font-bold text-white mb-1">{item.title}</p>
-                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>{item.desc}</p>
+                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        {item.desc}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -527,12 +701,25 @@ export default function LandingPage() {
                 onClick={() => router.push("get-started")}
                 className="flex items-center gap-2 px-8 py-4 rounded-2xl font-bold text-base transition-all"
                 style={{ backgroundColor: "white", color: "#036c5f", fontFamily: "var(--font-display)" }}
-                onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#e6f4f2"; }}
-                onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "white"; }}
+                onMouseOver={(e) => {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = "#e6f4f2";
+                }}
+                onMouseOut={(e) => {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = "white";
+                }}
               >
                 See it in action
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                  <polyline points="12 5 19 12 12 19" />
                 </svg>
               </button>
             </div>
@@ -561,12 +748,22 @@ export default function LandingPage() {
                   boxShadow: "0 16px 48px rgba(0,0,0,0.2)",
                 }}
               >
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: "#036c5f" }}>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mb-2"
+                  style={{ backgroundColor: "#036c5f" }}
+                >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                    <path
+                      d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                      stroke="white"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 </div>
-                <p className="text-sm font-bold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>Dhriti OS</p>
+                <p className="text-sm font-bold text-slate-900" style={{ fontFamily: "var(--font-display)" }}>
+                  Dhriti OS
+                </p>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">Work Graph</p>
               </div>
 
@@ -659,7 +856,9 @@ export default function LandingPage() {
 
       {/* ── Testimonials ─────────────────────────── */}
       <section className="py-24 relative overflow-hidden" style={{ backgroundColor: "#f8fafc" }}>
-        <div className="absolute inset-0 text-slate-400"><DotGrid opacity={0.04} /></div>
+        <div className="absolute inset-0 text-slate-400">
+          <DotGrid opacity={0.04} />
+        </div>
         <div className="relative z-10 max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2
@@ -708,19 +907,25 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA dark section ──────────────────────── */}
-      <section
-        className="py-24 relative overflow-hidden"
-        style={{ backgroundColor: "#0f172a" }}
-      >
+      <section className="py-24 relative overflow-hidden" style={{ backgroundColor: "#0f172a" }}>
         {/* Background layers */}
-        <div className="absolute inset-0 text-slate-700"><DotGrid opacity={0.3} /></div>
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-full pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(3,108,95,0.2) 0%, transparent 60%)" }} />
+        <div className="absolute inset-0 text-slate-700">
+          <DotGrid opacity={0.3} />
+        </div>
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(3,108,95,0.2) 0%, transparent 60%)" }}
+        />
 
         <div className="relative z-10 max-w-4xl mx-auto px-6">
           <div className="text-center mb-12">
             <div
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold mb-6"
-              style={{ backgroundColor: "rgba(3,108,95,0.2)", color: "#4ade80", border: "1px solid rgba(3,108,95,0.3)" }}
+              style={{
+                backgroundColor: "rgba(3,108,95,0.2)",
+                color: "#4ade80",
+                border: "1px solid rgba(3,108,95,0.3)",
+              }}
             >
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               Ready to get started?
@@ -755,15 +960,25 @@ export default function LandingPage() {
                   color: "white",
                   fontFamily: "var(--font-sans)",
                 }}
-                onFocus={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(3,108,95,0.7)"; (e.target as HTMLInputElement).style.backgroundColor = "rgba(255,255,255,0.12)"; }}
-                onBlur={(e) => { (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.target as HTMLInputElement).style.backgroundColor = "rgba(255,255,255,0.08)"; }}
+                onFocus={(e) => {
+                  (e.target as HTMLInputElement).style.borderColor = "rgba(3,108,95,0.7)";
+                  (e.target as HTMLInputElement).style.backgroundColor = "rgba(255,255,255,0.12)";
+                }}
+                onBlur={(e) => {
+                  (e.target as HTMLInputElement).style.borderColor = "rgba(255,255,255,0.15)";
+                  (e.target as HTMLInputElement).style.backgroundColor = "rgba(255,255,255,0.08)";
+                }}
               />
               <button
                 type="submit"
                 className="px-7 py-4 rounded-2xl font-bold text-sm text-white transition-all flex-shrink-0"
                 style={{ backgroundColor: "#036c5f", fontFamily: "var(--font-display)" }}
-                onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#024d44"; }}
-                onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#036c5f"; }}
+                onMouseOver={(e) => {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = "#024d44";
+                }}
+                onMouseOut={(e) => {
+                  (e.currentTarget as HTMLElement).style.backgroundColor = "#036c5f";
+                }}
               >
                 Get started for free
               </button>
@@ -773,7 +988,15 @@ export default function LandingPage() {
               className="flex items-center justify-center gap-3 py-4 px-8 rounded-2xl mx-auto mb-8 max-w-sm"
               style={{ backgroundColor: "rgba(3,108,95,0.2)", border: "1px solid rgba(3,108,95,0.4)" }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#4ade80"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               <span className="text-green-400 font-semibold text-sm">You're on the list! Check your inbox.</span>
@@ -784,7 +1007,9 @@ export default function LandingPage() {
             {["No credit card required", "14-day free trial", "Cancel anytime", "SOC 2 Type II"].map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CheckCircle color="#4ade80" />
-                <span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>{item}</span>
+                <span className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.5)" }}>
+                  {item}
+                </span>
               </div>
             ))}
           </div>

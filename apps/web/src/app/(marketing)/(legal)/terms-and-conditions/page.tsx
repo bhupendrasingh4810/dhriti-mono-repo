@@ -58,14 +58,12 @@ export default function TermsPage() {
           >
             Legal document · Last updated September 14, 2026
           </div>
-          <h1
-            className="text-4xl font-bold text-white mb-3"
-            style={{ fontFamily: "var(--font-display)" }}
-          >
+          <h1 className="text-4xl font-bold text-white mb-3" style={{ fontFamily: "var(--font-display)" }}>
             Terms of Service
           </h1>
           <p className="text-white/70 text-base max-w-xl">
-            Please read these terms carefully before using Dhriti OS. By accessing the platform you agree to be bound by these terms.
+            Please read these terms carefully before using Dhriti OS. By accessing the platform you agree to be bound by
+            these terms.
           </p>
         </div>
       </div>
@@ -118,9 +116,7 @@ export default function TermsPage() {
                     {s.title}
                   </h2>
                 </div>
-                <div className="text-slate-600 text-sm leading-relaxed space-y-3 pl-10">
-                  {TERM_CONTENT[s.id]}
-                </div>
+                <div className="text-slate-600 text-sm leading-relaxed space-y-3 pl-10">{TERM_CONTENT[s.id]}</div>
               </section>
             ))}
           </div>
@@ -142,73 +138,121 @@ export default function TermsPage() {
 const TERM_CONTENT: Record<string, ReactNode> = {
   acceptance: (
     <>
-      <p>By creating an account, accessing, or using Dhriti OS ("the Service"), you acknowledge that you have read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.</p>
-      <p>If you are entering into this agreement on behalf of a company or other legal entity, you represent that you have the authority to bind such entity to these terms. If you do not agree, do not use the Service.</p>
+      <p>
+        By creating an account, accessing, or using Dhriti OS ("the Service"), you acknowledge that you have read,
+        understood, and agree to be bound by these Terms of Service and our Privacy Policy.
+      </p>
+      <p>
+        If you are entering into this agreement on behalf of a company or other legal entity, you represent that you
+        have the authority to bind such entity to these terms. If you do not agree, do not use the Service.
+      </p>
     </>
   ),
   services: (
     <>
-      <p>Dhriti OS provides a unified enterprise workspace platform including team messaging, project management, document collaboration, calendar integration, and AI-powered workflow tools.</p>
-      <p>We reserve the right to modify, suspend, or discontinue any aspect of the Service at any time with reasonable notice to active subscribers.</p>
+      <p>
+        Dhriti OS provides a unified enterprise workspace platform including team messaging, project management,
+        document collaboration, calendar integration, and AI-powered workflow tools.
+      </p>
+      <p>
+        We reserve the right to modify, suspend, or discontinue any aspect of the Service at any time with reasonable
+        notice to active subscribers.
+      </p>
     </>
   ),
   accounts: (
     <>
-      <p>You must provide accurate, complete, and current registration information. You are responsible for maintaining the confidentiality of your credentials and for all activities under your account.</p>
-      <p>Notify us immediately at <span className="font-medium text-slate-800">security@dhritios.app</span> if you suspect any unauthorized use of your account.</p>
+      <p>
+        You must provide accurate, complete, and current registration information. You are responsible for maintaining
+        the confidentiality of your credentials and for all activities under your account.
+      </p>
+      <p>
+        Notify us immediately at <span className="font-medium text-slate-800">security@dhritios.app</span> if you
+        suspect any unauthorized use of your account.
+      </p>
     </>
   ),
   conduct: (
     <>
-      <p>You agree not to use the Service to: transmit unlawful, harmful, or abusive content; impersonate others; distribute malware or spam; attempt unauthorized access to other accounts or systems; or violate any applicable law.</p>
+      <p>
+        You agree not to use the Service to: transmit unlawful, harmful, or abusive content; impersonate others;
+        distribute malware or spam; attempt unauthorized access to other accounts or systems; or violate any applicable
+        law.
+      </p>
       <p>Dhriti OS reserves the right to investigate violations and suspend or terminate accounts at its discretion.</p>
     </>
   ),
   data: (
     <>
-      <p>Your use of the Service is also governed by our Privacy Policy. You retain all rights to the content you submit, and grant Dhriti OS a limited license to host, process, and display it solely to provide the Service.</p>
-      <p>We implement industry-standard security measures including encryption at rest and in transit, SOC 2 Type II compliance, and regular third-party audits.</p>
+      <p>
+        Your use of the Service is also governed by our Privacy Policy. You retain all rights to the content you submit,
+        and grant Dhriti OS a limited license to host, process, and display it solely to provide the Service.
+      </p>
+      <p>
+        We implement industry-standard security measures including encryption at rest and in transit, SOC 2 Type II
+        compliance, and regular third-party audits.
+      </p>
     </>
   ),
   ip: (
     <>
-      <p>The Service, including its software, design, and brand, is owned by Dhriti OS, Inc. and protected by applicable intellectual property laws. These terms do not grant you any rights to use our trademarks or logos.</p>
+      <p>
+        The Service, including its software, design, and brand, is owned by Dhriti OS, Inc. and protected by applicable
+        intellectual property laws. These terms do not grant you any rights to use our trademarks or logos.
+      </p>
     </>
   ),
   billing: (
     <>
-      <p>Paid plans are billed in advance on a monthly or annual basis. All fees are non-refundable except as required by law or as explicitly stated in our refund policy.</p>
+      <p>
+        Paid plans are billed in advance on a monthly or annual basis. All fees are non-refundable except as required by
+        law or as explicitly stated in our refund policy.
+      </p>
       <p>We may change pricing with 30 days' notice. Continued use after a price change constitutes acceptance.</p>
     </>
   ),
   termination: (
     <>
-      <p>Either party may terminate this agreement at any time. Upon termination, your access to the Service will cease and we will delete your data within 90 days per our data retention policy.</p>
+      <p>
+        Either party may terminate this agreement at any time. Upon termination, your access to the Service will cease
+        and we will delete your data within 90 days per our data retention policy.
+      </p>
       <p>Sections on intellectual property, limitation of liability, and dispute resolution survive termination.</p>
     </>
   ),
   liability: (
     <>
-      <p>To the maximum extent permitted by law, Dhriti OS shall not be liable for any indirect, incidental, special, consequential, or punitive damages. Our total liability shall not exceed the fees paid by you in the 12 months preceding the claim.</p>
+      <p>
+        To the maximum extent permitted by law, Dhriti OS shall not be liable for any indirect, incidental, special,
+        consequential, or punitive damages. Our total liability shall not exceed the fees paid by you in the 12 months
+        preceding the claim.
+      </p>
     </>
   ),
   disputes: (
     <>
-      <p>These terms are governed by the laws of the State of Delaware. Any disputes shall be resolved through binding arbitration under the AAA Commercial Arbitration Rules, except for injunctive relief in cases of IP infringement.</p>
+      <p>
+        These terms are governed by the laws of the State of Delaware. Any disputes shall be resolved through binding
+        arbitration under the AAA Commercial Arbitration Rules, except for injunctive relief in cases of IP
+        infringement.
+      </p>
     </>
   ),
   changes: (
     <>
-      <p>We may modify these terms at any time. We will provide at least 30 days' notice via email for material changes. Your continued use after the effective date constitutes acceptance of the updated terms.</p>
+      <p>
+        We may modify these terms at any time. We will provide at least 30 days' notice via email for material changes.
+        Your continued use after the effective date constitutes acceptance of the updated terms.
+      </p>
     </>
   ),
   contact: (
     <>
-      <p>For questions about these terms, contact us at <span className="font-medium text-slate-800">legal@dhritios.app</span> or write to:</p>
-      <div
-        className="rounded-xl p-4 mt-2"
-        style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}
-      >
+      <p>
+        For questions about these terms, contact us at{" "}
+        <span className="font-medium text-slate-800">legal@dhritios.app</span> or write to:
+      </p>
+      <div className="rounded-xl p-4 mt-2" style={{ backgroundColor: "#f8fafc", border: "1px solid #e2e8f0" }}>
         <p className="font-medium text-slate-700">Dhriti OS, Inc.</p>
         <p>Legal Department</p>
         <p>1234 Enterprise Blvd, Suite 500</p>

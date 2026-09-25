@@ -8,7 +8,10 @@ import { AuditService } from "../../audit/audit.service";
 
 @Injectable()
 export class HrmsAttendanceService {
-  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(organizationId: string, employeeId: string, from?: string, to?: string) {
     await this.requireEmployee(organizationId, employeeId);
@@ -16,13 +19,27 @@ export class HrmsAttendanceService {
       where: {
         organizationId,
         employeeId,
-        ...(from || to ? { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}),
+        ...(from || to
+          ? { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } }
+          : {}),
       },
       orderBy: { date: "desc" },
     });
   }
 
-  async upsert(organizationId: string, employeeId: string, actorUserId: string, input: { date: string; checkIn?: string; checkOut?: string; status?: AttendanceStatus; workHours?: number; notes?: string }) {
+  async upsert(
+    organizationId: string,
+    employeeId: string,
+    actorUserId: string,
+    input: {
+      date: string;
+      checkIn?: string;
+      checkOut?: string;
+      status?: AttendanceStatus;
+      workHours?: number;
+      notes?: string;
+    },
+  ) {
     await this.requireEmployee(organizationId, employeeId);
     const date = new Date(input.date);
     const record = await this.prisma.hrmsAttendanceRecord.upsert({
@@ -45,13 +62,25 @@ export class HrmsAttendanceService {
         ...(input.notes !== undefined ? { notes: input.notes.trim() } : {}),
       },
     });
-    await this.audit.record({ action: "hrms.attendance.upserted", organizationId, actorUserId, resourceType: "HrmsAttendanceRecord", resourceId: record.id, metadata: { employeeId, date: input.date } });
+    await this.audit.record({
+      action: "hrms.attendance.upserted",
+      organizationId,
+      actorUserId,
+      resourceType: "HrmsAttendanceRecord",
+      resourceId: record.id,
+      metadata: { employeeId, date: input.date },
+    });
     return record;
   }
 
   private async requireEmployee(organizationId: string, employeeId: string) {
-    const employee = await this.prisma.hrmsEmployee.findFirst({ where: { id: employeeId, organizationId, status: "ACTIVE", deletedAt: null }, select: { id: true } });
-    if (!employee) {throw new AppError(ErrorCode.EMPLOYEE_NOT_FOUND, "Employee not found", HttpStatus.NOT_FOUND);}
+    const employee = await this.prisma.hrmsEmployee.findFirst({
+      where: { id: employeeId, organizationId, status: "ACTIVE", deletedAt: null },
+      select: { id: true },
+    });
+    if (!employee) {
+      throw new AppError(ErrorCode.EMPLOYEE_NOT_FOUND, "Employee not found", HttpStatus.NOT_FOUND);
+    }
     return employee;
   }
 }

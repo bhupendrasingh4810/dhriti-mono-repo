@@ -20,9 +20,7 @@ interface EmojiGridProps {
  */
 export function EmojiGrid({ emojis, onSelect, onHover, disabled, animated = false }: EmojiGridProps) {
   if (emojis.length === 0) {
-    return (
-      <Box sx={{ py: 3, textAlign: "center", fontSize: 12, color: "text.secondary" }}>No emojis found</Box>
-    );
+    return <Box sx={{ py: 3, textAlign: "center", fontSize: 12, color: "text.secondary" }}>No emojis found</Box>;
   }
 
   return (

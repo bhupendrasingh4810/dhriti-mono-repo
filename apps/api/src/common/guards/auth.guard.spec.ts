@@ -20,7 +20,9 @@ describe("AuthGuard cookie origin protection", () => {
 
   it("rejects a cookie-authenticated mutation without a trusted origin", async () => {
     const guard = new AuthGuard(jwt as never, reflector as never, config as never, sessions as never);
-    await expect(guard.canActivate(context({ method: "POST", headers: {}, cookies: { access_token: "token" } }) as never)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      guard.canActivate(context({ method: "POST", headers: {}, cookies: { access_token: "token" } }) as never),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
     expect(jwt.verifyAsync).not.toHaveBeenCalled();
   });
 

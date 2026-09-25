@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import {
   createContext,
@@ -9,26 +9,16 @@ import {
   useRef,
   useState,
   type ReactNode,
-} from 'react';
+} from "react";
 
-export type AlertVariant =
-  | 'success'
-  | 'error'
-  | 'warning'
-  | 'info';
+export type AlertVariant = "success" | "error" | "warning" | "info";
 
-export type AlertPosition =
-  | 'top-left'
-  | 'top-center'
-  | 'top-right'
-  | 'bottom-left'
-  | 'bottom-center'
-  | 'bottom-right';
+export type AlertPosition = "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right";
 
 export interface AlertAction {
   label: string;
   onClick: () => void;
-  variant?: 'primary' | 'ghost';
+  variant?: "primary" | "ghost";
 }
 
 export interface AlertProps {
@@ -49,9 +39,7 @@ interface AlertItem extends AlertProps {
 }
 
 interface AlertContextValue {
-  showAlert: (
-    props: Omit<AlertProps, 'onDismiss'>,
-  ) => number;
+  showAlert: (props: Omit<AlertProps, "onDismiss">) => number;
   dismiss: (id: number) => void;
 }
 
@@ -77,16 +65,16 @@ const CONFIG: Record<
   }
 > = {
   success: {
-    bg: '#f0fdf4',
-    border: '#bbf7d0',
-    iconBg: '#dcfce7',
-    iconColor: '#16a34a',
-    titleColor: '#14532d',
-    msgColor: '#166534',
-    dismissColor: '#86efac',
-    primaryBg: '#16a34a',
-    primaryText: '#ffffff',
-    ghostColor: '#16a34a',
+    bg: "#f0fdf4",
+    border: "#bbf7d0",
+    iconBg: "#dcfce7",
+    iconColor: "#16a34a",
+    titleColor: "#14532d",
+    msgColor: "#166534",
+    dismissColor: "#86efac",
+    primaryBg: "#16a34a",
+    primaryText: "#ffffff",
+    ghostColor: "#16a34a",
     icon: (
       <svg
         width="16"
@@ -105,16 +93,16 @@ const CONFIG: Record<
   },
 
   error: {
-    bg: '#fef2f2',
-    border: '#fecaca',
-    iconBg: '#fee2e2',
-    iconColor: '#dc2626',
-    titleColor: '#7f1d1d',
-    msgColor: '#991b1b',
-    dismissColor: '#fca5a5',
-    primaryBg: '#dc2626',
-    primaryText: '#ffffff',
-    ghostColor: '#dc2626',
+    bg: "#fef2f2",
+    border: "#fecaca",
+    iconBg: "#fee2e2",
+    iconColor: "#dc2626",
+    titleColor: "#7f1d1d",
+    msgColor: "#991b1b",
+    dismissColor: "#fca5a5",
+    primaryBg: "#dc2626",
+    primaryText: "#ffffff",
+    ghostColor: "#dc2626",
     icon: (
       <svg
         width="16"
@@ -135,16 +123,16 @@ const CONFIG: Record<
   },
 
   warning: {
-    bg: '#fffbeb',
-    border: '#fde68a',
-    iconBg: '#fef3c7',
-    iconColor: '#d97706',
-    titleColor: '#78350f',
-    msgColor: '#92400e',
-    dismissColor: '#fcd34d',
-    primaryBg: '#d97706',
-    primaryText: '#ffffff',
-    ghostColor: '#d97706',
+    bg: "#fffbeb",
+    border: "#fde68a",
+    iconBg: "#fef3c7",
+    iconColor: "#d97706",
+    titleColor: "#78350f",
+    msgColor: "#92400e",
+    dismissColor: "#fcd34d",
+    primaryBg: "#d97706",
+    primaryText: "#ffffff",
+    ghostColor: "#d97706",
     icon: (
       <svg
         width="16"
@@ -165,16 +153,16 @@ const CONFIG: Record<
   },
 
   info: {
-    bg: '#eff6ff',
-    border: '#bfdbfe',
-    iconBg: '#dbeafe',
-    iconColor: '#2563eb',
-    titleColor: '#1e3a8a',
-    msgColor: '#1e40af',
-    dismissColor: '#93c5fd',
-    primaryBg: '#2563eb',
-    primaryText: '#ffffff',
-    ghostColor: '#2563eb',
+    bg: "#eff6ff",
+    border: "#bfdbfe",
+    iconBg: "#dbeafe",
+    iconColor: "#2563eb",
+    titleColor: "#1e3a8a",
+    msgColor: "#1e40af",
+    dismissColor: "#93c5fd",
+    primaryBg: "#2563eb",
+    primaryText: "#ffffff",
+    ghostColor: "#2563eb",
     icon: (
       <svg
         width="16"
@@ -196,48 +184,47 @@ const CONFIG: Record<
 };
 
 const POSITION_CLASSES: Record<AlertPosition, string> = {
-  'top-left': 'left-4 top-4 items-start',
-  'top-center': 'left-1/2 top-4 -translate-x-1/2 items-center',
-  'top-right': 'right-4 top-4 items-end',
-  'bottom-left': 'bottom-4 left-4 items-start',
-  'bottom-center':
-    'bottom-4 left-1/2 -translate-x-1/2 items-center',
-  'bottom-right': 'bottom-4 right-4 items-end',
+  "top-left": "left-4 top-4 items-start",
+  "top-center": "left-1/2 top-4 -translate-x-1/2 items-center",
+  "top-right": "right-4 top-4 items-end",
+  "bottom-left": "bottom-4 left-4 items-start",
+  "bottom-center": "bottom-4 left-1/2 -translate-x-1/2 items-center",
+  "bottom-right": "bottom-4 right-4 items-end",
 };
 
 function getExitTransform(position: AlertPosition) {
   switch (position) {
-    case 'top-left':
-    case 'bottom-left':
-      return 'translate3d(-32px, 0, 0) scale(0.95)';
+    case "top-left":
+    case "bottom-left":
+      return "translate3d(-32px, 0, 0) scale(0.95)";
 
-    case 'top-right':
-    case 'bottom-right':
-      return 'translate3d(32px, 0, 0) scale(0.95)';
+    case "top-right":
+    case "bottom-right":
+      return "translate3d(32px, 0, 0) scale(0.95)";
 
-    case 'top-center':
-      return 'translate3d(0, -32px, 0) scale(0.95)';
+    case "top-center":
+      return "translate3d(0, -32px, 0) scale(0.95)";
 
-    case 'bottom-center':
-      return 'translate3d(0, 32px, 0) scale(0.95)';
+    case "bottom-center":
+      return "translate3d(0, 32px, 0) scale(0.95)";
   }
 }
 
 function getInitialTransform(position: AlertPosition) {
   switch (position) {
-    case 'top-left':
-    case 'bottom-left':
-      return 'translate3d(-32px, 0, 0) scale(0.95)';
+    case "top-left":
+    case "bottom-left":
+      return "translate3d(-32px, 0, 0) scale(0.95)";
 
-    case 'top-right':
-    case 'bottom-right':
-      return 'translate3d(32px, 0, 0) scale(0.95)';
+    case "top-right":
+    case "bottom-right":
+      return "translate3d(32px, 0, 0) scale(0.95)";
 
-    case 'top-center':
-      return 'translate3d(0, -32px, 0) scale(0.95)';
+    case "top-center":
+      return "translate3d(0, -32px, 0) scale(0.95)";
 
-    case 'bottom-center':
-      return 'translate3d(0, 32px, 0) scale(0.95)';
+    case "bottom-center":
+      return "translate3d(0, 32px, 0) scale(0.95)";
   }
 }
 
@@ -249,9 +236,9 @@ export function Alert({
   icon = false,
   actions,
   onDismiss,
-  className = '',
+  className = "",
   duration = 4000,
-  position = 'top-right',
+  position = "top-right",
 }: AlertProps) {
   const [mounted, setMounted] = useState(true);
   const [entered, setEntered] = useState(false);
@@ -318,31 +305,29 @@ export function Alert({
   const transform = exiting
     ? getExitTransform(position)
     : entered
-      ? 'translate3d(0, 0, 0) scale(1)'
+      ? "translate3d(0, 0, 0) scale(1)"
       : getInitialTransform(position);
 
   return (
     <div
       className={[
-        'w-full max-w-md',
-        'flex gap-3 rounded-xl border p-4',
-        'transform-gpu transition-all duration-300',
-        'ease-[cubic-bezier(0.22,1,0.36,1)]',
-        'motion-reduce:transition-none',
-        exiting
-          ? 'pointer-events-none opacity-0'
-          : 'opacity-100',
+        "w-full max-w-md",
+        "flex gap-3 rounded-xl border p-4",
+        "transform-gpu transition-all duration-300",
+        "ease-[cubic-bezier(0.22,1,0.36,1)]",
+        "motion-reduce:transition-none",
+        exiting ? "pointer-events-none opacity-0" : "opacity-100",
         className,
       ]
         .filter(Boolean)
-        .join(' ')}
+        .join(" ")}
       style={{
         backgroundColor: colors.bg,
         borderColor: colors.border,
         transform,
       }}
-      role={variant === 'error' ? 'alert' : 'status'}
-      aria-live={variant === 'error' ? 'assertive' : 'polite'}
+      role={variant === "error" ? "alert" : "status"}
+      aria-live={variant === "error" ? "assertive" : "polite"}
       aria-atomic="true"
     >
       {icon && (
@@ -360,18 +345,12 @@ export function Alert({
 
       <div className="min-w-0 flex-1">
         {title && (
-          <p
-            className="mb-0.5 text-sm font-semibold"
-            style={{ color: colors.titleColor }}
-          >
+          <p className="mb-0.5 text-sm font-semibold" style={{ color: colors.titleColor }}>
             {title}
           </p>
         )}
 
-        <p
-          className="text-sm leading-relaxed"
-          style={{ color: colors.msgColor }}
-        >
+        <p className="text-sm leading-relaxed" style={{ color: colors.msgColor }}>
           {message}
         </p>
 
@@ -384,17 +363,17 @@ export function Alert({
                 onClick={action.onClick}
                 className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-85 focus:outline-none focus:ring-2 focus:ring-offset-2 motion-reduce:transition-none"
                 style={
-                  action.variant === 'ghost'
+                  action.variant === "ghost"
                     ? {
-                      color: colors.ghostColor,
-                      backgroundColor: 'transparent',
-                      border: `1px solid ${colors.border}`,
-                    }
+                        color: colors.ghostColor,
+                        backgroundColor: "transparent",
+                        border: `1px solid ${colors.border}`,
+                      }
                     : {
-                      backgroundColor: colors.primaryBg,
-                      color: colors.primaryText,
-                      border: '1px solid transparent',
-                    }
+                        backgroundColor: colors.primaryBg,
+                        color: colors.primaryText,
+                        border: "1px solid transparent",
+                      }
                 }
               >
                 {action.label}
@@ -411,12 +390,10 @@ export function Alert({
           className="mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 motion-reduce:transition-none"
           style={{ color: colors.dismissColor }}
           onMouseEnter={(event) => {
-            event.currentTarget.style.color =
-              colors.iconColor;
+            event.currentTarget.style.color = colors.iconColor;
           }}
           onMouseLeave={(event) => {
-            event.currentTarget.style.color =
-              colors.dismissColor;
+            event.currentTarget.style.color = colors.dismissColor;
           }}
           aria-label="Dismiss notification"
         >
@@ -439,25 +416,18 @@ export function Alert({
   );
 }
 
-const AlertContext = createContext<
-  AlertContextValue | undefined
->(undefined);
+const AlertContext = createContext<AlertContextValue | undefined>(undefined);
 
-export function AlertProvider({
-  children,
-  position = 'top-right',
-}: AlertProviderProps) {
+export function AlertProvider({ children, position = "top-right" }: AlertProviderProps) {
   const [alerts, setAlerts] = useState<AlertItem[]>([]);
   const counter = useRef(0);
 
   const dismiss = useCallback((id: number) => {
-    setAlerts((previousAlerts) =>
-      previousAlerts.filter((alert) => alert.id !== id),
-    );
+    setAlerts((previousAlerts) => previousAlerts.filter((alert) => alert.id !== id));
   }, []);
 
   const showAlert = useCallback(
-    (props: Omit<AlertProps, 'onDismiss'>) => {
+    (props: Omit<AlertProps, "onDismiss">) => {
       const id = ++counter.current;
 
       setAlerts((previousAlerts) => [
@@ -481,17 +451,14 @@ export function AlertProvider({
 
       <div
         className={[
-          'pointer-events-none fixed z-50 flex w-full max-w-md flex-col gap-3 p-4 sm:p-0',
+          "pointer-events-none fixed z-50 flex w-full max-w-md flex-col gap-3 p-4 sm:p-0",
           POSITION_CLASSES[position],
-        ].join(' ')}
+        ].join(" ")}
         aria-live="polite"
         aria-atomic="false"
       >
         {alerts.map(({ id, ...alert }) => (
-          <div
-            key={id}
-            className="pointer-events-auto w-full"
-          >
+          <div key={id} className="pointer-events-auto w-full">
             <Alert {...alert} />
           </div>
         ))}
@@ -504,9 +471,7 @@ export function useAlert(): AlertContextValue {
   const context = useContext(AlertContext);
 
   if (!context) {
-    throw new Error(
-      'useAlert must be used within an AlertProvider',
-    );
+    throw new Error("useAlert must be used within an AlertProvider");
   }
 
   return context;

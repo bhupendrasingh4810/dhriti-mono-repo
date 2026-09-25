@@ -96,18 +96,10 @@ export class FileService {
     });
   }
 
-  async delete(
-    organizationId: string,
-    fileId: string,
-    actorUserId: string,
-  ): Promise<void> {
+  async delete(organizationId: string, fileId: string, actorUserId: string): Promise<void> {
     const file = await this.getFile(organizationId, fileId);
     if (file.uploadedById !== actorUserId) {
-      throw new AppError(
-        ErrorCode.FORBIDDEN,
-        "Only the uploader can delete this file",
-        HttpStatus.FORBIDDEN,
-      );
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the uploader can delete this file", HttpStatus.FORBIDDEN);
     }
 
     await this.prisma.storedFile.update({

@@ -14,12 +14,7 @@ function makeService() {
     delete: jest.fn().mockResolvedValue(2),
     deleteByPattern: jest.fn(),
   };
-  const service = new SessionService(
-    prisma as never,
-    redis as never,
-    {} as never,
-    { refreshTokenTtlDays: 7 } as never,
-  );
+  const service = new SessionService(prisma as never, redis as never, {} as never, { refreshTokenTtlDays: 7 } as never);
 
   return { service, prisma, redis };
 }

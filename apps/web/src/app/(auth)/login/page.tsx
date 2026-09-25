@@ -1,4 +1,3 @@
-
 "use client";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -8,12 +7,7 @@ import AuthLayout from "../../../components/auth/AuthLayout";
 import { GoogleOAuthButton } from "@/components/shared/oauth/GoogleOAuthButton";
 import { GitHubOAuthButton } from "@/components/shared/oauth/GitHubOAuthButton";
 
-export type Page =
-  | "login"
-  | "signup"
-  | "reset-password"
-  | "verify-email"
-  | "dashboard";
+export type Page = "login" | "signup" | "reset-password" | "verify-email" | "dashboard";
 
 const getEmailError = (email: string): string | null => {
   const trimmedEmail = email.trim();
@@ -52,8 +46,8 @@ export default function LoginPage() {
       const data = await login({ email, password });
       const callbackUrl = searchParams.get("callbackUrl");
       const organizationSlug = data.user?.organization?.slug;
-      const isOrganizationCallback = callbackUrl?.startsWith(`/${organizationSlug}/`)
-        || callbackUrl === `/${organizationSlug}`;
+      const isOrganizationCallback =
+        callbackUrl?.startsWith(`/${organizationSlug}/`) || callbackUrl === `/${organizationSlug}`;
       const destination = !organizationSlug
         ? "/onboarding"
         : callbackUrl && isOrganizationCallback
@@ -73,16 +67,11 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthLayout
-      title="Welcome back"
-      subtitle="Sign in to your workspace"
-      illustration="login"
-    >
+    <AuthLayout title="Welcome back" subtitle="Sign in to your workspace" illustration="login">
       <form noValidate onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Work email {" "}
-            <span style={{ color: "#dc2626" }}>*</span>
+            Work email <span style={{ color: "#dc2626" }}>*</span>
           </label>
           <input
             type="email"
@@ -98,16 +87,24 @@ export default function LoginPage() {
             className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
             style={{
               borderColor: formFieldValidity.email ? "#dc2626" : "#036c5f",
-              boxShadow: formFieldValidity.email
-                ? "0 0 0 3px rgba(220,38,38,0.12)"
-                : "0 0 0 3px rgba(3,108,95,0.12)",
+              boxShadow: formFieldValidity.email ? "0 0 0 3px rgba(220,38,38,0.12)" : "0 0 0 3px rgba(3,108,95,0.12)",
             }}
           />
           <div className="flex items-center justify-between mt-2">
             {formFieldValidity.email ? (
               <p className="text-xs font-medium flex items-center gap-1" style={{ color: "#dc2626" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 {formFieldValidity.email}
               </p>
@@ -118,8 +115,7 @@ export default function LoginPage() {
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <label className="block text-sm font-medium text-slate-700">
-              Password {" "}
-              <span style={{ color: "#dc2626" }}>*</span>
+              Password <span style={{ color: "#dc2626" }}>*</span>
             </label>
             <button
               type="button"
@@ -155,12 +151,31 @@ export default function LoginPage() {
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
             >
               {showPw ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z" />
                   <path d="M9.75 12a2.25 2.25 0 1 0 4.5 0 2.25 2.25 0 0 0-4.5 0z" />
                 </svg>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)" }}>
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ transform: "rotate(180deg)" }}
+                >
                   <path d="M3 13.5c2.35-2.1 5.25-3.15 9-3.15s6.65 1.05 9 3.15" />
                   <path d="M6.5 11.75 5 9.5" />
                   <path d="M12 10.35V7.75" />
@@ -172,8 +187,18 @@ export default function LoginPage() {
           <div className="flex items-center justify-between mt-2">
             {!formFieldValidity.password ? (
               <p className="text-xs font-medium flex items-center gap-1" style={{ color: "#dc2626" }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 Password is required
               </p>

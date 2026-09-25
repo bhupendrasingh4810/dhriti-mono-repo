@@ -161,7 +161,7 @@ export const connectMessages: ConnectMessage[] = [
     conversationType: "channel",
     conversationId: "channel_001",
     senderId: "usr_001",
-    content: "`Welcome` Home\n\n**`Welcome`**\n\n```tsx\nconst heading = \"Connect\";\n```",
+    content: '`Welcome` Home\n\n**`Welcome`**\n\n```tsx\nconst heading = "Connect";\n```',
     contentType: "code",
     createdAt: "2026-08-26T18:48:00Z",
     status: "sent",

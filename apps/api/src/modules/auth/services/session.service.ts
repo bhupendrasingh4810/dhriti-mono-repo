@@ -91,11 +91,7 @@ export class SessionService {
     });
 
     if (!session) {
-      throw new AppError(
-        ErrorCode.TOKEN_INVALID,
-        "Refresh token is not recognized",
-        HttpStatus.UNAUTHORIZED,
-      );
+      throw new AppError(ErrorCode.TOKEN_INVALID, "Refresh token is not recognized", HttpStatus.UNAUTHORIZED);
     }
 
     const now = new Date();

@@ -9,7 +9,14 @@ describe("DhritiEmojiPicker", () => {
 
   it("renders a searchable grid and calls onSelect with the full emoji definition", async () => {
     const handleSelect = vi.fn();
-    render(<DhritiEmojiPicker onSelect={handleSelect} initialCategory="smileys-emotion" showFrequentlyUsed={false} showRecent={false} />);
+    render(
+      <DhritiEmojiPicker
+        onSelect={handleSelect}
+        initialCategory="smileys-emotion"
+        showFrequentlyUsed={false}
+        showRecent={false}
+      />,
+    );
 
     const searchInput = screen.getByLabelText("Search emoji");
     fireEvent.change(searchInput, { target: { value: "grinning-face" } });

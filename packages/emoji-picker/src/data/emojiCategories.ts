@@ -2,7 +2,8 @@ import { EMOJI_CATEGORY_DEFINITIONS } from "../generated/emojiCategories.generat
 import type { EmojiCategoryDefinition } from "../types/emoji.types";
 
 /** Static (dataset-backed) category definitions, in display order. */
-export const staticEmojiCategories: EmojiCategoryDefinition[] = EMOJI_CATEGORY_DEFINITIONS as unknown as EmojiCategoryDefinition[];
+export const staticEmojiCategories: EmojiCategoryDefinition[] =
+  EMOJI_CATEGORY_DEFINITIONS as unknown as EmojiCategoryDefinition[];
 
 /** Full category list including the virtual "recent" / "frequently-used" sections, in display order. */
 export const emojiCategories: EmojiCategoryDefinition[] = [

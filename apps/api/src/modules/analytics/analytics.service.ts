@@ -72,12 +72,7 @@ export class AnalyticsService {
     };
   }
 
-  async usageByApp(
-    organizationId: string,
-    from: Date,
-    to: Date,
-    app?: string,
-  ): Promise<UsageByApp[]> {
+  async usageByApp(organizationId: string, from: Date, to: Date, app?: string): Promise<UsageByApp[]> {
     const rows = await this.prisma.usageEvent.groupBy({
       by: ["app"],
       where: {
@@ -91,12 +86,7 @@ export class AnalyticsService {
     return rows.map((row) => ({ app: row.app, count: row._count }));
   }
 
-  async dailyActivity(
-    organizationId: string,
-    from: Date,
-    to: Date,
-    app?: string,
-  ): Promise<DailyActivity[]> {
+  async dailyActivity(organizationId: string, from: Date, to: Date, app?: string): Promise<DailyActivity[]> {
     const rows = await this.prisma.$queryRaw<Array<{ date: string; count: bigint }>>`
       SELECT to_char(date_trunc('day', "createdAt"), 'YYYY-MM-DD') AS date, COUNT(*)::bigint AS count
       FROM "usage_events"

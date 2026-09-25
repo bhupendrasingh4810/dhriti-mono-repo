@@ -1,33 +1,15 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Patch,
-  Post,
-  Res,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Patch, Post, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../../common/decorators/organization.decorator";
 import { RequirePermission } from "../../../common/decorators/access.decorator";
 import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
 
 import { OrganizationAdminService, type OrgDashboard } from "./organization.service";
-import {
-  UpdateOrgEntitlementDto,
-  UpdateOrgSettingsDto,
-  UpsertOrgFeatureFlagDto,
-} from "./dto/organization.dto";
+import { UpdateOrgEntitlementDto, UpdateOrgSettingsDto, UpsertOrgFeatureFlagDto } from "./dto/organization.dto";
 
 @ApiTags("control/organization")
 @ApiBearerAuth()

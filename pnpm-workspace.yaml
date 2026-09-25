@@ -2,14 +2,14 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  '@prisma/client': true
-  '@prisma/engines': true
-  '@scarf/scarf': true
+  "@parcel/watcher": set this to true or false
+  "@prisma/client": true
+  "@prisma/engines": true
+  "@scarf/scarf": true
   esbuild: true
   prisma: true
   protobufjs: true
 minimumReleaseAgeExclude:
-  - '@remotion/animated-emoji@4.0.520'
-  - '@remotion/player@4.0.520'
+  - "@remotion/animated-emoji@4.0.520"
+  - "@remotion/player@4.0.520"
   - remotion@4.0.520

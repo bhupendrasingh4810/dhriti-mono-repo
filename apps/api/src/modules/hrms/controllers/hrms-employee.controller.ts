@@ -16,43 +16,47 @@ import { HrmsEmployeeService } from "../services/hrms-employee.service";
 export class HrmsEmployeeController {
   constructor(private readonly employees: HrmsEmployeeService) {}
 
-  @Get() 
+  @Get()
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.employee.read" })
-  list(@CurrentOrganization() organization: OrganizationContext) { 
-    return this.employees.list(organization.organizationId); 
-}
+  list(@CurrentOrganization() organization: OrganizationContext) {
+    return this.employees.list(organization.organizationId);
+  }
 
-  @Get(":employeeId") 
+  @Get(":employeeId")
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.employee.read" })
-  get(@CurrentOrganization() organization: OrganizationContext, @Param("employeeId") employeeId: string) { 
-    return this.employees.get(organization.organizationId, employeeId); }
+  get(@CurrentOrganization() organization: OrganizationContext, @Param("employeeId") employeeId: string) {
+    return this.employees.get(organization.organizationId, employeeId);
+  }
 
-  @Post() 
+  @Post()
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.employee.manage" })
   create(
-    @CurrentOrganization() organization: OrganizationContext, 
-    @CurrentUser() user: AuthenticatedUser, 
-    @Body() dto: CreateHrmsEmployeeDto) { 
-        return this.employees.create(organization.organizationId, user.userId, dto); 
-    }
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateHrmsEmployeeDto,
+  ) {
+    return this.employees.create(organization.organizationId, user.userId, dto);
+  }
 
-  @Patch(":employeeId") 
+  @Patch(":employeeId")
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.employee.manage" })
   update(
-    @CurrentOrganization() organization: OrganizationContext, 
-    @CurrentUser() user: AuthenticatedUser, 
-    @Param("employeeId") employeeId: string, 
-    @Body() dto: UpdateHrmsEmployeeDto) { 
-        return this.employees.update(organization.organizationId, employeeId, user.userId, dto); 
-    }
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("employeeId") employeeId: string,
+    @Body() dto: UpdateHrmsEmployeeDto,
+  ) {
+    return this.employees.update(organization.organizationId, employeeId, user.userId, dto);
+  }
 
-  @Delete(":employeeId") 
-  @HttpCode(HttpStatus.NO_CONTENT) 
+  @Delete(":employeeId")
+  @HttpCode(HttpStatus.NO_CONTENT)
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.employee.manage" })
   delete(
-    @CurrentOrganization() organization: OrganizationContext, 
-    @CurrentUser() user: AuthenticatedUser, 
-    @Param("employeeId") employeeId: string) { 
-        return this.employees.delete(organization.organizationId, employeeId, user.userId); 
-    }
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("employeeId") employeeId: string,
+  ) {
+    return this.employees.delete(organization.organizationId, employeeId, user.userId);
+  }
 }

@@ -25,21 +25,35 @@ export function useToast() {
   return { toasts, addToast, removeToast };
 }
 
-
 export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
   return (
-    <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8 }}>
+    <div
+      style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        gap: 8,
+      }}
+    >
       {toasts.map((toast) => {
         const s = variantStyles[toast.variant];
         return (
           <div
             key={toast.id}
             style={{
-              display: "flex", alignItems: "center", gap: 10,
-              backgroundColor: s.bg, color: s.color,
-              padding: "12px 16px", borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              backgroundColor: s.bg,
+              color: s.color,
+              padding: "12px 16px",
+              borderRadius: 8,
               boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-              minWidth: 280, maxWidth: 400,
+              minWidth: 280,
+              maxWidth: 400,
               animation: "slideInRight 0.3s ease",
             }}
           >
@@ -47,8 +61,18 @@ export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove
             <span style={{ flex: 1, fontSize: 14 }}>{toast.message}</span>
             <button
               onClick={() => onRemove(toast.id)}
-              style={{ background: "none", border: "none", color: s.color, cursor: "pointer", fontSize: 16, padding: 0, lineHeight: 1 }}
-            >×</button>
+              style={{
+                background: "none",
+                border: "none",
+                color: s.color,
+                cursor: "pointer",
+                fontSize: 16,
+                padding: 0,
+                lineHeight: 1,
+              }}
+            >
+              ×
+            </button>
           </div>
         );
       })}

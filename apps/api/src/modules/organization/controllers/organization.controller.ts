@@ -1,25 +1,8 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../../common/decorators/organization.decorator";
 import { RequirePermission } from "../../../common/decorators/access.decorator";
 import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
@@ -27,12 +10,14 @@ import { TenantGuard } from "../../../common/guards/tenant.guard";
 import { OrganizationService, type MemberWithUser } from "../services/organization.service";
 import { SessionService } from "../../auth/services/session.service";
 import { CreateOrganizationDto, UpdateOrganizationDto } from "../dto/organization.dto";
-import { InviteMemberDto, TransferOwnershipDto, UpdateMemberLifecycleDto, UpdateMemberRoleDto } from "../dto/member.dto";
-import { CreateTeamDto, UpdateTeamDto } from "../dto/team.dto";
 import {
-  CreateGroupDto,
-  UpdateGroupDto,
-} from "../dto/invitation.dto";
+  InviteMemberDto,
+  TransferOwnershipDto,
+  UpdateMemberLifecycleDto,
+  UpdateMemberRoleDto,
+} from "../dto/member.dto";
+import { CreateTeamDto, UpdateTeamDto } from "../dto/team.dto";
+import { CreateGroupDto, UpdateGroupDto } from "../dto/invitation.dto";
 
 @ApiTags("organizations")
 @ApiBearerAuth()
@@ -74,10 +59,7 @@ export class OrganizationController {
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.settings.manage")
   @ApiOperation({ summary: "Rename the active organization" })
-  async updateActive(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Body() dto: UpdateOrganizationDto,
-  ) {
+  async updateActive(@CurrentOrganization() organization: OrganizationContext, @Body() dto: UpdateOrganizationDto) {
     return this.organizations.updateOrganization(organization.organizationId, dto.name);
   }
 
@@ -85,9 +67,7 @@ export class OrganizationController {
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.members.read")
   @ApiOperation({ summary: "List members of the active organization" })
-  async listMembers(
-    @CurrentOrganization() organization: OrganizationContext,
-  ): Promise<MemberWithUser[]> {
+  async listMembers(@CurrentOrganization() organization: OrganizationContext): Promise<MemberWithUser[]> {
     return this.organizations.listMembers(organization.organizationId);
   }
 
@@ -122,14 +102,24 @@ export class OrganizationController {
   @Patch("organization/members/:memberId/lifecycle")
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.members.remove")
-  async updateMemberLifecycle(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Param("memberId") memberId: string, @Body() dto: UpdateMemberLifecycleDto): Promise<MemberWithUser> {
+  async updateMemberLifecycle(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("memberId") memberId: string,
+    @Body() dto: UpdateMemberLifecycleDto,
+  ): Promise<MemberWithUser> {
     return this.organizations.updateMemberLifecycle(organization.organizationId, memberId, user.userId, dto.status);
   }
 
   @Post("organization/members/:memberId/transfer-ownership")
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.permissions.manage")
-  async transferOwnership(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Param("memberId") memberId: string, @Body() dto: TransferOwnershipDto): Promise<void> {
+  async transferOwnership(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("memberId") memberId: string,
+    @Body() dto: TransferOwnershipDto,
+  ): Promise<void> {
     return this.organizations.transferOwnership(organization.organizationId, memberId, dto.memberId, user.userId);
   }
 
@@ -160,10 +150,7 @@ export class OrganizationController {
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.permissions.manage")
   @ApiOperation({ summary: "Create a team (OWNER/ADMIN)" })
-  async createTeam(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Body() dto: CreateTeamDto,
-  ) {
+  async createTeam(@CurrentOrganization() organization: OrganizationContext, @Body() dto: CreateTeamDto) {
     return this.organizations.createTeam(organization.organizationId, dto);
   }
 

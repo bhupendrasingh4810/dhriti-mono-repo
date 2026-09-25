@@ -1,7 +1,4 @@
-import {
-  ApiRequestError,
-  apiRequest,
-} from '@/services/http.service';
+import { ApiRequestError, apiRequest } from "@/services/http.service";
 
 import type {
   RegisterInput,
@@ -9,7 +6,7 @@ import type {
   ResendVerificationInput,
   ForgotPasswordInput,
   ResetPasswordInput,
-} from '@/types/request';
+} from "@/types/request";
 
 import type {
   RegisterResponse,
@@ -17,32 +14,30 @@ import type {
   CurrentUserResponse,
   AuthUserResponse,
   AuthTokensResponse,
-} from '@/types/response';
+} from "@/types/response";
 
-export async function login(
-  input: Pick<RegisterInput, 'email' | 'password'>,
-): Promise<LoginResponse> {
+export async function login(input: Pick<RegisterInput, "email" | "password">): Promise<LoginResponse> {
   return apiRequest<LoginResponse>(
-    '/api/auth/login',
+    "/api/auth/login",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     },
-    'Unable to sign in.',
+    "Unable to sign in.",
   );
 }
 
 export async function getCurrentUser(): Promise<AuthUserResponse | null> {
   try {
     const result = await apiRequest<CurrentUserResponse>(
-      '/api/auth/me',
+      "/api/auth/me",
       {
-        method: 'GET',
+        method: "GET",
       },
-      'Unable to load your session.',
+      "Unable to load your session.",
     );
 
     return result.user;
@@ -58,11 +53,11 @@ export async function getCurrentUser(): Promise<AuthUserResponse | null> {
 
 export async function refreshSession(): Promise<AuthUserResponse | null> {
   const result = await apiRequest<CurrentUserResponse>(
-    '/api/auth/refresh',
+    "/api/auth/refresh",
     {
-      method: 'POST',
+      method: "POST",
     },
-    'Unable to refresh your session.',
+    "Unable to refresh your session.",
   );
 
   return result.user;
@@ -70,106 +65,94 @@ export async function refreshSession(): Promise<AuthUserResponse | null> {
 
 export async function logout(): Promise<void> {
   await apiRequest<void>(
-    '/api/auth/logout',
+    "/api/auth/logout",
     {
-      method: 'POST',
+      method: "POST",
     },
-    'Unable to sign out.',
+    "Unable to sign out.",
   );
 }
 
-export async function register(
-  input: RegisterInput,
-): Promise<RegisterResponse> {
+export async function register(input: RegisterInput): Promise<RegisterResponse> {
   return apiRequest<RegisterResponse>(
-    '/api/auth/register',
+    "/api/auth/register",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     },
-    'Unable to create your account.',
+    "Unable to create your account.",
   );
 }
 
-export async function verifyEmail(
-  input: VerifyEmailInput,
-): Promise<AuthTokensResponse> {
+export async function verifyEmail(input: VerifyEmailInput): Promise<AuthTokensResponse> {
   return apiRequest<AuthTokensResponse>(
-    '/api/auth/verify-email',
+    "/api/auth/verify-email",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     },
-    'Unable to verify your email.',
+    "Unable to verify your email.",
   );
 }
 
-export async function resendVerification(
-  input: ResendVerificationInput,
-): Promise<void> {
+export async function resendVerification(input: ResendVerificationInput): Promise<void> {
   await apiRequest<void>(
-    '/api/auth/resend-verification',
+    "/api/auth/resend-verification",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     },
-    'Unable to resend the verification email.',
+    "Unable to resend the verification email.",
   );
 }
 
-export async function forgotPassword(
-  input: ForgotPasswordInput,
-): Promise<void> {
+export async function forgotPassword(input: ForgotPasswordInput): Promise<void> {
   await apiRequest<void>(
-    '/api/auth/forgot-password',
+    "/api/auth/forgot-password",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     },
-    'Unable to request a password reset.',
+    "Unable to request a password reset.",
   );
 }
 
-export async function resetPassword(
-  input: ResetPasswordInput,
-): Promise<void> {
+export async function resetPassword(input: ResetPasswordInput): Promise<void> {
   await apiRequest<void>(
-    '/api/auth/reset-password',
+    "/api/auth/reset-password",
     {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(input),
     },
-    'Unable to reset your password.',
+    "Unable to reset your password.",
   );
 }
 
-export async function uploadProfilePhoto(
-  file: File,
-): Promise<AuthUserResponse> {
+export async function uploadProfilePhoto(file: File): Promise<AuthUserResponse> {
   const formData = new FormData();
-  formData.append('file', file);
+  formData.append("file", file);
 
   return apiRequest<AuthUserResponse>(
-    '/api/auth/avatar',
+    "/api/auth/me/avatar",
     {
-      method: 'POST',
+      method: "POST",
       body: formData,
     },
-    'Unable to upload profile photo.',
+    "Unable to upload profile photo.",
   );
 }

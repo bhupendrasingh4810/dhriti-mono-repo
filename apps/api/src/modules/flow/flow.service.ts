@@ -40,16 +40,16 @@ export class FlowService {
       select: { id: true },
     });
     if (keyTaken) {
-      throw new AppError(
-        ErrorCode.PROJECT_KEY_TAKEN,
-        "A project with this key already exists",
-        HttpStatus.CONFLICT,
-      );
+      throw new AppError(ErrorCode.PROJECT_KEY_TAKEN, "A project with this key already exists", HttpStatus.CONFLICT);
     }
 
     const limit = await this.entitlements.getLimit(organizationId, "max_projects");
     if (limit === null) {
-      throw new AppError(ErrorCode.ENTITLEMENT_LIMIT_EXCEEDED, "Organization exceeded max_projects", HttpStatus.FORBIDDEN);
+      throw new AppError(
+        ErrorCode.ENTITLEMENT_LIMIT_EXCEEDED,
+        "Organization exceeded max_projects",
+        HttpStatus.FORBIDDEN,
+      );
     }
     const project = await this.createProjectWithinLimit(organizationId, dto, limit);
 
@@ -63,27 +63,40 @@ export class FlowService {
     return project;
   }
 
-  private async createProjectWithinLimit(organizationId: string, dto: CreateProjectDto, limit: number): Promise<Project> {
+  private async createProjectWithinLimit(
+    organizationId: string,
+    dto: CreateProjectDto,
+    limit: number,
+  ): Promise<Project> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
       try {
-        return await this.prisma.$transaction(async (transaction) => {
-          const projectCount = await transaction.project.count({ where: { organizationId, deletedAt: null } });
-          if (projectCount >= limit) {
-            throw new AppError(ErrorCode.ENTITLEMENT_LIMIT_EXCEEDED, "Organization exceeded max_projects", HttpStatus.FORBIDDEN);
-          }
-          return transaction.project.create({
-            data: {
-              organizationId,
-              teamId: dto.teamId ?? null,
-              key: dto.key,
-              name: dto.name.trim(),
-              description: dto.description ?? null,
-              leadId: dto.leadId ?? null,
-            },
-          });
-        }, { isolationLevel: "Serializable" });
+        return await this.prisma.$transaction(
+          async (transaction) => {
+            const projectCount = await transaction.project.count({ where: { organizationId, deletedAt: null } });
+            if (projectCount >= limit) {
+              throw new AppError(
+                ErrorCode.ENTITLEMENT_LIMIT_EXCEEDED,
+                "Organization exceeded max_projects",
+                HttpStatus.FORBIDDEN,
+              );
+            }
+            return transaction.project.create({
+              data: {
+                organizationId,
+                teamId: dto.teamId ?? null,
+                key: dto.key,
+                name: dto.name.trim(),
+                description: dto.description ?? null,
+                leadId: dto.leadId ?? null,
+              },
+            });
+          },
+          { isolationLevel: "Serializable" },
+        );
       } catch (error) {
-        if (!this.isSerializationFailure(error) || attempt === 2) {throw error;}
+        if (!this.isSerializationFailure(error) || attempt === 2) {
+          throw error;
+        }
       }
     }
     throw new AppError(ErrorCode.INTERNAL_ERROR, "Project quota transaction failed", HttpStatus.SERVICE_UNAVAILABLE);
@@ -134,11 +147,7 @@ export class FlowService {
 
   // ---------------- Issues ----------------
 
-  async listIssues(
-    organizationId: string,
-    projectId: string,
-    query: ListIssuesQueryDto,
-  ): Promise<Issue[]> {
+  async listIssues(organizationId: string, projectId: string, query: ListIssuesQueryDto): Promise<Issue[]> {
     await this.getProject(organizationId, projectId);
     return this.prisma.issue.findMany({
       where: {
@@ -216,12 +225,7 @@ export class FlowService {
     return issue;
   }
 
-  async updateIssue(
-    organizationId: string,
-    issueId: string,
-    userId: string,
-    dto: UpdateIssueDto,
-  ): Promise<Issue> {
+  async updateIssue(organizationId: string, issueId: string, userId: string, dto: UpdateIssueDto): Promise<Issue> {
     const existing = await this.getIssue(organizationId, issueId);
 
     if (dto.assigneeId) {
@@ -241,9 +245,7 @@ export class FlowService {
         ...(dto.assigneeId !== undefined ? { assigneeId: dto.assigneeId } : {}),
         ...(dto.sprintId !== undefined ? { sprintId: dto.sprintId } : {}),
         ...(dto.estimate !== undefined ? { estimate: dto.estimate } : {}),
-        ...(dto.dueDate !== undefined
-          ? { dueDate: dto.dueDate === null ? null : new Date(dto.dueDate) }
-          : {}),
+        ...(dto.dueDate !== undefined ? { dueDate: dto.dueDate === null ? null : new Date(dto.dueDate) } : {}),
       },
     });
 
@@ -258,12 +260,7 @@ export class FlowService {
     return updated;
   }
 
-  async moveIssue(
-    organizationId: string,
-    issueId: string,
-    userId: string,
-    dto: MoveIssueDto,
-  ): Promise<Issue> {
+  async moveIssue(organizationId: string, issueId: string, userId: string, dto: MoveIssueDto): Promise<Issue> {
     await this.getIssue(organizationId, issueId);
     const updated = await this.prisma.issue.update({
       where: { id: issueId },
@@ -438,13 +435,7 @@ export class FlowService {
     return column;
   }
 
-  async updateColumn(
-    organizationId: string,
-    boardId: string,
-    columnId: string,
-    userId: string,
-    dto: UpdateColumnDto,
-  ) {
+  async updateColumn(organizationId: string, boardId: string, columnId: string, userId: string, dto: UpdateColumnDto) {
     const board = await this.getBoardForOrg(organizationId, boardId);
     const column = await this.prisma.boardColumn.findFirst({
       where: { id: columnId, boardId: board.id },
@@ -502,7 +493,6 @@ export class FlowService {
     }
     return board;
   }
-
 
   private async assertOrgMember(organizationId: string, userId: string): Promise<void> {
     const member = await this.prisma.organizationMember.findFirst({

@@ -75,12 +75,7 @@ export class AtlasService {
     return space;
   }
 
-  async updateSpace(
-    organizationId: string,
-    spaceId: string,
-    userId: string,
-    dto: UpdateSpaceDto,
-  ): Promise<AtlasSpace> {
+  async updateSpace(organizationId: string, spaceId: string, userId: string, dto: UpdateSpaceDto): Promise<AtlasSpace> {
     await this.getSpace(organizationId, spaceId);
     const updated = await this.prisma.atlasSpace.update({
       where: { id: spaceId },
@@ -138,12 +133,7 @@ export class AtlasService {
     });
   }
 
-  async createPage(
-    organizationId: string,
-    spaceId: string,
-    userId: string,
-    dto: CreatePageDto,
-  ): Promise<PageWithMeta> {
+  async createPage(organizationId: string, spaceId: string, userId: string, dto: CreatePageDto): Promise<PageWithMeta> {
     await this.getSpace(organizationId, spaceId);
 
     if (dto.parentId) {
@@ -185,12 +175,7 @@ export class AtlasService {
     return page;
   }
 
-  async updatePage(
-    organizationId: string,
-    pageId: string,
-    userId: string,
-    dto: UpdatePageDto,
-  ): Promise<PageWithMeta> {
+  async updatePage(organizationId: string, pageId: string, userId: string, dto: UpdatePageDto): Promise<PageWithMeta> {
     const existing = await this.getPage(organizationId, pageId);
 
     if (dto.parentId && dto.parentId === pageId) {
@@ -268,7 +253,12 @@ export class AtlasService {
     });
   }
 
-  async resolveComment(organizationId: string, commentId: string, userId: string, isResolved: boolean): Promise<AtlasComment> {
+  async resolveComment(
+    organizationId: string,
+    commentId: string,
+    userId: string,
+    isResolved: boolean,
+  ): Promise<AtlasComment> {
     const comment = await this.prisma.atlasComment.findFirst({
       where: { id: commentId, organizationId, deletedAt: null },
     });

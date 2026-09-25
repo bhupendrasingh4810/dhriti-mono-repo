@@ -22,21 +22,7 @@ import { BlogTagService } from "./blogs/tags/blog-tag.service";
     BlogCategoryController,
     BlogTagController,
   ],
-  providers: [
-    LegalDocumentService,
-    FaqService,
-    CareerService,
-    BlogPostService,
-    BlogCategoryService,
-    BlogTagService,
-  ],
-  exports: [
-    LegalDocumentService,
-    FaqService,
-    CareerService,
-    BlogPostService,
-    BlogCategoryService,
-    BlogTagService,
-  ],
+  providers: [LegalDocumentService, FaqService, CareerService, BlogPostService, BlogCategoryService, BlogTagService],
+  exports: [LegalDocumentService, FaqService, CareerService, BlogPostService, BlogCategoryService, BlogTagService],
 })
 export class ContentModule {}

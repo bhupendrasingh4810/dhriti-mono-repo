@@ -58,7 +58,7 @@ export default function VerifyEmailPage({ email }: Props) {
       showAlert({
         message: "Verification link is invalid or incomplete.",
         dismissible: true,
-        variant: "error"
+        variant: "error",
       });
       return;
     }
@@ -84,7 +84,7 @@ export default function VerifyEmailPage({ email }: Props) {
       showAlert({
         message: "Verification link is invalid or incomplete.",
         dismissible: true,
-        variant: "error"
+        variant: "error",
       });
       return;
     }
@@ -107,7 +107,10 @@ export default function VerifyEmailPage({ email }: Props) {
     setCountdown(60);
     const timer = setInterval(() => {
       setCountdown((c) => {
-        if (c <= 1) { clearInterval(timer); return 0; }
+        if (c <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
         return c - 1;
       });
     }, 1000);
@@ -126,7 +129,9 @@ export default function VerifyEmailPage({ email }: Props) {
           {code.map((digit, i) => (
             <input
               key={i}
-              ref={(el) => { inputs.current[i] = el; }}
+              ref={(el) => {
+                inputs.current[i] = el;
+              }}
               type="text"
               inputMode="numeric"
               maxLength={1}
@@ -165,8 +170,7 @@ export default function VerifyEmailPage({ email }: Props) {
         <div className="text-center space-y-3">
           {resent && countdown > 0 ? (
             <p className="text-sm text-slate-500">
-              Code resent. Resend again in{" "}
-              <span className="font-semibold text-slate-700">{countdown}s</span>
+              Code resent. Resend again in <span className="font-semibold text-slate-700">{countdown}s</span>
             </p>
           ) : (
             <p className="text-sm text-slate-500">

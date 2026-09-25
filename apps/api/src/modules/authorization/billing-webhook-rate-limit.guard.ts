@@ -16,7 +16,11 @@ import { MetricsService } from "../../common/metrics/metrics.service";
 export class BillingWebhookRateLimitGuard implements CanActivate {
   private readonly logger = new Logger(BillingWebhookRateLimitGuard.name);
 
-  constructor(private readonly redis: RedisService, private readonly config: ApiConfigService, private readonly metrics: MetricsService) {}
+  constructor(
+    private readonly redis: RedisService,
+    private readonly config: ApiConfigService,
+    private readonly metrics: MetricsService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
@@ -30,9 +34,13 @@ export class BillingWebhookRateLimitGuard implements CanActivate {
         throw new AppError(ErrorCode.FORBIDDEN, "Billing webhook rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS);
       }
     } catch (error) {
-      if (error instanceof AppError) {throw error;}
+      if (error instanceof AppError) {
+        throw error;
+      }
       this.metrics.billingWebhookRateLimitUnavailable();
-      this.logger.warn(`Billing webhook rate limiting unavailable for provider=${provider}; accepting request after signature verification`);
+      this.logger.warn(
+        `Billing webhook rate limiting unavailable for provider=${provider}; accepting request after signature verification`,
+      );
     }
     return true;
   }

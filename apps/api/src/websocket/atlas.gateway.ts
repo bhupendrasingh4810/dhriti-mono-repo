@@ -125,10 +125,7 @@ export class AtlasGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
   }
 
   @SubscribeMessage("page:leave")
-  async leavePage(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: JoinPagePayload,
-  ): Promise<{ ok: true }> {
+  async leavePage(@ConnectedSocket() socket: Socket, @MessageBody() payload: JoinPagePayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     await socket.leave(pageRoom(payload.pageId));
     const room = this.editors.get(payload.pageId);

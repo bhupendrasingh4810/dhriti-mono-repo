@@ -38,27 +38,18 @@ export class PlatformService {
    * @throws Error if there is an issue retrieving the dashboard data.
    */
   async dashboard(): Promise<PlatformDashboard> {
-    const [
-      totalOrgs,
-      suspendedOrgs,
-      totalUsers,
-      activeUsers,
-      mfaUsers,
-      subs,
-      products,
-      openTickets,
-      escalatedTickets,
-    ] = await Promise.all([
-      this.prisma.organization.count(),
-      this.prisma.organization.count({ where: { deletedAt: { not: null } } }),
-      this.prisma.user.count({ where: { deletedAt: null } }),
-      this.prisma.user.count({ where: { deletedAt: null, status: "ACTIVE" } }),
-      this.prisma.userAuth.count({ where: { mfaEnabled: true, user: { deletedAt: null } } }),
-      this.prisma.subscription.groupBy({ by: ["status"], _count: true }),
-      this.prisma.product.count(),
-      this.prisma.supportTicket.count({ where: { status: "OPEN" } }),
-      this.prisma.supportTicket.count({ where: { status: "ESCALATED" } }),
-    ]);
+    const [totalOrgs, suspendedOrgs, totalUsers, activeUsers, mfaUsers, subs, products, openTickets, escalatedTickets] =
+      await Promise.all([
+        this.prisma.organization.count(),
+        this.prisma.organization.count({ where: { deletedAt: { not: null } } }),
+        this.prisma.user.count({ where: { deletedAt: null } }),
+        this.prisma.user.count({ where: { deletedAt: null, status: "ACTIVE" } }),
+        this.prisma.userAuth.count({ where: { mfaEnabled: true, user: { deletedAt: null } } }),
+        this.prisma.subscription.groupBy({ by: ["status"], _count: true }),
+        this.prisma.product.count(),
+        this.prisma.supportTicket.count({ where: { status: "OPEN" } }),
+        this.prisma.supportTicket.count({ where: { status: "ESCALATED" } }),
+      ]);
 
     const subCounts = Object.fromEntries(subs.map((row) => [row.status, row._count]));
 
@@ -100,11 +91,7 @@ export class PlatformService {
    * @param actorUserId The ID of the user performing the action.
    * @throws AppError if the organization is not found.
    */
-  async setOrganizationSuspended(
-    organizationId: string,
-    suspended: boolean,
-    actorUserId: string,
-  ): Promise<void> {
+  async setOrganizationSuspended(organizationId: string, suspended: boolean, actorUserId: string): Promise<void> {
     const org = await this.prisma.organization.findUnique({ where: { id: organizationId } });
     if (!org) {
       throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Organization not found", HttpStatus.NOT_FOUND);
@@ -256,7 +243,6 @@ export class PlatformService {
    * @returns The subscription if found, otherwise null.
    * @throws AppError if there is an issue retrieving the subscription.
    */
-
 
   async getSubscription(organizationId: string): Promise<Subscription | null> {
     return this.prisma.subscription.findUnique({ where: { organizationId } });

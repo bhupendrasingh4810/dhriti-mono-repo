@@ -92,19 +92,19 @@ interface EmojiDefinition {
 
 ## `DhritiEmojiPicker` props
 
-| Prop                  | Type                              | Default              | Description                                  |
-| --------------------- | --------------------------------- | --------------------- | --------------------------------------------- |
-| `onSelect`             | `(emoji: EmojiDefinition) => void` | -                     | Called when an emoji is picked.                |
-| `searchable`           | `boolean`                          | `true`                | Show the search input.                         |
-| `showFrequentlyUsed`   | `boolean`                          | `true`                | Show the "Frequently Used" tab/strip.          |
-| `showRecent`           | `boolean`                          | `true`                | Show the "Recent" tab.                         |
-| `initialCategory`      | `EmojiCategory`                    | `"frequently-used"`* | Category selected on mount.                    |
-| `recentLimit`          | `number`                          | `24`                  | Max tracked/shown recent emojis.               |
-| `frequentlyUsedLimit`  | `number`                          | `24`                  | Max shown frequently-used emojis.              |
-| `disabled`             | `boolean`                          | `false`               | Disables all interaction.                      |
-| `width` / `height`     | `number`                          | `340` / `380`         | Size of the picker surface in pixels.          |
-| `sx` / `className`    | MUI `sx` / string                 | -                     | Style overrides.                               |
-| `animated`             | `boolean`                         | `true`                | Play a Lottie animation on hover per grid cell.|
+| Prop                  | Type                               | Default              | Description                                     |
+| --------------------- | ---------------------------------- | -------------------- | ----------------------------------------------- |
+| `onSelect`            | `(emoji: EmojiDefinition) => void` | -                    | Called when an emoji is picked.                 |
+| `searchable`          | `boolean`                          | `true`               | Show the search input.                          |
+| `showFrequentlyUsed`  | `boolean`                          | `true`               | Show the "Frequently Used" tab/strip.           |
+| `showRecent`          | `boolean`                          | `true`               | Show the "Recent" tab.                          |
+| `initialCategory`     | `EmojiCategory`                    | `"frequently-used"`* | Category selected on mount.                     |
+| `recentLimit`         | `number`                           | `24`                 | Max tracked/shown recent emojis.                |
+| `frequentlyUsedLimit` | `number`                           | `24`                 | Max shown frequently-used emojis.               |
+| `disabled`            | `boolean`                          | `false`              | Disables all interaction.                       |
+| `width` / `height`    | `number`                           | `340` / `380`        | Size of the picker surface in pixels.           |
+| `sx` / `className`    | MUI `sx` / string                  | -                    | Style overrides.                                |
+| `animated`            | `boolean`                          | `true`               | Play a Lottie animation on hover per grid cell. |
 
 \* Falls back to `"smileys-emotion"` if `showFrequentlyUsed` is `false`.
 

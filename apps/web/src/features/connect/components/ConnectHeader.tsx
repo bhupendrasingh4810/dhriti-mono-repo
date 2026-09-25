@@ -25,22 +25,42 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
 
   const normalizedQuery = searchValue.trim().toLowerCase();
   const filteredUsers = useMemo(
-    () => users.filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(normalizedQuery)).slice(0, 6),
-    [users, normalizedQuery]
+    () =>
+      users
+        .filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(normalizedQuery))
+        .slice(0, 6),
+    [users, normalizedQuery],
   );
   const filteredMessages = useMemo(
-    () => messages.filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(normalizedQuery)).slice(0, 6),
-    [messages, normalizedQuery]
+    () =>
+      messages
+        .filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(normalizedQuery))
+        .slice(0, 6),
+    [messages, normalizedQuery],
   );
   const filteredFiles = useMemo(
-    () => files.filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(normalizedQuery)).slice(0, 6),
-    [files, normalizedQuery]
+    () =>
+      files
+        .filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(normalizedQuery))
+        .slice(0, 6),
+    [files, normalizedQuery],
   );
 
   const shouldShowResults = searchOpen && normalizedQuery.length > 0;
 
   return (
-    <Box sx={{ height: 68, px: 2, bgcolor: "background.paper", borderBottom: 1, borderColor: "borders.borderSubtle", display: "flex", alignItems: "center", flexShrink: 0 }}>
+    <Box
+      sx={{
+        height: 68,
+        px: 2,
+        bgcolor: "background.paper",
+        borderBottom: 1,
+        borderColor: "borders.borderSubtle",
+        display: "flex",
+        alignItems: "center",
+        flexShrink: 0,
+      }}
+    >
       <Box
         sx={{
           width: "100%",
@@ -51,8 +71,24 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
         }}
       >
         <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: "fit-content" }}>
-          <Box sx={{ width: 28, height: 28, borderRadius: 2, bgcolor: "primary.main", display: "grid", placeItems: "center", color: "primary.contrastText", fontWeight: "fontWeightBold", fontStyle: "italic" }}>F</Box>
-          <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>Flowrise</Typography>
+          <Box
+            sx={{
+              width: 28,
+              height: 28,
+              borderRadius: 2,
+              bgcolor: "primary.main",
+              display: "grid",
+              placeItems: "center",
+              color: "primary.contrastText",
+              fontWeight: "fontWeightBold",
+              fontStyle: "italic",
+            }}
+          >
+            F
+          </Box>
+          <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
+            Flowrise
+          </Typography>
         </Stack>
 
         <Box sx={{ gridColumn: "2 / 3", width: "100%", maxWidth: 760, justifySelf: "center", position: "relative" }}>
@@ -101,20 +137,45 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
                 { title: "Messages", data: filteredMessages },
                 { title: "Files", data: filteredFiles },
               ].map((section) => (
-                <Box key={section.title} sx={{ p: 1.25, borderBottom: 1, borderColor: "borders.borderSubtle", '&:last-of-type': { borderBottom: "none" } }}>
+                <Box
+                  key={section.title}
+                  sx={{
+                    p: 1.25,
+                    borderBottom: 1,
+                    borderColor: "borders.borderSubtle",
+                    "&:last-of-type": { borderBottom: "none" },
+                  }}
+                >
                   <Typography variant="overline" color="text.disabled" sx={{ mb: 0.8 }}>
                     {section.title}
                   </Typography>
                   <Stack spacing={0.4}>
                     {section.data.length > 0 ? (
                       section.data.map((item) => (
-                        <Box key={item.id} sx={{ px: 1, py: 0.8, borderRadius: (theme) => theme.tokens.radius.sm, cursor: "pointer", '&:hover': { bgcolor: "surfaces.surfaceHover" } }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600 }}>{item.title}</Typography>
-                          {item.description ? <Typography variant="caption" color="text.secondary">{item.description}</Typography> : null}
+                        <Box
+                          key={item.id}
+                          sx={{
+                            px: 1,
+                            py: 0.8,
+                            borderRadius: (theme) => theme.tokens.radius.sm,
+                            cursor: "pointer",
+                            "&:hover": { bgcolor: "surfaces.surfaceHover" },
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                            {item.title}
+                          </Typography>
+                          {item.description ? (
+                            <Typography variant="caption" color="text.secondary">
+                              {item.description}
+                            </Typography>
+                          ) : null}
                         </Box>
                       ))
                     ) : (
-                      <Typography variant="caption" color="text.disabled" sx={{ px: 1, py: 0.8 }}>No results</Typography>
+                      <Typography variant="caption" color="text.disabled" sx={{ px: 1, py: 0.8 }}>
+                        No results
+                      </Typography>
                     )}
                   </Stack>
                 </Box>
@@ -123,8 +184,16 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
           )}
         </Box>
 
-        <Stack direction="row" spacing={1} sx={{ alignItems: "center", justifySelf: "end", gridColumn: { xs: "2 / 3", md: "3 / 4" } }}>
-          <Badge badgeContent={3} color="warning" sx={{ "& .MuiBadge-badge": { fontSize: 9, minWidth: 14, height: 14, fontWeight: 700 } }}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{ alignItems: "center", justifySelf: "end", gridColumn: { xs: "2 / 3", md: "3 / 4" } }}
+        >
+          <Badge
+            badgeContent={3}
+            color="warning"
+            sx={{ "& .MuiBadge-badge": { fontSize: 9, minWidth: 14, height: 14, fontWeight: 700 } }}
+          >
             <IconButton>
               <NotificationsNoneRounded fontSize="small" />
             </IconButton>
@@ -137,7 +206,10 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
               <Typography variant="caption" sx={{ fontWeight: 700, lineHeight: 1.1 }}>Rahul Sharma</Typography>
               <Typography variant="overline" color="text.disabled" sx={{ lineHeight: 1.1 }}>Acme Technologies</Typography>
             </Box> */}
-            <Avatar src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" sx={{ width: 32, height: 32 }} />
+            <Avatar
+              src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+              sx={{ width: 32, height: 32 }}
+            />
             <ExpandMoreRounded sx={{ fontSize: 18, color: "text.disabled" }} />
           </Stack>
         </Stack>

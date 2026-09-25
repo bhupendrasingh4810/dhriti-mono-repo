@@ -1,25 +1,8 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  HttpCode,
-  HttpStatus,
-  Param,
-  Patch,
-  Post,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { RequireAccess } from "../../common/decorators/access.decorator";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
@@ -84,10 +67,7 @@ export class AtlasController {
   @Get("spaces/:spaceId/pages")
   @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.read" })
   @ApiOperation({ summary: "List pages in a space (ordered tree data)" })
-  async listPages(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("spaceId") spaceId: string,
-  ) {
+  async listPages(@CurrentOrganization() organization: OrganizationContext, @Param("spaceId") spaceId: string) {
     return this.atlas.listPages(organization.organizationId, spaceId);
   }
 
@@ -106,10 +86,7 @@ export class AtlasController {
   @Get("pages/:pageId")
   @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.read" })
   @ApiOperation({ summary: "Get a page" })
-  async getPage(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("pageId") pageId: string,
-  ) {
+  async getPage(@CurrentOrganization() organization: OrganizationContext, @Param("pageId") pageId: string) {
     return this.atlas.getPage(organization.organizationId, pageId);
   }
 
@@ -142,10 +119,7 @@ export class AtlasController {
   @Get("pages/:pageId/comments")
   @RequireAccess({ entitlement: "atlas.enabled", permission: "atlas.page.read" })
   @ApiOperation({ summary: "List comments on a page" })
-  async listComments(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("pageId") pageId: string,
-  ) {
+  async listComments(@CurrentOrganization() organization: OrganizationContext, @Param("pageId") pageId: string) {
     return this.atlas.listComments(organization.organizationId, pageId);
   }
 

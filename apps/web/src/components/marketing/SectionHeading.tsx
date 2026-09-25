@@ -6,11 +6,7 @@ interface SectionHeadingProps {
   description: string;
 }
 
-export function SectionHeading({
-  eyebrow,
-  title,
-  description,
-}: SectionHeadingProps) {
+export function SectionHeading({ eyebrow, title, description }: SectionHeadingProps) {
   return (
     <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
       {eyebrow ? (

@@ -58,23 +58,23 @@ export const lightPaletteTokens: SemanticPalette = {
   secondary: "#475569", // Cool slate gray
   success: "#70C748", // Soft emerald
   warning: "#F6B51E", // Soft amber
-  error: "#EF4444",   // Soft rose/red
-  info: "#539BFF",    // Cool sky blue
+  error: "#EF4444", // Soft rose/red
+  info: "#539BFF", // Cool sky blue
   surface: {
     background: "#F4F7F6", // Muted mint-tinted gray
     surface: "#FFFFFF",
     surfaceElevated: "#FFFFFF",
-    surfaceHover: "#EBF1F0",     // Cool teal-tinted hover
-    surfaceSelected: "#E0F2F1",  // Soft teal selection
+    surfaceHover: "#EBF1F0", // Cool teal-tinted hover
+    surfaceSelected: "#E0F2F1", // Soft teal selection
   },
   text: {
-    primary: "#0F172A",    // Deep slate blue-black
-    secondary: "#475569",  // Muted gray-blue
-    disabled: "#94A3B8",   // Clear disabled slate
+    primary: "#0F172A", // Deep slate blue-black
+    secondary: "#475569", // Muted gray-blue
+    disabled: "#94A3B8", // Clear disabled slate
     inverse: "#F8FAFC",
   },
   border: {
-    border: "#CFDCDA",       // Soft cool gray border
+    border: "#CFDCDA", // Soft cool gray border
     borderSubtle: "#E5ECEB", // Very light divider
     borderStrong: "#28a99e", // Accent brand border
   },
@@ -100,11 +100,11 @@ export const darkPaletteTokens: SemanticPalette = {
   primary: "#048c7f",
   secondary: "#94A3B8",
   surface: {
-    background: "#0B0F12",       // Rich dark teal-slate
-    surface: "#12181B",          // Balanced deep surface
-    surfaceElevated: "#1A2326",  // Elevated layer
+    background: "#0B0F12", // Rich dark teal-slate
+    surface: "#12181B", // Balanced deep surface
+    surfaceElevated: "#1A2326", // Elevated layer
     surfaceHover: "#1D282C",
-    surfaceSelected: "#025043",  // Selected row deep variant
+    surfaceSelected: "#025043", // Selected row deep variant
   },
   text: {
     primary: "#E2E8F0",

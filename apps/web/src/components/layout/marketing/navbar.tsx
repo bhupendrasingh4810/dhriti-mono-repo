@@ -29,10 +29,17 @@ export function Navbar() {
         <button onClick={() => router.push("/")} className="flex items-center gap-2.5 flex-shrink-0">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#036c5f" }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+              <path
+                d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             </svg>
           </div>
-          <span className="font-bold text-slate-900 text-lg" style={{ fontFamily: "var(--font-display)" }}>Dhriti OS</span>
+          <span className="font-bold text-slate-900 text-lg" style={{ fontFamily: "var(--font-display)" }}>
+            Dhriti OS
+          </span>
         </button>
 
         {/* Desktop nav */}
@@ -40,7 +47,7 @@ export function Navbar() {
           {NAV_ITEMS.map((item) => (
             <button
               key={item}
-              onClick={() => item === "Pricing" ? router.push("pricing") : undefined}
+              onClick={() => (item === "Pricing" ? router.push("pricing") : undefined)}
               className="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
             >
               {item}
@@ -59,8 +66,12 @@ export function Navbar() {
             onClick={() => router.push("get-started")}
             className="text-sm font-semibold px-5 py-2.5 rounded-xl text-white transition-all"
             style={{ backgroundColor: "#036c5f", boxShadow: "0 2px 8px rgba(3,108,95,0.3)" }}
-            onMouseOver={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#024d44"; }}
-            onMouseOut={(e) => { (e.currentTarget as HTMLElement).style.backgroundColor = "#036c5f"; }}
+            onMouseOver={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = "#024d44";
+            }}
+            onMouseOut={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = "#036c5f";
+            }}
           >
             Get started free
           </button>
@@ -71,11 +82,27 @@ export function Navbar() {
           className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-all"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            {mobileMenuOpen
-              ? <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>
-              : <><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></>
-            }
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            {mobileMenuOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="3" y1="6" x2="21" y2="6" />
+                <line x1="3" y1="12" x2="21" y2="12" />
+                <line x1="3" y1="18" x2="21" y2="18" />
+              </>
+            )}
           </svg>
         </button>
       </div>
@@ -84,13 +111,28 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="lg:hidden px-6 pb-4 pt-2 border-t" style={{ backgroundColor: "white", borderColor: "#e2e8f0" }}>
           {NAV_ITEMS.map((item) => (
-            <button key={item} className="w-full text-left py-3 text-sm font-medium text-slate-600 border-b border-slate-50 last:border-0">
+            <button
+              key={item}
+              className="w-full text-left py-3 text-sm font-medium text-slate-600 border-b border-slate-50 last:border-0"
+            >
               {item}
             </button>
           ))}
           <div className="flex gap-3 mt-4">
-            <button onClick={() => router.push("login")} className="flex-1 py-2.5 rounded-xl text-sm font-semibold border text-slate-700 hover:bg-slate-50 transition-all" style={{ borderColor: "#e2e8f0" }}>Sign in</button>
-            <button onClick={() => router.push("get-started")} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white" style={{ backgroundColor: "#036c5f" }}>Get started</button>
+            <button
+              onClick={() => router.push("login")}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border text-slate-700 hover:bg-slate-50 transition-all"
+              style={{ borderColor: "#e2e8f0" }}
+            >
+              Sign in
+            </button>
+            <button
+              onClick={() => router.push("get-started")}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white"
+              style={{ backgroundColor: "#036c5f" }}
+            >
+              Get started
+            </button>
           </div>
         </div>
       )}

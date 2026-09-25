@@ -76,10 +76,7 @@ export class MetricsService {
   }
 
   render(): string {
-    const lines: string[] = [
-      "# HELP http_requests_total Total HTTP requests",
-      "# TYPE http_requests_total counter",
-    ];
+    const lines: string[] = ["# HELP http_requests_total Total HTTP requests", "# TYPE http_requests_total counter"];
 
     for (const [key, value] of Object.entries(this.httpRequests)) {
       const [method, route, status] = key.split("|");

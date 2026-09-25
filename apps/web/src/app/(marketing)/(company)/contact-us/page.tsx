@@ -18,7 +18,15 @@ const CATEGORIES: { id: Category; label: string; icon: string; desc: string }[] 
 const CONTACT_CARDS = [
   {
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      >
         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
         <polyline points="22,6 12,13 2,6" />
       </svg>
@@ -29,7 +37,15 @@ const CONTACT_CARDS = [
   },
   {
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      >
         <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
       </svg>
     ),
@@ -39,8 +55,17 @@ const CONTACT_CARDS = [
   },
   {
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" />
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+      >
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+        <circle cx="12" cy="10" r="3" />
       </svg>
     ),
     label: "Office",
@@ -61,10 +86,14 @@ export default function ContactPage({ navigate }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSent(true); }, 1000);
+    setTimeout(() => {
+      setLoading(false);
+      setSent(true);
+    }, 1000);
   };
 
-  const inputClass = "w-full px-4 py-3 text-sm rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all";
+  const inputClass =
+    "w-full px-4 py-3 text-sm rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 focus:outline-none transition-all";
   const inputFocus = {
     onFocus: (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       e.currentTarget.style.borderColor = "#036c5f";
@@ -108,7 +137,9 @@ export default function ContactPage({ navigate }: Props) {
               >
                 <span className="text-lg">{c.icon}</span>
                 <div>
-                  <p className="text-sm font-bold" style={{ color: category === c.id ? "#036c5f" : "#0f172a" }}>{c.label}</p>
+                  <p className="text-sm font-bold" style={{ color: category === c.id ? "#036c5f" : "#0f172a" }}>
+                    {c.label}
+                  </p>
                   <p className="text-xs text-slate-500 mt-0.5">{c.desc}</p>
                 </div>
               </button>
@@ -125,7 +156,15 @@ export default function ContactPage({ navigate }: Props) {
                 className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
                 style={{ backgroundColor: "#036c5f" }}
               >
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="white"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
@@ -136,7 +175,10 @@ export default function ContactPage({ navigate }: Props) {
                 We've received your message and will get back to you at <strong>{form.email}</strong> within 24 hours.
               </p>
               <button
-                onClick={() => { setSent(false); setForm({ name: "", email: "", company: "", message: "" }); }}
+                onClick={() => {
+                  setSent(false);
+                  setForm({ name: "", email: "", company: "", message: "" });
+                }}
                 className="text-sm font-semibold text-[#036c5f] hover:underline"
               >
                 Send another message
@@ -149,18 +191,41 @@ export default function ContactPage({ navigate }: Props) {
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Full name <span style={{ color: "#dc2626" }}>*</span>
                   </label>
-                  <input type="text" required value={form.name} onChange={set("name")} placeholder="Jane Smith" className={inputClass} {...inputFocus} />
+                  <input
+                    type="text"
+                    required
+                    value={form.name}
+                    onChange={set("name")}
+                    placeholder="Jane Smith"
+                    className={inputClass}
+                    {...inputFocus}
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                     Work email <span style={{ color: "#dc2626" }}>*</span>
                   </label>
-                  <input type="email" required value={form.email} onChange={set("email")} placeholder="jane@company.com" className={inputClass} {...inputFocus} />
+                  <input
+                    type="email"
+                    required
+                    value={form.email}
+                    onChange={set("email")}
+                    placeholder="jane@company.com"
+                    className={inputClass}
+                    {...inputFocus}
+                  />
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">Company</label>
-                <input type="text" value={form.company} onChange={set("company")} placeholder="Acme Corp" className={inputClass} {...inputFocus} />
+                <input
+                  type="text"
+                  value={form.company}
+                  onChange={set("company")}
+                  placeholder="Acme Corp"
+                  className={inputClass}
+                  {...inputFocus}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1.5">
@@ -175,8 +240,8 @@ export default function ContactPage({ navigate }: Props) {
                     category === "sales"
                       ? "Tell us about your team size and what you're looking for..."
                       : category === "support"
-                      ? "Describe the issue you're facing..."
-                      : "How can we help you?"
+                        ? "Describe the issue you're facing..."
+                        : "How can we help you?"
                   }
                   className={inputClass + " resize-none"}
                   {...inputFocus}
@@ -187,8 +252,12 @@ export default function ContactPage({ navigate }: Props) {
                 disabled={loading}
                 className="w-full py-3.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all"
                 style={{ backgroundColor: "#036c5f" }}
-                onMouseOver={(e) => { if (!loading) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#024d44"; }}
-                onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#036c5f"; }}
+                onMouseOver={(e) => {
+                  if (!loading) (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#024d44";
+                }}
+                onMouseOut={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#036c5f";
+                }}
               >
                 {loading ? (
                   <>

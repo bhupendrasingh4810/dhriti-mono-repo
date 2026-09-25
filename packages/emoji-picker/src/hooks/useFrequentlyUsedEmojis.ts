@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_FREQUENTLY_USED_LIMIT, FREQUENTLY_USED_EMOJIS_STORAGE_KEY, MAX_STORED_HISTORY } from "../constants/emoji.constants";
+import {
+  DEFAULT_FREQUENTLY_USED_LIMIT,
+  FREQUENTLY_USED_EMOJIS_STORAGE_KEY,
+  MAX_STORED_HISTORY,
+} from "../constants/emoji.constants";
 import { getEmojiByName } from "../data/emojiRegistry";
 import type { EmojiDefinition } from "../types/emoji.types";
 import { readStoredUsageCounts, writeStoredUsageCounts } from "../utils/storage";

@@ -54,20 +54,13 @@ export class ConnectService {
         organizationId,
         deletedAt: null,
         isArchived: false,
-        OR: [
-          { visibility: "PUBLIC" },
-          { members: { some: { userId } } },
-        ],
+        OR: [{ visibility: "PUBLIC" }, { members: { some: { userId } } }],
       },
       orderBy: { createdAt: "asc" },
     });
   }
 
-  async createChannel(
-    organizationId: string,
-    creatorUserId: string,
-    dto: CreateChannelDto,
-  ): Promise<Channel> {
+  async createChannel(organizationId: string, creatorUserId: string, dto: CreateChannelDto): Promise<Channel> {
     if (dto.teamId) {
       const team = await this.prisma.team.findFirst({
         where: { id: dto.teamId, organizationId, deletedAt: null },
@@ -161,7 +154,11 @@ export class ConnectService {
       select: { id: true },
     });
     if (!membership) {
-      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.MEMBER_NOT_FOUND,
+        "User is not an active organization member",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     await this.prisma.channelMember.upsert({
       where: { channelId_userId: { channelId, userId } },
@@ -320,12 +317,7 @@ export class ConnectService {
 
   // ---------------- Reactions ----------------
 
-  async addReaction(
-    organizationId: string,
-    messageId: string,
-    userId: string,
-    emoji: string,
-  ): Promise<void> {
+  async addReaction(organizationId: string, messageId: string, userId: string, emoji: string): Promise<void> {
     const message = await this.getMessage(organizationId, messageId);
     await this.getChannelForMember(organizationId, message.channelId, userId);
 
@@ -336,12 +328,7 @@ export class ConnectService {
     });
   }
 
-  async removeReaction(
-    organizationId: string,
-    messageId: string,
-    userId: string,
-    emoji: string,
-  ): Promise<void> {
+  async removeReaction(organizationId: string, messageId: string, userId: string, emoji: string): Promise<void> {
     await this.getMessage(organizationId, messageId);
     await this.prisma.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
   }

@@ -14,26 +14,27 @@ import { BillingWebhookRateLimitGuard } from "./billing-webhook-rate-limit.guard
 
 @Global()
 @Module({
-    controllers: [OrganizationAccessController, BillingWebhookController],
-    providers: [
-        EntitlementService,
-        PermissionService,
-        SubscriptionService,
-        BillingWebhookService,
-        BillingWebhookRateLimitGuard,
-        OrganizationPermissionGroupService,
-        OrganizationDepartmentService,
-        OrganizationTeamService,
-        PlatformRoleService],
-    exports: [
-        EntitlementService,
-        PermissionService,
-        SubscriptionService,
-        BillingWebhookService,
-        OrganizationPermissionGroupService,
-        OrganizationDepartmentService,
-        OrganizationTeamService,
-        PlatformRoleService,
-    ],
+  controllers: [OrganizationAccessController, BillingWebhookController],
+  providers: [
+    EntitlementService,
+    PermissionService,
+    SubscriptionService,
+    BillingWebhookService,
+    BillingWebhookRateLimitGuard,
+    OrganizationPermissionGroupService,
+    OrganizationDepartmentService,
+    OrganizationTeamService,
+    PlatformRoleService,
+  ],
+  exports: [
+    EntitlementService,
+    PermissionService,
+    SubscriptionService,
+    BillingWebhookService,
+    OrganizationPermissionGroupService,
+    OrganizationDepartmentService,
+    OrganizationTeamService,
+    PlatformRoleService,
+  ],
 })
-export class AuthorizationModule { }
+export class AuthorizationModule {}

@@ -24,10 +24,10 @@ export class AccessGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const requirements = this.reflector.getAllAndOverride<AccessRequirements | undefined>(
-      ACCESS_REQUIREMENTS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
+    const requirements = this.reflector.getAllAndOverride<AccessRequirements | undefined>(ACCESS_REQUIREMENTS_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!requirements) {
       return true;
     }

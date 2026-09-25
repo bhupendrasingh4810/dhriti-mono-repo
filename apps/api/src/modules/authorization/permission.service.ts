@@ -95,8 +95,12 @@ export class PermissionService {
       }),
     ]);
     const keys = [
-      ...platformPermissions.flatMap((assignment) => assignment.platformRole.permissions.map(({ permission }) => permission.key)),
-      ...organizationPermissions.flatMap((assignment) => assignment.permissionGroup.permissions.map(({ permission }) => permission.key)),
+      ...platformPermissions.flatMap((assignment) =>
+        assignment.platformRole.permissions.map(({ permission }) => permission.key),
+      ),
+      ...organizationPermissions.flatMap((assignment) =>
+        assignment.permissionGroup.permissions.map(({ permission }) => permission.key),
+      ),
     ];
     return [...new Set(keys)];
   }

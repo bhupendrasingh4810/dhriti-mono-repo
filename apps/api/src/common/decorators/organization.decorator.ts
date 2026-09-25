@@ -17,9 +17,7 @@ export const CurrentOrganization = createParamDecorator(
     const request = ctx.switchToHttp().getRequest<TenantRequest>();
     const organization = request.organization;
     if (!organization) {
-      throw new Error(
-        "CurrentOrganization used on a route without organization context; add TenantGuard",
-      );
+      throw new Error("CurrentOrganization used on a route without organization context; add TenantGuard");
     }
     return data ? organization[data] : organization;
   },

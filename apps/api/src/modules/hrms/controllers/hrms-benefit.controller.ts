@@ -8,9 +8,22 @@ import { TenantGuard } from "../../../common/guards/tenant.guard";
 import { CreateHrmsBenefitDto } from "../dto/hrms-operations.dto";
 import { HrmsBenefitService } from "../services/hrms-benefit.service";
 
-@ApiTags("hrms") @ApiBearerAuth() @UseGuards(TenantGuard, AccessGuard) @Controller("organization/hrms/benefits")
+@ApiTags("hrms")
+@ApiBearerAuth()
+@UseGuards(TenantGuard, AccessGuard)
+@Controller("organization/hrms/benefits")
 export class HrmsBenefitController {
   constructor(private readonly benefits: HrmsBenefitService) {}
-  @Get() @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.benefit.read" }) list(@CurrentOrganization() organization: OrganizationContext) { return this.benefits.list(organization.organizationId); }
-  @Post() @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.benefit.manage" }) create(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Body() dto: CreateHrmsBenefitDto) { return this.benefits.create(organization.organizationId, user.userId, dto); }
+  @Get() @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.benefit.read" }) list(
+    @CurrentOrganization() organization: OrganizationContext,
+  ) {
+    return this.benefits.list(organization.organizationId);
+  }
+  @Post() @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.benefit.manage" }) create(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateHrmsBenefitDto,
+  ) {
+    return this.benefits.create(organization.organizationId, user.userId, dto);
+  }
 }

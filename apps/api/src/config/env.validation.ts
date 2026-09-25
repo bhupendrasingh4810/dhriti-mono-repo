@@ -29,7 +29,10 @@ export const envSchema = z
 
     LOCKOUT_THRESHOLD: z.coerce.number().int().positive().default(10),
     LOCKOUT_DURATION_MINUTES: z.coerce.number().int().positive().default(15),
-    TRUST_PROXY: z.enum(["true", "false"]).transform((value) => value === "true").default("false"),
+    TRUST_PROXY: z
+      .enum(["true", "false"])
+      .transform((value) => value === "true")
+      .default("false"),
     PUBLIC_AUTH_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
     PUBLIC_AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(20),
     EMAIL_VERIFICATION_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(1200),
@@ -109,15 +112,27 @@ export const envSchema = z
         message: "BREVO_API_KEY requires BREVO_SENDER_EMAIL and BREVO_SENDER_NAME",
       });
     }
-    if (env.NODE_ENV === "production" && (!env.SECRETS_ENCRYPTION_KEY || Buffer.from(env.SECRETS_ENCRYPTION_KEY, "base64").length !== 32)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "SECRETS_ENCRYPTION_KEY must be a base64-encoded 32-byte key in production" });
+    if (
+      env.NODE_ENV === "production" &&
+      (!env.SECRETS_ENCRYPTION_KEY || Buffer.from(env.SECRETS_ENCRYPTION_KEY, "base64").length !== 32)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "SECRETS_ENCRYPTION_KEY must be a base64-encoded 32-byte key in production",
+      });
     }
 
     if (env.BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS >= env.BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS must be less than BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS must be less than BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS",
+      });
     }
     if (env.BILLING_WEBHOOK_RETRY_BASE_DELAY_SECONDS > env.BILLING_WEBHOOK_RETRY_MAX_DELAY_SECONDS) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "BILLING_WEBHOOK_RETRY_BASE_DELAY_SECONDS must not exceed BILLING_WEBHOOK_RETRY_MAX_DELAY_SECONDS" });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "BILLING_WEBHOOK_RETRY_BASE_DELAY_SECONDS must not exceed BILLING_WEBHOOK_RETRY_MAX_DELAY_SECONDS",
+      });
     }
   });
 
@@ -126,9 +141,7 @@ export type Env = z.infer<typeof envSchema>;
 export function validateEnv(raw: Record<string, unknown>): Env {
   const parsed = envSchema.safeParse(raw);
   if (!parsed.success) {
-    const details = parsed.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join("; ");
+    const details = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
     throw new Error(`Invalid environment configuration: ${details}`);
   }
   return parsed.data;

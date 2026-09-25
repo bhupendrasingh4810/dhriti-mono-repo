@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState } from "react";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
@@ -50,7 +50,9 @@ export default function SystemHealth() {
 
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>System Health</h1>
-        <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>Real-time infrastructure status and performance metrics</p>
+        <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+          Real-time infrastructure status and performance metrics
+        </p>
       </div>
 
       {/* Status summary */}
@@ -60,11 +62,25 @@ export default function SystemHealth() {
           { label: "Degraded", count: degraded, color: "#92400e", bg: "#fef9c3" },
           { label: "Outage", count: outage, color: "#991b1b", bg: "#fee2e2" },
         ].map((item) => (
-          <div key={item.label} style={{ backgroundColor: "white", borderRadius: 12, padding: 20, border: "1px solid #e2e8f0" }}>
+          <div
+            key={item.label}
+            style={{ backgroundColor: "white", borderRadius: 12, padding: 20, border: "1px solid #e2e8f0" }}
+          >
             <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500, marginBottom: 8 }}>{item.label}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 32, fontWeight: 700, color: item.color }}>{item.count}</span>
-              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 20, backgroundColor: item.bg, color: item.color, fontWeight: 600 }}>services</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  padding: "2px 8px",
+                  borderRadius: 20,
+                  backgroundColor: item.bg,
+                  color: item.color,
+                  fontWeight: 600,
+                }}
+              >
+                services
+              </span>
             </div>
           </div>
         ))}
@@ -72,7 +88,15 @@ export default function SystemHealth() {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, marginBottom: 16 }}>
         {/* Services table */}
-        <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div
+          style={{
+            backgroundColor: "white",
+            borderRadius: 12,
+            border: "1px solid #e2e8f0",
+            overflow: "hidden",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}
+        >
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9" }}>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: 0 }}>Service Status</h2>
           </div>
@@ -80,7 +104,20 @@ export default function SystemHealth() {
             <thead>
               <tr style={{ backgroundColor: "#f8fafc" }}>
                 {["Service", "Status", "Uptime", "Latency", "Last Check"].map((h) => (
-                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</th>
+                  <th
+                    key={h}
+                    style={{
+                      padding: "10px 16px",
+                      textAlign: "left",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#64748b",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -89,15 +126,28 @@ export default function SystemHealth() {
                 const sc = statusColors[svc.status];
                 return (
                   <tr key={svc.name} style={{ borderTop: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 500, color: "#0f172a" }}>{svc.name}</td>
+                    <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 500, color: "#0f172a" }}>
+                      {svc.name}
+                    </td>
                     <td style={{ padding: "12px 16px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <div style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: sc.dot }} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: sc.color, textTransform: "capitalize" }}>{svc.status}</span>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: sc.color, textTransform: "capitalize" }}>
+                          {svc.status}
+                        </span>
                       </div>
                     </td>
                     <td style={{ padding: "12px 16px", fontSize: 13, color: "#475569" }}>{svc.uptime}</td>
-                    <td style={{ padding: "12px 16px", fontSize: 13, color: svc.latency > "100ms" ? "#d97706" : "#475569", fontFamily: "monospace" }}>{svc.latency}</td>
+                    <td
+                      style={{
+                        padding: "12px 16px",
+                        fontSize: 13,
+                        color: svc.latency > "100ms" ? "#d97706" : "#475569",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {svc.latency}
+                    </td>
                     <td style={{ padding: "12px 16px", fontSize: 12, color: "#94a3b8" }}>{svc.lastCheck}</td>
                   </tr>
                 );
@@ -107,18 +157,31 @@ export default function SystemHealth() {
         </div>
 
         {/* Resource metrics */}
-        <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20, boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div
+          style={{
+            backgroundColor: "white",
+            borderRadius: 12,
+            border: "1px solid #e2e8f0",
+            padding: 20,
+            boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+          }}
+        >
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: "0 0 20px" }}>Resource Usage</h2>
           {resourceMetrics.map((rm) => (
             <div key={rm.label} style={{ marginBottom: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                 <span style={{ fontSize: 13, color: "#475569", fontWeight: 500 }}>{rm.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: rm.color }}>{rm.value}{rm.unit}</span>
+                <span style={{ fontSize: 13, fontWeight: 700, color: rm.color }}>
+                  {rm.value}
+                  {rm.unit}
+                </span>
               </div>
               <div style={{ height: 10, backgroundColor: "#f1f5f9", borderRadius: 5 }}>
                 <div
                   style={{
-                    height: "100%", width: `${rm.value}%`, borderRadius: 5,
+                    height: "100%",
+                    width: `${rm.value}%`,
+                    borderRadius: 5,
                     backgroundColor: rm.color,
                     opacity: 0.85,
                   }}
@@ -134,11 +197,20 @@ export default function SystemHealth() {
           <button
             onClick={() => addToast("Health report generated", "success")}
             style={{
-              marginTop: 16, width: "100%", padding: "9px", borderRadius: 8,
-              border: "1px solid #e2e8f0", backgroundColor: "white", cursor: "pointer",
-              fontSize: 13, color: "#475569", fontWeight: 500,
+              marginTop: 16,
+              width: "100%",
+              padding: "9px",
+              borderRadius: 8,
+              border: "1px solid #e2e8f0",
+              backgroundColor: "white",
+              cursor: "pointer",
+              fontSize: 13,
+              color: "#475569",
+              fontWeight: 500,
             }}
-          >Download Health Report</button>
+          >
+            Download Health Report
+          </button>
         </div>
       </div>
     </div>

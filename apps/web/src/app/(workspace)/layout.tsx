@@ -23,25 +23,23 @@ function getActiveApp(pathname: string): PageType {
   return "home";
 }
 
-export default function WorkspaceLayout({
-  children,
-  params,
-}: WorkspaceLayoutProps) {
+export default function WorkspaceLayout({ children, params }: WorkspaceLayoutProps) {
   const { organizationSlug } = useParams();
 
   const pathname = usePathname();
   const activeApp = getActiveApp(pathname);
-  const headerAppName = activeApp === "home"
-    ? PageName.Home
-    : activeApp === "connect"
-      ? PageName.Connect
-      : activeApp === "flow"
-        ? PageName.Flow
-        : activeApp === "atlas"
-          ? PageName.Atlas
-          : activeApp === "pulse"
-            ? PageName.Pulse
-            : PageName.Nexus;
+  const headerAppName =
+    activeApp === "home"
+      ? PageName.Home
+      : activeApp === "connect"
+        ? PageName.Connect
+        : activeApp === "flow"
+          ? PageName.Flow
+          : activeApp === "atlas"
+            ? PageName.Atlas
+            : activeApp === "pulse"
+              ? PageName.Pulse
+              : PageName.Nexus;
 
   const headerSearchUsers = connectUsers.map((user) => ({
     id: user.id,
@@ -63,12 +61,17 @@ export default function WorkspaceLayout({
         {activeApp === "connect" ? (
           <ConnectHeader users={headerSearchUsers} messages={headerSearchMessages} files={headerSearchFiles} />
         ) : (
-          <Header activeView={activeApp} onViewChange={() => { }} />
+          <Header activeView={activeApp} onViewChange={() => {}} />
         )}
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-        <Sidebar activeView={activeApp} organizationSlug={organizationSlug as string} onViewChange={() => { }} onLogout={() => { }} />
+        <Sidebar
+          activeView={activeApp}
+          organizationSlug={organizationSlug as string}
+          onViewChange={() => {}}
+          onLogout={() => {}}
+        />
         <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto" }}>{children}</Box>
       </Box>
     </Box>

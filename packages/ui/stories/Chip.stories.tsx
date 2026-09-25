@@ -1,16 +1,12 @@
 /**
  * Chip Component Stories
- * 
+ *
  * Comprehensive Storybook documentation for Dhriti Chip component.
  */
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Chip } from "../src/components/mui";
-import {
-  Check as CheckIcon,
-  Favorite as FavoriteIcon,
-  Star as StarIcon,
-} from "@mui/icons-material";
+import { Check as CheckIcon, Favorite as FavoriteIcon, Star as StarIcon } from "@mui/icons-material";
 
 const meta = {
   title: "Components/Chip",

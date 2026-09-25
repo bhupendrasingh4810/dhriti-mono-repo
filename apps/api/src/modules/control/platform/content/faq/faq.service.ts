@@ -5,12 +5,7 @@ import { PrismaService } from "../../../../../database/prisma.service";
 import { AppError } from "../../../../../common/errors/app-error";
 import { ErrorCode } from "../../../../../common/errors/error-codes";
 
-import type {
-  CreateFaqGroupDto,
-  CreateFaqItemDto,
-  UpdateFaqGroupDto,
-  UpdateFaqItemDto,
-} from "./dto/faq.dto";
+import type { CreateFaqGroupDto, CreateFaqItemDto, UpdateFaqGroupDto, UpdateFaqItemDto } from "./dto/faq.dto";
 
 export type FaqGroupWithItems = FaqGroup & { items: FaqItem[] };
 

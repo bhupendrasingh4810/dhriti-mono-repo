@@ -18,7 +18,7 @@ export class TokenService {
   constructor(
     private readonly jwtService: JwtService,
     private readonly config: ApiConfigService,
-  ) { }
+  ) {}
 
   /**
    * Signs an access token for the given user and session information.

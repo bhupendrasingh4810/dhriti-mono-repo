@@ -1,14 +1,7 @@
 export type PresenceState = "online" | "away" | "busy" | "do_not_disturb" | "offline";
 
 export type AvailabilityState =
-  | "available"
-  | "busy"
-  | "in_a_meeting"
-  | "on_a_call"
-  | "presenting"
-  | "away"
-  | "offline"
-  | "do_not_disturb";
+  "available" | "busy" | "in_a_meeting" | "on_a_call" | "presenting" | "away" | "offline" | "do_not_disturb";
 
 export type OrgRole = "admin" | "member" | "guest";
 

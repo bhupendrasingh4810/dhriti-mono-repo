@@ -1,6 +1,6 @@
 /**
  * Button Component Stories
- * 
+ *
  * Comprehensive Storybook documentation for Dhriti Button component.
  */
 
@@ -56,15 +56,7 @@ const meta = {
 
     color: {
       control: "select",
-      options: [
-        "primary",
-        "secondary",
-        "success",
-        "error",
-        "info",
-        "warning",
-        "inherit",
-      ],
+      options: ["primary", "secondary", "success", "error", "info", "warning", "inherit"],
     },
 
     size: {
@@ -160,14 +152,14 @@ export const Default: Story = {
 export const Colors: Story = {
   name: "Colors",
   render: () => (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
       <Button variant="contained" color="primary">
         Primary
       </Button>
@@ -265,14 +257,14 @@ export const Sizes: Story = {
 export const Outlined: Story = {
   name: "Outlined",
   render: () => (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
       <Button variant="outlined" color="primary">
         Primary
       </Button>
@@ -326,7 +318,6 @@ export const OutlinedIcon: Story = {
       <Button variant="outlined" color="secondary" endIcon={<SendRounded />}>
         End Icon
       </Button>
-
     </div>
   ),
 };

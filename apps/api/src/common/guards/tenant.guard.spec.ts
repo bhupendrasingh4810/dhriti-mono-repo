@@ -19,25 +19,35 @@ describe("TenantGuard", () => {
   it("creates context only for an active membership", async () => {
     const prisma = {
       organizationMember: {
-        findFirst: jest.fn().mockResolvedValue({ id: "member-a", user: { role: "EMPLOYEE" }, organization: { deletedAt: null } }),
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: "member-a", user: { role: "EMPLOYEE" }, organization: { deletedAt: null } }),
       },
       userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
     };
     const guard = new TenantGuard(prisma as never);
 
     await expect(guard.canActivate(context() as never)).resolves.toBe(true);
-    expect(prisma.organizationMember.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ status: "ACTIVE" }) }));
+    expect(prisma.organizationMember.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: "ACTIVE" }) }),
+    );
   });
 
   it("denies a suspended or removed membership", async () => {
-    const prisma = { organizationMember: { findFirst: jest.fn().mockResolvedValue(null) }, userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) } };
+    const prisma = {
+      organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
+      userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
+    };
     const guard = new TenantGuard(prisma as never);
 
     await expect(guard.canActivate(context() as never)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("rejects an invalid organization identifier before querying membership", async () => {
-    const prisma = { organizationMember: { findFirst: jest.fn() }, userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId: "not-a-uuid" }) } };
+    const prisma = {
+      organizationMember: { findFirst: jest.fn() },
+      userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId: "not-a-uuid" }) },
+    };
     const guard = new TenantGuard(prisma as never);
 
     await expect(guard.canActivate(context(null) as never)).rejects.toBeInstanceOf(ForbiddenException);

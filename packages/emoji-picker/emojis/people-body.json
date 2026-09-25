@@ -1,33 +1,189 @@
 [
-  { "name": "waving-hand", "emoji": "\ud83d\udc4b", "unicode": "U+1F44B", "aliases": ["wave"], "keywords": ["hello", "hi", "bye"] },
-  { "name": "raised-hand", "emoji": "\u270b", "unicode": "U+270B", "aliases": ["hand"], "keywords": ["stop", "high-five"] },
-  { "name": "ok-hand", "emoji": "\ud83d\udc4c", "unicode": "U+1F44C", "aliases": ["ok"], "keywords": ["okay", "perfect"] },
-  { "name": "victory-hand", "emoji": "\u270c\ufe0f", "unicode": "U+270C", "aliases": ["victory", "peace"], "keywords": ["peace", "win"] },
-  { "name": "crossed-fingers", "emoji": "\ud83e\udd1e", "unicode": "U+1F91E", "aliases": ["fingers-crossed"], "keywords": ["luck", "hope"] },
-  { "name": "love-you-gesture", "emoji": "\ud83e\udd1f", "unicode": "U+1F91F", "aliases": [], "keywords": ["love", "ily"] },
-  { "name": "sign-of-the-horns", "emoji": "\ud83e\udd18", "unicode": "U+1F918", "aliases": ["rock-on", "metal"], "keywords": ["rock", "metal"] },
-  { "name": "call-me-hand", "emoji": "\ud83e\udd19", "unicode": "U+1F919", "aliases": ["call-me"], "keywords": ["call", "phone"] },
-  { "name": "backhand-index-pointing-left", "emoji": "\ud83d\udc48", "unicode": "U+1F448", "aliases": ["point-left"], "keywords": ["left", "point"] },
-  { "name": "backhand-index-pointing-right", "emoji": "\ud83d\udc49", "unicode": "U+1F449", "aliases": ["point-right"], "keywords": ["right", "point"] },
-  { "name": "backhand-index-pointing-up", "emoji": "\ud83d\udc46", "unicode": "U+1F446", "aliases": ["point-up-2"], "keywords": ["up", "point"] },
-  { "name": "backhand-index-pointing-down", "emoji": "\ud83d\udc47", "unicode": "U+1F447", "aliases": ["point-down"], "keywords": ["down", "point"] },
-  { "name": "thumbs-up", "emoji": "\ud83d\udc4d", "unicode": "U+1F44D", "aliases": ["+1", "thumbsup"], "keywords": ["like", "approve", "yes"] },
-  { "name": "thumbs-down", "emoji": "\ud83d\udc4e", "unicode": "U+1F44E", "aliases": ["-1", "thumbsdown"], "keywords": ["dislike", "no"] },
-  { "name": "raised-fist", "emoji": "\u270a", "unicode": "U+270A", "aliases": ["fist"], "keywords": ["power", "solidarity"] },
-  { "name": "oncoming-fist", "emoji": "\ud83d\udc4a", "unicode": "U+1F44A", "aliases": ["fist-bump", "punch"], "keywords": ["fist", "bump"] },
-  { "name": "clapping-hands", "emoji": "\ud83d\udc4f", "unicode": "U+1F44F", "aliases": ["clap"], "keywords": ["applause", "bravo"] },
-  { "name": "raised-hands", "emoji": "\ud83d\ude4c", "unicode": "U+1F64C", "aliases": ["raised-hands"], "keywords": ["celebration", "praise"] },
+  {
+    "name": "waving-hand",
+    "emoji": "\ud83d\udc4b",
+    "unicode": "U+1F44B",
+    "aliases": ["wave"],
+    "keywords": ["hello", "hi", "bye"]
+  },
+  {
+    "name": "raised-hand",
+    "emoji": "\u270b",
+    "unicode": "U+270B",
+    "aliases": ["hand"],
+    "keywords": ["stop", "high-five"]
+  },
+  {
+    "name": "ok-hand",
+    "emoji": "\ud83d\udc4c",
+    "unicode": "U+1F44C",
+    "aliases": ["ok"],
+    "keywords": ["okay", "perfect"]
+  },
+  {
+    "name": "victory-hand",
+    "emoji": "\u270c\ufe0f",
+    "unicode": "U+270C",
+    "aliases": ["victory", "peace"],
+    "keywords": ["peace", "win"]
+  },
+  {
+    "name": "crossed-fingers",
+    "emoji": "\ud83e\udd1e",
+    "unicode": "U+1F91E",
+    "aliases": ["fingers-crossed"],
+    "keywords": ["luck", "hope"]
+  },
+  {
+    "name": "love-you-gesture",
+    "emoji": "\ud83e\udd1f",
+    "unicode": "U+1F91F",
+    "aliases": [],
+    "keywords": ["love", "ily"]
+  },
+  {
+    "name": "sign-of-the-horns",
+    "emoji": "\ud83e\udd18",
+    "unicode": "U+1F918",
+    "aliases": ["rock-on", "metal"],
+    "keywords": ["rock", "metal"]
+  },
+  {
+    "name": "call-me-hand",
+    "emoji": "\ud83e\udd19",
+    "unicode": "U+1F919",
+    "aliases": ["call-me"],
+    "keywords": ["call", "phone"]
+  },
+  {
+    "name": "backhand-index-pointing-left",
+    "emoji": "\ud83d\udc48",
+    "unicode": "U+1F448",
+    "aliases": ["point-left"],
+    "keywords": ["left", "point"]
+  },
+  {
+    "name": "backhand-index-pointing-right",
+    "emoji": "\ud83d\udc49",
+    "unicode": "U+1F449",
+    "aliases": ["point-right"],
+    "keywords": ["right", "point"]
+  },
+  {
+    "name": "backhand-index-pointing-up",
+    "emoji": "\ud83d\udc46",
+    "unicode": "U+1F446",
+    "aliases": ["point-up-2"],
+    "keywords": ["up", "point"]
+  },
+  {
+    "name": "backhand-index-pointing-down",
+    "emoji": "\ud83d\udc47",
+    "unicode": "U+1F447",
+    "aliases": ["point-down"],
+    "keywords": ["down", "point"]
+  },
+  {
+    "name": "thumbs-up",
+    "emoji": "\ud83d\udc4d",
+    "unicode": "U+1F44D",
+    "aliases": ["+1", "thumbsup"],
+    "keywords": ["like", "approve", "yes"]
+  },
+  {
+    "name": "thumbs-down",
+    "emoji": "\ud83d\udc4e",
+    "unicode": "U+1F44E",
+    "aliases": ["-1", "thumbsdown"],
+    "keywords": ["dislike", "no"]
+  },
+  {
+    "name": "raised-fist",
+    "emoji": "\u270a",
+    "unicode": "U+270A",
+    "aliases": ["fist"],
+    "keywords": ["power", "solidarity"]
+  },
+  {
+    "name": "oncoming-fist",
+    "emoji": "\ud83d\udc4a",
+    "unicode": "U+1F44A",
+    "aliases": ["fist-bump", "punch"],
+    "keywords": ["fist", "bump"]
+  },
+  {
+    "name": "clapping-hands",
+    "emoji": "\ud83d\udc4f",
+    "unicode": "U+1F44F",
+    "aliases": ["clap"],
+    "keywords": ["applause", "bravo"]
+  },
+  {
+    "name": "raised-hands",
+    "emoji": "\ud83d\ude4c",
+    "unicode": "U+1F64C",
+    "aliases": ["raised-hands"],
+    "keywords": ["celebration", "praise"]
+  },
   { "name": "open-hands", "emoji": "\ud83d\udc50", "unicode": "U+1F450", "aliases": [], "keywords": ["hug", "open"] },
-  { "name": "palms-up-together", "emoji": "\ud83e\udd32", "unicode": "U+1F932", "aliases": [], "keywords": ["pray", "hopeful"] },
-  { "name": "handshake", "emoji": "\ud83e\udd1d", "unicode": "U+1F91D", "aliases": ["deal"], "keywords": ["agreement", "partnership"] },
-  { "name": "folded-hands", "emoji": "\ud83d\ude4f", "unicode": "U+1F64F", "aliases": ["pray"], "keywords": ["please", "thanks", "hope"] },
-  { "name": "writing-hand", "emoji": "\u270d\ufe0f", "unicode": "U+270D", "aliases": ["writing"], "keywords": ["note", "write"] },
-  { "name": "nail-polish", "emoji": "\ud83d\udc85", "unicode": "U+1F485", "aliases": ["nails"], "keywords": ["manicure", "beauty"] },
+  {
+    "name": "palms-up-together",
+    "emoji": "\ud83e\udd32",
+    "unicode": "U+1F932",
+    "aliases": [],
+    "keywords": ["pray", "hopeful"]
+  },
+  {
+    "name": "handshake",
+    "emoji": "\ud83e\udd1d",
+    "unicode": "U+1F91D",
+    "aliases": ["deal"],
+    "keywords": ["agreement", "partnership"]
+  },
+  {
+    "name": "folded-hands",
+    "emoji": "\ud83d\ude4f",
+    "unicode": "U+1F64F",
+    "aliases": ["pray"],
+    "keywords": ["please", "thanks", "hope"]
+  },
+  {
+    "name": "writing-hand",
+    "emoji": "\u270d\ufe0f",
+    "unicode": "U+270D",
+    "aliases": ["writing"],
+    "keywords": ["note", "write"]
+  },
+  {
+    "name": "nail-polish",
+    "emoji": "\ud83d\udc85",
+    "unicode": "U+1F485",
+    "aliases": ["nails"],
+    "keywords": ["manicure", "beauty"]
+  },
   { "name": "selfie", "emoji": "\ud83e\udd33", "unicode": "U+1F933", "aliases": [], "keywords": ["photo", "camera"] },
-  { "name": "flexed-biceps", "emoji": "\ud83d\udcaa", "unicode": "U+1F4AA", "aliases": ["muscle"], "keywords": ["strong", "gym", "workout"] },
-  { "name": "eyes", "emoji": "\ud83d\udc40", "unicode": "U+1F440", "aliases": ["eyes"], "keywords": ["look", "watching"] },
+  {
+    "name": "flexed-biceps",
+    "emoji": "\ud83d\udcaa",
+    "unicode": "U+1F4AA",
+    "aliases": ["muscle"],
+    "keywords": ["strong", "gym", "workout"]
+  },
+  {
+    "name": "eyes",
+    "emoji": "\ud83d\udc40",
+    "unicode": "U+1F440",
+    "aliases": ["eyes"],
+    "keywords": ["look", "watching"]
+  },
   { "name": "eye", "emoji": "\ud83d\udc41\ufe0f", "unicode": "U+1F441", "aliases": [], "keywords": ["look", "see"] },
   { "name": "tongue", "emoji": "\ud83d\udc45", "unicode": "U+1F445", "aliases": [], "keywords": ["taste", "silly"] },
   { "name": "mouth", "emoji": "\ud83d\udc44", "unicode": "U+1F444", "aliases": [], "keywords": ["lips", "speak"] },
-  { "name": "brain", "emoji": "\ud83e\udde0", "unicode": "U+1F9E0", "aliases": [], "keywords": ["smart", "idea", "think"] }
+  {
+    "name": "brain",
+    "emoji": "\ud83e\udde0",
+    "unicode": "U+1F9E0",
+    "aliases": [],
+    "keywords": ["smart", "idea", "think"]
+  }
 ]

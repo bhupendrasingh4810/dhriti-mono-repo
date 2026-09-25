@@ -1,25 +1,14 @@
 import { Body, Controller, Get, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { RequireAccess } from "../../common/decorators/access.decorator";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { NexusService, type ExtractedTask } from "./nexus.service";
-import {
-  AskDto,
-  ExtractTasksDto,
-  SummarizeConversationDto,
-  SummarizePageDto,
-} from "./dto/nexus.dto";
+import { AskDto, ExtractTasksDto, SummarizeConversationDto, SummarizePageDto } from "./dto/nexus.dto";
 
 @ApiTags("nexus")
 @ApiBearerAuth()
@@ -36,12 +25,7 @@ export class NexusController {
     @CurrentOrganization() organization: OrganizationContext,
     @Body() dto: SummarizeConversationDto,
   ) {
-    return this.nexus.summarizeConversation(
-      organization.organizationId,
-      user.userId,
-      dto.channelId,
-      dto.messageLimit,
-    );
+    return this.nexus.summarizeConversation(organization.organizationId, user.userId, dto.channelId, dto.messageLimit);
   }
 
   @Post("summarize/page")
@@ -90,10 +74,7 @@ export class NexusController {
   @Get("tasks")
   @RequireAccess({ entitlement: "nexus.enabled", permission: "nexus.task.read" })
   @ApiOperation({ summary: "List the current user's Nexus AI tasks (summaries, extractions)" })
-  async listTasks(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentOrganization() organization: OrganizationContext,
-  ) {
+  async listTasks(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
     return this.nexus.listTasks(organization.organizationId, user.userId);
   }
 }

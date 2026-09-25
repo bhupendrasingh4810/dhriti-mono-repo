@@ -50,7 +50,12 @@ import { ConnectConversations } from "@/features/connect/components/ConnectConve
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import { ConnectConversationMessage, ConnectPendingAttachment, ConnectSidebarMenuContext, ConnectSidebarTeamGroup } from "@/types/connect.types";
+import {
+  ConnectConversationMessage,
+  ConnectPendingAttachment,
+  ConnectSidebarMenuContext,
+  ConnectSidebarTeamGroup,
+} from "@/types/connect.types";
 import { ConnectMessageInput } from "@/features/connect/components/ConnectMessageInput";
 import { ConnectMentionsFilter, ConnectMentionsView } from "@/features/connect/components/ConnectMentionsView";
 import { ConnectChannelDetailsPanel } from "@/features/connect/components/ConnectChannelDetailsPanel";
@@ -106,7 +111,12 @@ export default function ConnectPage() {
 
   const [activeQuickViewId, setActiveQuickViewId] = useState<string | null>(null);
   const [expandedTeamIds, setExpandedTeamIds] = useState<Record<string, boolean>>({ team_001: true });
-  const [sectionViewMode, setSectionViewMode] = useState({ favorites: "all", chats: "all", mentions: "always", threads: "always" });
+  const [sectionViewMode, setSectionViewMode] = useState({
+    favorites: "all",
+    chats: "all",
+    mentions: "always",
+    threads: "always",
+  });
   const [quotedMessage, setQuotedMessage] = useState<ConnectMessage | null>(null);
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
@@ -120,15 +130,18 @@ export default function ConnectPage() {
 
   const [messagesByConversation, setMessagesByConversation] = useState<Record<string, ConnectMessage[]>>(() =>
     Object.fromEntries(
-      Object.entries(connectMessagesByConversation).map(([conversationId, messages]) => [conversationId, [...messages]])
-    )
+      Object.entries(connectMessagesByConversation).map(([conversationId, messages]) => [
+        conversationId,
+        [...messages],
+      ]),
+    ),
   );
 
   const [conversationsById, setConversationsById] = useState<Record<string, ConnectConversation>>(() =>
     connectConversations.reduce<Record<string, ConnectConversation>>((acc, conversation) => {
       acc[conversation.id] = { ...conversation };
       return acc;
-    }, {})
+    }, {}),
   );
 
   const [sidebarMenuAnchor, setSidebarMenuAnchor] = useState<HTMLElement | null>(null);
@@ -146,7 +159,6 @@ export default function ConnectPage() {
   const [editingMessageDraft, setEditingMessageDraft] = useState("");
   const [discardEditDialogOpen, setDiscardEditDialogOpen] = useState(false);
 
-
   useEffect(() => {
     return () => {
       if (reactionHoverCloseTimerRef.current) {
@@ -159,40 +171,45 @@ export default function ConnectPage() {
   const selectedConversation = conversationsById[selectedConversationId] ?? connectConversations[0];
   const selectedTeam = selectedConversation?.teamId ? connectTeamsById[selectedConversation.teamId] : null;
 
-  const favoriteConversations = useMemo(
-    () => {
-      const items = [...connectSidebarState.favorites.channels, ...connectSidebarState.favorites.chats]
-        .map((id) => conversationsById[id])
-        .filter((conversation): conversation is ConnectConversation => Boolean(conversation));
+  const favoriteConversations = useMemo(() => {
+    const items = [...connectSidebarState.favorites.channels, ...connectSidebarState.favorites.chats]
+      .map((id) => conversationsById[id])
+      .filter((conversation): conversation is ConnectConversation => Boolean(conversation));
 
-      const withPersonal = currentUser
-        ? [{
-          id: `personal_${currentUser.id}`,
-          type: "direct" as const,
-          organizationId: selectedConversation.organizationId,
-          name: `${currentUser.displayName} (You)`,
-          avatar: currentUser.avatar,
-          createdBy: currentUser.id,
-          createdAt: currentUser.createdAt,
-          participants: [currentUser.id],
-          lastMessageAt: new Date().toISOString(),
-          unreadCount: 0,
-          isFavorite: true,
-          muted: false,
-          pinned: true,
-          archived: false,
-          description: "Personal messages visible only to you.",
-        }, ...items]
-        : items;
+    const withPersonal = currentUser
+      ? [
+          {
+            id: `personal_${currentUser.id}`,
+            type: "direct" as const,
+            organizationId: selectedConversation.organizationId,
+            name: `${currentUser.displayName} (You)`,
+            avatar: currentUser.avatar,
+            createdBy: currentUser.id,
+            createdAt: currentUser.createdAt,
+            participants: [currentUser.id],
+            lastMessageAt: new Date().toISOString(),
+            unreadCount: 0,
+            isFavorite: true,
+            muted: false,
+            pinned: true,
+            archived: false,
+            description: "Personal messages visible only to you.",
+          },
+          ...items,
+        ]
+      : items;
 
-      return sectionViewMode.favorites === "unread" ? withPersonal.filter((conversation) => conversation.unreadCount > 0) : withPersonal;
-    },
-    [conversationsById, currentUser, sectionViewMode.favorites, selectedConversation.organizationId]
-  );
+    return sectionViewMode.favorites === "unread"
+      ? withPersonal.filter((conversation) => conversation.unreadCount > 0)
+      : withPersonal;
+  }, [conversationsById, currentUser, sectionViewMode.favorites, selectedConversation.organizationId]);
 
   const chatConversations = useMemo(
-    () => Object.values(conversationsById).filter((conversation) => conversation.type === "direct" || conversation.type === "group"),
-    [conversationsById]
+    () =>
+      Object.values(conversationsById).filter(
+        (conversation) => conversation.type === "direct" || conversation.type === "group",
+      ),
+    [conversationsById],
   );
 
   const recentConversations = useMemo(
@@ -200,16 +217,25 @@ export default function ConnectPage() {
       connectSidebarState.recentChats
         .map((id) => conversationsById[id])
         .filter((conversation): conversation is ConnectConversation => Boolean(conversation)),
-    [conversationsById]
+    [conversationsById],
   );
 
-  const unreadTotal = useMemo(() => Object.values(connectSidebarState.unread).reduce((sum, count) => sum + count, 0), []);
-  const mentionTotal = useMemo(() => Object.values(connectSidebarState.mentions).reduce((sum, count) => sum + count, 0), []);
+  const unreadTotal = useMemo(
+    () => Object.values(connectSidebarState.unread).reduce((sum, count) => sum + count, 0),
+    [],
+  );
+  const mentionTotal = useMemo(
+    () => Object.values(connectSidebarState.mentions).reduce((sum, count) => sum + count, 0),
+    [],
+  );
   const draftCount = useMemo(() => (composerMessage.trim() ? 1 : 0), [composerMessage]);
 
   const threadCount = useMemo(
-    () => Object.values(messagesByConversation).flat().filter((message) => (message.replyCount ?? 0) > 0).length,
-    [messagesByConversation]
+    () =>
+      Object.values(messagesByConversation)
+        .flat()
+        .filter((message) => (message.replyCount ?? 0) > 0).length,
+    [messagesByConversation],
   );
 
   const selectedMessages = useMemo(() => {
@@ -219,17 +245,17 @@ export default function ConnectPage() {
 
   const conversationFiles = useMemo(
     () => connectFiles.filter((file) => file.conversationId === selectedConversation?.id),
-    [selectedConversation]
+    [selectedConversation],
   );
 
   const pinnedCount = useMemo(
     () => connectPinnedItems.filter((item) => item.conversationId === selectedConversation?.id).length,
-    [selectedConversation]
+    [selectedConversation],
   );
 
   const relatedMeetings = useMemo(
     () => (selectedConversation?.type === "channel" ? connectMeetings.slice(0, 1) : []),
-    [selectedConversation]
+    [selectedConversation],
   );
 
   const sidebarTeams = useMemo<ConnectSidebarTeamGroup[]>(
@@ -248,7 +274,7 @@ export default function ConnectPage() {
             isPrivate: channel.visibility === "private",
           })),
       })),
-    [expandedTeamIds]
+    [expandedTeamIds],
   );
 
   const sidebarQuickViews = useMemo(
@@ -259,7 +285,7 @@ export default function ConnectPage() {
         label: item.label,
         value: item.label === "Mentions" ? mentionTotal : item.label === "Threads" ? threadCount : draftCount,
       })),
-    [draftCount, mentionTotal, threadCount]
+    [draftCount, mentionTotal, threadCount],
   );
 
   const visibleChatConversations = useMemo(() => {
@@ -267,7 +293,9 @@ export default function ConnectPage() {
       .concat(chatConversations)
       .filter((conversation, index, all) => all.findIndex((item) => item.id === conversation.id) === index);
 
-    return sectionViewMode.chats === "unread" ? merged.filter((conversation) => (connectSidebarState.unread[conversation.id] ?? conversation.unreadCount) > 0) : merged;
+    return sectionViewMode.chats === "unread"
+      ? merged.filter((conversation) => (connectSidebarState.unread[conversation.id] ?? conversation.unreadCount) > 0)
+      : merged;
   }, [chatConversations, recentConversations, sectionViewMode.chats]);
 
   const mentionItems = useMemo(() => {
@@ -296,7 +324,7 @@ export default function ConnectPage() {
 
   const selectedMention = useMemo(
     () => mentionItems.find((item) => item.id === selectedMentionId) ?? null,
-    [mentionItems, selectedMentionId]
+    [mentionItems, selectedMentionId],
   );
 
   const mentionDetail = useMemo(() => {
@@ -329,7 +357,12 @@ export default function ConnectPage() {
   }, [conversationsById, messagesByConversation, selectedMention]);
 
   const mentionSourceMenuItems = useMemo<ConnectCascadingMenuItem[]>(() => {
-    if (!activeMentionMenuId || !selectedMention || selectedMention.id !== activeMentionMenuId || selectedMention.sourceType !== "channel") {
+    if (
+      !activeMentionMenuId ||
+      !selectedMention ||
+      selectedMention.id !== activeMentionMenuId ||
+      selectedMention.sourceType !== "channel"
+    ) {
       return [];
     }
 
@@ -345,22 +378,31 @@ export default function ConnectPage() {
     { id: "audio-call", label: "Audio Call", icon: <PeopleRounded fontSize="small" /> },
   ];
 
-
-
   const sidebarMenuItems = useMemo<ConnectCascadingMenuItem[]>(
-    () => getMenuItems(
-      sidebarMenuContext,
+    () =>
+      getMenuItems(
+        sidebarMenuContext,
+        sectionViewMode,
+        setSectionViewMode,
+        setCreateSectionOpen,
+        setCreateTeamOpen,
+        setCreateChannelOpen,
+        pushSystemMessage,
+      ),
+    [
       sectionViewMode,
+      sidebarMenuContext,
       setSectionViewMode,
       setCreateSectionOpen,
       setCreateTeamOpen,
       setCreateChannelOpen,
-      pushSystemMessage
-    ),
-    [sectionViewMode, sidebarMenuContext, setSectionViewMode, setCreateSectionOpen, setCreateTeamOpen, setCreateChannelOpen, pushSystemMessage]
+      pushSystemMessage,
+    ],
   );
 
-  const activeMenuMessage = activeMessageId ? selectedMessages.find((message) => message.id === activeMessageId) : undefined;
+  const activeMenuMessage = activeMessageId
+    ? selectedMessages.find((message) => message.id === activeMessageId)
+    : undefined;
   const canEditActiveMessage = Boolean(activeMenuMessage && activeMenuMessage.senderId === currentUser.id);
 
   const messageMenuItems: ConnectCascadingMenuItem[] = [
@@ -451,11 +493,11 @@ export default function ConnectPage() {
             reactions: reactions.map((reaction) =>
               reaction.emoji === emoji
                 ? {
-                  ...reaction,
-                  count: reaction.count + 1,
-                  userIds: hasUser ? reaction.userIds : [...reaction.userIds, currentUser.id],
-                }
-                : reaction
+                    ...reaction,
+                    count: reaction.count + 1,
+                    userIds: hasUser ? reaction.userIds : [...reaction.userIds, currentUser.id],
+                  }
+                : reaction,
             ),
           };
         }
@@ -494,7 +536,11 @@ export default function ConnectPage() {
     }));
   }
 
-  function handleSendMessageToConversation(conversationId: string, payload: { content: string; mentionUserIds: string[] }, attachments?: ConnectPendingAttachment[]) {
+  function handleSendMessageToConversation(
+    conversationId: string,
+    payload: { content: string; mentionUserIds: string[] },
+    attachments?: ConnectPendingAttachment[],
+  ) {
     const conversation = conversationsById[conversationId];
     if (!conversation || !currentUser) return;
     if (!payload.content.trim() && !attachments?.length) return;
@@ -533,7 +579,11 @@ export default function ConnectPage() {
   function handleSendMessage(payload: { content: string; mentionUserIds: string[] }) {
     if (!selectedConversation) return;
 
-    handleSendMessageToConversation(selectedConversation.id, payload, pendingAttachments.length ? pendingAttachments : undefined);
+    handleSendMessageToConversation(
+      selectedConversation.id,
+      payload,
+      pendingAttachments.length ? pendingAttachments : undefined,
+    );
 
     setComposerMessage("");
     setPendingAttachments([]);
@@ -608,11 +658,11 @@ export default function ConnectPage() {
       [selectedConversation.id]: (previous[selectedConversation.id] ?? []).map((message) =>
         message.id === editingMessageId
           ? {
-            ...message,
-            content: nextContent,
-            mentions: payload.mentionUserIds,
-          }
-          : message
+              ...message,
+              content: nextContent,
+              mentions: payload.mentionUserIds,
+            }
+          : message,
       ),
     }));
     setEditingMessageId(null);
@@ -682,29 +732,36 @@ export default function ConnectPage() {
     setMentionPendingAttachments((previous) => previous.filter((attachment) => attachment.id !== attachmentId));
   }
 
-
-
-
   if (!selectedConversation || !currentUser) return null;
 
   const quotedPreview = quotedMessage
     ? {
-      senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-      content: quotedMessage.content,
-    }
+        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+        content: quotedMessage.content,
+      }
     : null;
 
-  const mentionQuotedPreview = quotedMessage && selectedMention
-    ? {
-      senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-      content: quotedMessage.content,
-    }
-    : null;
+  const mentionQuotedPreview =
+    quotedMessage && selectedMention
+      ? {
+          senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+          content: quotedMessage.content,
+        }
+      : null;
 
   const isMentionsView = activeQuickViewId === "mentions";
 
   return (
-    <Box sx={{ height: "100%", display: "flex", flexDirection: "column", overflow: "hidden", bgcolor: "background.default", color: "text.primary" }}>
+    <Box
+      sx={{
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+        bgcolor: "background.default",
+        color: "text.primary",
+      }}
+    >
       <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
         <ConnectSidebar
           quickViews={sidebarQuickViews}
@@ -735,7 +792,12 @@ export default function ConnectPage() {
         {isMentionsView ? (
           <ConnectMentionsView
             items={mentionItems}
-            usersById={Object.fromEntries(Object.values(connectUsersById).map((user) => [user.id, { id: user.id, displayName: user.displayName, avatar: user.avatar, jobTitle: user.jobTitle }]))}
+            usersById={Object.fromEntries(
+              Object.values(connectUsersById).map((user) => [
+                user.id,
+                { id: user.id, displayName: user.displayName, avatar: user.avatar, jobTitle: user.jobTitle },
+              ]),
+            )}
             selectedMentionId={selectedMentionId}
             filter={mentionsFilter}
             detail={mentionDetail}
@@ -761,7 +823,9 @@ export default function ConnectPage() {
             composer={
               selectedMention ? (
                 <ConnectMessageInput
-                  conversationLabel={getConversationLabel(conversationsById[selectedMention.conversationId] ?? selectedConversation)}
+                  conversationLabel={getConversationLabel(
+                    conversationsById[selectedMention.conversationId] ?? selectedConversation,
+                  )}
                   value={mentionComposerMessage}
                   users={connectUsers.map((user) => ({
                     id: user.id,
@@ -774,7 +838,11 @@ export default function ConnectPage() {
                   pendingAttachments={mentionPendingAttachments}
                   onChange={setMentionComposerMessage}
                   onSend={(payload) => {
-                    handleSendMessageToConversation(selectedMention.conversationId, payload, mentionPendingAttachments.length ? mentionPendingAttachments : undefined);
+                    handleSendMessageToConversation(
+                      selectedMention.conversationId,
+                      payload,
+                      mentionPendingAttachments.length ? mentionPendingAttachments : undefined,
+                    );
                     setMentionComposerMessage("");
                     setMentionPendingAttachments([]);
                     setQuotedMessage(null);
@@ -801,7 +869,10 @@ export default function ConnectPage() {
             messages={selectedMessages as ConnectConversationMessage[]}
             activeMessageMenuId={activeMessageId}
             activeMessageEmojiId={activeMessageForEmoji}
-            getQuotedMessageById={(id) => (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as ConnectConversationMessage | undefined}
+            getQuotedMessageById={(id) =>
+              (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as
+                ConnectConversationMessage | undefined
+            }
             onOpenDetails={() => setShowDetails(true)}
             onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
             onOpenMessageEmoji={openMessageEmojiMenu}
@@ -840,19 +911,25 @@ export default function ConnectPage() {
           </ConnectConversations>
         )}
 
-        {!isMentionsView ? <ConnectChannelDetailsPanel
-          open={showDetails}
-          title={selectedConversation.name}
-          type={selectedConversation.type}
-          teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
-          description={selectedConversation.description ?? ""}
-          memberCount={selectedConversation.participants.length}
-          pinnedCount={pinnedCount}
-          linkCount={(messagesByConversation[selectedConversation.id] ?? []).filter((message) => message.content.includes("http")).length}
-          files={conversationFiles.map((file) => ({ id: file.id, originalName: file.originalName, size: file.size }))}
-          meetings={relatedMeetings.map((meeting) => ({ id: meeting.id, title: meeting.title }))}
-          onClose={() => setShowDetails(false)}
-        /> : null}
+        {!isMentionsView ? (
+          <ConnectChannelDetailsPanel
+            open={showDetails}
+            title={selectedConversation.name}
+            type={selectedConversation.type}
+            teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
+            description={selectedConversation.description ?? ""}
+            memberCount={selectedConversation.participants.length}
+            pinnedCount={pinnedCount}
+            linkCount={
+              (messagesByConversation[selectedConversation.id] ?? []).filter((message) =>
+                message.content.includes("http"),
+              ).length
+            }
+            files={conversationFiles.map((file) => ({ id: file.id, originalName: file.originalName, size: file.size }))}
+            meetings={relatedMeetings.map((meeting) => ({ id: meeting.id, title: meeting.title }))}
+            onClose={() => setShowDetails(false)}
+          />
+        ) : null}
       </Box>
 
       <ConnectCascadingMenu
@@ -888,9 +965,13 @@ export default function ConnectPage() {
       <ConnectCascadingMenu
         anchorEl={messageMenuAnchor}
         open={Boolean(messageMenuAnchor) && Boolean(activeMessageId)}
-        onClose={() => { setMessageMenuAnchor(null); setActiveMessageId(null); }}
+        onClose={() => {
+          setMessageMenuAnchor(null);
+          setActiveMessageId(null);
+        }}
         items={messageMenuItems.map((item) => ({
-          ...item, onClick: () => {
+          ...item,
+          onClick: () => {
             if (item.id === "edit" && activeMessageId) {
               const message = selectedMessages.find((entry) => entry.id === activeMessageId);
               if (message) startEditMessage(message as ConnectConversationMessage);
@@ -908,8 +989,9 @@ export default function ConnectPage() {
 
             setMessageMenuAnchor(null);
             setActiveMessageId(null);
-          }
-        }))} />
+          },
+        }))}
+      />
 
       <ConfirmationDialog
         open={discardEditDialogOpen}
@@ -948,7 +1030,17 @@ export default function ConnectPage() {
         </Stack>
       ) : null}
 
-      <Popover open={Boolean(messageEmojiAnchor) && Boolean(activeMessageForEmoji)} anchorEl={messageEmojiAnchor} onClose={() => { setMessageEmojiAnchor(null); setActiveMessageForEmoji(null); }} disableScrollLock anchorOrigin={{ vertical: "bottom", horizontal: "left" }} transformOrigin={{ vertical: "top", horizontal: "left" }}>
+      <Popover
+        open={Boolean(messageEmojiAnchor) && Boolean(activeMessageForEmoji)}
+        anchorEl={messageEmojiAnchor}
+        onClose={() => {
+          setMessageEmojiAnchor(null);
+          setActiveMessageForEmoji(null);
+        }}
+        disableScrollLock
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+      >
         <Emoji
           width={320}
           height={380}
@@ -962,8 +1054,6 @@ export default function ConnectPage() {
         />
       </Popover>
 
-
-
       <Popover
         open={Boolean(reactionHover)}
         anchorEl={reactionHover?.anchorEl ?? null}
@@ -975,12 +1065,15 @@ export default function ConnectPage() {
         <Box onMouseEnter={cancelReactionHoverClose} onMouseLeave={scheduleReactionHoverClose}>
           <ConnectReactionUsersList
             emoji={reactionHover?.emoji ?? ""}
-            users={(reactionHover?.userIds ?? []).map((userId) => connectUsersById[userId]).filter(Boolean).map((user) => ({
-              id: user.id,
-              avatar: user.avatar,
-              displayName: user.displayName,
-              jobTitle: user.jobTitle,
-            }))}
+            users={(reactionHover?.userIds ?? [])
+              .map((userId) => connectUsersById[userId])
+              .filter(Boolean)
+              .map((user) => ({
+                id: user.id,
+                avatar: user.avatar,
+                displayName: user.displayName,
+                jobTitle: user.jobTitle,
+              }))}
           />
         </Box>
       </Popover>
@@ -994,27 +1087,33 @@ export default function ConnectPage() {
         transformOrigin={{ vertical: "center", horizontal: "left" }}
       >
         <Box>
-          {mentionHover ? (() => {
-            const user = connectUsersById[mentionHover.userId];
-            if (!user) return null;
+          {mentionHover
+            ? (() => {
+                const user = connectUsersById[mentionHover.userId];
+                if (!user) return null;
 
-            const reportsToUserId = connectReportsToByUserId[user.id];
-            const reportsToUser = reportsToUserId ? connectUsersById[reportsToUserId] : undefined;
+                const reportsToUserId = connectReportsToByUserId[user.id];
+                const reportsToUser = reportsToUserId ? connectUsersById[reportsToUserId] : undefined;
 
-            return (
-              <ConnectUserDetailsCard
-                avatar={user.avatar}
-                displayName={user.displayName}
-                jobTitle={user.jobTitle}
-                email={user.email}
-                phone={user.phone}
-                location={user.location}
-                timezone={user.timezone}
-                viewerTimezone={currentUser.timezone}
-                reportsTo={reportsToUser ? { displayName: reportsToUser.displayName, jobTitle: reportsToUser.jobTitle } : undefined}
-              />
-            );
-          })() : null}
+                return (
+                  <ConnectUserDetailsCard
+                    avatar={user.avatar}
+                    displayName={user.displayName}
+                    jobTitle={user.jobTitle}
+                    email={user.email}
+                    phone={user.phone}
+                    location={user.location}
+                    timezone={user.timezone}
+                    viewerTimezone={currentUser.timezone}
+                    reportsTo={
+                      reportsToUser
+                        ? { displayName: reportsToUser.displayName, jobTitle: reportsToUser.jobTitle }
+                        : undefined
+                    }
+                  />
+                );
+              })()
+            : null}
         </Box>
       </Popover>
 

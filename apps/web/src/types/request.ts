@@ -1,28 +1,28 @@
 export interface RegisterInput {
-    name: string;
-    email: string;
-    password: string;
-    isTermsAccepted: boolean;
+  name: string;
+  email: string;
+  password: string;
+  isTermsAccepted: boolean;
 }
 
 export interface VerifyEmailInput {
-    email: string;
-    token: string;
-    otp: string;
+  email: string;
+  token: string;
+  otp: string;
 }
 
 export interface ResendVerificationInput {
-    email: string;
-    token: string;
+  email: string;
+  token: string;
 }
 
 export interface ForgotPasswordInput {
-    email: string;
+  email: string;
 }
 
 export interface ResetPasswordInput {
-    token: string;
-    newPassword: string;
+  token: string;
+  newPassword: string;
 }
 
 export interface CreateOrganizationInput {

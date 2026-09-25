@@ -20,6 +20,7 @@ User.platformRole ∈ SUPER_ADMIN | SUPPORT | BILLING | SECURITY | ENGINEERING
 ```
 
 ## Platform Admin — base `/v1/control/platform`
+
 Guarded by `PlatformRolesGuard` + `@PlatformRoles(...)` (internal staff only).
 
 - `GET /dashboard` — orgs (total/active/suspended), users (total/active/MFA), subscription status counts, product counts, support (open/escalated).
@@ -32,6 +33,7 @@ Guarded by `PlatformRolesGuard` + `@PlatformRoles(...)` (internal staff only).
 - `GET /health` — uptime, memory, Redis.
 
 ## Organization Admin — base `/v1/control/organization`
+
 Guarded by `TenantGuard` + `@OrgRoles("OWNER","ADMIN")`.
 
 - `GET /dashboard` — members (total/owners/admins), teams, enabled products, subscription, storage usage, message/issue/page counts.
@@ -42,5 +44,6 @@ Guarded by `TenantGuard` + `@OrgRoles("OWNER","ADMIN")`.
 - `GET /audit-logs/export` — download org audit logs as CSV.
 
 ## Error codes
+
 `PRODUCT_NOT_FOUND`, `PRODUCT_KEY_TAKEN`, `TICKET_NOT_FOUND`,
 `ORGANIZATION_NOT_FOUND`, `FORBIDDEN`, plus the IAM codes.

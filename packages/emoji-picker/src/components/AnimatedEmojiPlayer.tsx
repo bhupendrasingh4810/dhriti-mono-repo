@@ -15,11 +15,6 @@ interface AnimatedEmojiPlayerProps {
  */
 export default function AnimatedEmojiPlayer({ animationData, size, autoplay }: AnimatedEmojiPlayerProps) {
   return (
-    <Lottie
-      animationData={animationData}
-      loop={false}
-      autoplay={autoplay}
-      style={{ width: size, height: size }}
-    />
+    <Lottie animationData={animationData} loop={false} autoplay={autoplay} style={{ width: size, height: size }} />
   );
 }

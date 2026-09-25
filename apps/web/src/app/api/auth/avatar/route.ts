@@ -9,9 +9,7 @@ export async function POST(request: NextRequest) {
     }
 
     const backendResponse = await authService.uploadAvatar(accessToken, await request.formData());
-    const responseBody = backendResponse.status === 204
-      ? undefined
-      : await backendResponse.json().catch(() => ({}));
+    const responseBody = backendResponse.status === 204 ? undefined : await backendResponse.json().catch(() => ({}));
     return NextResponse.json(responseBody, { status: backendResponse.status });
   } catch {
     return NextResponse.json({ error: { message: "Unable to upload profile photo." } }, { status: 500 });

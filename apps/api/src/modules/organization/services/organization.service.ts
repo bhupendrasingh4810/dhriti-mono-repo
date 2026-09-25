@@ -1,13 +1,5 @@
-
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type {
-  Group,
-  Organization,
-  OrganizationMember,
-  Team,
-  User,
-  UserRole,
-} from "@prisma/client";
+import type { Group, Organization, OrganizationMember, Team, User, UserRole } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
@@ -25,14 +17,11 @@ export class OrganizationService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementService,
-  ) { }
+  ) {}
 
   // ---------------- Organizations ----------------
 
-  async createOrganization(
-    creatorUserId: string,
-    input: { name: string; slug: string },
-  ): Promise<Organization> {
+  async createOrganization(creatorUserId: string, input: { name: string; slug: string }): Promise<Organization> {
     const slugTaken = await this.prisma.organization.findUnique({
       where: { slug: input.slug },
       select: { id: true },
@@ -86,11 +75,7 @@ export class OrganizationService {
       where: { id: organizationId },
     });
     if (!organization || organization.deletedAt) {
-      throw new AppError(
-        ErrorCode.ORGANIZATION_NOT_FOUND,
-        "Organization not found",
-        HttpStatus.NOT_FOUND,
-      );
+      throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Organization not found", HttpStatus.NOT_FOUND);
     }
     return organization;
   }
@@ -115,12 +100,7 @@ export class OrganizationService {
     });
   }
 
-  async addMember(
-    organizationId: string,
-    actorUserId: string,
-    email: string,
-    role: UserRole,
-  ): Promise<MemberWithUser> {
+  async addMember(organizationId: string, actorUserId: string, email: string, role: UserRole): Promise<MemberWithUser> {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     });
@@ -144,7 +124,9 @@ export class OrganizationService {
     }
 
     if (!existing) {
-      const memberCount = await this.prisma.organizationMember.count({ where: { organizationId, status: "ACTIVE", deletedAt: null } });
+      const memberCount = await this.prisma.organizationMember.count({
+        where: { organizationId, status: "ACTIVE", deletedAt: null },
+      });
       await this.entitlements.assertWithinLimit(organizationId, "max_users", memberCount + 1);
     }
 
@@ -159,7 +141,14 @@ export class OrganizationService {
         },
       });
     });
-    await this.audit.record({ action: "iam.member.activated", organizationId, actorUserId, resourceType: "OrganizationMember", resourceId: membership.id, metadata: { userId: user.id } });
+    await this.audit.record({
+      action: "iam.member.activated",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: membership.id,
+      metadata: { userId: user.id },
+    });
     return membership;
   }
 
@@ -178,7 +167,14 @@ export class OrganizationService {
         user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
       },
     });
-    await this.audit.record({ action: "iam.member.role_updated", organizationId, actorUserId, resourceType: "OrganizationMember", resourceId: member.id, metadata: { role } });
+    await this.audit.record({
+      action: "iam.member.role_updated",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: member.id,
+      metadata: { role },
+    });
     return updated;
   }
 
@@ -186,41 +182,99 @@ export class OrganizationService {
     const member = await this.getMember(organizationId, memberId);
     await this.prisma.$transaction(async (transaction) => {
       if (member.isOwner) {
-        const ownerCount = await transaction.organizationMember.count({ where: { organizationId, isOwner: true, status: "ACTIVE", deletedAt: null } });
-        if (ownerCount <= 1) {throw new AppError(ErrorCode.LAST_OWNER, "Transfer ownership before removing the last active owner", HttpStatus.CONFLICT);}
+        const ownerCount = await transaction.organizationMember.count({
+          where: { organizationId, isOwner: true, status: "ACTIVE", deletedAt: null },
+        });
+        if (ownerCount <= 1) {
+          throw new AppError(
+            ErrorCode.LAST_OWNER,
+            "Transfer ownership before removing the last active owner",
+            HttpStatus.CONFLICT,
+          );
+        }
       }
       const removedAt = new Date();
       await transaction.teamMember.deleteMany({ where: { userId: member.userId, team: { organizationId } } });
       await transaction.groupMember.deleteMany({ where: { userId: member.userId, group: { organizationId } } });
-      await transaction.organizationMember.update({ where: { id: member.id }, data: { status: "REMOVED", removedAt, deletedAt: removedAt } });
+      await transaction.organizationMember.update({
+        where: { id: member.id },
+        data: { status: "REMOVED", removedAt, deletedAt: removedAt },
+      });
     });
-    await this.audit.record({ action: "iam.member.removed", organizationId, actorUserId, resourceType: "OrganizationMember", resourceId: member.id, metadata: { userId: member.userId } });
+    await this.audit.record({
+      action: "iam.member.removed",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: member.id,
+      metadata: { userId: member.userId },
+    });
   }
 
-  async updateMemberLifecycle(organizationId: string, memberId: string, actorUserId: string, status: "ACTIVE" | "SUSPENDED"): Promise<MemberWithUser> {
+  async updateMemberLifecycle(
+    organizationId: string,
+    memberId: string,
+    actorUserId: string,
+    status: "ACTIVE" | "SUSPENDED",
+  ): Promise<MemberWithUser> {
     const member = await this.getMember(organizationId, memberId);
-    if (member.isOwner && status !== "ACTIVE") {await this.assertOwnerCanBeDeactivated(organizationId);}
+    if (member.isOwner && status !== "ACTIVE") {
+      await this.assertOwnerCanBeDeactivated(organizationId);
+    }
     const updated = await this.prisma.organizationMember.update({
       where: { id: member.id },
       data: { status, suspendedAt: status === "SUSPENDED" ? new Date() : null },
       include: { user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } } },
     });
-    await this.audit.record({ action: `iam.member.${status.toLowerCase()}`, organizationId, actorUserId, resourceType: "OrganizationMember", resourceId: member.id, metadata: { userId: member.userId } });
+    await this.audit.record({
+      action: `iam.member.${status.toLowerCase()}`,
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: member.id,
+      metadata: { userId: member.userId },
+    });
     return updated;
   }
 
-  async transferOwnership(organizationId: string, fromMemberId: string, toMemberId: string, actorUserId: string): Promise<void> {
-    if (fromMemberId === toMemberId) {return;}
+  async transferOwnership(
+    organizationId: string,
+    fromMemberId: string,
+    toMemberId: string,
+    actorUserId: string,
+  ): Promise<void> {
+    if (fromMemberId === toMemberId) {
+      return;
+    }
     await this.prisma.$transaction(async (transaction) => {
       const [from, to] = await Promise.all([
-        transaction.organizationMember.findFirst({ where: { id: fromMemberId, organizationId, status: "ACTIVE", isOwner: true, deletedAt: null }, select: { id: true } }),
-        transaction.organizationMember.findFirst({ where: { id: toMemberId, organizationId, status: "ACTIVE", deletedAt: null }, select: { id: true } }),
+        transaction.organizationMember.findFirst({
+          where: { id: fromMemberId, organizationId, status: "ACTIVE", isOwner: true, deletedAt: null },
+          select: { id: true },
+        }),
+        transaction.organizationMember.findFirst({
+          where: { id: toMemberId, organizationId, status: "ACTIVE", deletedAt: null },
+          select: { id: true },
+        }),
       ]);
-      if (!from || !to) {throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Active ownership transfer members not found", HttpStatus.NOT_FOUND);}
+      if (!from || !to) {
+        throw new AppError(
+          ErrorCode.MEMBER_NOT_FOUND,
+          "Active ownership transfer members not found",
+          HttpStatus.NOT_FOUND,
+        );
+      }
       await transaction.organizationMember.update({ where: { id: to.id }, data: { isOwner: true } });
       await transaction.organizationMember.update({ where: { id: from.id }, data: { isOwner: false } });
     });
-    await this.audit.record({ action: "iam.member.ownership_transferred", organizationId, actorUserId, resourceType: "OrganizationMember", resourceId: toMemberId, metadata: { fromMemberId } });
+    await this.audit.record({
+      action: "iam.member.ownership_transferred",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: toMemberId,
+      metadata: { fromMemberId },
+    });
   }
 
   // ---------------- Teams ----------------
@@ -235,10 +289,7 @@ export class OrganizationService {
     return teams.map(({ _count, ...team }) => ({ ...team, memberCount: _count.members }));
   }
 
-  async createTeam(
-    organizationId: string,
-    input: { name: string; slug: string; description?: string },
-  ): Promise<Team> {
+  async createTeam(organizationId: string, input: { name: string; slug: string; description?: string }): Promise<Team> {
     const slugTaken = await this.prisma.team.findUnique({
       where: { organizationId_slug: { organizationId, slug: input.slug } },
       select: { id: true },
@@ -406,7 +457,11 @@ export class OrganizationService {
    * Evaluates a dynamic group's rule and syncs membership to the matching org
    * members. Rule shape: { field: "role" | "teamId", op: "eq" | "in", value }.
    */
-  async syncDynamicGroup(organizationId: string, groupId: string, actorUserId: string): Promise<{ added: number; removed: number }> {
+  async syncDynamicGroup(
+    organizationId: string,
+    groupId: string,
+    actorUserId: string,
+  ): Promise<{ added: number; removed: number }> {
     const group = await this.getGroup(organizationId, groupId);
     if (!group.rule) {
       throw new AppError(ErrorCode.GROUP_NOT_DYNAMIC, "This group is manual and has no rule", HttpStatus.BAD_REQUEST);
@@ -427,10 +482,12 @@ export class OrganizationService {
 
     await this.prisma.$transaction([
       ...(toAdd.length > 0
-        ? [this.prisma.groupMember.createMany({
-          data: toAdd.map((userId) => ({ groupId, userId })),
-          skipDuplicates: true,
-        })]
+        ? [
+            this.prisma.groupMember.createMany({
+              data: toAdd.map((userId) => ({ groupId, userId })),
+              skipDuplicates: true,
+            }),
+          ]
         : []),
       ...(toRemove.length > 0
         ? [this.prisma.groupMember.deleteMany({ where: { groupId, userId: { in: toRemove } } })]
@@ -528,8 +585,15 @@ export class OrganizationService {
   }
 
   private async assertOwnerCanBeDeactivated(organizationId: string): Promise<void> {
-    const ownerCount = await this.prisma.organizationMember.count({ where: { organizationId, isOwner: true, status: "ACTIVE", deletedAt: null } });
-    if (ownerCount <= 1) {throw new AppError(ErrorCode.LAST_OWNER, "Transfer ownership before changing the last active owner", HttpStatus.CONFLICT);}
+    const ownerCount = await this.prisma.organizationMember.count({
+      where: { organizationId, isOwner: true, status: "ACTIVE", deletedAt: null },
+    });
+    if (ownerCount <= 1) {
+      throw new AppError(
+        ErrorCode.LAST_OWNER,
+        "Transfer ownership before changing the last active owner",
+        HttpStatus.CONFLICT,
+      );
+    }
   }
-
 }

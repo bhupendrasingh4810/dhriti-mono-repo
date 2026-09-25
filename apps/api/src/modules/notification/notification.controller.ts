@@ -1,31 +1,12 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { NotificationService, type NotificationPage } from "./notification.service";
-import {
-  CreateNotificationDto,
-  ListNotificationsQueryDto,
-  UpsertPreferenceDto,
-} from "./dto/notification.dto";
+import { CreateNotificationDto, ListNotificationsQueryDto, UpsertPreferenceDto } from "./dto/notification.dto";
 
 @ApiTags("notifications")
 @ApiBearerAuth()
@@ -56,10 +37,7 @@ export class NotificationController {
 
   @Post()
   @ApiOperation({ summary: "Create a notification for a user (internal/mention use)" })
-  async create(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Body() dto: CreateNotificationDto,
-  ) {
+  async create(@CurrentOrganization() organization: OrganizationContext, @Body() dto: CreateNotificationDto) {
     return this.notifications.create(organization.organizationId, dto);
   }
 

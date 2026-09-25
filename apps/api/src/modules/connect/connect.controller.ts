@@ -13,26 +13,15 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { RequireAccess } from "../../common/decorators/access.decorator";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
-import {
-  AddReactionDto,
-  CreateMessageDto,
-  ListMessagesQueryDto,
-  UpdateMessageDto,
-} from "./dto/message.dto";
+import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, UpdateMessageDto } from "./dto/message.dto";
 
 @ApiTags("connect")
 @ApiBearerAuth()
@@ -46,10 +35,7 @@ export class ConnectController {
   @Get("channels")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @ApiOperation({ summary: "List channels visible to the current user" })
-  async listChannels(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentOrganization() organization: OrganizationContext,
-  ) {
+  async listChannels(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
     return this.connect.listChannels(organization.organizationId, user.userId);
   }
 

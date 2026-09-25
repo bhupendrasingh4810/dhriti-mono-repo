@@ -8,17 +8,13 @@ import { ErrorCode } from "../../../common/errors/error-codes";
 import type { UpdateProfileDto, UserProfileResponse } from "../dto/profile.dto";
 import type { OrganizationResponse } from "../dto/auth-response.dto";
 
-
 type UserWithRelations = User & { auth: UserAuth | null; profile: UserProfile | null };
 
 const withAuthAndProfile = { auth: true, profile: true } as const;
 
 @Injectable()
 export class ProfileService {
-
-  constructor(
-    private readonly prisma: PrismaService,
-  ) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Retrieves the profile of the specified user.

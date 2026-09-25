@@ -1,12 +1,9 @@
 // apps/web/src/app/api/auth/me/route.ts
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
-import { authService } from '@/services/auth.server';
-import {
-  clearAuthCookies,
-  setAuthCookies,
-} from '@/lib/auth/cookie-helpers';
+import { authService } from "@/services/auth.server";
+import { clearAuthCookies, setAuthCookies } from "@/lib/auth/cookie-helpers";
 
 type AuthUser = {
   id: string;
@@ -26,10 +23,7 @@ type RefreshResponse = {
   user: AuthUser;
 };
 
-function jsonError(
-  message: string,
-  status: number,
-) {
+function jsonError(message: string, status: number) {
   return NextResponse.json(
     {
       user: null,
@@ -48,14 +42,12 @@ async function parseJson<T>(response: Response): Promise<T | null> {
 }
 
 export async function GET(request: NextRequest) {
-  const accessToken =
-    request.cookies.get('access_token')?.value;
+  const accessToken = request.cookies.get("access_token")?.value;
 
-  const refreshToken =
-    request.cookies.get('refresh_token')?.value;
+  const refreshToken = request.cookies.get("refresh_token")?.value;
 
   if (!accessToken && !refreshToken) {
-    return jsonError('Unauthenticated', 401);
+    return jsonError("Unauthenticated", 401);
   }
 
   if (accessToken) {
@@ -65,7 +57,7 @@ export async function GET(request: NextRequest) {
       const user = await parseJson<AuthUser>(backendResponse);
 
       if (!user) {
-        return jsonError('Invalid authentication response', 502);
+        return jsonError("Invalid authentication response", 502);
       }
 
       return NextResponse.json({ user });
@@ -79,43 +71,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           user: null,
-          message: body?.message ?? 'Unable to load session',
+          message: body?.message ?? "Unable to load session",
         },
         {
-          status: backendResponse.status >= 400
-            ? backendResponse.status
-            : 502,
+          status: backendResponse.status >= 400 ? backendResponse.status : 502,
         },
       );
     }
   }
 
   if (!refreshToken) {
-    const response = jsonError('Unauthenticated', 401);
+    const response = jsonError("Unauthenticated", 401);
     clearAuthCookies(response);
     return response;
   }
 
-  const refreshResponse =
-    await authService.refresh(refreshToken);
+  const refreshResponse = await authService.refresh(refreshToken);
 
   if (!refreshResponse.ok) {
-    const response = jsonError('Unauthenticated', 401);
+    const response = jsonError("Unauthenticated", 401);
     clearAuthCookies(response);
     return response;
   }
 
-  const refreshed =
-    await parseJson<RefreshResponse>(refreshResponse);
+  const refreshed = await parseJson<RefreshResponse>(refreshResponse);
 
-  if (
-    !refreshed?.accessToken ||
-    !refreshed.user
-  ) {
-    const response = jsonError(
-      'Invalid refresh response',
-      502,
-    );
+  if (!refreshed?.accessToken || !refreshed.user) {
+    const response = jsonError("Invalid refresh response", 502);
 
     clearAuthCookies(response);
     return response;

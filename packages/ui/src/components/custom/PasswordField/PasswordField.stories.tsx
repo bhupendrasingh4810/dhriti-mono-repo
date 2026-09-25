@@ -21,7 +21,15 @@ export const Default: Story = {
 };
 
 export const WithError: Story = {
-  render: () => <PasswordField error helperText="Password does not meet the requirements." label="Account password" onChange={() => undefined} value="short" />,
+  render: () => (
+    <PasswordField
+      error
+      helperText="Password does not meet the requirements."
+      label="Account password"
+      onChange={() => undefined}
+      value="short"
+    />
+  ),
 };
 
 export const Disabled: Story = {

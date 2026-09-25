@@ -35,7 +35,8 @@ export function DhritiEmojiPicker({
 }: DhritiEmojiPickerProps) {
   const [hoveredEmoji, setHoveredEmoji] = useState<EmojiDefinition | null>(null);
 
-  const resolvedInitialCategory: EmojiCategory = initialCategory ?? (showFrequentlyUsed ? "frequently-used" : "smileys-emotion");
+  const resolvedInitialCategory: EmojiCategory =
+    initialCategory ?? (showFrequentlyUsed ? "frequently-used" : "smileys-emotion");
 
   const {
     activeCategory,
@@ -61,10 +62,11 @@ export function DhritiEmojiPicker({
         if (category.id === "frequently-used") return showFrequentlyUsed;
         return true;
       }),
-    [showRecent, showFrequentlyUsed]
+    [showRecent, showFrequentlyUsed],
   );
 
-  const showFrequentlyUsedStrip = showFrequentlyUsed && !isSearching && activeCategory !== "frequently-used" && frequentlyUsedEmojis.length > 0;
+  const showFrequentlyUsedStrip =
+    showFrequentlyUsed && !isSearching && activeCategory !== "frequently-used" && frequentlyUsedEmojis.length > 0;
 
   return (
     <Box
@@ -105,7 +107,13 @@ export function DhritiEmojiPicker({
         ) : null}
 
         {isSearching ? (
-          <EmojiGrid emojis={searchResults} onSelect={selectEmoji} onHover={setHoveredEmoji} disabled={disabled} animated={animated} />
+          <EmojiGrid
+            emojis={searchResults}
+            onSelect={selectEmoji}
+            onHover={setHoveredEmoji}
+            disabled={disabled}
+            animated={animated}
+          />
         ) : (
           <EmojiSection
             title={getEmojiCategoryLabel(activeCategory)}

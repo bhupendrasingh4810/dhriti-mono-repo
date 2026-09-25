@@ -22,12 +22,7 @@ export class GithubStrategy extends PassportStrategy(Strategy, "github") {
     });
   }
 
-  validate(
-    _accessToken: string,
-    _refreshToken: string,
-    profile: Profile,
-    done: GithubVerifyCallback,
-  ): void {
+  validate(_accessToken: string, _refreshToken: string, profile: Profile, done: GithubVerifyCallback): void {
     const email = profile.emails?.[0]?.value;
     if (!email) {
       done(new Error("GitHub account has no accessible email"));

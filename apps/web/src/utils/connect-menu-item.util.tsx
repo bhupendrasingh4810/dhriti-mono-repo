@@ -64,7 +64,7 @@ export function getMenuItems(
   setCreateSectionOpen: (open: boolean) => void,
   setCreateTeamOpen: (open: boolean) => void,
   setCreateChannelOpen: (open: boolean) => void,
-  pushSystemMessage: (msg: string) => void
+  pushSystemMessage: (msg: string) => void,
 ): ConnectCascadingMenuItem[] {
   if (!sidebarMenuContext?.kind) return [];
 
@@ -72,14 +72,14 @@ export function getMenuItems(
   switch (sidebarMenuContext.kind) {
     case "section": {
       const { sectionId } = sidebarMenuContext;
-      
+
       if (sectionId === "quick-views") {
         return [
           { id: "show-always", label: "Always", selected: true, sectionTitle: "Show" },
           { id: "show-unread", label: "When unread" },
         ];
       }
-      
+
       if (sectionId === "favorites" || sectionId === "chats") {
         return [
           {
@@ -97,7 +97,7 @@ export function getMenuItems(
           },
         ];
       }
-      
+
       if (sectionId === "teams") {
         return [
           {
@@ -114,7 +114,14 @@ export function getMenuItems(
 
     case "quick-view": {
       if (sidebarMenuContext.id === "drafts") {
-        return [{ id: "hide-drafts", label: "Hide", icon: <VisibilityOffRounded fontSize="small" />, sectionTitle: "Options" }];
+        return [
+          {
+            id: "hide-drafts",
+            label: "Hide",
+            icon: <VisibilityOffRounded fontSize="small" />,
+            sectionTitle: "Options",
+          },
+        ];
       }
 
       const key = sidebarMenuContext.id as "mentions" | "threads";
@@ -161,14 +168,24 @@ export function getMenuItems(
         { id: "notify", label: "Notify when available", icon: <WbSunnyOutlined fontSize="small" /> },
         { id: "workflows", label: "Workflows", icon: <SettingsRounded fontSize="small" /> },
         { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
-        { id: "remove-history", label: "Remove Chat History", icon: <DeleteOutlineRounded fontSize="small" />, dividerAbove: true, danger: true },
+        {
+          id: "remove-history",
+          label: "Remove Chat History",
+          icon: <DeleteOutlineRounded fontSize="small" />,
+          dividerAbove: true,
+          danger: true,
+        },
         { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
       ];
 
     case "channel":
       return [
         { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
-        { id: "channel-notifications", label: "Channel notifications", icon: <NotificationsNoneRounded fontSize="small" /> },
+        {
+          id: "channel-notifications",
+          label: "Channel notifications",
+          icon: <NotificationsNoneRounded fontSize="small" />,
+        },
         {
           id: "move-section",
           label: "Move to section",
@@ -177,12 +194,12 @@ export function getMenuItems(
         },
         { id: "remove-section", label: "Remove from section", icon: <DeleteOutlineRounded fontSize="small" /> },
         { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
-        { 
-          id: "manage-channel", 
-          label: "Manage channel", 
-          icon: <SettingsRounded fontSize="small" />, 
-          dividerAbove: true, 
-          onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label || ''}.`) 
+        {
+          id: "manage-channel",
+          label: "Manage channel",
+          icon: <SettingsRounded fontSize="small" />,
+          dividerAbove: true,
+          onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label || ""}.`),
         },
         { id: "manage-tags", label: "Manage channel tags", icon: <EditRounded fontSize="small" /> },
         { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
@@ -194,12 +211,17 @@ export function getMenuItems(
       return [
         { id: "hide-channels", label: "Hide all Channels", icon: <VisibilityOffRounded fontSize="small" /> },
         { id: "add-member", label: "Add member", icon: <PersonAddAlt1Rounded fontSize="small" /> },
-        { id: "add-channel", label: "Add channel", icon: <AddRounded fontSize="small" />, onClick: () => setCreateChannelOpen(true) },
-        { 
-          id: "manage-team", 
-          label: "Manage team", 
-          icon: <SettingsRounded fontSize="small" />, 
-          onClick: () => pushSystemMessage(`Manage team requested for ${sidebarMenuContext.label || ''}.`) 
+        {
+          id: "add-channel",
+          label: "Add channel",
+          icon: <AddRounded fontSize="small" />,
+          onClick: () => setCreateChannelOpen(true),
+        },
+        {
+          id: "manage-team",
+          label: "Manage team",
+          icon: <SettingsRounded fontSize="small" />,
+          onClick: () => pushSystemMessage(`Manage team requested for ${sidebarMenuContext.label || ""}.`),
         },
         { id: "manage-tags", label: "Manage tags", icon: <EditRounded fontSize="small" /> },
         { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
@@ -208,15 +230,15 @@ export function getMenuItems(
 
     case "message":
       return [
-          { id: "forward", label: "Forward", icon: <ForwardToInboxRounded fontSize="small" /> },
-          { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
-          { id: "pin", label: "Pin", icon: <PushPinRounded fontSize="small" /> },
-          { id: "save", label: "Save this Message", icon: <SaveAltRounded fontSize="small" /> },
-          { id: "mark-unread", label: "Mark as unread", icon: <MarkEmailUnreadRounded fontSize="small" /> },
-          { id: "translate", label: "Translations", icon: <TranslateRounded fontSize="small" /> },
-          { id: "report", label: "Report this Message", icon: <FlagOutlined fontSize="small" />, danger: true },
-          { id: "more", label: "More actions", icon: <MoreVertRounded fontSize="small" /> },
-        ];
+        { id: "forward", label: "Forward", icon: <ForwardToInboxRounded fontSize="small" /> },
+        { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
+        { id: "pin", label: "Pin", icon: <PushPinRounded fontSize="small" /> },
+        { id: "save", label: "Save this Message", icon: <SaveAltRounded fontSize="small" /> },
+        { id: "mark-unread", label: "Mark as unread", icon: <MarkEmailUnreadRounded fontSize="small" /> },
+        { id: "translate", label: "Translations", icon: <TranslateRounded fontSize="small" /> },
+        { id: "report", label: "Report this Message", icon: <FlagOutlined fontSize="small" />, danger: true },
+        { id: "more", label: "More actions", icon: <MoreVertRounded fontSize="small" /> },
+      ];
     default:
       return [];
   }

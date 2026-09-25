@@ -30,11 +30,7 @@ export class CadenceService {
     });
   }
 
-  async createSession(
-    organizationId: string,
-    facilitatorId: string,
-    dto: CreateSessionDto,
-  ): Promise<CadenceSession> {
+  async createSession(organizationId: string, facilitatorId: string, dto: CreateSessionDto): Promise<CadenceSession> {
     await this.assertOrganizationMember(organizationId, facilitatorId);
     if (dto.teamId) {
       const team = await this.prisma.team.findFirst({
@@ -121,15 +117,14 @@ export class CadenceService {
 
   // ---------------- Cards ----------------
 
-  async addCard(
-    organizationId: string,
-    sessionId: string,
-    authorId: string,
-    dto: CreateCardDto,
-  ): Promise<CadenceCard> {
+  async addCard(organizationId: string, sessionId: string, authorId: string, dto: CreateCardDto): Promise<CadenceCard> {
     const session = await this.getSessionRow(organizationId, sessionId);
     if (session.phase !== "COLLECT") {
-      throw new AppError(ErrorCode.PHASE_LOCKED, "Cards can only be added during the collect phase", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.PHASE_LOCKED,
+        "Cards can only be added during the collect phase",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const maxPosition = await this.prisma.cadenceCard.aggregate({

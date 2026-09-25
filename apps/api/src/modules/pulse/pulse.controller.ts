@@ -13,27 +13,15 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { RequireAccess } from "../../common/decorators/access.decorator";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { PulseService, type SchedulingConflict } from "./pulse.service";
 import { CreateCalendarDto, UpdateCalendarDto } from "./dto/calendar.dto";
-import {
-  AddAttendeeDto,
-  CreateEventDto,
-  ListEventsQueryDto,
-  RsvpDto,
-  UpdateEventDto,
-} from "./dto/event.dto";
+import { AddAttendeeDto, CreateEventDto, ListEventsQueryDto, RsvpDto, UpdateEventDto } from "./dto/event.dto";
 
 @ApiTags("pulse")
 @ApiBearerAuth()
@@ -91,10 +79,7 @@ export class PulseController {
   @Get("events")
   @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "List events overlapping a time range (from/to ISO 8601)" })
-  async listEvents(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Query() query: ListEventsQueryDto,
-  ) {
+  async listEvents(@CurrentOrganization() organization: OrganizationContext, @Query() query: ListEventsQueryDto) {
     return this.pulse.listEvents(organization.organizationId, query);
   }
 
@@ -113,10 +98,7 @@ export class PulseController {
   @Get("events/:eventId")
   @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "Get an event with attendees" })
-  async getEvent(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("eventId") eventId: string,
-  ) {
+  async getEvent(@CurrentOrganization() organization: OrganizationContext, @Param("eventId") eventId: string) {
     return this.pulse.getEvent(organization.organizationId, eventId);
   }
 

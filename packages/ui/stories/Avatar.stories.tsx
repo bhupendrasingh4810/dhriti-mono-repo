@@ -1,16 +1,12 @@
 /**
  * Avatar Component Stories
- * 
+ *
  * Comprehensive Storybook documentation for Dhriti Avatar component.
  */
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Avatar, AvatarGroupCustom } from "../src/components/mui";
-import {
-  Business as BusinessIcon,
-  Person as PersonIcon,
-  Star as StarIcon,
-} from "@mui/icons-material";
+import { Business as BusinessIcon, Person as PersonIcon, Star as StarIcon } from "@mui/icons-material";
 
 const meta = {
   title: "Components/Avatar",

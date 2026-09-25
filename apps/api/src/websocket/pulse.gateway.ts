@@ -95,10 +95,7 @@ export class PulseGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
 
   /** Broadcast an RSVP change so other clients update attendee counts. */
   @SubscribeMessage("event:rsvp-changed")
-  rsvpChanged(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: RsvpUpdatePayload,
-  ): void {
+  rsvpChanged(@ConnectedSocket() socket: Socket, @MessageBody() payload: RsvpUpdatePayload): void {
     const principal = this.wsAuth.getPrincipal(socket);
     const organizationId = this.assertOrg(principal);
     this.server.to(orgRoom(organizationId)).emit("event:rsvp-changed", {

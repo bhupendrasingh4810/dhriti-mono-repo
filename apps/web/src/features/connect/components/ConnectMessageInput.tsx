@@ -36,8 +36,6 @@ import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectMentionUser, ConnectPendingAttachment } from "@/types/connect.types";
 
-
-
 type ConnectMessageInputProps = {
   conversationLabel: string;
   value: string;
@@ -67,7 +65,13 @@ function parseSlashQuery(text: string) {
   return match ? match[1].toLowerCase() : null;
 }
 
-function wrapWithMarkdown(value: string, selectionStart: number, selectionEnd: number, prefix: string, suffix = prefix) {
+function wrapWithMarkdown(
+  value: string,
+  selectionStart: number,
+  selectionEnd: number,
+  prefix: string,
+  suffix = prefix,
+) {
   const selectedText = value.slice(selectionStart, selectionEnd);
   const nextValue = `${value.slice(0, selectionStart)}${prefix}${selectedText}${suffix}${value.slice(selectionEnd)}`;
   return {
@@ -141,7 +145,17 @@ function renderInlineMarkdown(text: string) {
         <Box
           key={`${index}-inline-code`}
           component="span"
-          sx={{ px: 0.7, py: 0.15, mx: 0.2, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "surfaces.surfaceHover", border: 1, borderColor: "borders.border", fontFamily: "monospace", fontSize: "0.75rem" }}
+          sx={{
+            px: 0.7,
+            py: 0.15,
+            mx: 0.2,
+            borderRadius: (theme) => theme.tokens.radius.sm,
+            bgcolor: "surfaces.surfaceHover",
+            border: 1,
+            borderColor: "borders.border",
+            fontFamily: "monospace",
+            fontSize: "0.75rem",
+          }}
         >
           {token.slice(1, -1)}
         </Box>
@@ -149,25 +163,49 @@ function renderInlineMarkdown(text: string) {
     }
 
     if (/^\*\*[^*]+\*\*$/.test(token)) {
-      return <Box key={`${index}-bold`} component="span" sx={{ fontWeight: 800 }}>{token.slice(2, -2)}</Box>;
+      return (
+        <Box key={`${index}-bold`} component="span" sx={{ fontWeight: 800 }}>
+          {token.slice(2, -2)}
+        </Box>
+      );
     }
 
     if (/^\*[^*]+\*$/.test(token)) {
-      return <Box key={`${index}-italic`} component="span" sx={{ fontStyle: "italic" }}>{token.slice(1, -1)}</Box>;
+      return (
+        <Box key={`${index}-italic`} component="span" sx={{ fontStyle: "italic" }}>
+          {token.slice(1, -1)}
+        </Box>
+      );
     }
 
     if (/^~~[^~]+~~$/.test(token)) {
-      return <Box key={`${index}-strike`} component="span" sx={{ textDecoration: "line-through" }}>{token.slice(2, -2)}</Box>;
+      return (
+        <Box key={`${index}-strike`} component="span" sx={{ textDecoration: "line-through" }}>
+          {token.slice(2, -2)}
+        </Box>
+      );
     }
 
     if (/^==[^=]+==$/.test(token)) {
-      return <Box key={`${index}-highlight`} component="span" sx={{ px: 0.45, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "warning.light" }}>{token.slice(2, -2)}</Box>;
+      return (
+        <Box
+          key={`${index}-highlight`}
+          component="span"
+          sx={{ px: 0.45, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "warning.light" }}
+        >
+          {token.slice(2, -2)}
+        </Box>
+      );
     }
 
     const linkMatch = token.match(/^\[([^\]]+)\]\(([^\)]+)\)$/);
     if (linkMatch) {
       return (
-        <Box key={`${index}-link`} component="span" sx={{ color: "interactive.interactive", textDecoration: "underline" }}>
+        <Box
+          key={`${index}-link`}
+          component="span"
+          sx={{ color: "interactive.interactive", textDecoration: "underline" }}
+        >
           {linkMatch[1]}
         </Box>
       );
@@ -233,15 +271,30 @@ export function ConnectMessageInput({
 
   const slashCommands = useMemo(
     () => [
-      { id: "assign", label: "/assign", description: "Assign and notify a teammate", insertText: "@[] please review this\n" },
+      {
+        id: "assign",
+        label: "/assign",
+        description: "Assign and notify a teammate",
+        insertText: "@[] please review this\n",
+      },
       { id: "urgent", label: "/urgent", description: "Mark message as urgent", insertText: "[URGENT] " },
       { id: "important", label: "/important", description: "Mark message as important", insertText: "[IMPORTANT] " },
-      { id: "schedule", label: "/schedule", description: "Schedule for later", insertText: "[SCHEDULE: tomorrow 09:00] " },
+      {
+        id: "schedule",
+        label: "/schedule",
+        description: "Schedule for later",
+        insertText: "[SCHEDULE: tomorrow 09:00] ",
+      },
       { id: "gif", label: "/gif", description: "Insert a GIF placeholder", insertText: "[GIF: search-term] " },
-      { id: "table", label: "/table", description: "Insert markdown table", insertText: "| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n" },
+      {
+        id: "table",
+        label: "/table",
+        description: "Insert markdown table",
+        insertText: "| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n",
+      },
       { id: "bot", label: "/bot", description: "Message extension or bot command", insertText: "@bot " },
     ],
-    []
+    [],
   );
 
   const slashSuggestions = useMemo(() => {
@@ -278,7 +331,7 @@ export function ConnectMessageInput({
         onClick: () => setPriorityFlag("urgent"),
       },
     ],
-    [priorityFlag]
+    [priorityFlag],
   );
 
   const composerAttachItems = useMemo<ConnectCascadingMenuItem[]>(
@@ -293,20 +346,33 @@ export function ConnectMessageInput({
       { id: "gif", label: "Insert GIF", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
       { id: "sticker", label: "Insert sticker", icon: <SentimentSatisfiedAltRounded fontSize="small" /> },
       { id: "schedule", label: "Schedule message", icon: <NotificationsNoneRounded fontSize="small" /> },
-      { id: "delivery", label: "Message delivery", icon: <MailOutlineRounded fontSize="small" />, children: priorityItems },
+      {
+        id: "delivery",
+        label: "Message delivery",
+        icon: <MailOutlineRounded fontSize="small" />,
+        children: priorityItems,
+      },
       { id: "video", label: "Record a video clip", icon: <VideocamRounded fontSize="small" /> },
       { id: "voice", label: "Record a voice clip", icon: <VideocamRounded fontSize="small" /> },
       { id: "loop", label: "Insert loop component", icon: <TableRowsRounded fontSize="small" /> },
     ],
-    [priorityItems]
+    [priorityItems],
   );
 
   function handleMentionPick(displayName: string) {
-    setDraftValue(draftValue.replace(/(?:^|\s)@[a-zA-Z0-9._-]*$/, (match) => `${match.startsWith(" ") ? " " : ""}@[${displayName}] `));
+    setDraftValue(
+      draftValue.replace(
+        /(?:^|\s)@[a-zA-Z0-9._-]*$/,
+        (match) => `${match.startsWith(" ") ? " " : ""}@[${displayName}] `,
+      ),
+    );
   }
 
   function handleSlashPick(insertText: string) {
-    const next = draftValue.replace(/(?:^|\n)\/[a-zA-Z-]*$/, (match) => `${match.startsWith("\n") ? "\n" : ""}${insertText}`);
+    const next = draftValue.replace(
+      /(?:^|\n)\/[a-zA-Z-]*$/,
+      (match) => `${match.startsWith("\n") ? "\n" : ""}${insertText}`,
+    );
     setDraftValue(next);
   }
 
@@ -344,12 +410,15 @@ export function ConnectMessageInput({
       return;
     }
 
-    const mentionNameMatches = [...nextContent.matchAll(/@\[([^\]]+)\]/g)].map((match) => match[1].trim().toLowerCase());
+    const mentionNameMatches = [...nextContent.matchAll(/@\[([^\]]+)\]/g)].map((match) =>
+      match[1].trim().toLowerCase(),
+    );
     const mentionUserIds = users
       .filter((user) => mentionNameMatches.includes(user.displayName.toLowerCase()))
       .map((user) => user.id);
 
-    const priorityPrefix = isEditing || priorityFlag === "normal" ? "" : priorityFlag === "important" ? "[IMPORTANT] " : "[URGENT] ";
+    const priorityPrefix =
+      isEditing || priorityFlag === "normal" ? "" : priorityFlag === "important" ? "[IMPORTANT] " : "[URGENT] ";
 
     onSend({ content: `${priorityPrefix}${nextContent}`, mentionUserIds });
     lastSyncedValueRef.current = "";
@@ -397,10 +466,21 @@ export function ConnectMessageInput({
                 direction="row"
                 spacing={1}
                 onClick={() => handleSlashPick(command.insertText)}
-                sx={{ px: 1.5, py: 0.8, alignItems: "center", justifyContent: "space-between", cursor: "pointer", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
+                sx={{
+                  px: 1.5,
+                  py: 0.8,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "surfaces.surfaceHover" },
+                }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 700 }}>{command.label}</Typography>
-                <Typography variant="caption" color="text.secondary">{command.description}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                  {command.label}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {command.description}
+                </Typography>
               </Stack>
             ))}
           </Stack>
@@ -439,7 +519,13 @@ export function ConnectMessageInput({
                 direction="row"
                 spacing={1}
                 onClick={() => handleMentionPick(user.displayName)}
-                sx={{ px: 1.5, py: 0.8, alignItems: "center", cursor: "pointer", "&:hover": { bgcolor: "surfaces.surfaceHover" } }}
+                sx={{
+                  px: 1.5,
+                  py: 0.8,
+                  alignItems: "center",
+                  cursor: "pointer",
+                  "&:hover": { bgcolor: "surfaces.surfaceHover" },
+                }}
               >
                 <Box
                   component="img"
@@ -448,8 +534,12 @@ export function ConnectMessageInput({
                   sx={{ width: 22, height: 22, borderRadius: "999px", objectFit: "cover" }}
                 />
                 <Box>
-                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{user.displayName}</Typography>
-                  <Typography variant="caption" color="text.secondary">{user.subtitle}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                    {user.displayName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {user.subtitle}
+                  </Typography>
                 </Box>
               </Stack>
             ))}
@@ -457,11 +547,33 @@ export function ConnectMessageInput({
         </Box>
       ) : null}
 
-      <Box sx={{ border: 1, borderColor: "borders.borderSubtle", borderRadius: (theme) => theme.tokens.radius.lg, bgcolor: "background.paper", p: 0.5, boxShadow: (theme) => theme.tokens.elevation.subtle, overflow: "hidden" }}>
+      <Box
+        sx={{
+          border: 1,
+          borderColor: "borders.borderSubtle",
+          borderRadius: (theme) => theme.tokens.radius.lg,
+          bgcolor: "background.paper",
+          p: 0.5,
+          boxShadow: (theme) => theme.tokens.elevation.subtle,
+          overflow: "hidden",
+        }}
+      >
         {quotedMessage ? (
           <Stack
             direction="row"
-            sx={{ mb: 1, py: 3, px: 3, alignItems: "center", justifyContent: "space-between", bgcolor: "background.paper", borderLeft: 3, borderColor: "primary.main", borderRadius: (theme) => theme.tokens.radius.sm, mx: 1, mt: 1 }}
+            sx={{
+              mb: 1,
+              py: 3,
+              px: 3,
+              alignItems: "center",
+              justifyContent: "space-between",
+              bgcolor: "background.paper",
+              borderLeft: 3,
+              borderColor: "primary.main",
+              borderRadius: (theme) => theme.tokens.radius.sm,
+              mx: 1,
+              mt: 1,
+            }}
           >
             <Box>
               <Typography variant="caption" sx={{ color: "primary.main", fontWeight: 700 }}>
@@ -482,14 +594,42 @@ export function ConnectMessageInput({
             {pendingAttachments.map((attachment) => (
               <Box
                 key={attachment.id}
-                sx={{ position: "relative", width: 100, height: 100, borderRadius: (theme) => theme.tokens.radius.sm, overflow: "hidden", border: 1, borderColor: "borders.border", bgcolor: "surfaces.surfaceHover" }}
+                sx={{
+                  position: "relative",
+                  width: 100,
+                  height: 100,
+                  borderRadius: (theme) => theme.tokens.radius.sm,
+                  overflow: "hidden",
+                  border: 1,
+                  borderColor: "borders.border",
+                  bgcolor: "surfaces.surfaceHover",
+                }}
               >
                 {attachment.type.startsWith("image/") ? (
-                  <Box component="img" src={attachment.url} alt={attachment.name} sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <Box
+                    component="img"
+                    src={attachment.url}
+                    alt={attachment.name}
+                    sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
                 ) : attachment.type.startsWith("video/") ? (
-                  <Box component="video" src={attachment.url} muted sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <Box
+                    component="video"
+                    src={attachment.url}
+                    muted
+                    sx={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                  />
                 ) : (
-                  <Stack sx={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center", color: "info.main", px: 0.5 }}>
+                  <Stack
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "info.main",
+                      px: 0.5,
+                    }}
+                  >
                     <DescriptionOutlined sx={{ fontSize: 20 }} />
                     <Typography variant="caption" color="text.secondary" sx={{ mt: 0.3, textAlign: "center" }} noWrap>
                       {attachment.name}
@@ -499,7 +639,17 @@ export function ConnectMessageInput({
                 <IconButton
                   size="small"
                   onClick={() => onRemovePendingAttachment?.(attachment.id)}
-                  sx={{ position: "absolute", top: 2, right: 2, width: 18, height: 18, bgcolor: "grey.900", color: "common.white", opacity: 0.78, "&:hover": { bgcolor: "grey.900", opacity: 0.9 } }}
+                  sx={{
+                    position: "absolute",
+                    top: 2,
+                    right: 2,
+                    width: 18,
+                    height: 18,
+                    bgcolor: "grey.900",
+                    color: "common.white",
+                    opacity: 0.78,
+                    "&:hover": { bgcolor: "grey.900", opacity: 0.9 },
+                  }}
                 >
                   <CloseRounded sx={{ fontSize: 12 }} />
                 </IconButton>
@@ -511,11 +661,40 @@ export function ConnectMessageInput({
         {!isEditing && draftLinks.length > 0 ? (
           <Stack direction="row" spacing={1} sx={{ px: 1.5, pt: 1, flexWrap: "wrap", rowGap: 1 }}>
             {draftLinks.map((link) => (
-              <Stack key={link.url} direction="row" spacing={1} sx={{ width: 220, p: 1, borderRadius: (theme) => theme.tokens.radius.sm, border: 1, borderColor: "borders.border", bgcolor: "surfaces.surfaceHover", alignItems: "center" }}>
-                <Box component="img" src={link.thumbnail} alt="" sx={{ width: 32, height: 32, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "background.paper", border: 1, borderColor: "borders.borderSubtle" }} />
+              <Stack
+                key={link.url}
+                direction="row"
+                spacing={1}
+                sx={{
+                  width: 220,
+                  p: 1,
+                  borderRadius: (theme) => theme.tokens.radius.sm,
+                  border: 1,
+                  borderColor: "borders.border",
+                  bgcolor: "surfaces.surfaceHover",
+                  alignItems: "center",
+                }}
+              >
+                <Box
+                  component="img"
+                  src={link.thumbnail}
+                  alt=""
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: (theme) => theme.tokens.radius.sm,
+                    bgcolor: "background.paper",
+                    border: 1,
+                    borderColor: "borders.borderSubtle",
+                  }}
+                />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
-                  <Typography sx={{ fontSize: 12, fontWeight: 800 }} noWrap>{link.domain}</Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap>{link.url}</Typography>
+                  <Typography sx={{ fontSize: 12, fontWeight: 800 }} noWrap>
+                    {link.domain}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap>
+                    {link.url}
+                  </Typography>
                 </Box>
                 <IconButton size="small" component="a" href={link.url} target="_blank" rel="noreferrer">
                   <OpenInNewRounded sx={{ fontSize: 16 }} />
@@ -533,7 +712,9 @@ export function ConnectMessageInput({
           maxRows={6}
           placeholder={isEditing ? "Edit message" : `Message ${conversationLabel}`}
           value={draftValue}
-          onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setDraftValue(normalizePastedLinks(event.target.value))}
+          onChange={(event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+            setDraftValue(normalizePastedLinks(event.target.value))
+          }
           onKeyDown={(event: React.KeyboardEvent<HTMLDivElement>) => {
             if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
               event.preventDefault();
@@ -547,7 +728,8 @@ export function ConnectMessageInput({
                 updateValueAndSelection(result.value, selectionStart + 2, selectionStart + 2);
               } else {
                 const selectedText = draftValue.slice(selectionStart, selectionEnd);
-                const isAlreadyBold = selectedText.startsWith("**") && selectedText.endsWith("**") && selectedText.length >= 4;
+                const isAlreadyBold =
+                  selectedText.startsWith("**") && selectedText.endsWith("**") && selectedText.length >= 4;
                 if (isAlreadyBold) {
                   const unwrapped = `${draftValue.slice(0, selectionStart)}${selectedText.slice(2, -2)}${draftValue.slice(selectionEnd)}`;
                   updateValueAndSelection(unwrapped, selectionStart, selectionEnd - 4);
@@ -582,47 +764,125 @@ export function ConnectMessageInput({
         />
 
         {!isEditing && formattingOpen ? (
-          <Stack direction="row" spacing={0.45} sx={{ px: 1.5, py: 0.8, borderTop: 1, borderBottom: 1, borderColor: "borders.borderSubtle", flexWrap: "wrap", rowGap: 0.6 }}>
-            <IconButton size="small" onClick={() => applyMarkdown("**")}><FormatBoldRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("*")}><FormatItalicRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("<u>", "</u>")}><FormatUnderlinedRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("~~")}><FormatStrikethroughRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("==")}><FormatColorFillRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("`", "`")}><CodeRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("```\n", "\n```")}><MoreVertRounded sx={{ fontSize: 20, transform: "rotate(90deg)" }} /></IconButton>
+          <Stack
+            direction="row"
+            spacing={0.45}
+            sx={{
+              px: 1.5,
+              py: 0.8,
+              borderTop: 1,
+              borderBottom: 1,
+              borderColor: "borders.borderSubtle",
+              flexWrap: "wrap",
+              rowGap: 0.6,
+            }}
+          >
+            <IconButton size="small" onClick={() => applyMarkdown("**")}>
+              <FormatBoldRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("*")}>
+              <FormatItalicRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("<u>", "</u>")}>
+              <FormatUnderlinedRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("~~")}>
+              <FormatStrikethroughRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("==")}>
+              <FormatColorFillRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("`", "`")}>
+              <CodeRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("```\n", "\n```")}>
+              <MoreVertRounded sx={{ fontSize: 20, transform: "rotate(90deg)" }} />
+            </IconButton>
             <Divider orientation="vertical" flexItem />
-            <IconButton size="small" onClick={() => insertSnippet("- ")}><FormatListBulletedRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => insertSnippet("1. ")}><FormatListNumberedRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => insertSnippet("> ")}><FormatQuoteRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown("[", "](https://)")}><LinkRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n")}><TableRowsRounded sx={{ fontSize: 20 }} /></IconButton>
-            <IconButton size="small" onClick={() => applyMarkdown('<span style="font-size:14px">', "</span>")}><FormatSizeRounded sx={{ fontSize: 20 }} /></IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("- ")}>
+              <FormatListBulletedRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("1. ")}>
+              <FormatListNumberedRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => insertSnippet("> ")}>
+              <FormatQuoteRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown("[", "](https://)")}>
+              <LinkRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton
+              size="small"
+              onClick={() => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n")}
+            >
+              <TableRowsRounded sx={{ fontSize: 20 }} />
+            </IconButton>
+            <IconButton size="small" onClick={() => applyMarkdown('<span style="font-size:14px">', "</span>")}>
+              <FormatSizeRounded sx={{ fontSize: 20 }} />
+            </IconButton>
           </Stack>
         ) : null}
 
-        <Stack direction="row" sx={{ px: 1.5, py: 1, borderTop: 1, borderColor: "borders.borderSubtle", alignItems: "center", justifyContent: "space-between" }}>
+        <Stack
+          direction="row"
+          sx={{
+            px: 1.5,
+            py: 1,
+            borderTop: 1,
+            borderColor: "borders.borderSubtle",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <Stack direction="row" spacing={0.5}>
             {!isEditing ? (
               <>
                 <IconButton size="small" onClick={() => setFormattingOpen((previous) => !previous)}>
                   <EditRounded sx={{ fontSize: 20 }} />
                 </IconButton>
-                <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerEmojiAnchor(event.currentTarget)}>
+                <IconButton
+                  size="small"
+                  onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerEmojiAnchor(event.currentTarget)}
+                >
                   <SentimentSatisfiedAltRounded sx={{ fontSize: 20 }} />
                 </IconButton>
-                <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerAttachAnchor(event.currentTarget)}>
+                <IconButton
+                  size="small"
+                  onClick={(event: React.MouseEvent<HTMLButtonElement>) => setComposerAttachAnchor(event.currentTarget)}
+                >
                   <AddRounded sx={{ fontSize: 20 }} />
                 </IconButton>
-                <IconButton size="small" onClick={(event: React.MouseEvent<HTMLButtonElement>) => setPriorityAnchor(event.currentTarget)}>
-                  {priorityFlag === "urgent" ? <NotificationsActiveRounded sx={{ fontSize: 20, color: "error.main" }} /> : <PriorityHighRounded sx={{ fontSize: 20, color: priorityFlag === "normal" ? "text.secondary" : "warning.dark" }} />}
+                <IconButton
+                  size="small"
+                  onClick={(event: React.MouseEvent<HTMLButtonElement>) => setPriorityAnchor(event.currentTarget)}
+                >
+                  {priorityFlag === "urgent" ? (
+                    <NotificationsActiveRounded sx={{ fontSize: 20, color: "error.main" }} />
+                  ) : (
+                    <PriorityHighRounded
+                      sx={{ fontSize: 20, color: priorityFlag === "normal" ? "text.secondary" : "warning.dark" }}
+                    />
+                  )}
                 </IconButton>
               </>
             ) : null}
           </Stack>
           <Stack direction="row" spacing={0.75} sx={{ alignItems: "center" }}>
             {!isEditing && priorityFlag !== "normal" ? (
-              <Typography variant="caption" sx={{ fontWeight: 800, color: priorityFlag === "important" ? "warning.dark" : "error.main", px: 0.8, py: 0.25 }}>
-                {priorityFlag === "urgent" ? <NotificationsActiveRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} /> : <PriorityHighRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} />}
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 800,
+                  color: priorityFlag === "important" ? "warning.dark" : "error.main",
+                  px: 0.8,
+                  py: 0.25,
+                }}
+              >
+                {priorityFlag === "urgent" ? (
+                  <NotificationsActiveRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} />
+                ) : (
+                  <PriorityHighRounded sx={{ fontSize: 14, mr: 0.4, verticalAlign: "middle" }} />
+                )}
                 {priorityFlag === "important" ? "Important" : "Urgent"}
               </Typography>
             ) : null}
@@ -682,7 +942,14 @@ export function ConnectMessageInput({
         items={priorityItems}
       />
 
-      <Box component="input" ref={fileInputRef} type="file" multiple sx={{ display: "none" }} onChange={handleFileChange} />
+      <Box
+        component="input"
+        ref={fileInputRef}
+        type="file"
+        multiple
+        sx={{ display: "none" }}
+        onChange={handleFileChange}
+      />
     </Box>
   );
 }

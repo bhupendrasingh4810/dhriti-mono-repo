@@ -1,503 +1,502 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Verify Your Email - Dhriti</title>
     <!--[if mso]>
-  <noscript>
-    <xml>
-      <o:OfficeDocumentSettings>
-        <o:PixelsPerInch>96</o:PixelsPerInch>
-      </o:OfficeDocumentSettings>
-    </xml>
-  </noscript>
-  <![endif]-->
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+    <![endif]-->
     <style>
-        /* Reset styles */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      /* Reset styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background-color: #f4f6f8;
-            color: #1a1a1a;
-            line-height: 1.6;
-        }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #f4f6f8;
+        color: #1a1a1a;
+        line-height: 1.6;
+      }
 
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      }
+
+      .header {
+        background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
+        padding: 40px 30px;
+        text-align: center;
+      }
+
+      .logo-container {
+        width: 64px;
+        height: 64px;
+        background-color: #ffffff;
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .header h1 {
+        color: #ffffff;
+        font-size: 28px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .header p {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 16px;
+      }
+
+      .content {
+        padding: 40px 30px;
+      }
+
+      .greeting {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1a1a1a;
+        margin-bottom: 16px;
+        text-align: center;
+      }
+
+      .message {
+        font-size: 16px;
+        color: #4a5568;
+        margin-bottom: 32px;
+        line-height: 1.8;
+        text-align: center;
+      }
+
+      .alert-box {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-left: 4px solid #f59e0b;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 32px;
+      }
+
+      .alert-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #92400e;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .alert-text {
+        font-size: 14px;
+        color: #78350f;
+        line-height: 1.6;
+      }
+
+      .otp-section {
+        background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+        border: 2px solid #036c5f;
+        border-radius: 12px;
+        padding: 30px;
+        text-align: center;
+        margin-bottom: 32px;
+      }
+
+      .otp-label {
+        font-size: 14px;
+        color: #036c5f;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+      }
+
+      .otp-code {
+        font-size: 42px;
+        font-weight: 800;
+        color: #036c5f;
+        letter-spacing: 8px;
+        font-family: "Courier New", Courier, monospace;
+        margin-bottom: 8px;
+      }
+
+      .otp-note {
+        font-size: 13px;
+        color: #718096;
+        margin-bottom: 4px;
+      }
+
+      .otp-timer {
+        font-size: 13px;
+        color: #f59e0b;
+        font-weight: 600;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed #036c5f;
+      }
+
+      .cta-button {
+        display: inline-block;
+        background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
+        color: #ffffff;
+        text-decoration: none;
+        padding: 16px 48px;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 6px rgba(3, 108, 95, 0.3);
+        transition: all 0.3s ease;
+      }
+
+      .cta-button:hover {
+        background: linear-gradient(135deg, #048c7b 0%, #05a893 100%);
+        box-shadow: 0 6px 12px rgba(3, 108, 95, 0.4);
+        transform: translateY(-2px);
+      }
+
+      .divider {
+        height: 1px;
+        background-color: #e2e8f0;
+        margin: 32px 0;
+      }
+
+      .security-info {
+        background-color: #f7fafc;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 32px;
+      }
+
+      .security-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1a1a1a;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .security-list {
+        list-style: none;
+        padding: 0;
+      }
+
+      .security-list li {
+        font-size: 14px;
+        color: #4a5568;
+        margin-bottom: 10px;
+        padding-left: 24px;
+        position: relative;
+      }
+
+      .security-list li:before {
+        content: "•";
+        position: absolute;
+        left: 0;
+        color: #036c5f;
+        font-weight: 700;
+      }
+
+      .help-section {
+        background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+        border-left: 4px solid #9333ea;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 32px;
+      }
+
+      .help-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #6b21a8;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .help-text {
+        font-size: 14px;
+        color: #581c87;
+        line-height: 1.6;
+        margin-bottom: 12px;
+      }
+
+      .help-link {
+        display: inline-block;
+        color: #9333ea;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 14px;
+      }
+
+      .help-link:hover {
+        text-decoration: underline;
+      }
+
+      .footer {
+        background-color: #f7fafc;
+        padding: 30px;
+        text-align: center;
+        border-top: 1px solid #e2e8f0;
+      }
+
+      .footer-text {
+        font-size: 14px;
+        color: #718096;
+        margin-bottom: 16px;
+      }
+
+      .footer-note {
+        font-size: 13px;
+        color: #9ca3af;
+        margin-bottom: 16px;
+        padding: 16px;
+        background-color: #ffffff;
+        border-radius: 6px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .footer-links {
+        margin-bottom: 16px;
+      }
+
+      .footer-links a {
+        color: #036c5f;
+        text-decoration: none;
+        margin: 0 12px;
+        font-size: 13px;
+      }
+
+      .footer-links a:hover {
+        text-decoration: underline;
+      }
+
+      .social-links {
+        margin-bottom: 16px;
+      }
+
+      .social-links a {
+        display: inline-block;
+        margin: 0 8px;
+        text-decoration: none;
+      }
+
+      .copyright {
+        font-size: 12px;
+        color: #a0aec0;
+      }
+
+      /* Mobile responsive */
+      @media only screen and (max-width: 600px) {
         .email-container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          margin: 0;
+          border-radius: 0;
         }
 
         .header {
-            background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .logo-container {
-            width: 64px;
-            height: 64px;
-            background-color: #ffffff;
-            border-radius: 16px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .header h1 {
-            color: #ffffff;
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 16px;
+          padding: 30px 20px;
         }
 
         .content {
-            padding: 40px 30px;
+          padding: 30px 20px;
         }
 
         .greeting {
-            font-size: 24px;
-            font-weight: 700;
-            color: #1a1a1a;
-            margin-bottom: 16px;
-            text-align: center;
-        }
-
-        .message {
-            font-size: 16px;
-            color: #4a5568;
-            margin-bottom: 32px;
-            line-height: 1.8;
-            text-align: center;
-        }
-
-        .alert-box {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            border-left: 4px solid #f59e0b;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 32px;
-        }
-
-        .alert-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #92400e;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .alert-text {
-            font-size: 14px;
-            color: #78350f;
-            line-height: 1.6;
-        }
-
-        .otp-section {
-            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-            border: 2px solid #036c5f;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .otp-label {
-            font-size: 14px;
-            color: #036c5f;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
+          font-size: 20px;
         }
 
         .otp-code {
-            font-size: 42px;
-            font-weight: 800;
-            color: #036c5f;
-            letter-spacing: 8px;
-            font-family: 'Courier New', Courier, monospace;
-            margin-bottom: 8px;
-        }
-
-        .otp-note {
-            font-size: 13px;
-            color: #718096;
-            margin-bottom: 4px;
-        }
-
-        .otp-timer {
-            font-size: 13px;
-            color: #f59e0b;
-            font-weight: 600;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px dashed #036c5f;
+          font-size: 32px;
+          letter-spacing: 4px;
         }
 
         .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #036c5f 0%, #048c7b 100%);
-            color: #ffffff;
-            text-decoration: none;
-            padding: 16px 48px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 32px;
-            box-shadow: 0 4px 6px rgba(3, 108, 95, 0.3);
-            transition: all 0.3s ease;
+          padding: 14px 36px;
+          font-size: 15px;
+          display: block;
+          width: 100%;
         }
-
-        .cta-button:hover {
-            background: linear-gradient(135deg, #048c7b 0%, #05a893 100%);
-            box-shadow: 0 6px 12px rgba(3, 108, 95, 0.4);
-            transform: translateY(-2px);
-        }
-
-        .divider {
-            height: 1px;
-            background-color: #e2e8f0;
-            margin: 32px 0;
-        }
-
-        .security-info {
-            background-color: #f7fafc;
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 32px;
-        }
-
-        .security-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #1a1a1a;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .security-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .security-list li {
-            font-size: 14px;
-            color: #4a5568;
-            margin-bottom: 10px;
-            padding-left: 24px;
-            position: relative;
-        }
-
-        .security-list li:before {
-            content: "•";
-            position: absolute;
-            left: 0;
-            color: #036c5f;
-            font-weight: 700;
-        }
-
-        .help-section {
-            background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
-            border-left: 4px solid #9333ea;
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 32px;
-        }
-
-        .help-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: #6b21a8;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .help-text {
-            font-size: 14px;
-            color: #581c87;
-            line-height: 1.6;
-            margin-bottom: 12px;
-        }
-
-        .help-link {
-            display: inline-block;
-            color: #9333ea;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .help-link:hover {
-            text-decoration: underline;
-        }
-
-        .footer {
-            background-color: #f7fafc;
-            padding: 30px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-        }
-
-        .footer-text {
-            font-size: 14px;
-            color: #718096;
-            margin-bottom: 16px;
-        }
-
-        .footer-note {
-            font-size: 13px;
-            color: #9ca3af;
-            margin-bottom: 16px;
-            padding: 16px;
-            background-color: #ffffff;
-            border-radius: 6px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .footer-links {
-            margin-bottom: 16px;
-        }
-
-        .footer-links a {
-            color: #036c5f;
-            text-decoration: none;
-            margin: 0 12px;
-            font-size: 13px;
-        }
-
-        .footer-links a:hover {
-            text-decoration: underline;
-        }
-
-        .social-links {
-            margin-bottom: 16px;
-        }
-
-        .social-links a {
-            display: inline-block;
-            margin: 0 8px;
-            text-decoration: none;
-        }
-
-        .copyright {
-            font-size: 12px;
-            color: #a0aec0;
-        }
-
-        /* Mobile responsive */
-        @media only screen and (max-width: 600px) {
-            .email-container {
-                margin: 0;
-                border-radius: 0;
-            }
-
-            .header {
-                padding: 30px 20px;
-            }
-
-            .content {
-                padding: 30px 20px;
-            }
-
-            .greeting {
-                font-size: 20px;
-            }
-
-            .otp-code {
-                font-size: 32px;
-                letter-spacing: 4px;
-            }
-
-            .cta-button {
-                padding: 14px 36px;
-                font-size: 15px;
-                display: block;
-                width: 100%;
-            }
-        }
+      }
     </style>
-</head>
+  </head>
 
-<body>
-    <div style="background-color: #f4f6f8; padding: 40px 20px;">
-        <div class="email-container">
-            <!-- Header -->
-            <div class="header">
-                <div class="logo-container">
-                    <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
-                        <rect x="2" y="2" width="7" height="7" rx="2" fill="#036c5f" />
-                        <rect x="11" y="2" width="7" height="7" rx="2" fill="#036c5f" fillOpacity="0.6" />
-                        <rect x="2" y="11" width="7" height="7" rx="2" fill="#036c5f" fillOpacity="0.6" />
-                        <rect x="11" y="11" width="7" height="7" rx="2" fill="#036c5f" />
-                    </svg>
-                </div>
-                <h1>Verify Your Email</h1>
-                <p>Complete your Dhriti account setup</p>
-            </div>
-
-            <!-- Content -->
-            <div class="content">
-                <div class="greeting">Hi {{receiver_name}},</div>
-
-                <div class="message">
-                    We've sent you a new verification code to complete your email verification. This code will help us
-                    secure your Dhriti account.
-                </div>
-
-                <!-- Alert Box -->
-                <div class="alert-box">
-                    <div class="alert-title">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2" />
-                            <path d="M12 8V12" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" />
-                            <circle cx="12" cy="16" r="1" fill="#f59e0b" />
-                        </svg>
-                        Request Received
-                    </div>
-                    <div class="alert-text">
-                        We received a request to verify your email address. If this wasn't you, you can safely ignore
-                        this email.
-                    </div>
-                </div>
-
-                <!-- OTP Section -->
-                <div class="otp-section">
-                    <div class="otp-label">Your Verification Code</div>
-                    <div class="otp-code">{{otp_code}}</div>
-                    <div class="otp-note">Enter this code in the verification page</div>
-                    <div class="otp-note">This code will expire in {{expiry_minutes}} minutes</div>
-                    <div class="otp-timer">
-                        ⏱️ Code valid for a single use only
-                    </div>
-                </div>
-
-                <!-- CTA Button -->
-                <div style="text-align: center;">
-                    <a href="{{verification_url}}" class="cta-button" style="color: #ffffff !important;">
-                        Verify Email Address
-                    </a>
-                </div>
-
-                <div class="divider"></div>
-
-                <!-- Security Info -->
-                <div class="security-info">
-                    <div class="security-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                                stroke="#036c5f" stroke-width="2" />
-                            <path d="M9 12L11 14L15 10" stroke="#036c5f" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" />
-                        </svg>
-                        Security Information
-                    </div>
-                    <ul class="security-list">
-                        <li>This OTP is valid for {{expiry_minutes}} minutes only</li>
-                        <li>Do not share this code with anyone</li>
-                        <li>Dhriti will never ask for your password via email</li>
-                        <li>Each OTP can only be used once</li>
-                    </ul>
-                </div>
-
-                <!-- Help Section -->
-                <div class="help-section">
-                    <div class="help-title">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <circle cx="12" cy="12" r="10" stroke="#9333ea" stroke-width="2" />
-                            <path
-                                d="M9.09 9C9.32512 8.36612 9.78915 7.83968 10.3889 7.52573C10.9886 7.21178 11.6816 7.13389 12.3363 7.30681C12.991 7.47973 13.5627 7.89152 13.9364 8.45799C14.31 9.02446 14.4586 9.70484 14.35 10.36C14.19 11.2 13.5 11.6 13 12V13"
-                                stroke="#9333ea" stroke-width="2" stroke-linecap="round" />
-                            <circle cx="12" cy="17" r="1" fill="#9333ea" />
-                        </svg>
-                        Need Help?
-                    </div>
-                    <div class="help-text">
-                        Having trouble with verification? Our support team is here to help you get started.
-                    </div>
-                    <a href="{{help_center_url}}" class="help-link">Visit Help Center →</a>
-                </div>
-
-                <div class="message">
-                    <strong>Didn't request this code?</strong><br>
-                    If you didn't try to verify your email, you can safely ignore this message. Your account remains
-                    secure.
-                </div>
-
-                <div class="message">
-                    Best regards,<br>
-                    <strong>The Dhriti Team</strong>
-                </div>
-            </div>
-
-            <!-- Footer -->
-            <div class="footer">
-                <div class="footer-text">
-                    This email was sent to <strong>{{user_email}}</strong>
-                </div>
-
-                <div class="footer-note">
-                    🔒 This is an automated security email. Please do not reply to this message as this inbox is not
-                    monitored. For support, visit our Help Center.
-                </div>
-
-                <div class="footer-links">
-                    <a href="{{help_center_url}}">Help Center</a>
-                    <a href="{{contact_url}}">Contact Support</a>
-                    <a href="{{privacy_url}}">Privacy Policy</a>
-                    <a href="{{terms_url}}">Terms of Service</a>
-                </div>
-
-                <div class="social-links">
-                    <a href="{{twitter_url}}">
-                        <img src="https://cdn-icons-png.flaticon.com/32/5968/5968764.png" alt="Twitter" width="24"
-                            height="24" />
-                    </a>
-                    <a href="{{linkedin_url}}">
-                        <img src="https://cdn-icons-png.flaticon.com/32/145/145807.png" alt="LinkedIn" width="24"
-                            height="24" />
-                    </a>
-                    <a href="{{github_url}}">
-                        <img src="https://cdn-icons-png.flaticon.com/32/733/733553.png" alt="GitHub" width="24"
-                            height="24" />
-                    </a>
-                </div>
-
-                <div class="copyright">
-                    © 2026 Dhriti. All rights reserved.<br>
-                    Made with ❤️ for modern teams<br>
-                    <br>
-                    Dhriti Technologies Pvt. Ltd.<br>
-                    Lucknow, Uttar Pradesh, India
-                </div>
-            </div>
+  <body>
+    <div style="background-color: #f4f6f8; padding: 40px 20px">
+      <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+          <div class="logo-container">
+            <svg width="24" height="24" viewBox="0 0 20 20" fill="none">
+              <rect x="2" y="2" width="7" height="7" rx="2" fill="#036c5f" />
+              <rect x="11" y="2" width="7" height="7" rx="2" fill="#036c5f" fillOpacity="0.6" />
+              <rect x="2" y="11" width="7" height="7" rx="2" fill="#036c5f" fillOpacity="0.6" />
+              <rect x="11" y="11" width="7" height="7" rx="2" fill="#036c5f" />
+            </svg>
+          </div>
+          <h1>Verify Your Email</h1>
+          <p>Complete your Dhriti account setup</p>
         </div>
-    </div>
-</body>
 
+        <!-- Content -->
+        <div class="content">
+          <div class="greeting">Hi {{receiver_name}},</div>
+
+          <div class="message">
+            We've sent you a new verification code to complete your email verification. This code will help us secure
+            your Dhriti account.
+          </div>
+
+          <!-- Alert Box -->
+          <div class="alert-box">
+            <div class="alert-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="2" />
+                <path d="M12 8V12" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" />
+                <circle cx="12" cy="16" r="1" fill="#f59e0b" />
+              </svg>
+              Request Received
+            </div>
+            <div class="alert-text">
+              We received a request to verify your email address. If this wasn't you, you can safely ignore this email.
+            </div>
+          </div>
+
+          <!-- OTP Section -->
+          <div class="otp-section">
+            <div class="otp-label">Your Verification Code</div>
+            <div class="otp-code">{{otp_code}}</div>
+            <div class="otp-note">Enter this code in the verification page</div>
+            <div class="otp-note">This code will expire in {{expiry_minutes}} minutes</div>
+            <div class="otp-timer">⏱️ Code valid for a single use only</div>
+          </div>
+
+          <!-- CTA Button -->
+          <div style="text-align: center">
+            <a href="{{verification_url}}" class="cta-button" style="color: #ffffff !important">
+              Verify Email Address
+            </a>
+          </div>
+
+          <div class="divider"></div>
+
+          <!-- Security Info -->
+          <div class="security-info">
+            <div class="security-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
+                  stroke="#036c5f"
+                  stroke-width="2"
+                />
+                <path
+                  d="M9 12L11 14L15 10"
+                  stroke="#036c5f"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              Security Information
+            </div>
+            <ul class="security-list">
+              <li>This OTP is valid for {{expiry_minutes}} minutes only</li>
+              <li>Do not share this code with anyone</li>
+              <li>Dhriti will never ask for your password via email</li>
+              <li>Each OTP can only be used once</li>
+            </ul>
+          </div>
+
+          <!-- Help Section -->
+          <div class="help-section">
+            <div class="help-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10" stroke="#9333ea" stroke-width="2" />
+                <path
+                  d="M9.09 9C9.32512 8.36612 9.78915 7.83968 10.3889 7.52573C10.9886 7.21178 11.6816 7.13389 12.3363 7.30681C12.991 7.47973 13.5627 7.89152 13.9364 8.45799C14.31 9.02446 14.4586 9.70484 14.35 10.36C14.19 11.2 13.5 11.6 13 12V13"
+                  stroke="#9333ea"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <circle cx="12" cy="17" r="1" fill="#9333ea" />
+              </svg>
+              Need Help?
+            </div>
+            <div class="help-text">
+              Having trouble with verification? Our support team is here to help you get started.
+            </div>
+            <a href="{{help_center_url}}" class="help-link">Visit Help Center →</a>
+          </div>
+
+          <div class="message">
+            <strong>Didn't request this code?</strong><br />
+            If you didn't try to verify your email, you can safely ignore this message. Your account remains secure.
+          </div>
+
+          <div class="message">
+            Best regards,<br />
+            <strong>The Dhriti Team</strong>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+          <div class="footer-text">This email was sent to <strong>{{user_email}}</strong></div>
+
+          <div class="footer-note">
+            🔒 This is an automated security email. Please do not reply to this message as this inbox is not monitored.
+            For support, visit our Help Center.
+          </div>
+
+          <div class="footer-links">
+            <a href="{{help_center_url}}">Help Center</a>
+            <a href="{{contact_url}}">Contact Support</a>
+            <a href="{{privacy_url}}">Privacy Policy</a>
+            <a href="{{terms_url}}">Terms of Service</a>
+          </div>
+
+          <div class="social-links">
+            <a href="{{twitter_url}}">
+              <img src="https://cdn-icons-png.flaticon.com/32/5968/5968764.png" alt="Twitter" width="24" height="24" />
+            </a>
+            <a href="{{linkedin_url}}">
+              <img src="https://cdn-icons-png.flaticon.com/32/145/145807.png" alt="LinkedIn" width="24" height="24" />
+            </a>
+            <a href="{{github_url}}">
+              <img src="https://cdn-icons-png.flaticon.com/32/733/733553.png" alt="GitHub" width="24" height="24" />
+            </a>
+          </div>
+
+          <div class="copyright">
+            © 2026 Dhriti. All rights reserved.<br />
+            Made with ❤️ for modern teams<br />
+            <br />
+            Dhriti Technologies Pvt. Ltd.<br />
+            Lucknow, Uttar Pradesh, India
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

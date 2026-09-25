@@ -1,21 +1,7 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../../common/decorators/current-user.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
 import { PlatformRoles } from "../../../common/decorators/platform-roles.decorator";
 import { PlatformRolesGuard } from "../../../common/guards/platform-roles.guard";
 
@@ -60,14 +46,22 @@ export class PlatformController {
   @Put("roles/:roleId/permissions/:permissionId")
   @PlatformRoles("SUPER_ADMIN")
   @ApiOperation({ summary: "Attach a permission to a platform role" })
-  attachRolePermission(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("permissionId") permissionId: string): Promise<void> {
+  attachRolePermission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("roleId") roleId: string,
+    @Param("permissionId") permissionId: string,
+  ): Promise<void> {
     return this.platformRoles.attachPermission(roleId, permissionId, user.userId);
   }
 
   @Delete("roles/:roleId/permissions/:permissionId")
   @PlatformRoles("SUPER_ADMIN")
   @ApiOperation({ summary: "Remove a permission from a platform role" })
-  removeRolePermission(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("permissionId") permissionId: string): Promise<void> {
+  removeRolePermission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("roleId") roleId: string,
+    @Param("permissionId") permissionId: string,
+  ): Promise<void> {
     return this.platformRoles.removePermission(roleId, permissionId, user.userId);
   }
 
@@ -81,7 +75,11 @@ export class PlatformController {
   @Patch("roles/:roleId/users/:userId/revoke")
   @PlatformRoles("SUPER_ADMIN")
   @ApiOperation({ summary: "Revoke a platform role from a user" })
-  revokeRole(@CurrentUser() user: AuthenticatedUser, @Param("roleId") roleId: string, @Param("userId") userId: string): Promise<void> {
+  revokeRole(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("roleId") roleId: string,
+    @Param("userId") userId: string,
+  ): Promise<void> {
     return this.platformRoles.revoke(roleId, userId, user.userId);
   }
 
@@ -123,19 +121,13 @@ export class PlatformController {
 
   @Post("users/:userId/suspend")
   @ApiOperation({ summary: "Suspend a user" })
-  async suspendUser(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param("userId") userId: string,
-  ): Promise<void> {
+  async suspendUser(@CurrentUser() user: AuthenticatedUser, @Param("userId") userId: string): Promise<void> {
     return this.platform.setUserSuspended(userId, true, user.userId);
   }
 
   @Post("users/:userId/reactivate")
   @ApiOperation({ summary: "Reactivate a user" })
-  async reactivateUser(
-    @CurrentUser() user: AuthenticatedUser,
-    @Param("userId") userId: string,
-  ): Promise<void> {
+  async reactivateUser(@CurrentUser() user: AuthenticatedUser, @Param("userId") userId: string): Promise<void> {
     return this.platform.setUserSuspended(userId, false, user.userId);
   }
 

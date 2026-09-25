@@ -1,6 +1,6 @@
 /**
  * Button Component for Dhriti UI
- * 
+ *
  * A comprehensive wrapper around MUI Button with enhanced features
  * for loading states, icon-only buttons, and FAB variants.
  */
@@ -16,11 +16,10 @@ export type ButtonLoadingPosition = "start" | "end" | "center";
 export type ButtonVariant = "contained" | "outlined" | "text" | "fab";
 export type ButtonSize = "small" | "medium" | "large";
 
-export interface ButtonProps
-  extends Omit<
-    MuiButtonProps,
-    "variant" | "size" | "loading" | "loadingPosition" | "loadingIndicator"
-  > {
+export interface ButtonProps extends Omit<
+  MuiButtonProps,
+  "variant" | "size" | "loading" | "loadingPosition" | "loadingIndicator"
+> {
   /**
    * Button variant.
    * @default "contained"
@@ -73,33 +72,31 @@ export interface ButtonProps
 // Styled FAB Button
 const FabButton = styled(MuiButton, {
   shouldForwardProp: (prop) => prop !== "fab",
-})<Pick<ButtonProps, "size">>(
-  ({ theme, size = "medium" }) => {
-    const dimension = theme.density.buttonHeight[size];
+})<Pick<ButtonProps, "size">>(({ theme, size = "medium" }) => {
+  const dimension = theme.density.buttonHeight[size];
 
-    return {
-      minWidth: dimension,
-      width: dimension,
-      height: dimension,
-      borderRadius: theme.tokens.radius.pill,
-      padding: 0,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      boxShadow: theme.tokens.elevation.low,
-      transition: theme.transitions.create(["box-shadow", "transform"], {
-        duration: theme.transitions.duration.short,
-      }),
-      "&:hover": {
-        boxShadow: theme.tokens.elevation.medium,
-        transform: "translateY(-2px)",
-      },
-      "&:active": {
-        transform: "translateY(0)",
-      },
-    };
-  }
-);
+  return {
+    minWidth: dimension,
+    width: dimension,
+    height: dimension,
+    borderRadius: theme.tokens.radius.pill,
+    padding: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: theme.tokens.elevation.low,
+    transition: theme.transitions.create(["box-shadow", "transform"], {
+      duration: theme.transitions.duration.short,
+    }),
+    "&:hover": {
+      boxShadow: theme.tokens.elevation.medium,
+      transform: "translateY(-2px)",
+    },
+    "&:active": {
+      transform: "translateY(0)",
+    },
+  };
+});
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
@@ -128,31 +125,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const isFab = fab || variant === "fab";
 
   // Loading indicator
-  const loadingIndicator =
-    loader ?? (
-      <CircularProgress
-        size={theme.density.buttonLoaderSize[size]}
-        color="inherit"
-      />
-    );
+  const loadingIndicator = loader ?? <CircularProgress size={theme.density.buttonLoaderSize[size]} color="inherit" />;
 
   // Content to display
   const content = loading && loadingText !== undefined ? loadingText : children;
 
   // Resolve icons based on loading state and icon-only mode
   const resolvedStartIcon =
-    loading && loadingPosition === "start"
-      ? loadingIndicator
-      : iconOnly || isFab
-        ? undefined
-        : startIcon;
+    loading && loadingPosition === "start" ? loadingIndicator : iconOnly || isFab ? undefined : startIcon;
 
   const resolvedEndIcon =
-    loading && loadingPosition === "end"
-      ? loadingIndicator
-      : iconOnly || isFab
-        ? undefined
-        : endIcon;
+    loading && loadingPosition === "end" ? loadingIndicator : iconOnly || isFab ? undefined : endIcon;
 
   // Button is disabled when explicitly disabled or loading
   const isDisabled = disabled || loading;
@@ -171,9 +154,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
 
     // FabButton owns the shared, token-driven floating button dimensions.
     if (isFab) {
-      return [
-        ...(Array.isArray(sx) ? sx : [sx]),
-      ];
+      return [...(Array.isArray(sx) ? sx : [sx])];
     }
 
     // Icon-only button styles
@@ -219,15 +200,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   // Render FAB button
   if (isFab) {
     return (
-      <FabButton
-        ref={ref}
-        variant="contained"
-        size={size}
-        color={color}
-        disabled={isDisabled}
-        sx={finalSx}
-        {...props}
-      >
+      <FabButton ref={ref} variant="contained" size={size} color={color} disabled={isDisabled} sx={finalSx} {...props}>
         {loading ? (
           <span className="DhritiButton-loader">{loadingIndicator}</span>
         ) : (
@@ -250,15 +223,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       sx={finalSx}
       {...props}
     >
-      <span className="DhritiButton-content">
-        {renderChildren()}
-      </span>
+      <span className="DhritiButton-content">{renderChildren()}</span>
 
       {loading && loadingPosition === "center" && (
-        <span
-          className="DhritiButton-loader"
-          aria-hidden="true"
-        >
+        <span className="DhritiButton-loader" aria-hidden="true">
           {loadingIndicator}
         </span>
       )}

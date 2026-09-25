@@ -1,11 +1,11 @@
 // Constants
 export const PageName = {
-    Home: "Home",
-    Connect: "Connect",
-    Flow: "Flow",
-    Atlas: "Atlas",
-    Pulse: "Pulse",
-    Nexus: "Nexus",
+  Home: "Home",
+  Connect: "Connect",
+  Flow: "Flow",
+  Atlas: "Atlas",
+  Pulse: "Pulse",
+  Nexus: "Nexus",
 };
 
 // Interfaces

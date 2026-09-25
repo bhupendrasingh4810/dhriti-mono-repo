@@ -32,7 +32,7 @@ export function useRecentEmojis(limit: number = DEFAULT_RECENT_LIMIT): UseRecent
         return next;
       });
     },
-    [limit]
+    [limit],
   );
 
   const clearRecentEmojis = useCallback(() => {

@@ -66,9 +66,7 @@ export function DataTable<T extends DataTableRow>({
   const filteredRows = React.useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return rows;
-    return rows.filter((row) =>
-      Object.values(row).some((value) => String(value).toLowerCase().includes(query)),
-    );
+    return rows.filter((row) => Object.values(row).some((value) => String(value).toLowerCase().includes(query)));
   }, [rows, search]);
 
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
@@ -98,8 +96,14 @@ export function DataTable<T extends DataTableRow>({
 
   return (
     <Paper sx={{ p: 2.5, borderRadius: (theme) => theme.tokens.radius.xl }}>
-      <Stack direction={{ xs: "column", md: "row" }} spacing={2} sx={{ mb: 2, justifyContent: "space-between", alignItems: { xs: "stretch", md: "center" } }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>{title ?? "Records"}</Typography>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        spacing={2}
+        sx={{ mb: 2, justifyContent: "space-between", alignItems: { xs: "stretch", md: "center" } }}
+      >
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>
+          {title ?? "Records"}
+        </Typography>
         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
           <TextField
             size="small"
@@ -141,9 +145,7 @@ export function DataTable<T extends DataTableRow>({
                         return;
                       }
 
-                      setSelected((current) => [
-                        ...new Set([...current, ...currentRows.map((row) => row.id)]),
-                      ]);
+                      setSelected((current) => [...new Set([...current, ...currentRows.map((row) => row.id)])]);
                     }}
                   />
                 </TableCell>
@@ -191,7 +193,11 @@ export function DataTable<T extends DataTableRow>({
         </Grid>
       )}
 
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ mt: 2, justifyContent: "space-between", alignItems: "center" }}>
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={1.5}
+        sx={{ mt: 2, justifyContent: "space-between", alignItems: "center" }}
+      >
         <Chip label={`${selected.length} selected`} />
         <Pagination page={page} count={totalPages} onChange={(_, nextPage) => setPage(nextPage - 1)} color="primary" />
       </Stack>

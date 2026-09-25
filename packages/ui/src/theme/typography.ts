@@ -1,10 +1,8 @@
 import type { ThemeOptions } from "@mui/material/styles";
 
 export const typographyTokens = {
-  fontFamily:
-    '"Inter", "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif',
-  monoFontFamily:
-    '"JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace',
+  fontFamily: '"Inter", "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif',
+  monoFontFamily: '"JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace',
 } as const;
 
 export const typography: ThemeOptions["typography"] = {

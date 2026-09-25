@@ -15,13 +15,7 @@ export type DTableDensity = "compact" | "normal" | "comfortable";
 export type DTableSortOrder = "asc" | "desc";
 export type DTableVariant = "elevated" | "outlined" | "flat";
 
-export type DTableFilterType =
-  | "select"
-  | "multi-select"
-  | "search"
-  | "boolean"
-  | "date-range"
-  | "custom";
+export type DTableFilterType = "select" | "multi-select" | "search" | "boolean" | "date-range" | "custom";
 
 export interface DTableFilterOption {
   label: string;
@@ -40,11 +34,7 @@ export interface DTableFilter {
   defaultValue?: any;
   placeholder?: string;
   icon?: ReactNode;
-  render?: (props: {
-    value: any;
-    onChange: (val: any) => void;
-    filter: DTableFilter;
-  }) => ReactNode;
+  render?: (props: { value: any; onChange: (val: any) => void; filter: DTableFilter }) => ReactNode;
 }
 
 export interface DTableColumn<T = any> {
@@ -251,13 +241,15 @@ export interface DTableProps<T extends { id?: string | number; [key: string]: an
    */
   loading?: boolean;
   loadingRows?: number;
-  emptyState?: {
-    icon?: ReactNode;
-    title?: ReactNode;
-    description?: ReactNode;
-    actionLabel?: string;
-    onAction?: () => void;
-  } | ReactNode;
+  emptyState?:
+    | {
+        icon?: ReactNode;
+        title?: ReactNode;
+        description?: ReactNode;
+        actionLabel?: string;
+        onAction?: () => void;
+      }
+    | ReactNode;
 
   /**
    * Card grid layout columns for Card View

@@ -274,9 +274,7 @@ describe("AuthService.login", () => {
 
   it("rejects locked accounts before checking the password", async () => {
     const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(
-      makeUser({ lockedUntil: new Date(Date.now() + 60_000) }),
-    );
+    prisma.user.findUnique.mockResolvedValue(makeUser({ lockedUntil: new Date(Date.now() + 60_000) }));
     const { service } = makeSut(prisma);
 
     await expect(service.login(loginDto, {})).rejects.toMatchObject({
@@ -349,9 +347,9 @@ describe("AuthService MFA completion", () => {
     const { service, mfa } = makeSut(prisma);
     mfa.consumeRecoveryCode.mockResolvedValueOnce(false);
 
-    await expect(
-      service.completeRecoveryLogin("mfa-token", "ab12-cd34-ef56", {}),
-    ).rejects.toMatchObject({ code: ErrorCode.RECOVERY_CODE_INVALID });
+    await expect(service.completeRecoveryLogin("mfa-token", "ab12-cd34-ef56", {})).rejects.toMatchObject({
+      code: ErrorCode.RECOVERY_CODE_INVALID,
+    });
   });
 });
 
@@ -392,11 +390,7 @@ describe("AuthService email verification", () => {
         data: expect.objectContaining({ status: "ACTIVE" }),
       }),
     );
-    expect(emailSender.sendWelcomeEmail).toHaveBeenCalledWith(
-      "jane@acme.com",
-      "Jane Doe",
-      undefined,
-    );
+    expect(emailSender.sendWelcomeEmail).toHaveBeenCalledWith("jane@acme.com", "Jane Doe", undefined);
   });
 
   it("verifyEmail rejects already-used tokens", async () => {

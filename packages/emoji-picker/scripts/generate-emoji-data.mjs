@@ -90,7 +90,8 @@ function buildSearchIndex(definitions) {
 function writeGeneratedFile(fileName, exportName, value, typeAnnotation) {
   mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  const banner = "// AUTO-GENERATED FILE. Do not edit by hand.\n// Run `pnpm generate` in packages/emoji-picker to regenerate.\n\n";
+  const banner =
+    "// AUTO-GENERATED FILE. Do not edit by hand.\n// Run `pnpm generate` in packages/emoji-picker to regenerate.\n\n";
   const content = `${banner}export const ${exportName}${typeAnnotation ? `: ${typeAnnotation}` : ""} = ${JSON.stringify(value, null, 2)} as const;\n`;
 
   writeFileSync(path.join(OUTPUT_DIR, fileName), content, "utf-8");
@@ -105,21 +106,21 @@ function run() {
     "emojiRegistry.generated.ts",
     "EMOJI_DEFINITIONS",
     definitions,
-    "ReadonlyArray<{ id: string; name: string; emoji: string; category: string; aliases: string[]; keywords: string[]; unicode: string }>"
+    "ReadonlyArray<{ id: string; name: string; emoji: string; category: string; aliases: string[]; keywords: string[]; unicode: string }>",
   );
 
   writeGeneratedFile(
     "emojiCategories.generated.ts",
     "EMOJI_CATEGORY_DEFINITIONS",
     categories,
-    "ReadonlyArray<{ id: string; label: string }>"
+    "ReadonlyArray<{ id: string; label: string }>",
   );
 
   writeGeneratedFile(
     "emojiSearchIndex.generated.ts",
     "EMOJI_SEARCH_INDEX",
     searchIndex,
-    "Readonly<Record<string, readonly string[]>>"
+    "Readonly<Record<string, readonly string[]>>",
   );
 
   console.log(`Generated ${definitions.length} emoji definitions across ${categories.length} categories.`);

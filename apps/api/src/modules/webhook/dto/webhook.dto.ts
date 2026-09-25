@@ -1,13 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import {
-  ArrayMinSize,
-  IsArray,
-  IsBoolean,
-  IsOptional,
-  IsString,
-  IsUrl,
-  MaxLength,
-} from "class-validator";
+import { ArrayMinSize, IsArray, IsBoolean, IsOptional, IsString, IsUrl, MaxLength } from "class-validator";
 
 export class CreateWebhookDto {
   @ApiProperty({ example: "https://hooks.example.com/dhriti" })

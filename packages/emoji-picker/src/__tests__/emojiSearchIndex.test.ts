@@ -10,7 +10,14 @@ describe("searchEmojis", () => {
   it("matches by partial name", () => {
     const results = searchEmojis("grin");
     expect(results.length).toBeGreaterThan(0);
-    expect(results.every((emoji) => emoji.name.includes("grin") || emoji.aliases.some((alias) => alias.includes("grin")) || emoji.keywords.some((keyword) => keyword.includes("grin")))).toBe(true);
+    expect(
+      results.every(
+        (emoji) =>
+          emoji.name.includes("grin") ||
+          emoji.aliases.some((alias) => alias.includes("grin")) ||
+          emoji.keywords.some((keyword) => keyword.includes("grin")),
+      ),
+    ).toBe(true);
   });
 
   it("is case-insensitive", () => {

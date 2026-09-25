@@ -48,7 +48,11 @@ export default function ForgotPasswordPage() {
   return (
     <AuthLayout
       title={sent ? "Check your email" : "Forgot your password"}
-      subtitle={sent ? "If an account exists for this email, you will receive a password reset link shortly." : "We'll send you a link to reset your password"}
+      subtitle={
+        sent
+          ? "If an account exists for this email, you will receive a password reset link shortly."
+          : "We'll send you a link to reset your password"
+      }
       illustration="reset"
     >
       {sent ? (
@@ -57,15 +61,19 @@ export default function ForgotPasswordPage() {
             <div className="w-16 h-16 rounded-2xl bg-[#036c5f]/10 flex items-center justify-center">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
                 <rect x="2" y="6" width="20" height="14" rx="3" stroke="#036c5f" strokeWidth="1.5" />
-                <path d="M2 9l10 7 10-7" stroke="#036c5f" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                <path
+                  d="M2 9l10 7 10-7"
+                  stroke="#036c5f"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
           </div>
 
           <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-            <p className="text-sm text-slate-600 text-center">
-              Didn't receive the email? Check your spam folder, or
-            </p>
+            <p className="text-sm text-slate-600 text-center">Didn't receive the email? Check your spam folder, or</p>
             <button
               onClick={() => setSent(false)}
               className="w-full text-sm text-[#036c5f] font-semibold hover:text-[#024d44] cursor-pointer transition-colors text-center"
@@ -87,8 +95,7 @@ export default function ForgotPasswordPage() {
         <form noValidate onSubmit={handleSubmit} className="space-y-5">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">
-              Work email {" "}
-              <span className="text-red-600">*</span>
+              Work email <span className="text-red-600">*</span>
             </label>
             <input
               type="email"
@@ -104,14 +111,10 @@ export default function ForgotPasswordPage() {
               className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#036c5f]/30 focus:border-[#036c5f] transition-all"
               style={{
                 borderColor: emailError ? "#dc2626" : "#036c5f",
-                boxShadow: emailError
-                  ? "0 0 0 3px rgba(220,38,38,0.12)"
-                  : "0 0 0 3px rgba(3,108,95,0.12)",
+                boxShadow: emailError ? "0 0 0 3px rgba(220,38,38,0.12)" : "0 0 0 3px rgba(3,108,95,0.12)",
               }}
             />
-            {emailError && (
-              <p className="mt-1 text-sm text-red-600">{emailError}</p>
-            )}
+            {emailError && <p className="mt-1 text-sm text-red-600">{emailError}</p>}
           </div>
 
           <button

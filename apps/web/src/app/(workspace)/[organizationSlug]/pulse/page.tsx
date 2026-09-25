@@ -8,17 +8,7 @@ import {
   FilterListRounded,
   MoreVertRounded,
 } from "@mui/icons-material";
-import {
-  Avatar,
-  Box,
-  Button,
-  Checkbox,
-  Divider,
-  IconButton,
-  Paper,
-  Stack,
-  Typography,
-} from "@dhriti/ui";
+import { Avatar, Box, Button, Checkbox, Divider, IconButton, Paper, Stack, Typography } from "@dhriti/ui";
 import { alpha } from "@mui/material/styles";
 
 type EventTone = "info" | "success" | "warning" | "secondary" | "error";
@@ -38,25 +28,109 @@ const dayHeaders = ["Mon 25", "Tue 26", "Wed 27", "Thu 28", "Fri 29"];
 const timeSlots = ["8 AM", "9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM", "4 PM", "5 PM", "6 PM"];
 
 const events: CalendarEvent[] = [
-  { id: "e1", day: 0, startHour: 9.5, durationHours: 0.75, title: "Daily Standup", time: "9:30 - 10:00", location: "Room 2B", tone: "secondary" },
-  { id: "e2", day: 1, startHour: 10, durationHours: 2, title: "Sprint Planning", time: "10:00 - 12:00", location: "Room 2B", tone: "success" },
-  { id: "e3", day: 2, startHour: 11, durationHours: 1.25, title: "Product Discussion", time: "11:00 - 12:15", location: "Room 3A", tone: "info" },
-  { id: "e4", day: 3, startHour: 10, durationHours: 1.5, title: "Architecture Review", time: "10:00 - 11:30", location: "Room 2B", tone: "secondary" },
-  { id: "e5", day: 4, startHour: 9.5, durationHours: 1, title: "Product Roadmap", time: "9:30 - 10:30", location: "Room 3A", tone: "warning" },
-  { id: "e6", day: 0, startHour: 14, durationHours: 1.5, title: "Architecture Review", time: "2:00 - 3:30", location: "Room 3A", tone: "warning" },
-  { id: "e7", day: 1, startHour: 15, durationHours: 2, title: "Focus Time", time: "3:00 - 5:00", location: "Heads down", tone: "error" },
-  { id: "e8", day: 4, startHour: 15, durationHours: 1, title: "Team Sync", time: "3:00 - 4:00", location: "Room 2B", tone: "secondary" },
+  {
+    id: "e1",
+    day: 0,
+    startHour: 9.5,
+    durationHours: 0.75,
+    title: "Daily Standup",
+    time: "9:30 - 10:00",
+    location: "Room 2B",
+    tone: "secondary",
+  },
+  {
+    id: "e2",
+    day: 1,
+    startHour: 10,
+    durationHours: 2,
+    title: "Sprint Planning",
+    time: "10:00 - 12:00",
+    location: "Room 2B",
+    tone: "success",
+  },
+  {
+    id: "e3",
+    day: 2,
+    startHour: 11,
+    durationHours: 1.25,
+    title: "Product Discussion",
+    time: "11:00 - 12:15",
+    location: "Room 3A",
+    tone: "info",
+  },
+  {
+    id: "e4",
+    day: 3,
+    startHour: 10,
+    durationHours: 1.5,
+    title: "Architecture Review",
+    time: "10:00 - 11:30",
+    location: "Room 2B",
+    tone: "secondary",
+  },
+  {
+    id: "e5",
+    day: 4,
+    startHour: 9.5,
+    durationHours: 1,
+    title: "Product Roadmap",
+    time: "9:30 - 10:30",
+    location: "Room 3A",
+    tone: "warning",
+  },
+  {
+    id: "e6",
+    day: 0,
+    startHour: 14,
+    durationHours: 1.5,
+    title: "Architecture Review",
+    time: "2:00 - 3:30",
+    location: "Room 3A",
+    tone: "warning",
+  },
+  {
+    id: "e7",
+    day: 1,
+    startHour: 15,
+    durationHours: 2,
+    title: "Focus Time",
+    time: "3:00 - 5:00",
+    location: "Heads down",
+    tone: "error",
+  },
+  {
+    id: "e8",
+    day: 4,
+    startHour: 15,
+    durationHours: 1,
+    title: "Team Sync",
+    time: "3:00 - 4:00",
+    location: "Room 2B",
+    tone: "secondary",
+  },
 ];
 
 function eventPalette(tone: EventTone) {
   if (tone === "success") {
-    return { border: "success.main", bg: (theme: any) => alpha(theme.palette.success.main, 0.12), text: "success.dark" };
+    return {
+      border: "success.main",
+      bg: (theme: any) => alpha(theme.palette.success.main, 0.12),
+      text: "success.dark",
+    };
   }
   if (tone === "warning") {
-    return { border: "warning.main", bg: (theme: any) => alpha(theme.palette.warning.main, 0.12), text: "warning.dark" };
+    return {
+      border: "warning.main",
+      bg: (theme: any) => alpha(theme.palette.warning.main, 0.12),
+      text: "warning.dark",
+    };
   }
   if (tone === "secondary") {
-    return { border: "secondary.main", bg: (theme: any) => alpha(theme.palette.secondary.main, 0.12), text: "secondary.main" };
+    return {
+      border: "secondary.main",
+      bg: (theme: any) => alpha(theme.palette.secondary.main, 0.12),
+      text: "secondary.main",
+    };
   }
   if (tone === "error") {
     return { border: "error.main", bg: (theme: any) => alpha(theme.palette.error.main, 0.12), text: "error.dark" };
@@ -80,7 +154,12 @@ function MiniCalendar({ value, onChange }: { value: Date; onChange: (date: Date)
       </Typography>
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0.5 }}>
         {["S", "M", "T", "W", "T", "F", "S"].map((label, index) => (
-          <Typography key={`${label}-${index}`} variant="caption" color="text.disabled" sx={{ textAlign: "center", fontWeight: 700 }}>
+          <Typography
+            key={`${label}-${index}`}
+            variant="caption"
+            color="text.disabled"
+            sx={{ textAlign: "center", fontWeight: 700 }}
+          >
             {label}
           </Typography>
         ))}
@@ -113,16 +192,38 @@ export default function PulsePage() {
   }, [selectedDate]);
 
   return (
-    <Box sx={{ bgcolor: "background.paper", color: "text.primary", height: "100vh", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <Box
+      sx={{
+        bgcolor: "background.paper",
+        color: "text.primary",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
       <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
-        <Box sx={{ width: 300, borderRight: 1, borderColor: "divider", bgcolor: "background.paper", overflowY: "auto" }}>
+        <Box
+          sx={{ width: 300, borderRight: 1, borderColor: "divider", bgcolor: "background.paper", overflowY: "auto" }}
+        >
           <Box sx={{ p: 2.5 }}>
             <MiniCalendar value={selectedDate} onChange={setSelectedDate} />
           </Box>
           <Divider />
           <Stack spacing={3} sx={{ p: 2.5 }}>
             <Box>
-              <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", mb: 1.25 }}>My Calendars</Typography>
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  color: "text.secondary",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  mb: 1.25,
+                }}
+              >
+                My Calendars
+              </Typography>
               <Stack spacing={1.25}>
                 {[
                   { label: "Calendar", checked: true },
@@ -131,19 +232,38 @@ export default function PulsePage() {
                 ].map((item) => (
                   <Stack key={item.label} direction="row" spacing={1} sx={{ alignItems: "center" }}>
                     <Checkbox checked={item.checked} size="small" />
-                    <Typography sx={{ fontSize: 14, color: "text.secondary", fontWeight: 600 }}>{item.label}</Typography>
+                    <Typography sx={{ fontSize: 14, color: "text.secondary", fontWeight: 600 }}>
+                      {item.label}
+                    </Typography>
                   </Stack>
                 ))}
               </Stack>
             </Box>
 
             <Box>
-              <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", mb: 1.25 }}>Team: Rahul Sharma</Typography>
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  color: "text.secondary",
+                  fontWeight: 800,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  mb: 1.25,
+                }}
+              >
+                Team: Rahul Sharma
+              </Typography>
               <Stack spacing={1}>
                 {["Rahul Sharma (You)", "Amit Verma", "Priya Nair", "Neha Joshi", "Karan Mehta"].map((name, index) => (
                   <Stack key={name} direction="row" spacing={1} sx={{ alignItems: "center" }}>
                     <Checkbox checked={index === 0} size="small" />
-                    <Avatar sx={{ width: 20, height: 20, fontSize: 10 }}>{name.split(" ").map((part) => part[0]).slice(0, 2).join("")}</Avatar>
+                    <Avatar sx={{ width: 20, height: 20, fontSize: 10 }}>
+                      {name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .slice(0, 2)
+                        .join("")}
+                    </Avatar>
                     <Typography sx={{ fontSize: 14, color: "text.secondary", fontWeight: 600 }}>{name}</Typography>
                   </Stack>
                 ))}
@@ -153,18 +273,39 @@ export default function PulsePage() {
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
-          <Stack direction="row" sx={{ p: 2.5, borderBottom: 1, borderColor: "divider", alignItems: "center", justifyContent: "space-between", gap: 1.5, bgcolor: "background.paper" }}>
+          <Stack
+            direction="row"
+            sx={{
+              p: 2.5,
+              borderBottom: 1,
+              borderColor: "divider",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1.5,
+              bgcolor: "background.paper",
+            }}
+          >
             <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-              <Button variant="outlined" size="small">Today</Button>
-              <IconButton size="small"><ChevronLeftRounded /></IconButton>
-              <IconButton size="small"><ChevronRightRounded /></IconButton>
+              <Button variant="outlined" size="small">
+                Today
+              </Button>
+              <IconButton size="small">
+                <ChevronLeftRounded />
+              </IconButton>
+              <IconButton size="small">
+                <ChevronRightRounded />
+              </IconButton>
               <Typography sx={{ fontSize: 18, fontWeight: 800 }}>25 - 29 August 2025</Typography>
             </Stack>
 
             <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
               <Button variant="outlined" sx={{ px: 0 }} startIcon={<FilterListRounded />} />
-              <Button variant="contained" startIcon={<AddRounded />}>New Meeting</Button>
-              <IconButton><MoreVertRounded /></IconButton>
+              <Button variant="contained" startIcon={<AddRounded />}>
+                New Meeting
+              </Button>
+              <IconButton>
+                <MoreVertRounded />
+              </IconButton>
             </Stack>
           </Stack>
 
@@ -179,22 +320,65 @@ export default function PulsePage() {
                 bgcolor: "background.paper",
               }}
             >
-              <Box sx={{ position: "sticky", top: 0, zIndex: 3, borderBottom: 1, borderRight: 1, borderColor: "divider", bgcolor: "background.paper", display: "grid", placeItems: "center" }}>
-                <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>Time</Typography>
+              <Box
+                sx={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 3,
+                  borderBottom: 1,
+                  borderRight: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                  display: "grid",
+                  placeItems: "center",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 11,
+                    color: "text.secondary",
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Time
+                </Typography>
               </Box>
               {dayHeaders.map((day, index) => (
-                <Box key={day} sx={{ position: "sticky", top: 0, zIndex: 3, borderBottom: 1, borderColor: "divider", bgcolor: "background.paper", display: "grid", placeItems: "center", color: index === 4 ? "primary.main" : "text.secondary" }}>
+                <Box
+                  key={day}
+                  sx={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 3,
+                    borderBottom: 1,
+                    borderColor: "divider",
+                    bgcolor: "background.paper",
+                    display: "grid",
+                    placeItems: "center",
+                    color: index === 4 ? "primary.main" : "text.secondary",
+                  }}
+                >
                   <Typography sx={{ fontSize: 13, fontWeight: 800 }}>{day}</Typography>
                 </Box>
               ))}
 
-              <Box sx={{ borderBottom: 1, borderRight: 1, borderColor: "divider", display: "grid", placeItems: "center" }}>
+              <Box
+                sx={{ borderBottom: 1, borderRight: 1, borderColor: "divider", display: "grid", placeItems: "center" }}
+              >
                 <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary" }}>All Day</Typography>
               </Box>
               {["Independence Day", "", "Priya Nair Birthday", "", ""].map((label, index) => (
-                <Box key={`all-day-${index}`} sx={{ borderBottom: 1, borderRight: index < 4 ? 1 : 0, borderColor: "divider", p: 0.75 }}>
+                <Box
+                  key={`all-day-${index}`}
+                  sx={{ borderBottom: 1, borderRight: index < 4 ? 1 : 0, borderColor: "divider", p: 0.75 }}
+                >
                   {label ? (
-                    <Paper variant="outlined" sx={{ px: 1, py: 0.65, borderColor: "divider", bgcolor: "background.default" }}>
+                    <Paper
+                      variant="outlined"
+                      sx={{ px: 1, py: 0.65, borderColor: "divider", bgcolor: "background.default" }}
+                    >
                       <Typography sx={{ fontSize: 11, fontWeight: 700 }}>{label}</Typography>
                     </Paper>
                   ) : null}
@@ -207,7 +391,15 @@ export default function PulsePage() {
                     <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: 700 }}>{slot}</Typography>
                   </Box>
                   {Array.from({ length: 5 }).map((_, colIndex) => (
-                    <Box key={`${slot}-${colIndex}`} sx={{ borderBottom: 1, borderRight: colIndex < 4 ? 1 : 0, borderColor: "divider", position: "relative" }} />
+                    <Box
+                      key={`${slot}-${colIndex}`}
+                      sx={{
+                        borderBottom: 1,
+                        borderRight: colIndex < 4 ? 1 : 0,
+                        borderColor: "divider",
+                        position: "relative",
+                      }}
+                    />
                   ))}
                 </Box>
               ))}
@@ -238,9 +430,7 @@ export default function PulsePage() {
                     <Typography sx={{ fontSize: 11, fontWeight: 800, color: palette.text, lineHeight: 1.25 }} noWrap>
                       {event.title}
                     </Typography>
-                    <Typography sx={{ fontSize: 10, color: "text.secondary", mt: 0.25 }}>
-                      {event.time}
-                    </Typography>
+                    <Typography sx={{ fontSize: 10, color: "text.secondary", mt: 0.25 }}>{event.time}</Typography>
                     <Typography sx={{ fontSize: 10, color: "text.disabled", mt: 0.2 }} noWrap>
                       {event.location}
                     </Typography>
@@ -259,7 +449,17 @@ export default function PulsePage() {
                   zIndex: 4,
                 }}
               >
-                <Box sx={{ position: "absolute", top: -4, left: -4, width: 8, height: 8, borderRadius: (theme) => theme.tokens.radius.pill, bgcolor: "error.main" }} />
+                <Box
+                  sx={{
+                    position: "absolute",
+                    top: -4,
+                    left: -4,
+                    width: 8,
+                    height: 8,
+                    borderRadius: (theme) => theme.tokens.radius.pill,
+                    bgcolor: "error.main",
+                  }}
+                />
               </Box>
             </Box>
           </Box>

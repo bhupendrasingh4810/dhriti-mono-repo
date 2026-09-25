@@ -70,10 +70,7 @@ export class CadenceGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 
   @SubscribeMessage("session:join")
-  async joinSession(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: SessionPayload,
-  ): Promise<{ ok: true }> {
+  async joinSession(@ConnectedSocket() socket: Socket, @MessageBody() payload: SessionPayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     const organizationId = this.assertOrg(principal);
     // Authorize: the session must exist in the org.
@@ -83,20 +80,14 @@ export class CadenceGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 
   @SubscribeMessage("session:leave")
-  async leaveSession(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: SessionPayload,
-  ): Promise<{ ok: true }> {
+  async leaveSession(@ConnectedSocket() socket: Socket, @MessageBody() payload: SessionPayload): Promise<{ ok: true }> {
     await socket.leave(sessionRoom(payload.sessionId));
     return { ok: true };
   }
 
   /** Anonymous voting sync: broadcast a vote change without exposing the voter. */
   @SubscribeMessage("card:vote")
-  async vote(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: VotePayload,
-  ): Promise<{ ok: true }> {
+  async vote(@ConnectedSocket() socket: Socket, @MessageBody() payload: VotePayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     const organizationId = this.assertOrg(principal);
     await this.cadence.vote(organizationId, payload.sessionId, payload.cardId, principal.userId);
@@ -110,10 +101,7 @@ export class CadenceGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   }
 
   @SubscribeMessage("card:unvote")
-  async unvote(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: VotePayload,
-  ): Promise<{ ok: true }> {
+  async unvote(@ConnectedSocket() socket: Socket, @MessageBody() payload: VotePayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     const organizationId = this.assertOrg(principal);
     await this.cadence.unvote(organizationId, payload.sessionId, payload.cardId, principal.userId);
@@ -126,10 +114,7 @@ export class CadenceGateway implements OnGatewayInit, OnGatewayConnection, OnGat
 
   /** Facilitator phase transition broadcast. */
   @SubscribeMessage("session:phase")
-  async setPhase(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: PhasePayload,
-  ): Promise<{ ok: true }> {
+  async setPhase(@ConnectedSocket() socket: Socket, @MessageBody() payload: PhasePayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     const organizationId = this.assertOrg(principal);
     const updated = await this.cadence.setPhase(

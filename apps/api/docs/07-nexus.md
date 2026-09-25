@@ -13,11 +13,13 @@ MEETING_NOTES | ASK`; `status` ∈ `PENDING | RUNNING | COMPLETED | FAILED`.
 `NexusMessage` stores the Q&A history for a conversation.
 
 ## AI provider
+
 `AiProviderService` is a swappable port. If `OPENAI_API_KEY` is set it calls
 OpenAI chat completions (`OPENAI_MODEL`, default `gpt-4o-mini`); otherwise it
 uses a deterministic local fallback so features work in dev.
 
 ## REST (base `/v1/organization/nexus`)
+
 - `POST /summarize/conversation` `{ channelId, messageLimit? }` → summary + decisions + action items (a `NexusTask`).
 - `POST /summarize/page` `{ pageId }` → summary + key points.
 - `POST /extract-tasks` `{ text }` → `ExtractedTask[]` (`title`, optional `assignee`/`dueDate`/`priority`).
@@ -25,6 +27,7 @@ uses a deterministic local fallback so features work in dev.
 - `GET /conversations`, `GET /tasks` — the current user's AI conversations and tasks.
 
 ## WebSocket — namespace `/nexus`
+
 `ask:stream` `{ question, conversationId? }` streams the answer token-by-token:
 
 ```
@@ -37,4 +40,5 @@ nexus:answer:error  { message }
 The Q&A pair is persisted via the Nexus service so history is kept.
 
 ## Error codes
+
 `NOTHING_TO_SUMMARIZE`, `PAGE_NOT_FOUND`, `CONVERSATION_NOT_FOUND`.

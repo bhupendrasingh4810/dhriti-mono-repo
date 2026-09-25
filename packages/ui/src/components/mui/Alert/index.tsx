@@ -1,6 +1,6 @@
 /**
  * Alert Component for Dhriti UI
- * 
+ *
  * Enterprise-grade alert component with:
  * - Multiple variants (filled, outlined)
  * - Severity levels (success, error, warning, info)
@@ -417,31 +417,21 @@ export const Alert = forwardRef<HTMLDivElement, AlertProps>(function Alert(
         <Box className="DhritiAlert-content">
           {/* Title */}
           {children && (
-            <Typography
-              className="DhritiAlert-title"
-              variant="body1"
-              component="div"
-            >
+            <Typography className="DhritiAlert-title" variant="body1" component="div">
               {children}
             </Typography>
           )}
 
           {/* Description */}
           {description && (
-            <Typography
-              className="DhritiAlert-description"
-              variant="body2"
-              component="div"
-            >
+            <Typography className="DhritiAlert-description" variant="body2" component="div">
               {description}
             </Typography>
           )}
         </Box>
 
         {/* Action */}
-        {action && (
-          <Box className="DhritiAlert-action">{action}</Box>
-        )}
+        {action && <Box className="DhritiAlert-action">{action}</Box>}
 
         {/* Dismiss button */}
         {dismissible && (

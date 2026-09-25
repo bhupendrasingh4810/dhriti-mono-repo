@@ -1,4 +1,4 @@
-export type UserRole = 'PLATFORM_ADMIN' | 'ORG_OWNER' | 'ORG_ADMIN' | 'EMPLOYEE' | 'GUEST';
+export type UserRole = "PLATFORM_ADMIN" | "ORG_OWNER" | "ORG_ADMIN" | "EMPLOYEE" | "GUEST";
 export interface Organization {
   id: string;
   name: string;

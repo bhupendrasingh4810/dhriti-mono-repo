@@ -1,6 +1,6 @@
 /**
  * Alert Component Stories
- * 
+ *
  * Comprehensive Storybook documentation for Dhriti Alert component.
  */
 
@@ -128,19 +128,35 @@ export const Description: Story = {
   name: "Descriptions",
   render: () => (
     <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%", maxWidth: 600 }}>
-      <Alert severity="success" variant="filled" description="Your changes have been saved successfully and will be reflected shortly.">
+      <Alert
+        severity="success"
+        variant="filled"
+        description="Your changes have been saved successfully and will be reflected shortly."
+      >
         Changes saved
       </Alert>
 
-      <Alert severity="error" variant="filled" description="We couldn't connect to the server. Please check your internet connection and try again.">
+      <Alert
+        severity="error"
+        variant="filled"
+        description="We couldn't connect to the server. Please check your internet connection and try again."
+      >
         Connection failed
       </Alert>
 
-      <Alert severity="warning" variant="filled" description="This action cannot be undone. All data will be permanently deleted from our servers.">
+      <Alert
+        severity="warning"
+        variant="filled"
+        description="This action cannot be undone. All data will be permanently deleted from our servers."
+      >
         Delete account?
       </Alert>
 
-      <Alert severity="info" variant="filled" description="We've sent a verification code to your email. Please enter it below to continue.">
+      <Alert
+        severity="info"
+        variant="filled"
+        description="We've sent a verification code to your email. Please enter it below to continue."
+      >
         Verification required
       </Alert>
     </div>
@@ -159,7 +175,11 @@ export const Action: Story = {
         severity="success"
         variant="filled"
         description="Your changes have been saved."
-        action={<Button size="small" variant="outlined">Undo</Button>}
+        action={
+          <Button size="small" variant="outlined">
+            Undo
+          </Button>
+        }
       >
         Saved successfully
       </Alert>
@@ -168,7 +188,11 @@ export const Action: Story = {
         severity="error"
         variant="filled"
         description="Failed to save your changes."
-        action={<Button size="small" variant="contained" color="error">Retry</Button>}
+        action={
+          <Button size="small" variant="contained" color="error">
+            Retry
+          </Button>
+        }
       >
         Save failed
       </Alert>
@@ -179,8 +203,12 @@ export const Action: Story = {
         description="This action cannot be undone."
         action={
           <>
-            <Button size="small" variant="text">Cancel</Button>
-            <Button size="small" variant="contained" color="warning">Confirm</Button>
+            <Button size="small" variant="text">
+              Cancel
+            </Button>
+            <Button size="small" variant="contained" color="warning">
+              Confirm
+            </Button>
           </>
         }
       >
@@ -193,8 +221,12 @@ export const Action: Story = {
         description="A new version is available."
         action={
           <>
-            <Button size="small" variant="text">Later</Button>
-            <Button size="small" variant="contained">Update</Button>
+            <Button size="small" variant="text">
+              Later
+            </Button>
+            <Button size="small" variant="contained">
+              Update
+            </Button>
           </>
         }
       >
@@ -221,11 +253,7 @@ export const Dismissible: Story = {
     return (
       <div style={{ display: "flex", flexDirection: "column", gap: 16, width: "100%", maxWidth: 600 }}>
         {alerts.map((alert, index) => (
-          <DismissibleAlert
-            key={index}
-            severity={alert.severity as any}
-            message={alert.message}
-          />
+          <DismissibleAlert key={index} severity={alert.severity as any} message={alert.message} />
         ))}
       </div>
     );
@@ -238,13 +266,7 @@ const DismissibleAlert = ({ severity, message }: { severity: string; message: st
   if (!open) return null;
 
   return (
-    <Alert
-      severity={severity as any}
-      variant="filled"
-      dismissible
-      open={open}
-      onDismiss={() => setOpen(false)}
-    >
+    <Alert severity={severity as any} variant="filled" dismissible open={open} onDismiss={() => setOpen(false)}>
       {message}
     </Alert>
   );
@@ -340,8 +362,12 @@ export const FilledComplete: Story = {
       description="A new version is available with improved performance and bug fixes."
       action={
         <>
-          <Button size="small" variant="text">Later</Button>
-          <Button size="small" variant="contained">Update</Button>
+          <Button size="small" variant="text">
+            Later
+          </Button>
+          <Button size="small" variant="contained">
+            Update
+          </Button>
         </>
       }
     >
@@ -383,17 +409,17 @@ export const EnterprisePatterns: Story = {
         severity="success"
         variant="filled"
         description="Your profile has been updated successfully."
-        action={<Button size="small" variant="outlined">View Profile</Button>}
+        action={
+          <Button size="small" variant="outlined">
+            View Profile
+          </Button>
+        }
       >
         Profile updated
       </Alert>
 
       {/* Validation error */}
-      <Alert
-        severity="error"
-        variant="outlined"
-        description="Please correct the errors in the form below."
-      >
+      <Alert severity="error" variant="outlined" description="Please correct the errors in the form below.">
         Form validation failed
       </Alert>
 
@@ -404,8 +430,12 @@ export const EnterprisePatterns: Story = {
         description="Scheduled maintenance on Dec 25, 2024 from 2-4 AM UTC."
         action={
           <>
-            <Button size="small" variant="text">Learn More</Button>
-            <Button size="small" variant="contained">Set Reminder</Button>
+            <Button size="small" variant="text">
+              Learn More
+            </Button>
+            <Button size="small" variant="contained">
+              Set Reminder
+            </Button>
           </>
         }
       >
@@ -417,7 +447,11 @@ export const EnterprisePatterns: Story = {
         severity="info"
         variant="filled"
         description="We've sent a verification code to your email."
-        action={<Button size="small" variant="contained">Resend Code</Button>}
+        action={
+          <Button size="small" variant="contained">
+            Resend Code
+          </Button>
+        }
       >
         Verification required
       </Alert>

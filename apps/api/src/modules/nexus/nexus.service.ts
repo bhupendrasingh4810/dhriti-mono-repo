@@ -98,7 +98,7 @@ export class NexusService {
       {
         role: "system",
         content:
-          'Extract action items from the text. Return ONLY a JSON array of objects with keys: title (string), and optional assignee, dueDate (ISO date), priority (URGENT|HIGH|MEDIUM|LOW). No prose, no code fences.',
+          "Extract action items from the text. Return ONLY a JSON array of objects with keys: title (string), and optional assignee, dueDate (ISO date), priority (URGENT|HIGH|MEDIUM|LOW). No prose, no code fences.",
       },
       { role: "user", content: text },
     ]);

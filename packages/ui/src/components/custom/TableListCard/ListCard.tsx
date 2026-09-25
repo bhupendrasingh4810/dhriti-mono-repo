@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  forwardRef,
-  useState,
-  type ReactNode,
-  type MouseEvent,
-  type KeyboardEvent,
-} from "react";
+import { forwardRef, useState, type ReactNode, type MouseEvent, type KeyboardEvent } from "react";
 import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
 import CardContent from "@mui/material/CardContent";
@@ -89,14 +83,7 @@ export type ListCardColumnKey =
   | "custom";
 
 export type ListCardStatusType =
-  | "success"
-  | "error"
-  | "info"
-  | "warning"
-  | "primary"
-  | "secondary"
-  | "inherit"
-  | "default";
+  "success" | "error" | "info" | "warning" | "primary" | "secondary" | "inherit" | "default";
 export type ListCardDateFormat = "format1" | "format2" | "format3" | "relative" | "due" | "standard";
 export type ListCardAppType = "Connect" | "Pulse" | "Flow" | "Atlas" | "Control" | "Nexus" | string;
 
@@ -630,21 +617,19 @@ const sizeTokens = {
 
 const Root = styled(Card, {
   shouldForwardProp: (prop) => prop !== "cardvariant" && prop !== "fullwidth",
-})<{ cardvariant: ListCardVariant; fullwidth: boolean }>(
-  ({ theme, cardvariant, fullwidth }) => ({
-    width: fullwidth ? "100%" : "auto",
-    overflow: "hidden",
-    borderRadius: theme.shape.borderRadius,
-    ...(cardvariant === "outlined" && {
-      border: `1px solid ${theme.palette.divider}`,
-      boxShadow: "none",
-    }),
-    ...(cardvariant === "flat" && {
-      boxShadow: "none",
-      backgroundColor: "transparent",
-    }),
+})<{ cardvariant: ListCardVariant; fullwidth: boolean }>(({ theme, cardvariant, fullwidth }) => ({
+  width: fullwidth ? "100%" : "auto",
+  overflow: "hidden",
+  borderRadius: theme.shape.borderRadius,
+  ...(cardvariant === "outlined" && {
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: "none",
   }),
-);
+  ...(cardvariant === "flat" && {
+    boxShadow: "none",
+    backgroundColor: "transparent",
+  }),
+}));
 
 const Leading = styled(ListItemIcon)<{ dimension: number }>(({ dimension }) => ({
   minWidth: dimension,
@@ -804,36 +789,25 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
     typeof headerImageSize === "number"
       ? headerImageSize
       : headerImageSize === "sm"
-      ? 36
-      : headerImageSize === "lg"
-      ? 52
-      : 44;
+        ? 36
+        : headerImageSize === "lg"
+          ? 52
+          : 44;
 
   const resolvedHeaderIconColor = headerIconColor ?? theme.palette.primary.main;
-  const resolvedHeaderIconBgColor =
-    headerIconBgColor ?? alpha(resolvedHeaderIconColor, 0.08);
-  const resolvedHeaderIconBorderColor =
-    headerIconBorderColor ?? alpha(resolvedHeaderIconColor, 0.2);
+  const resolvedHeaderIconBgColor = headerIconBgColor ?? alpha(resolvedHeaderIconColor, 0.08);
+  const resolvedHeaderIconBorderColor = headerIconBorderColor ?? alpha(resolvedHeaderIconColor, 0.2);
 
   const headerAvatarNode = shouldRenderHeaderImage && headerImage && (
     <Box sx={{ mr: 1.5, display: "flex", alignItems: "center" }}>
       {typeof headerImage === "string" ? (
-        <Avatar
-          src={headerImage}
-          variant={headerImageVariant}
-          sx={{ width: imageDimension, height: imageDimension }}
-        />
+        <Avatar src={headerImage} variant={headerImageVariant} sx={{ width: imageDimension, height: imageDimension }} />
       ) : (
         <Box
           sx={{
             width: imageDimension,
             height: imageDimension,
-            borderRadius:
-              headerImageVariant === "circular"
-                ? "50%"
-                : headerImageVariant === "rounded"
-                ? 1.5
-                : 0,
+            borderRadius: headerImageVariant === "circular" ? "50%" : headerImageVariant === "rounded" ? 1.5 : 0,
             border: `1px solid ${resolvedHeaderIconBorderColor}`,
             backgroundColor: resolvedHeaderIconBgColor,
             color: resolvedHeaderIconColor,
@@ -861,10 +835,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
             <Typography variant={size === "large" ? "h6" : "subtitle1"} sx={{ fontWeight: 700 }}>
               {title}
             </Typography>
-            <Typography
-              variant="caption"
-              sx={(t) => ({ color: alpha(t.palette.text.disabled, 0.9), fontWeight: 700 })}
-            >
+            <Typography variant="caption" sx={(t) => ({ color: alpha(t.palette.text.disabled, 0.9), fontWeight: 700 })}>
               {subtitle}
             </Typography>
           </Stack>
@@ -894,8 +865,10 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
     Boolean(customButton) ||
     Boolean(headerMenuItems);
 
-  const resolvedHeaderControls = headerControls ?? headerAction ?? (
-    hasStructuredHeaderControls ? (
+  const resolvedHeaderControls =
+    headerControls ??
+    headerAction ??
+    (hasStructuredHeaderControls ? (
       <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
         {/* 1. Header Action Icons */}
         {headerIcons?.map((action, idx) => (
@@ -977,8 +950,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
           </Tooltip>
         )}
       </Stack>
-    ) : null
-  );
+    ) : null);
 
   // ==========================================================================
   // COLUMN RENDERING LOGIC
@@ -1017,14 +989,14 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         const subtitleText =
           u.subtitleType === "none"
             ? null
-            : u.subtitle ??
+            : (u.subtitle ??
               (u.subtitleType === "activity"
                 ? u.activity
                 : u.subtitleType === "team"
-                ? [u.designation, u.teamName].filter(Boolean).join(" • ")
-                : u.subtitleType === "designation"
-                ? u.designation
-                : u.activity ?? [u.designation, u.teamName].filter(Boolean).join(" • ") ?? u.designation);
+                  ? [u.designation, u.teamName].filter(Boolean).join(" • ")
+                  : u.subtitleType === "designation"
+                    ? u.designation
+                    : (u.activity ?? [u.designation, u.teamName].filter(Boolean).join(" • ") ?? u.designation)));
 
         const avatarSizeProp = u.avatarSize ?? "md";
 
@@ -1040,11 +1012,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
               {u.initials ?? u.name.slice(0, 2).toUpperCase()}
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography
-                variant="body2"
-                noWrap
-                sx={{ fontWeight: selected ? 700 : 600, color: "text.primary" }}
-              >
+              <Typography variant="body2" noWrap sx={{ fontWeight: selected ? 700 : 600, color: "text.primary" }}>
                 {u.name}
               </Typography>
               {subtitleText && (
@@ -1156,7 +1124,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
                 </Box>
               }
               secondary={
-                (ptSubtitle || ptMeta) ? (
+                ptSubtitle || ptMeta ? (
                   <Stack spacing={0.25}>
                     {ptSubtitle && <span>{ptSubtitle}</span>}
                     {ptMeta && (
@@ -1200,7 +1168,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         const initials =
           typeof item.avatarInitials === "object"
             ? item.avatarInitials.initials
-            : item.avatarInitials ?? item.assigneeInitials;
+            : (item.avatarInitials ?? item.assigneeInitials);
         if (!initials) return null;
         const palette = [
           theme.palette.primary.main,
@@ -1210,18 +1178,10 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
           theme.palette.warning.main,
         ];
         const customColor =
-          typeof item.avatarInitials === "object"
-            ? item.avatarInitials.color
-            : palette[index % palette.length];
+          typeof item.avatarInitials === "object" ? item.avatarInitials.color : palette[index % palette.length];
 
         return (
-          <Avatar
-            key="avatarInitials"
-            size="sm"
-            color={customColor}
-            variant="circular"
-            sx={{ flexShrink: 0 }}
-          >
+          <Avatar key="avatarInitials" size="sm" color={customColor} variant="circular" sx={{ flexShrink: 0 }}>
             {initials}
           </Avatar>
         );
@@ -1236,30 +1196,27 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
           typeof st === "object" && st.type
             ? st.type
             : st === "high"
-            ? "error"
-            : st === "medium"
-            ? "warning"
-            : st === "low"
-            ? "success"
-            : "default";
+              ? "error"
+              : st === "medium"
+                ? "warning"
+                : st === "low"
+                  ? "success"
+                  : "default";
 
         const paletteObj =
           type === "error"
             ? theme.palette.error
             : type === "warning"
-            ? theme.palette.warning
-            : type === "success"
-            ? theme.palette.success
-            : type === "info"
-            ? theme.palette.info
-            : type === "secondary"
-            ? theme.palette.secondary
-            : theme.palette.primary;
+              ? theme.palette.warning
+              : type === "success"
+                ? theme.palette.success
+                : type === "info"
+                  ? theme.palette.info
+                  : type === "secondary"
+                    ? theme.palette.secondary
+                    : theme.palette.primary;
 
-        const formattedLabel =
-          typeof label === "string"
-            ? `${label.charAt(0).toUpperCase()}${label.slice(1)}`
-            : label;
+        const formattedLabel = typeof label === "string" ? `${label.charAt(0).toUpperCase()}${label.slice(1)}` : label;
 
         return (
           <Box key="status" sx={{ display: "flex", justifyContent: "center", minWidth: 96, flexShrink: 0 }}>
@@ -1267,12 +1224,11 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
               label={formattedLabel}
               size="small"
               sx={{
-                backgroundColor: type === "inherit" || type === "default"
-                  ? theme.palette.action.selected
-                  : alpha(paletteObj.main, 0.15),
-                color: type === "inherit" || type === "default"
-                  ? theme.palette.text.primary
-                  : paletteObj.dark,
+                backgroundColor:
+                  type === "inherit" || type === "default"
+                    ? theme.palette.action.selected
+                    : alpha(paletteObj.main, 0.15),
+                color: type === "inherit" || type === "default" ? theme.palette.text.primary : paletteObj.dark,
                 fontWeight: 600,
                 fontSize: "0.75rem",
               }}
@@ -1286,9 +1242,9 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         const prog = item.progress;
         if (prog == null) return null;
         const value = typeof prog === "number" ? prog : prog.value;
-        const max = typeof prog === "object" ? prog.max ?? 100 : 100;
+        const max = typeof prog === "object" ? (prog.max ?? 100) : 100;
         const pct = Math.round((value / max) * 100);
-        const progColor = typeof prog === "object" ? prog.color ?? "primary" : "primary";
+        const progColor = typeof prog === "object" ? (prog.color ?? "primary") : "primary";
 
         return (
           <Box key="progress" sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 130, flex: 1 }}>
@@ -1440,7 +1396,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         const refObj = item.referenceId;
         if (refObj == null) return null;
         const rawId = typeof refObj === "object" ? refObj.id : refObj;
-        const prefix = typeof refObj === "object" ? refObj.prefix ?? "" : "";
+        const prefix = typeof refObj === "object" ? (refObj.prefix ?? "") : "";
         const href = typeof refObj === "object" ? refObj.href : undefined;
         const click = typeof refObj === "object" ? refObj.onClick : undefined;
         const displayId = `${prefix}${rawId}`;
@@ -1495,7 +1451,10 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         const ap = item.app;
         if (!ap) return null;
         const appName = typeof ap === "string" ? ap : ap.name;
-        const branding = appBranding[appName] ?? { color: theme.palette.primary.main, icon: <HubRounded fontSize="small" /> };
+        const branding = appBranding[appName] ?? {
+          color: theme.palette.primary.main,
+          icon: <HubRounded fontSize="small" />,
+        };
         const icon = typeof ap === "object" && ap.icon ? ap.icon : branding.icon;
         const color = typeof ap === "object" && ap.color ? ap.color : branding.color;
 
@@ -1540,10 +1499,27 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
                 flexShrink: 0,
               }}
             >
-              <Box sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: "0.625rem", fontWeight: 700, py: 0.25 }}>
+              <Box
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  fontSize: "0.625rem",
+                  fontWeight: 700,
+                  py: 0.25,
+                }}
+              >
                 {ev.month.slice(0, 3).toUpperCase()}
               </Box>
-              <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.875rem" }}>
+              <Box
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "0.875rem",
+                }}
+              >
                 {ev.day}
               </Box>
             </Box>
@@ -1566,8 +1542,8 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         const numObj = item.numeric;
         if (numObj == null) return null;
         const val = typeof numObj === "object" ? numObj.value : numObj;
-        const prefix = typeof numObj === "object" ? numObj.prefix ?? "" : "";
-        const suffix = typeof numObj === "object" ? numObj.suffix ?? "" : "";
+        const prefix = typeof numObj === "object" ? (numObj.prefix ?? "") : "";
+        const suffix = typeof numObj === "object" ? (numObj.suffix ?? "") : "";
         const lbl = typeof numObj === "object" ? numObj.label : undefined;
         const color = typeof numObj === "object" && numObj.color ? numObj.color : "text.secondary";
         const fontWeight = typeof numObj === "object" && numObj.fontWeight ? numObj.fontWeight : 500;
@@ -1575,7 +1551,9 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         return (
           <Box key="numeric" sx={{ textAlign: "right", minWidth: 90, flexShrink: 0 }}>
             <Typography variant="body2" sx={{ fontWeight, color }}>
-              {prefix}{val}{suffix}
+              {prefix}
+              {val}
+              {suffix}
             </Typography>
             {lbl && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
@@ -1600,7 +1578,10 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         ];
 
         return (
-          <Box key="tags" sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75, maxWidth: 300, flexShrink: 0 }}>
+          <Box
+            key="tags"
+            sx={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 0.75, maxWidth: 300, flexShrink: 0 }}
+          >
             {tg.map((tag, tIdx) => {
               const label = typeof tag === "string" ? tag : tag.label;
               const type = typeof tag === "object" ? tag.type : undefined;
@@ -1611,16 +1592,16 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
                 type === "error"
                   ? { bg: alpha(theme.palette.error.main, 0.15), text: theme.palette.error.dark }
                   : type === "warning"
-                  ? { bg: alpha(theme.palette.warning.main, 0.15), text: theme.palette.warning.dark }
-                  : type === "success"
-                  ? { bg: alpha(theme.palette.success.main, 0.15), text: theme.palette.success.dark }
-                  : type === "info"
-                  ? { bg: alpha(theme.palette.info.main, 0.15), text: theme.palette.info.dark }
-                  : type === "secondary"
-                  ? { bg: alpha(theme.palette.secondary.main, 0.15), text: theme.palette.secondary.dark }
-                  : type === "primary"
-                  ? { bg: alpha(theme.palette.primary.main, 0.15), text: theme.palette.primary.dark }
-                  : tagColorPalettes[tIdx % tagColorPalettes.length];
+                    ? { bg: alpha(theme.palette.warning.main, 0.15), text: theme.palette.warning.dark }
+                    : type === "success"
+                      ? { bg: alpha(theme.palette.success.main, 0.15), text: theme.palette.success.dark }
+                      : type === "info"
+                        ? { bg: alpha(theme.palette.info.main, 0.15), text: theme.palette.info.dark }
+                        : type === "secondary"
+                          ? { bg: alpha(theme.palette.secondary.main, 0.15), text: theme.palette.secondary.dark }
+                          : type === "primary"
+                            ? { bg: alpha(theme.palette.primary.main, 0.15), text: theme.palette.primary.dark }
+                            : tagColorPalettes[tIdx % tagColorPalettes.length];
 
               return (
                 <Chip
@@ -1655,7 +1636,8 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
               </Typography>
               {pr.price && (
                 <Typography variant="caption" sx={{ fontWeight: 700, color: "primary.main" }}>
-                  {pr.price}{pr.period ? `/${pr.period}` : ""}
+                  {pr.price}
+                  {pr.period ? `/${pr.period}` : ""}
                 </Typography>
               )}
             </Box>
@@ -1750,11 +1732,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
               {notif.appIcon ?? <NotificationsRounded fontSize="small" />}
             </Box>
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              <Typography
-                variant="body2"
-                noWrap
-                sx={{ fontWeight: notif.unread ? 700 : selected ? 600 : 400 }}
-              >
+              <Typography variant="body2" noWrap sx={{ fontWeight: notif.unread ? 700 : selected ? 600 : 400 }}>
                 {notif.title}
               </Typography>
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
@@ -1924,8 +1902,9 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
   };
 
   // Resolve Footer
-  const footerNode = footer ?? (
-    footerConfig ? (
+  const footerNode =
+    footer ??
+    (footerConfig ? (
       <Box
         sx={{
           display: "flex",
@@ -1973,8 +1952,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
           </Link>
         )}
       </Box>
-    ) : null
-  );
+    ) : null);
 
   return (
     <Root
@@ -2004,8 +1982,12 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
         ) : items.length === 0 ? (
           <Box sx={{ px: token.px, py: dense ? 3 : 5, textAlign: "center" }} role="status">
             {typeof emptyState === "string" ? (
-              <Typography color="text.secondary" variant="body2">{emptyState}</Typography>
-            ) : emptyState}
+              <Typography color="text.secondary" variant="body2">
+                {emptyState}
+              </Typography>
+            ) : (
+              emptyState
+            )}
           </Box>
         ) : (
           <List disablePadding aria-label={ariaLabel}>
@@ -2024,11 +2006,7 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
 
       {/* Header Menu */}
       {headerMenuItems && (
-        <Menu
-          anchorEl={headerMenuAnchor}
-          open={Boolean(headerMenuAnchor)}
-          onClose={() => setHeaderMenuAnchor(null)}
-        >
+        <Menu anchorEl={headerMenuAnchor} open={Boolean(headerMenuAnchor)} onClose={() => setHeaderMenuAnchor(null)}>
           {typeof headerMenuItems === "function"
             ? headerMenuItems({ selectedIds: currentSelectedIds })
             : headerMenuItems.map((mItem, mIdx) => (
@@ -2058,39 +2036,36 @@ export const ListCard = forwardRef<HTMLDivElement, ListCardProps>(function ListC
           setActiveRowItem(null);
         }}
       >
-        {activeRowItem && (
-          rowMenuItems ? (
-            rowMenuItems(activeRowItem, {
-              selectedId,
-              selectedIds: currentSelectedIds,
-              item: activeRowItem,
-            })
-          ) : activeRowItem.menuItems ? (
-            typeof activeRowItem.menuItems === "function" ? (
-              activeRowItem.menuItems({
+        {activeRowItem &&
+          (rowMenuItems
+            ? rowMenuItems(activeRowItem, {
                 selectedId,
                 selectedIds: currentSelectedIds,
                 item: activeRowItem,
               })
-            ) : (
-              activeRowItem.menuItems.map((mItem, mIdx) => (
-                <MenuItem
-                  key={mItem.id ?? mIdx}
-                  disabled={mItem.disabled}
-                  divider={mItem.divider}
-                  onClick={(e) => {
-                    setRowMenuAnchor(null);
-                    mItem.onClick?.(activeRowItem, e);
-                  }}
-                  sx={{ gap: 1.5 }}
-                >
-                  {mItem.icon && <Box sx={{ display: "flex", color: "text.secondary" }}>{mItem.icon}</Box>}
-                  {mItem.label}
-                </MenuItem>
-              ))
-            )
-          ) : null
-        )}
+            : activeRowItem.menuItems
+              ? typeof activeRowItem.menuItems === "function"
+                ? activeRowItem.menuItems({
+                    selectedId,
+                    selectedIds: currentSelectedIds,
+                    item: activeRowItem,
+                  })
+                : activeRowItem.menuItems.map((mItem, mIdx) => (
+                    <MenuItem
+                      key={mItem.id ?? mIdx}
+                      disabled={mItem.disabled}
+                      divider={mItem.divider}
+                      onClick={(e) => {
+                        setRowMenuAnchor(null);
+                        mItem.onClick?.(activeRowItem, e);
+                      }}
+                      sx={{ gap: 1.5 }}
+                    >
+                      {mItem.icon && <Box sx={{ display: "flex", color: "text.secondary" }}>{mItem.icon}</Box>}
+                      {mItem.label}
+                    </MenuItem>
+                  ))
+              : null)}
       </Menu>
     </Root>
   );

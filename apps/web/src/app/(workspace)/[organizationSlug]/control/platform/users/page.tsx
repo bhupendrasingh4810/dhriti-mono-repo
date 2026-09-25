@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useState } from "react";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
@@ -56,9 +56,7 @@ export default function PlatformUsers() {
   const [search, setSearch] = useState("");
 
   const filtered = users.filter(
-    (u) =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
+    (u) => u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()),
   );
 
   const validateInvite = (): boolean => {
@@ -87,7 +85,7 @@ export default function PlatformUsers() {
   };
 
   const handleRoleChange = (i: number, role: Role) => {
-    setUsers((prev) => prev.map((u, idx) => idx === i ? { ...u, role } : u));
+    setUsers((prev) => prev.map((u, idx) => (idx === i ? { ...u, role } : u)));
     addToast(`Role updated to ${role}`, "success");
   };
 
@@ -106,25 +104,40 @@ export default function PlatformUsers() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>Platform Users</h1>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>Manage internal staff and their access levels</p>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+            Manage internal staff and their access levels
+          </p>
         </div>
         <button
           onClick={() => setShowInvite(true)}
           style={{
-            padding: "9px 18px", borderRadius: 8, border: "none",
-            backgroundColor: "#036c5f", color: "white", cursor: "pointer",
-            fontSize: 13, fontWeight: 600,
+            padding: "9px 18px",
+            borderRadius: 8,
+            border: "none",
+            backgroundColor: "#036c5f",
+            color: "white",
+            cursor: "pointer",
+            fontSize: 13,
+            fontWeight: 600,
           }}
-        >+ Invite Staff</button>
+        >
+          + Invite Staff
+        </button>
       </div>
 
       {/* Search */}
       <div style={{ position: "relative", marginBottom: 16, maxWidth: 360 }}>
         <svg
-          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#94a3b8"
+          strokeWidth="2"
           style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
         >
-          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input
           type="text"
@@ -132,14 +145,30 @@ export default function PlatformUsers() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
-            width: "100%", paddingLeft: 32, paddingRight: 12, paddingTop: 9, paddingBottom: 9,
-            border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box",
+            width: "100%",
+            paddingLeft: 32,
+            paddingRight: 12,
+            paddingTop: 9,
+            paddingBottom: 9,
+            border: "1px solid #e2e8f0",
+            borderRadius: 8,
+            fontSize: 13,
+            outline: "none",
+            boxSizing: "border-box",
           }}
         />
       </div>
 
       {/* Table */}
-      <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
+      <div
+        style={{
+          backgroundColor: "white",
+          borderRadius: 12,
+          border: "1px solid #e2e8f0",
+          overflow: "hidden",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        }}
+      >
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ backgroundColor: "#f8fafc" }}>
@@ -147,30 +176,49 @@ export default function PlatformUsers() {
                 <th
                   key={h}
                   style={{
-                    padding: "12px 16px", textAlign: "left", fontSize: 11,
-                    fontWeight: 600, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em",
+                    padding: "12px 16px",
+                    textAlign: "left",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#64748b",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
                   }}
-                >{h}</th>
+                >
+                  {h}
+                </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.map((user, i) => {
               const rc = roleColors[user.role];
-              const initials = user.name.split(" ").map((w) => w[0]).join("").slice(0, 2);
+              const initials = user.name
+                .split(" ")
+                .map((w) => w[0])
+                .join("")
+                .slice(0, 2);
               return (
                 <tr key={i} style={{ borderTop: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "14px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                       <div
                         style={{
-                          width: 36, height: 36, borderRadius: "50%",
+                          width: 36,
+                          height: 36,
+                          borderRadius: "50%",
                           backgroundColor: user.status === "Active" ? "#e6f4f2" : "#f1f5f9",
                           color: user.status === "Active" ? "#036c5f" : "#64748b",
-                          display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 12, fontWeight: 700, flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          flexShrink: 0,
                         }}
-                      >{initials}</div>
+                      >
+                        {initials}
+                      </div>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{user.name}</div>
                         <div style={{ fontSize: 12, color: "#64748b" }}>{user.email}</div>
@@ -178,7 +226,16 @@ export default function PlatformUsers() {
                     </div>
                   </td>
                   <td style={{ padding: "14px 16px" }}>
-                    <span style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, backgroundColor: rc.bg, color: rc.color }}>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        padding: "3px 8px",
+                        borderRadius: 20,
+                        backgroundColor: rc.bg,
+                        color: rc.color,
+                      }}
+                    >
                       {user.role}
                     </span>
                   </td>
@@ -187,11 +244,15 @@ export default function PlatformUsers() {
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <div
                         style={{
-                          width: 7, height: 7, borderRadius: "50%",
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
                           backgroundColor: user.status === "Active" ? "#22c55e" : "#94a3b8",
                         }}
                       />
-                      <span style={{ fontSize: 13, color: user.status === "Active" ? "#166534" : "#64748b" }}>{user.status}</span>
+                      <span style={{ fontSize: 13, color: user.status === "Active" ? "#166534" : "#64748b" }}>
+                        {user.status}
+                      </span>
                     </div>
                   </td>
                   <td style={{ padding: "14px 16px" }}>
@@ -200,21 +261,36 @@ export default function PlatformUsers() {
                         value={user.role}
                         onChange={(e) => handleRoleChange(i, e.target.value as Role)}
                         style={{
-                          padding: "5px 8px", border: "1px solid #e2e8f0", borderRadius: 6,
-                          fontSize: 12, cursor: "pointer", backgroundColor: "white", color: "#475569",
+                          padding: "5px 8px",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          cursor: "pointer",
+                          backgroundColor: "white",
+                          color: "#475569",
                         }}
                       >
                         {(["Super Admin", "Admin", "Support", "Viewer"] as Role[]).map((r) => (
-                          <option key={r} value={r}>{r}</option>
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
                         ))}
                       </select>
                       <button
                         onClick={() => setRemoveTarget(i)}
                         style={{
-                          padding: "5px 10px", borderRadius: 6, border: "1px solid #fecaca",
-                          backgroundColor: "#fff5f5", cursor: "pointer", fontSize: 12, color: "#dc2626", fontWeight: 500,
+                          padding: "5px 10px",
+                          borderRadius: 6,
+                          border: "1px solid #fecaca",
+                          backgroundColor: "#fff5f5",
+                          cursor: "pointer",
+                          fontSize: 12,
+                          color: "#dc2626",
+                          fontWeight: 500,
                         }}
-                      >Remove</button>
+                      >
+                        Remove
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -227,11 +303,25 @@ export default function PlatformUsers() {
       {/* INVITE MODAL */}
       {showInvite && (
         <div
-          style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           onClick={() => setShowInvite(false)}
         >
           <div
-            style={{ backgroundColor: "white", borderRadius: 16, padding: 28, width: 460, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+            style={{
+              backgroundColor: "white",
+              borderRadius: 16,
+              padding: 28,
+              width: 460,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 20px" }}>Invite Staff Member</h2>
@@ -246,11 +336,18 @@ export default function PlatformUsers() {
                 onChange={(e) => setInviteForm((f) => ({ ...f, name: e.target.value }))}
                 placeholder="Jane Doe"
                 style={{
-                  width: "100%", padding: "9px 12px", border: `1px solid ${inviteErrors.name ? "#dc2626" : "#e2e8f0"}`,
-                  borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box",
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1px solid ${inviteErrors.name ? "#dc2626" : "#e2e8f0"}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
-              {inviteErrors.name && <p style={{ color: "#dc2626", fontSize: 12, margin: "4px 0 0" }}>{inviteErrors.name}</p>}
+              {inviteErrors.name && (
+                <p style={{ color: "#dc2626", fontSize: 12, margin: "4px 0 0" }}>{inviteErrors.name}</p>
+              )}
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -263,11 +360,18 @@ export default function PlatformUsers() {
                 onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="jane@dhriti.io"
                 style={{
-                  width: "100%", padding: "9px 12px", border: `1px solid ${inviteErrors.email ? "#dc2626" : "#e2e8f0"}`,
-                  borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box",
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: `1px solid ${inviteErrors.email ? "#dc2626" : "#e2e8f0"}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  outline: "none",
+                  boxSizing: "border-box",
                 }}
               />
-              {inviteErrors.email && <p style={{ color: "#dc2626", fontSize: 12, margin: "4px 0 0" }}>{inviteErrors.email}</p>}
+              {inviteErrors.email && (
+                <p style={{ color: "#dc2626", fontSize: 12, margin: "4px 0 0" }}>{inviteErrors.email}</p>
+              )}
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -277,10 +381,20 @@ export default function PlatformUsers() {
               <select
                 value={inviteForm.role}
                 onChange={(e) => setInviteForm((f) => ({ ...f, role: e.target.value as Role }))}
-                style={{ width: "100%", padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, cursor: "pointer", backgroundColor: "white" }}
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  cursor: "pointer",
+                  backgroundColor: "white",
+                }}
               >
                 {(["Super Admin", "Admin", "Support", "Viewer"] as Role[]).map((r) => (
-                  <option key={r} value={r}>{r}</option>
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
                 ))}
               </select>
             </div>
@@ -300,13 +414,38 @@ export default function PlatformUsers() {
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
-                onClick={() => { setShowInvite(false); setInviteErrors({}); }}
-                style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e2e8f0", backgroundColor: "white", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 500 }}
-              >Cancel</button>
+                onClick={() => {
+                  setShowInvite(false);
+                  setInviteErrors({});
+                }}
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "#475569",
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleInvite}
-                style={{ padding: "9px 18px", borderRadius: 8, border: "none", backgroundColor: "#036c5f", color: "white", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
-              >Send Invitation</button>
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 8,
+                  border: "none",
+                  backgroundColor: "#036c5f",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                Send Invitation
+              </button>
             </div>
           </div>
         </div>
@@ -315,26 +454,63 @@ export default function PlatformUsers() {
       {/* REMOVE CONFIRM MODAL */}
       {removeTarget !== null && (
         <div
-          style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
           onClick={() => setRemoveTarget(null)}
         >
           <div
-            style={{ backgroundColor: "white", borderRadius: 16, padding: 28, width: 420, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+            style={{
+              backgroundColor: "white",
+              borderRadius: 16,
+              padding: 28,
+              width: 420,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+            }}
             onClick={(e) => e.stopPropagation()}
           >
             <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: "0 0 10px" }}>Remove Staff Member</h2>
             <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 24px", lineHeight: 1.6 }}>
-              Are you sure you want to remove <strong>{users[removeTarget]?.name}</strong> from the platform? They will lose all access immediately.
+              Are you sure you want to remove <strong>{users[removeTarget]?.name}</strong> from the platform? They will
+              lose all access immediately.
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
               <button
                 onClick={() => setRemoveTarget(null)}
-                style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #e2e8f0", backgroundColor: "white", cursor: "pointer", fontSize: 13, color: "#475569", fontWeight: 500 }}
-              >Cancel</button>
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  backgroundColor: "white",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  color: "#475569",
+                  fontWeight: 500,
+                }}
+              >
+                Cancel
+              </button>
               <button
                 onClick={handleRemove}
-                style={{ padding: "9px 18px", borderRadius: 8, border: "none", backgroundColor: "#dc2626", color: "white", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
-              >Remove</button>
+                style={{
+                  padding: "9px 18px",
+                  borderRadius: 8,
+                  border: "none",
+                  backgroundColor: "#dc2626",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                Remove
+              </button>
             </div>
           </div>
         </div>

@@ -27,23 +27,18 @@ import { PublicAuthRateLimitGuard } from "../../common/guards/public-auth-rate-l
 const conditionalStrategyProviders: Provider[] = [
   {
     provide: GoogleStrategy,
-    useFactory: (config: ApiConfigService) =>
-      config.googleOAuth ? new GoogleStrategy(config) : null,
+    useFactory: (config: ApiConfigService) => (config.googleOAuth ? new GoogleStrategy(config) : null),
     inject: [ApiConfigService],
   },
   {
     provide: GithubStrategy,
-    useFactory: (config: ApiConfigService) =>
-      config.githubOAuth ? new GithubStrategy(config) : null,
+    useFactory: (config: ApiConfigService) => (config.githubOAuth ? new GithubStrategy(config) : null),
     inject: [ApiConfigService],
   },
 ];
 
 @Module({
-  imports: [
-    PassportModule.register({}),
-    JwtModule.register({}),
-  ],
+  imports: [PassportModule.register({}), JwtModule.register({})],
   controllers: [
     RegistrationController,
     LoginController,

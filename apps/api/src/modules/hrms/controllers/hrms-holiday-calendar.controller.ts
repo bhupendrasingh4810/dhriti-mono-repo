@@ -18,18 +18,39 @@ export class HrmsHolidayCalendarController {
 
   @Get()
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.holiday.read" })
-  list(@CurrentOrganization() organization: OrganizationContext) { return this.calendars.list(organization.organizationId); }
+  list(@CurrentOrganization() organization: OrganizationContext) {
+    return this.calendars.list(organization.organizationId);
+  }
 
   @Post()
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.holiday.manage" })
-  create(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Body() dto: CreateHrmsHolidayCalendarDto) { return this.calendars.create(organization.organizationId, user.userId, dto); }
+  create(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateHrmsHolidayCalendarDto,
+  ) {
+    return this.calendars.create(organization.organizationId, user.userId, dto);
+  }
 
   @Patch(":calendarId")
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.holiday.manage" })
-  update(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Param("calendarId") calendarId: string, @Body() dto: UpdateHrmsHolidayCalendarDto) { return this.calendars.update(organization.organizationId, calendarId, user.userId, dto); }
+  update(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("calendarId") calendarId: string,
+    @Body() dto: UpdateHrmsHolidayCalendarDto,
+  ) {
+    return this.calendars.update(organization.organizationId, calendarId, user.userId, dto);
+  }
 
   @Delete(":calendarId")
   @HttpCode(HttpStatus.NO_CONTENT)
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.holiday.manage" })
-  remove(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Param("calendarId") calendarId: string): Promise<void> { return this.calendars.remove(organization.organizationId, calendarId, user.userId); }
+  remove(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("calendarId") calendarId: string,
+  ): Promise<void> {
+    return this.calendars.remove(organization.organizationId, calendarId, user.userId);
+  }
 }

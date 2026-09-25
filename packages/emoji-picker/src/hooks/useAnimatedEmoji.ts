@@ -21,7 +21,7 @@ export interface UseAnimatedEmojiResult {
  */
 export function useAnimatedEmoji(unicode: string | undefined, enabled: boolean): UseAnimatedEmojiResult {
   const [animationData, setAnimationData] = useState<LottieAnimationData | null>(
-    unicode ? (animationCache.get(unicode) ?? null) : null
+    unicode ? (animationCache.get(unicode) ?? null) : null,
   );
   const [hasError, setHasError] = useState(false);
 

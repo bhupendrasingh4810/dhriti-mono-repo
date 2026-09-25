@@ -1,6 +1,14 @@
 "use client";
 
-import { ChevronRightRounded, CloseRounded, DescriptionOutlined, LinkRounded, NotificationsNoneRounded, PeopleRounded, PushPinRounded } from "@mui/icons-material";
+import {
+  ChevronRightRounded,
+  CloseRounded,
+  DescriptionOutlined,
+  LinkRounded,
+  NotificationsNoneRounded,
+  PeopleRounded,
+  PushPinRounded,
+} from "@mui/icons-material";
 import { Box, Stack, Typography } from "@mui/material";
 
 export type ConnectDetailFile = {
@@ -58,9 +66,8 @@ export function ConnectChannelDetailsPanel({
       </Stack> */}
 
       <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 4 }}>
-        
         <Box>
-            <CloseRounded sx={{ fontSize: 18, color: "#9ca3af", cursor: "pointer", float: "right" }} onClick={onClose} />
+          <CloseRounded sx={{ fontSize: 18, color: "#9ca3af", cursor: "pointer", float: "right" }} onClick={onClose} />
         </Box>
         <Stack spacing={2} sx={{ alignItems: "center", textAlign: "center" }}>
           <Box
@@ -86,8 +93,21 @@ export function ConnectChannelDetailsPanel({
         </Stack>
 
         <Box>
-          <Typography sx={{ fontSize: 10, fontWeight: 900, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.09em", mb: 1.5 }}>About</Typography>
-          <Typography sx={{ fontSize: 12, color: "#4b5563", lineHeight: 1.6 }}>{description || "No additional description available."}</Typography>
+          <Typography
+            sx={{
+              fontSize: 10,
+              fontWeight: 900,
+              color: "#9ca3af",
+              textTransform: "uppercase",
+              letterSpacing: "0.09em",
+              mb: 1.5,
+            }}
+          >
+            About
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: "#4b5563", lineHeight: 1.6 }}>
+            {description || "No additional description available."}
+          </Typography>
         </Box>
 
         <Stack spacing={0.5}>
@@ -99,7 +119,17 @@ export function ConnectChannelDetailsPanel({
           ].map((row) => {
             const RowIcon = row.icon;
             return (
-              <Stack key={row.label} direction="row" sx={{ p: 1, borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", justifyContent: "space-between", "&:hover": { bgcolor: "#f9fafb" } }}>
+              <Stack
+                key={row.label}
+                direction="row"
+                sx={{
+                  p: 1,
+                  borderRadius: (theme) => theme.tokens.radius.sm,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  "&:hover": { bgcolor: "#f9fafb" },
+                }}
+              >
                 <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
                   <RowIcon sx={{ fontSize: 14, color: "#9ca3af" }} />
                   <Typography sx={{ fontSize: 14, color: "#374151" }}>{row.label}</Typography>
@@ -111,29 +141,90 @@ export function ConnectChannelDetailsPanel({
         </Stack>
 
         <Box>
-          <Typography sx={{ fontSize: 10, fontWeight: 900, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.09em", mb: 1.5 }}>Connected Work</Typography>
+          <Typography
+            sx={{
+              fontSize: 10,
+              fontWeight: 900,
+              color: "#9ca3af",
+              textTransform: "uppercase",
+              letterSpacing: "0.09em",
+              mb: 1.5,
+            }}
+          >
+            Connected Work
+          </Typography>
           <Stack spacing={1.25}>
             {files.slice(0, 2).map((file) => (
-              <Stack key={file.id} direction="row" spacing={1.25} sx={{ p: 1.25, border: "1px solid #f3f4f6", borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", "&:hover": { borderColor: "#e5e7eb" } }}>
-                <Box sx={{ width: 32, height: 32, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "#f0fdf4", color: "#16a34a", display: "grid", placeItems: "center" }}>
+              <Stack
+                key={file.id}
+                direction="row"
+                spacing={1.25}
+                sx={{
+                  p: 1.25,
+                  border: "1px solid #f3f4f6",
+                  borderRadius: (theme) => theme.tokens.radius.sm,
+                  alignItems: "center",
+                  "&:hover": { borderColor: "#e5e7eb" },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: (theme) => theme.tokens.radius.sm,
+                    bgcolor: "#f0fdf4",
+                    color: "#16a34a",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
                   <DescriptionOutlined sx={{ fontSize: 14 }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 11, fontWeight: 700 }} noWrap>{file.originalName}</Typography>
-                  <Typography sx={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>{(file.size / 1024).toFixed(0)} KB</Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 700 }} noWrap>
+                    {file.originalName}
+                  </Typography>
+                  <Typography sx={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>
+                    {(file.size / 1024).toFixed(0)} KB
+                  </Typography>
                 </Box>
                 <ChevronRightRounded sx={{ fontSize: 10, color: "#d1d5db" }} />
               </Stack>
             ))}
 
             {meetings.map((meeting) => (
-              <Stack key={meeting.id} direction="row" spacing={1.25} sx={{ p: 1.25, border: "1px solid #f3f4f6", borderRadius: (theme) => theme.tokens.radius.sm, alignItems: "center", "&:hover": { borderColor: "#e5e7eb" } }}>
-                <Box sx={{ width: 32, height: 32, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "#fff7ed", color: "#ea580c", display: "grid", placeItems: "center" }}>
+              <Stack
+                key={meeting.id}
+                direction="row"
+                spacing={1.25}
+                sx={{
+                  p: 1.25,
+                  border: "1px solid #f3f4f6",
+                  borderRadius: (theme) => theme.tokens.radius.sm,
+                  alignItems: "center",
+                  "&:hover": { borderColor: "#e5e7eb" },
+                }}
+              >
+                <Box
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: (theme) => theme.tokens.radius.sm,
+                    bgcolor: "#fff7ed",
+                    color: "#ea580c",
+                    display: "grid",
+                    placeItems: "center",
+                  }}
+                >
                   <NotificationsNoneRounded sx={{ fontSize: 14 }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography sx={{ fontSize: 11, fontWeight: 700 }} noWrap>{meeting.title}</Typography>
-                  <Typography sx={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>Scheduled</Typography>
+                  <Typography sx={{ fontSize: 11, fontWeight: 700 }} noWrap>
+                    {meeting.title}
+                  </Typography>
+                  <Typography sx={{ fontSize: 9, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase" }}>
+                    Scheduled
+                  </Typography>
                 </Box>
                 <ChevronRightRounded sx={{ fontSize: 10, color: "#d1d5db" }} />
               </Stack>

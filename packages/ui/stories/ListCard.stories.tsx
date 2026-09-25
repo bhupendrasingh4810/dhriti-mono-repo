@@ -389,9 +389,7 @@ export const ActionableListCardStory: Story = {
         selectable
         selectedIds={selectedIds}
         onItemToggle={(item, selected) => {
-          setSelectedIds((prev) =>
-            selected ? [...prev, item.id] : prev.filter((id) => id !== item.id),
-          );
+          setSelectedIds((prev) => (selected ? [...prev, item.id] : prev.filter((id) => id !== item.id)));
         }}
         columns={["checkbox", "primaryText", "status", "dateTime", "avatarInitials", "actions"]}
         headerIcons={[
@@ -399,11 +397,7 @@ export const ActionableListCardStory: Story = {
           { icon: <AccessTimeOutlined fontSize="small" />, tooltip: "Schedule selected" },
           { icon: <DeleteRounded fontSize="small" />, tooltip: "Delete selected" },
         ]}
-        headerMenuItems={[
-          { label: "Select all tasks" },
-          { label: "Clear selection" },
-          { label: "Bulk export CSV" },
-        ]}
+        headerMenuItems={[{ label: "Select all tasks" }, { label: "Clear selection" }, { label: "Bulk export CSV" }]}
         rowMenuItems={(item, context) =>
           context.selectedIds.length > 1 ? (
             <>
@@ -498,11 +492,7 @@ export const ProgressListCard: Story = {
       title="Campaigns"
       columns={["avatarImage", "primaryText", "status", "progress", "actions"]}
       viewAll={{ label: "View all" }}
-      headerMenuItems={[
-        { label: "New Campaign" },
-        { label: "Campaign analytics" },
-        { label: "Archive completed" },
-      ]}
+      headerMenuItems={[{ label: "New Campaign" }, { label: "Campaign analytics" }, { label: "Archive completed" }]}
       rowMenuItems={() => (
         <>
           <MenuItem>View campaign</MenuItem>
@@ -575,11 +565,7 @@ export const NotificationListCard: Story = {
       title="Notifications"
       columns={["notification", "actions"]}
       viewAll={{ label: "View all" }}
-      headerMenuItems={[
-        { label: "Mark all as read" },
-        { label: "Notification channels" },
-        { label: "Mute alerts" },
-      ]}
+      headerMenuItems={[{ label: "Mark all as read" }, { label: "Notification channels" }, { label: "Mute alerts" }]}
       rowMenuItems={() => (
         <>
           <MenuItem>Mark as read</MenuItem>
@@ -652,10 +638,7 @@ export const ProfileSummaryListCard: Story = {
       title="Profile Summary"
       columns={["user", "status", "email", "actions"]}
       viewAll={{ label: "View all" }}
-      headerMenuItems={[
-        { label: "Export executive list" },
-        { label: "Directory settings" },
-      ]}
+      headerMenuItems={[{ label: "Export executive list" }, { label: "Directory settings" }]}
       rowMenuItems={() => (
         <>
           <MenuItem>View executive profile</MenuItem>
@@ -792,11 +775,7 @@ export const FileListCard: Story = {
       title="Files"
       columns={["file", "downloadAction", "actions"]}
       viewAll={{ label: "View all" }}
-      headerMenuItems={[
-        { label: "Upload files" },
-        { label: "Create folder" },
-        { label: "Storage breakdown" },
-      ]}
+      headerMenuItems={[{ label: "Upload files" }, { label: "Create folder" }, { label: "Storage breakdown" }]}
       rowMenuItems={() => (
         <>
           <MenuItem>Share link</MenuItem>
@@ -866,11 +845,7 @@ export const SupportTicketCard: Story = {
       title="Support Tickets"
       columns={["referenceId", "primaryText", "status", "tags", "actions"]}
       viewAll={{ label: "View all" }}
-      headerMenuItems={[
-        { label: "Create ticket" },
-        { label: "Queue SLA report" },
-        { label: "Support settings" },
-      ]}
+      headerMenuItems={[{ label: "Create ticket" }, { label: "Queue SLA report" }, { label: "Support settings" }]}
       rowMenuItems={() => (
         <>
           <MenuItem>Open ticket</MenuItem>
@@ -1006,11 +981,7 @@ export const EventListCard: Story = {
       title="Events"
       columns={["event", "tags", "actions"]}
       viewAll={{ label: "View all" }}
-      headerMenuItems={[
-        { label: "Add new event" },
-        { label: "Sync Google Calendar" },
-        { label: "Calendar settings" },
-      ]}
+      headerMenuItems={[{ label: "Add new event" }, { label: "Sync Google Calendar" }, { label: "Calendar settings" }]}
       rowMenuItems={() => (
         <>
           <MenuItem>View event details</MenuItem>

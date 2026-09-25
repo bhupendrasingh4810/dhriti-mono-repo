@@ -58,12 +58,33 @@ export function ChatNavigation({
             const Icon = row.icon;
 
             return (
-              <Stack key={row.label} direction="row" sx={{ px: 1.5, py: 1, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", '&:hover': { bgcolor: "#f9fafb" } }}>
+              <Stack
+                key={row.label}
+                direction="row"
+                sx={{
+                  px: 1.5,
+                  py: 1,
+                  borderRadius: (theme) => theme.tokens.radius.md,
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  "&:hover": { bgcolor: "#f9fafb" },
+                }}
+              >
                 <Stack direction="row" spacing={1.25} sx={{ alignItems: "center", color: "#4b5563" }}>
                   <Icon sx={{ fontSize: 16, color: "#9ca3af" }} />
                   <Typography sx={{ fontSize: 14, fontWeight: row.count ? 700 : 400 }}>{row.label}</Typography>
                 </Stack>
-                <Box sx={{ px: 0.75, py: 0.2, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "#fffcf0", color: "#a16207", fontSize: 10, fontWeight: 700 }}>
+                <Box
+                  sx={{
+                    px: 0.75,
+                    py: 0.2,
+                    borderRadius: (theme) => theme.tokens.radius.sm,
+                    bgcolor: "#fffcf0",
+                    color: "#a16207",
+                    fontSize: 10,
+                    fontWeight: 700,
+                  }}
+                >
                   {row.count}
                 </Box>
               </Stack>
@@ -72,11 +93,30 @@ export function ChatNavigation({
         </Stack>
 
         <Box>
-          <Stack direction="row" sx={{ px: 1.5, mb: 1, justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setFavouritesOpen((prev) => !prev)}>
-            <Typography sx={{ fontSize: 10, fontWeight: 800, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <Stack
+            direction="row"
+            sx={{ px: 1.5, mb: 1, justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+            onClick={() => setFavouritesOpen((prev) => !prev)}
+          >
+            <Typography
+              sx={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#9ca3af",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
               Favourites
             </Typography>
-            <ExpandMoreRounded sx={{ fontSize: 12, color: "#9ca3af", transform: favouritesOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 140ms ease" }} />
+            <ExpandMoreRounded
+              sx={{
+                fontSize: 12,
+                color: "#9ca3af",
+                transform: favouritesOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 140ms ease",
+              }}
+            />
           </Stack>
           {favouritesOpen && (
             <Stack spacing={0.25}>
@@ -84,9 +124,23 @@ export function ChatNavigation({
                 const isActive = activeFavourite === channel;
 
                 return (
-                  <Stack key={channel} direction="row" sx={{ px: 1.5, py: 0.8, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", bgcolor: isActive ? "#f9fafb" : "transparent", fontWeight: isActive ? 700 : 500 }}>
+                  <Stack
+                    key={channel}
+                    direction="row"
+                    sx={{
+                      px: 1.5,
+                      py: 0.8,
+                      borderRadius: (theme) => theme.tokens.radius.md,
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      bgcolor: isActive ? "#f9fafb" : "transparent",
+                      fontWeight: isActive ? 700 : 500,
+                    }}
+                  >
                     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                      <Typography sx={{ fontSize: 12, color: isActive ? "#60a5fa" : "#818cf8", fontWeight: 700 }}>#</Typography>
+                      <Typography sx={{ fontSize: 12, color: isActive ? "#60a5fa" : "#818cf8", fontWeight: 700 }}>
+                        #
+                      </Typography>
                       <Typography sx={{ fontSize: 14, color: "#4b5563" }}>{channel}</Typography>
                     </Stack>
                     <PushPinRounded sx={{ fontSize: 11, color: isActive ? "#9ca3af" : "#d1d5db" }} />
@@ -98,11 +152,30 @@ export function ChatNavigation({
         </Box>
 
         <Box>
-          <Stack direction="row" sx={{ px: 1.5, mb: 1, justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setChatsOpen((prev) => !prev)}>
-            <Typography sx={{ fontSize: 10, fontWeight: 800, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <Stack
+            direction="row"
+            sx={{ px: 1.5, mb: 1, justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+            onClick={() => setChatsOpen((prev) => !prev)}
+          >
+            <Typography
+              sx={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#9ca3af",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
               Chats
             </Typography>
-            <ExpandMoreRounded sx={{ fontSize: 12, color: "#9ca3af", transform: chatsOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 140ms ease" }} />
+            <ExpandMoreRounded
+              sx={{
+                fontSize: 12,
+                color: "#9ca3af",
+                transform: chatsOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 140ms ease",
+              }}
+            />
           </Stack>
           {chatsOpen && (
             <Stack spacing={0.25}>
@@ -111,12 +184,33 @@ export function ChatNavigation({
                 const hasCount = typeof chat.unreadCount === "number";
 
                 return (
-                  <Stack key={chat.name} direction="row" sx={{ px: 1.5, py: 0.8, borderRadius: (theme) => theme.tokens.radius.md, alignItems: "center", justifyContent: "space-between", '&:hover': { bgcolor: "#f9fafb" } }}>
+                  <Stack
+                    key={chat.name}
+                    direction="row"
+                    sx={{
+                      px: 1.5,
+                      py: 0.8,
+                      borderRadius: (theme) => theme.tokens.radius.md,
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      "&:hover": { bgcolor: "#f9fafb" },
+                    }}
+                  >
                     <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                      {hasAvatar ? <Avatar src={chat.avatar} sx={{ width: 16, height: 16 }} /> : <PeopleRounded sx={{ fontSize: 14, color: "#d1d5db" }} />}
-                      <Typography sx={{ fontSize: 14, color: "#4b5563", fontWeight: hasCount ? 700 : 400 }}>{chat.name}</Typography>
+                      {hasAvatar ? (
+                        <Avatar src={chat.avatar} sx={{ width: 16, height: 16 }} />
+                      ) : (
+                        <PeopleRounded sx={{ fontSize: 14, color: "#d1d5db" }} />
+                      )}
+                      <Typography sx={{ fontSize: 14, color: "#4b5563", fontWeight: hasCount ? 700 : 400 }}>
+                        {chat.name}
+                      </Typography>
                     </Stack>
-                    {hasCount && <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#a16207" }}>{chat.unreadCount}</Typography>}
+                    {hasCount && (
+                      <Typography sx={{ fontSize: 10, fontWeight: 700, color: "#a16207" }}>
+                        {chat.unreadCount}
+                      </Typography>
+                    )}
                   </Stack>
                 );
               })}
@@ -125,11 +219,30 @@ export function ChatNavigation({
         </Box>
 
         <Box>
-          <Stack direction="row" sx={{ px: 1.5, mb: 1, justifyContent: "space-between", alignItems: "center", cursor: "pointer" }} onClick={() => setTeamsOpen((prev) => !prev)}>
-            <Typography sx={{ fontSize: 10, fontWeight: 800, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <Stack
+            direction="row"
+            sx={{ px: 1.5, mb: 1, justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+            onClick={() => setTeamsOpen((prev) => !prev)}
+          >
+            <Typography
+              sx={{
+                fontSize: 10,
+                fontWeight: 800,
+                color: "#9ca3af",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
               Teams & Channels
             </Typography>
-            <ExpandMoreRounded sx={{ fontSize: 12, color: "#9ca3af", transform: teamsOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 140ms ease" }} />
+            <ExpandMoreRounded
+              sx={{
+                fontSize: 12,
+                color: "#9ca3af",
+                transform: teamsOpen ? "rotate(0deg)" : "rotate(-90deg)",
+                transition: "transform 140ms ease",
+              }}
+            />
           </Stack>
           {teamsOpen && (
             <Stack spacing={0.5} sx={{ px: 1.5 }}>
@@ -152,7 +265,12 @@ export function ChatNavigation({
                 const Icon = group.icon;
 
                 return (
-                  <Stack key={group.label} direction="row" spacing={0.5} sx={{ alignItems: "center", color: "#6b7280" }}>
+                  <Stack
+                    key={group.label}
+                    direction="row"
+                    spacing={0.5}
+                    sx={{ alignItems: "center", color: "#6b7280" }}
+                  >
                     <ChevronRightRounded sx={{ fontSize: 11 }} />
                     <Icon sx={{ fontSize: 12, color: "#9ca3af" }} />
                     <Typography sx={{ fontSize: 14 }}>{group.label}</Typography>

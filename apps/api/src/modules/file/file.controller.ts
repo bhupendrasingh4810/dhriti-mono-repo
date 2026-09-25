@@ -16,14 +16,8 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 
-import {
-  CurrentUser,
-  type AuthenticatedUser,
-} from "../../common/decorators/current-user.decorator";
-import {
-  CurrentOrganization,
-  type OrganizationContext,
-} from "../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
@@ -65,7 +59,7 @@ export class FileController {
     @Req() request: Request,
   ) {
     if (!file) {
-      throw new AppError(ErrorCode.FILE_EMPTY, "No file provided in the \"file\" field", HttpStatus.BAD_REQUEST);
+      throw new AppError(ErrorCode.FILE_EMPTY, 'No file provided in the "file" field', HttpStatus.BAD_REQUEST);
     }
 
     const input: UploadedFileInput = {

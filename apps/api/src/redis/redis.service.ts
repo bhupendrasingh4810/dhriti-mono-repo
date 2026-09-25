@@ -104,7 +104,13 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       let cursor = "0";
       let deleted = 0;
       do {
-        const [nextCursor, keys] = await this.client.scan(cursor, "MATCH", pattern, "COUNT", this.config.redis.scanCount);
+        const [nextCursor, keys] = await this.client.scan(
+          cursor,
+          "MATCH",
+          pattern,
+          "COUNT",
+          this.config.redis.scanCount,
+        );
         cursor = nextCursor;
         if (keys.length > 0) {
           deleted += await this.client.del(...keys);
@@ -129,10 +135,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private async refreshResourceStats(): Promise<void> {
     try {
       const [memory, stats] = await Promise.all([this.client.info("memory"), this.client.info("stats")]);
-      this.metrics.setRedisResourceStats(
-        this.infoValue(memory, "used_memory"),
-        this.infoValue(stats, "evicted_keys"),
-      );
+      this.metrics.setRedisResourceStats(this.infoValue(memory, "used_memory"), this.infoValue(stats, "evicted_keys"));
     } catch (error) {
       this.metrics.redisError();
       this.logger.warn(`Unable to collect Redis resource statistics: ${(error as Error).message}`);

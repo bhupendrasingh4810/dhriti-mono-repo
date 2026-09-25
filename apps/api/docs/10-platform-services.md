@@ -54,5 +54,6 @@ OWNER/ADMIN only.
 Consumers verify with `WebhookService.verifySignature(secret, body, signature)`.
 
 ## Error codes
+
 `FILE_NOT_FOUND`, `FILE_EMPTY`, `FILE_TOO_LARGE`, `FILE_TYPE_NOT_ALLOWED`,
 `WEBHOOK_NOT_FOUND`, `NOTHING_TO_SUMMARIZE`.

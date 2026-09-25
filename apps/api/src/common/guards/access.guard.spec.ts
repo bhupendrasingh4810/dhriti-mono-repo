@@ -23,7 +23,12 @@ describe("AccessGuard", () => {
     const entitlement = { assertFeatureEnabled: jest.fn() };
     const permissions = { assertPermission: jest.fn() };
     const prisma = { issue: { findFirst: jest.fn() }, board: { findFirst: jest.fn() } };
-    return { guard: new AccessGuard(reflector as never, entitlement as never, permissions as never, prisma as never), reflector, entitlement, permissions };
+    return {
+      guard: new AccessGuard(reflector as never, entitlement as never, permissions as never, prisma as never),
+      reflector,
+      entitlement,
+      permissions,
+    };
   }
 
   it("rejects a disabled entitlement before evaluating permissions", async () => {
@@ -43,7 +48,12 @@ describe("AccessGuard", () => {
 
     await expect(guard.canActivate(makeContext() as never)).rejects.toThrow(denied);
     expect(entitlement.assertFeatureEnabled).toHaveBeenCalledWith("org-a", "hrms.enabled");
-    expect(permissions.assertPermission).toHaveBeenCalledWith({ userId: "user-a", organizationId: "org-a", permissionKey: "hrms.employee.read", resource: undefined });
+    expect(permissions.assertPermission).toHaveBeenCalledWith({
+      userId: "user-a",
+      organizationId: "org-a",
+      permissionKey: "hrms.employee.read",
+      resource: undefined,
+    });
   });
 
   it("allows a request once entitlement and permission checks pass", async () => {
@@ -52,6 +62,11 @@ describe("AccessGuard", () => {
     await expect(guard.canActivate(makeContext() as never)).resolves.toBe(true);
     expect(reflector.getAllAndOverride).toHaveBeenCalledWith(ACCESS_REQUIREMENTS_KEY, expect.any(Array));
     expect(entitlement.assertFeatureEnabled).toHaveBeenCalledWith("org-a", "hrms.enabled");
-    expect(permissions.assertPermission).toHaveBeenCalledWith({ userId: "user-a", organizationId: "org-a", permissionKey: "hrms.employee.read", resource: undefined });
+    expect(permissions.assertPermission).toHaveBeenCalledWith({
+      userId: "user-a",
+      organizationId: "org-a",
+      permissionKey: "hrms.employee.read",
+      resource: undefined,
+    });
   });
 });

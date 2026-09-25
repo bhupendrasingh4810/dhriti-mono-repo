@@ -1,3277 +1,2218 @@
 // AUTO-GENERATED FILE. Do not edit by hand.
 // Run `pnpm generate` in packages/emoji-picker to regenerate.
 
-export const EMOJI_DEFINITIONS: ReadonlyArray<{ id: string; name: string; emoji: string; category: string; aliases: string[]; keywords: string[]; unicode: string }> = [
-  {
-    "id": "activities:american-football",
-    "name": "american-football",
-    "emoji": "🏈",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3C8"
-  },
-  {
-    "id": "activities:artist-palette",
-    "name": "artist-palette",
-    "emoji": "🎨",
-    "category": "activities",
-    "aliases": [
-      "art"
-    ],
-    "keywords": [
-      "paint",
-      "creative"
-    ],
-    "unicode": "U+1F3A8"
-  },
-  {
-    "id": "activities:badminton",
-    "name": "badminton",
-    "emoji": "🏸",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3F8"
-  },
-  {
-    "id": "activities:balloon",
-    "name": "balloon",
-    "emoji": "🎈",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "party",
-      "celebration"
-    ],
-    "unicode": "U+1F388"
-  },
-  {
-    "id": "activities:baseball",
-    "name": "baseball",
-    "emoji": "⚾",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+26BE"
-  },
-  {
-    "id": "activities:basketball",
-    "name": "basketball",
-    "emoji": "🏀",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3C0"
-  },
-  {
-    "id": "activities:bowling",
-    "name": "bowling",
-    "emoji": "🎳",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3B3"
-  },
-  {
-    "id": "activities:chess-pawn",
-    "name": "chess-pawn",
-    "emoji": "♟️",
-    "category": "activities",
-    "aliases": [
-      "chess"
-    ],
-    "keywords": [
-      "game",
-      "strategy"
-    ],
-    "unicode": "U+265F"
-  },
-  {
-    "id": "activities:confetti-ball",
-    "name": "confetti-ball",
-    "emoji": "🎊",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "celebration",
-      "party"
-    ],
-    "unicode": "U+1F38A"
-  },
-  {
-    "id": "activities:cricket-game",
-    "name": "cricket-game",
-    "emoji": "🏏",
-    "category": "activities",
-    "aliases": [
-      "cricket"
-    ],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3CF"
-  },
-  {
-    "id": "activities:direct-hit",
-    "name": "direct-hit",
-    "emoji": "🎯",
-    "category": "activities",
-    "aliases": [
-      "dart",
-      "target"
-    ],
-    "keywords": [
-      "goal",
-      "aim"
-    ],
-    "unicode": "U+1F3AF"
-  },
-  {
-    "id": "activities:drum",
-    "name": "drum",
-    "emoji": "🥁",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "music",
-      "instrument"
-    ],
-    "unicode": "U+1F941"
-  },
-  {
-    "id": "activities:first-place-medal",
-    "name": "first-place-medal",
-    "emoji": "🥇",
-    "category": "activities",
-    "aliases": [
-      "gold-medal"
-    ],
-    "keywords": [
-      "win",
-      "award",
-      "first"
-    ],
-    "unicode": "U+1F947"
-  },
-  {
-    "id": "activities:guitar",
-    "name": "guitar",
-    "emoji": "🎸",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "music",
-      "instrument"
-    ],
-    "unicode": "U+1F3B8"
-  },
-  {
-    "id": "activities:headphone",
-    "name": "headphone",
-    "emoji": "🎧",
-    "category": "activities",
-    "aliases": [
-      "headphones"
-    ],
-    "keywords": [
-      "music",
-      "listen"
-    ],
-    "unicode": "U+1F3A7"
-  },
-  {
-    "id": "activities:microphone",
-    "name": "microphone",
-    "emoji": "🎤",
-    "category": "activities",
-    "aliases": [
-      "mic"
-    ],
-    "keywords": [
-      "sing",
-      "music"
-    ],
-    "unicode": "U+1F3A4"
-  },
-  {
-    "id": "activities:party-popper",
-    "name": "party-popper",
-    "emoji": "🎉",
-    "category": "activities",
-    "aliases": [
-      "tada"
-    ],
-    "keywords": [
-      "celebration",
-      "congrats"
-    ],
-    "unicode": "U+1F389"
-  },
-  {
-    "id": "activities:ping-pong",
-    "name": "ping-pong",
-    "emoji": "🏓",
-    "category": "activities",
-    "aliases": [
-      "table-tennis"
-    ],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3D3"
-  },
-  {
-    "id": "activities:rugby-football",
-    "name": "rugby-football",
-    "emoji": "🏉",
-    "category": "activities",
-    "aliases": [
-      "rugby"
-    ],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3C9"
-  },
-  {
-    "id": "activities:soccer-ball",
-    "name": "soccer-ball",
-    "emoji": "⚽",
-    "category": "activities",
-    "aliases": [
-      "football"
-    ],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+26BD"
-  },
-  {
-    "id": "activities:sports-medal",
-    "name": "sports-medal",
-    "emoji": "🏅",
-    "category": "activities",
-    "aliases": [
-      "medal"
-    ],
-    "keywords": [
-      "award",
-      "win"
-    ],
-    "unicode": "U+1F3C5"
-  },
-  {
-    "id": "activities:tennis",
-    "name": "tennis",
-    "emoji": "🎾",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3BE"
-  },
-  {
-    "id": "activities:trophy",
-    "name": "trophy",
-    "emoji": "🏆",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "win",
-      "award",
-      "champion"
-    ],
-    "unicode": "U+1F3C6"
-  },
-  {
-    "id": "activities:video-game",
-    "name": "video-game",
-    "emoji": "🎮",
-    "category": "activities",
-    "aliases": [
-      "controller"
-    ],
-    "keywords": [
-      "gaming",
-      "play"
-    ],
-    "unicode": "U+1F3AE"
-  },
-  {
-    "id": "activities:volleyball",
-    "name": "volleyball",
-    "emoji": "🏐",
-    "category": "activities",
-    "aliases": [],
-    "keywords": [
-      "sport",
-      "game"
-    ],
-    "unicode": "U+1F3D0"
-  },
-  {
-    "id": "animals-nature:baby-chick",
-    "name": "baby-chick",
-    "emoji": "🐤",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "cute",
-      "bird"
-    ],
-    "unicode": "U+1F424"
-  },
-  {
-    "id": "animals-nature:bat",
-    "name": "bat",
-    "emoji": "🦇",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "night"
-    ],
-    "unicode": "U+1F987"
-  },
-  {
-    "id": "animals-nature:bear",
-    "name": "bear",
-    "emoji": "🐻",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "wild"
-    ],
-    "unicode": "U+1F43B"
-  },
-  {
-    "id": "animals-nature:bird",
-    "name": "bird",
-    "emoji": "🐦",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "fly"
-    ],
-    "unicode": "U+1F426"
-  },
-  {
-    "id": "animals-nature:butterfly",
-    "name": "butterfly",
-    "emoji": "🦋",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "insect",
-      "nature"
-    ],
-    "unicode": "U+1F98B"
-  },
-  {
-    "id": "animals-nature:cat-face",
-    "name": "cat-face",
-    "emoji": "🐱",
-    "category": "animals-nature",
-    "aliases": [
-      "cat"
-    ],
-    "keywords": [
-      "pet",
-      "kitten",
-      "animal"
-    ],
-    "unicode": "U+1F431"
-  },
-  {
-    "id": "animals-nature:chicken",
-    "name": "chicken",
-    "emoji": "🐔",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "farm",
-      "bird"
-    ],
-    "unicode": "U+1F414"
-  },
-  {
-    "id": "animals-nature:cow-face",
-    "name": "cow-face",
-    "emoji": "🐮",
-    "category": "animals-nature",
-    "aliases": [
-      "cow"
-    ],
-    "keywords": [
-      "animal",
-      "farm"
-    ],
-    "unicode": "U+1F42E"
-  },
-  {
-    "id": "animals-nature:dog-face",
-    "name": "dog-face",
-    "emoji": "🐶",
-    "category": "animals-nature",
-    "aliases": [
-      "dog"
-    ],
-    "keywords": [
-      "pet",
-      "puppy",
-      "animal"
-    ],
-    "unicode": "U+1F436"
-  },
-  {
-    "id": "animals-nature:duck",
-    "name": "duck",
-    "emoji": "🦆",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "bird",
-      "water"
-    ],
-    "unicode": "U+1F986"
-  },
-  {
-    "id": "animals-nature:eagle",
-    "name": "eagle",
-    "emoji": "🦅",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "bird",
-      "wild"
-    ],
-    "unicode": "U+1F985"
-  },
-  {
-    "id": "animals-nature:fox",
-    "name": "fox",
-    "emoji": "🦊",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "wild"
-    ],
-    "unicode": "U+1F98A"
-  },
-  {
-    "id": "animals-nature:frog",
-    "name": "frog",
-    "emoji": "🐸",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "amphibian"
-    ],
-    "unicode": "U+1F438"
-  },
-  {
-    "id": "animals-nature:hamster",
-    "name": "hamster",
-    "emoji": "🐹",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "pet",
-      "animal"
-    ],
-    "unicode": "U+1F439"
-  },
-  {
-    "id": "animals-nature:honeybee",
-    "name": "honeybee",
-    "emoji": "🐝",
-    "category": "animals-nature",
-    "aliases": [
-      "bee"
-    ],
-    "keywords": [
-      "insect",
-      "honey"
-    ],
-    "unicode": "U+1F41D"
-  },
-  {
-    "id": "animals-nature:horse-face",
-    "name": "horse-face",
-    "emoji": "🐴",
-    "category": "animals-nature",
-    "aliases": [
-      "horse"
-    ],
-    "keywords": [
-      "animal",
-      "farm"
-    ],
-    "unicode": "U+1F434"
-  },
-  {
-    "id": "animals-nature:koala",
-    "name": "koala",
-    "emoji": "🐨",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "cute"
-    ],
-    "unicode": "U+1F428"
-  },
-  {
-    "id": "animals-nature:lady-beetle",
-    "name": "lady-beetle",
-    "emoji": "🐞",
-    "category": "animals-nature",
-    "aliases": [
-      "ladybug"
-    ],
-    "keywords": [
-      "insect",
-      "lucky"
-    ],
-    "unicode": "U+1F41E"
-  },
-  {
-    "id": "animals-nature:lion",
-    "name": "lion",
-    "emoji": "🦁",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "king",
-      "wild"
-    ],
-    "unicode": "U+1F981"
-  },
-  {
-    "id": "animals-nature:monkey-face",
-    "name": "monkey-face",
-    "emoji": "🐵",
-    "category": "animals-nature",
-    "aliases": [
-      "monkey"
-    ],
-    "keywords": [
-      "animal",
-      "silly"
-    ],
-    "unicode": "U+1F435"
-  },
-  {
-    "id": "animals-nature:mouse-face",
-    "name": "mouse-face",
-    "emoji": "🐭",
-    "category": "animals-nature",
-    "aliases": [
-      "mouse"
-    ],
-    "keywords": [
-      "animal",
-      "rodent"
-    ],
-    "unicode": "U+1F42D"
-  },
-  {
-    "id": "animals-nature:owl",
-    "name": "owl",
-    "emoji": "🦉",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "bird",
-      "wise"
-    ],
-    "unicode": "U+1F989"
-  },
-  {
-    "id": "animals-nature:panda",
-    "name": "panda",
-    "emoji": "🐼",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "cute"
-    ],
-    "unicode": "U+1F43C"
-  },
-  {
-    "id": "animals-nature:penguin",
-    "name": "penguin",
-    "emoji": "🐧",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "bird",
-      "cold"
-    ],
-    "unicode": "U+1F427"
-  },
-  {
-    "id": "animals-nature:pig-face",
-    "name": "pig-face",
-    "emoji": "🐷",
-    "category": "animals-nature",
-    "aliases": [
-      "pig"
-    ],
-    "keywords": [
-      "animal",
-      "farm"
-    ],
-    "unicode": "U+1F437"
-  },
-  {
-    "id": "animals-nature:rabbit-face",
-    "name": "rabbit-face",
-    "emoji": "🐰",
-    "category": "animals-nature",
-    "aliases": [
-      "rabbit"
-    ],
-    "keywords": [
-      "bunny",
-      "animal"
-    ],
-    "unicode": "U+1F430"
-  },
-  {
-    "id": "animals-nature:snail",
-    "name": "snail",
-    "emoji": "🐌",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "slow",
-      "animal"
-    ],
-    "unicode": "U+1F40C"
-  },
-  {
-    "id": "animals-nature:tiger-face",
-    "name": "tiger-face",
-    "emoji": "🐯",
-    "category": "animals-nature",
-    "aliases": [
-      "tiger"
-    ],
-    "keywords": [
-      "animal",
-      "wild",
-      "cat"
-    ],
-    "unicode": "U+1F42F"
-  },
-  {
-    "id": "animals-nature:unicorn",
-    "name": "unicorn",
-    "emoji": "🦄",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "magic",
-      "fantasy"
-    ],
-    "unicode": "U+1F984"
-  },
-  {
-    "id": "animals-nature:wolf",
-    "name": "wolf",
-    "emoji": "🐺",
-    "category": "animals-nature",
-    "aliases": [],
-    "keywords": [
-      "animal",
-      "wild"
-    ],
-    "unicode": "U+1F43A"
-  },
-  {
-    "id": "food-drink:avocado",
-    "name": "avocado",
-    "emoji": "🥑",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food",
-      "healthy"
-    ],
-    "unicode": "U+1F951"
-  },
-  {
-    "id": "food-drink:banana",
-    "name": "banana",
-    "emoji": "🍌",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F34C"
-  },
-  {
-    "id": "food-drink:beer-mug",
-    "name": "beer-mug",
-    "emoji": "🍺",
-    "category": "food-drink",
-    "aliases": [
-      "beer"
-    ],
-    "keywords": [
-      "drink",
-      "alcohol"
-    ],
-    "unicode": "U+1F37A"
-  },
-  {
-    "id": "food-drink:birthday-cake",
-    "name": "birthday-cake",
-    "emoji": "🎂",
-    "category": "food-drink",
-    "aliases": [
-      "cake"
-    ],
-    "keywords": [
-      "party",
-      "celebration",
-      "dessert"
-    ],
-    "unicode": "U+1F382"
-  },
-  {
-    "id": "food-drink:bread",
-    "name": "bread",
-    "emoji": "🍞",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "food",
-      "bakery"
-    ],
-    "unicode": "U+1F35E"
-  },
-  {
-    "id": "food-drink:carrot",
-    "name": "carrot",
-    "emoji": "🥕",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "vegetable",
-      "food"
-    ],
-    "unicode": "U+1F955"
-  },
-  {
-    "id": "food-drink:cheese-wedge",
-    "name": "cheese-wedge",
-    "emoji": "🧀",
-    "category": "food-drink",
-    "aliases": [
-      "cheese"
-    ],
-    "keywords": [
-      "food",
-      "dairy"
-    ],
-    "unicode": "U+1F9C0"
-  },
-  {
-    "id": "food-drink:cherries",
-    "name": "cherries",
-    "emoji": "🍒",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F352"
-  },
-  {
-    "id": "food-drink:chocolate-bar",
-    "name": "chocolate-bar",
-    "emoji": "🍫",
-    "category": "food-drink",
-    "aliases": [
-      "chocolate"
-    ],
-    "keywords": [
-      "dessert",
-      "sweet"
-    ],
-    "unicode": "U+1F36B"
-  },
-  {
-    "id": "food-drink:coconut",
-    "name": "coconut",
-    "emoji": "🥥",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "tropical"
-    ],
-    "unicode": "U+1F965"
-  },
-  {
-    "id": "food-drink:cooking",
-    "name": "cooking",
-    "emoji": "🍳",
-    "category": "food-drink",
-    "aliases": [
-      "fried-egg"
-    ],
-    "keywords": [
-      "food",
-      "breakfast",
-      "cook"
-    ],
-    "unicode": "U+1F373"
-  },
-  {
-    "id": "food-drink:doughnut",
-    "name": "doughnut",
-    "emoji": "🍩",
-    "category": "food-drink",
-    "aliases": [
-      "donut"
-    ],
-    "keywords": [
-      "dessert",
-      "sweet"
-    ],
-    "unicode": "U+1F369"
-  },
-  {
-    "id": "food-drink:ear-of-corn",
-    "name": "ear-of-corn",
-    "emoji": "🌽",
-    "category": "food-drink",
-    "aliases": [
-      "corn"
-    ],
-    "keywords": [
-      "vegetable",
-      "food"
-    ],
-    "unicode": "U+1F33D"
-  },
-  {
-    "id": "food-drink:egg",
-    "name": "egg",
-    "emoji": "🥚",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "food",
-      "breakfast"
-    ],
-    "unicode": "U+1F95A"
-  },
-  {
-    "id": "food-drink:french-fries",
-    "name": "french-fries",
-    "emoji": "🍟",
-    "category": "food-drink",
-    "aliases": [
-      "fries"
-    ],
-    "keywords": [
-      "food",
-      "fast-food"
-    ],
-    "unicode": "U+1F35F"
-  },
-  {
-    "id": "food-drink:grapes",
-    "name": "grapes",
-    "emoji": "🍇",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "wine"
-    ],
-    "unicode": "U+1F347"
-  },
-  {
-    "id": "food-drink:green-apple",
-    "name": "green-apple",
-    "emoji": "🍏",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F34F"
-  },
-  {
-    "id": "food-drink:hamburger",
-    "name": "hamburger",
-    "emoji": "🍔",
-    "category": "food-drink",
-    "aliases": [
-      "burger"
-    ],
-    "keywords": [
-      "food",
-      "fast-food"
-    ],
-    "unicode": "U+1F354"
-  },
-  {
-    "id": "food-drink:hot-beverage",
-    "name": "hot-beverage",
-    "emoji": "☕",
-    "category": "food-drink",
-    "aliases": [
-      "coffee"
-    ],
-    "keywords": [
-      "drink",
-      "tea",
-      "morning"
-    ],
-    "unicode": "U+2615"
-  },
-  {
-    "id": "food-drink:hot-dog",
-    "name": "hot-dog",
-    "emoji": "🌭",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "food",
-      "fast-food"
-    ],
-    "unicode": "U+1F32D"
-  },
-  {
-    "id": "food-drink:hot-pepper",
-    "name": "hot-pepper",
-    "emoji": "🌶️",
-    "category": "food-drink",
-    "aliases": [
-      "chili"
-    ],
-    "keywords": [
-      "spicy",
-      "food"
-    ],
-    "unicode": "U+1F336"
-  },
-  {
-    "id": "food-drink:kiwi-fruit",
-    "name": "kiwi-fruit",
-    "emoji": "🥝",
-    "category": "food-drink",
-    "aliases": [
-      "kiwi"
-    ],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F95D"
-  },
-  {
-    "id": "food-drink:lemon",
-    "name": "lemon",
-    "emoji": "🍋",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "citrus",
-      "sour"
-    ],
-    "unicode": "U+1F34B"
-  },
-  {
-    "id": "food-drink:mango",
-    "name": "mango",
-    "emoji": "🥭",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "tropical"
-    ],
-    "unicode": "U+1F96D"
-  },
-  {
-    "id": "food-drink:peach",
-    "name": "peach",
-    "emoji": "🍑",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F351"
-  },
-  {
-    "id": "food-drink:pear",
-    "name": "pear",
-    "emoji": "🍐",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F350"
-  },
-  {
-    "id": "food-drink:pineapple",
-    "name": "pineapple",
-    "emoji": "🍍",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "tropical"
-    ],
-    "unicode": "U+1F34D"
-  },
-  {
-    "id": "food-drink:pizza",
-    "name": "pizza",
-    "emoji": "🍕",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "food",
-      "italian"
-    ],
-    "unicode": "U+1F355"
-  },
-  {
-    "id": "food-drink:red-apple",
-    "name": "red-apple",
-    "emoji": "🍎",
-    "category": "food-drink",
-    "aliases": [
-      "apple"
-    ],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F34E"
-  },
-  {
-    "id": "food-drink:strawberry",
-    "name": "strawberry",
-    "emoji": "🍓",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "food"
-    ],
-    "unicode": "U+1F353"
-  },
-  {
-    "id": "food-drink:sushi",
-    "name": "sushi",
-    "emoji": "🍣",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "food",
-      "japanese"
-    ],
-    "unicode": "U+1F363"
-  },
-  {
-    "id": "food-drink:taco",
-    "name": "taco",
-    "emoji": "🌮",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "food",
-      "mexican"
-    ],
-    "unicode": "U+1F32E"
-  },
-  {
-    "id": "food-drink:tangerine",
-    "name": "tangerine",
-    "emoji": "🍊",
-    "category": "food-drink",
-    "aliases": [
-      "orange"
-    ],
-    "keywords": [
-      "fruit",
-      "citrus"
-    ],
-    "unicode": "U+1F34A"
-  },
-  {
-    "id": "food-drink:tomato",
-    "name": "tomato",
-    "emoji": "🍅",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "vegetable",
-      "food"
-    ],
-    "unicode": "U+1F345"
-  },
-  {
-    "id": "food-drink:watermelon",
-    "name": "watermelon",
-    "emoji": "🍉",
-    "category": "food-drink",
-    "aliases": [],
-    "keywords": [
-      "fruit",
-      "summer"
-    ],
-    "unicode": "U+1F349"
-  },
-  {
-    "id": "objects:alarm-clock",
-    "name": "alarm-clock",
-    "emoji": "⏰",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "time",
-      "wake"
-    ],
-    "unicode": "U+23F0"
-  },
-  {
-    "id": "objects:battery",
-    "name": "battery",
-    "emoji": "🔋",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "power",
-      "charge"
-    ],
-    "unicode": "U+1F50B"
-  },
-  {
-    "id": "objects:books",
-    "name": "books",
-    "emoji": "📚",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "read",
-      "study",
-      "library"
-    ],
-    "unicode": "U+1F4DA"
-  },
-  {
-    "id": "objects:camera",
-    "name": "camera",
-    "emoji": "📷",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "photo",
-      "device"
-    ],
-    "unicode": "U+1F4F7"
-  },
-  {
-    "id": "objects:desktop-computer",
-    "name": "desktop-computer",
-    "emoji": "🖥️",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "device",
-      "work"
-    ],
-    "unicode": "U+1F5A5"
-  },
-  {
-    "id": "objects:electric-plug",
-    "name": "electric-plug",
-    "emoji": "🔌",
-    "category": "objects",
-    "aliases": [
-      "plug"
-    ],
-    "keywords": [
-      "power",
-      "charge"
-    ],
-    "unicode": "U+1F50C"
-  },
-  {
-    "id": "objects:hammer",
-    "name": "hammer",
-    "emoji": "🔨",
-    "category": "objects",
-    "aliases": [
-      "tool"
-    ],
-    "keywords": [
-      "build",
-      "fix",
-      "tool"
-    ],
-    "unicode": "U+1F528"
-  },
-  {
-    "id": "objects:key",
-    "name": "key",
-    "emoji": "🔑",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "unlock",
-      "access"
-    ],
-    "unicode": "U+1F511"
-  },
-  {
-    "id": "objects:keyboard",
-    "name": "keyboard",
-    "emoji": "⌨️",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "device",
-      "type"
-    ],
-    "unicode": "U+2328"
-  },
-  {
-    "id": "objects:laptop",
-    "name": "laptop",
-    "emoji": "💻",
-    "category": "objects",
-    "aliases": [
-      "computer"
-    ],
-    "keywords": [
-      "device",
-      "work"
-    ],
-    "unicode": "U+1F4BB"
-  },
-  {
-    "id": "objects:light-bulb",
-    "name": "light-bulb",
-    "emoji": "💡",
-    "category": "objects",
-    "aliases": [
-      "bulb",
-      "idea"
-    ],
-    "keywords": [
-      "idea",
-      "light"
-    ],
-    "unicode": "U+1F4A1"
-  },
-  {
-    "id": "objects:locked",
-    "name": "locked",
-    "emoji": "🔒",
-    "category": "objects",
-    "aliases": [
-      "lock"
-    ],
-    "keywords": [
-      "security",
-      "private"
-    ],
-    "unicode": "U+1F512"
-  },
-  {
-    "id": "objects:memo",
-    "name": "memo",
-    "emoji": "📝",
-    "category": "objects",
-    "aliases": [
-      "note"
-    ],
-    "keywords": [
-      "write",
-      "notes"
-    ],
-    "unicode": "U+1F4DD"
-  },
-  {
-    "id": "objects:mobile-phone",
-    "name": "mobile-phone",
-    "emoji": "📱",
-    "category": "objects",
-    "aliases": [
-      "phone"
-    ],
-    "keywords": [
-      "device",
-      "call"
-    ],
-    "unicode": "U+1F4F1"
-  },
-  {
-    "id": "objects:movie-camera",
-    "name": "movie-camera",
-    "emoji": "🎥",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "film",
-      "movie"
-    ],
-    "unicode": "U+1F3A5"
-  },
-  {
-    "id": "objects:notebook",
-    "name": "notebook",
-    "emoji": "📓",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "notes",
-      "write"
-    ],
-    "unicode": "U+1F4D3"
-  },
-  {
-    "id": "objects:open-book",
-    "name": "open-book",
-    "emoji": "📖",
-    "category": "objects",
-    "aliases": [
-      "book"
-    ],
-    "keywords": [
-      "read",
-      "study"
-    ],
-    "unicode": "U+1F4D6"
-  },
-  {
-    "id": "objects:paperclip",
-    "name": "paperclip",
-    "emoji": "📎",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "attach",
-      "office"
-    ],
-    "unicode": "U+1F4CE"
-  },
-  {
-    "id": "objects:printer",
-    "name": "printer",
-    "emoji": "🖨️",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "device",
-      "office"
-    ],
-    "unicode": "U+1F5A8"
-  },
-  {
-    "id": "objects:pushpin",
-    "name": "pushpin",
-    "emoji": "📌",
-    "category": "objects",
-    "aliases": [
-      "pin"
-    ],
-    "keywords": [
-      "location",
-      "mark"
-    ],
-    "unicode": "U+1F4CC"
-  },
-  {
-    "id": "objects:radio",
-    "name": "radio",
-    "emoji": "📻",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "device",
-      "music"
-    ],
-    "unicode": "U+1F4FB"
-  },
-  {
-    "id": "objects:television",
-    "name": "television",
-    "emoji": "📺",
-    "category": "objects",
-    "aliases": [
-      "tv"
-    ],
-    "keywords": [
-      "device",
-      "watch"
-    ],
-    "unicode": "U+1F4FA"
-  },
-  {
-    "id": "objects:video-camera",
-    "name": "video-camera",
-    "emoji": "📹",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "video",
-      "record"
-    ],
-    "unicode": "U+1F4F9"
-  },
-  {
-    "id": "objects:watch",
-    "name": "watch",
-    "emoji": "⌚",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "time",
-      "wrist"
-    ],
-    "unicode": "U+231A"
-  },
-  {
-    "id": "objects:wrench",
-    "name": "wrench",
-    "emoji": "🔧",
-    "category": "objects",
-    "aliases": [],
-    "keywords": [
-      "tool",
-      "fix",
-      "settings"
-    ],
-    "unicode": "U+1F527"
-  },
-  {
-    "id": "people-body:backhand-index-pointing-down",
-    "name": "backhand-index-pointing-down",
-    "emoji": "👇",
-    "category": "people-body",
-    "aliases": [
-      "point-down"
-    ],
-    "keywords": [
-      "down",
-      "point"
-    ],
-    "unicode": "U+1F447"
-  },
-  {
-    "id": "people-body:backhand-index-pointing-left",
-    "name": "backhand-index-pointing-left",
-    "emoji": "👈",
-    "category": "people-body",
-    "aliases": [
-      "point-left"
-    ],
-    "keywords": [
-      "left",
-      "point"
-    ],
-    "unicode": "U+1F448"
-  },
-  {
-    "id": "people-body:backhand-index-pointing-right",
-    "name": "backhand-index-pointing-right",
-    "emoji": "👉",
-    "category": "people-body",
-    "aliases": [
-      "point-right"
-    ],
-    "keywords": [
-      "right",
-      "point"
-    ],
-    "unicode": "U+1F449"
-  },
-  {
-    "id": "people-body:backhand-index-pointing-up",
-    "name": "backhand-index-pointing-up",
-    "emoji": "👆",
-    "category": "people-body",
-    "aliases": [
-      "point-up-2"
-    ],
-    "keywords": [
-      "up",
-      "point"
-    ],
-    "unicode": "U+1F446"
-  },
-  {
-    "id": "people-body:brain",
-    "name": "brain",
-    "emoji": "🧠",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "smart",
-      "idea",
-      "think"
-    ],
-    "unicode": "U+1F9E0"
-  },
-  {
-    "id": "people-body:call-me-hand",
-    "name": "call-me-hand",
-    "emoji": "🤙",
-    "category": "people-body",
-    "aliases": [
-      "call-me"
-    ],
-    "keywords": [
-      "call",
-      "phone"
-    ],
-    "unicode": "U+1F919"
-  },
-  {
-    "id": "people-body:clapping-hands",
-    "name": "clapping-hands",
-    "emoji": "👏",
-    "category": "people-body",
-    "aliases": [
-      "clap"
-    ],
-    "keywords": [
-      "applause",
-      "bravo"
-    ],
-    "unicode": "U+1F44F"
-  },
-  {
-    "id": "people-body:crossed-fingers",
-    "name": "crossed-fingers",
-    "emoji": "🤞",
-    "category": "people-body",
-    "aliases": [
-      "fingers-crossed"
-    ],
-    "keywords": [
-      "luck",
-      "hope"
-    ],
-    "unicode": "U+1F91E"
-  },
-  {
-    "id": "people-body:eye",
-    "name": "eye",
-    "emoji": "👁️",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "look",
-      "see"
-    ],
-    "unicode": "U+1F441"
-  },
-  {
-    "id": "people-body:eyes",
-    "name": "eyes",
-    "emoji": "👀",
-    "category": "people-body",
-    "aliases": [
-      "eyes"
-    ],
-    "keywords": [
-      "look",
-      "watching"
-    ],
-    "unicode": "U+1F440"
-  },
-  {
-    "id": "people-body:flexed-biceps",
-    "name": "flexed-biceps",
-    "emoji": "💪",
-    "category": "people-body",
-    "aliases": [
-      "muscle"
-    ],
-    "keywords": [
-      "strong",
-      "gym",
-      "workout"
-    ],
-    "unicode": "U+1F4AA"
-  },
-  {
-    "id": "people-body:folded-hands",
-    "name": "folded-hands",
-    "emoji": "🙏",
-    "category": "people-body",
-    "aliases": [
-      "pray"
-    ],
-    "keywords": [
-      "please",
-      "thanks",
-      "hope"
-    ],
-    "unicode": "U+1F64F"
-  },
-  {
-    "id": "people-body:handshake",
-    "name": "handshake",
-    "emoji": "🤝",
-    "category": "people-body",
-    "aliases": [
-      "deal"
-    ],
-    "keywords": [
-      "agreement",
-      "partnership"
-    ],
-    "unicode": "U+1F91D"
-  },
-  {
-    "id": "people-body:love-you-gesture",
-    "name": "love-you-gesture",
-    "emoji": "🤟",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "love",
-      "ily"
-    ],
-    "unicode": "U+1F91F"
-  },
-  {
-    "id": "people-body:mouth",
-    "name": "mouth",
-    "emoji": "👄",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "lips",
-      "speak"
-    ],
-    "unicode": "U+1F444"
-  },
-  {
-    "id": "people-body:nail-polish",
-    "name": "nail-polish",
-    "emoji": "💅",
-    "category": "people-body",
-    "aliases": [
-      "nails"
-    ],
-    "keywords": [
-      "manicure",
-      "beauty"
-    ],
-    "unicode": "U+1F485"
-  },
-  {
-    "id": "people-body:ok-hand",
-    "name": "ok-hand",
-    "emoji": "👌",
-    "category": "people-body",
-    "aliases": [
-      "ok"
-    ],
-    "keywords": [
-      "okay",
-      "perfect"
-    ],
-    "unicode": "U+1F44C"
-  },
-  {
-    "id": "people-body:oncoming-fist",
-    "name": "oncoming-fist",
-    "emoji": "👊",
-    "category": "people-body",
-    "aliases": [
-      "fist-bump",
-      "punch"
-    ],
-    "keywords": [
-      "fist",
-      "bump"
-    ],
-    "unicode": "U+1F44A"
-  },
-  {
-    "id": "people-body:open-hands",
-    "name": "open-hands",
-    "emoji": "👐",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "hug",
-      "open"
-    ],
-    "unicode": "U+1F450"
-  },
-  {
-    "id": "people-body:palms-up-together",
-    "name": "palms-up-together",
-    "emoji": "🤲",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "pray",
-      "hopeful"
-    ],
-    "unicode": "U+1F932"
-  },
-  {
-    "id": "people-body:raised-fist",
-    "name": "raised-fist",
-    "emoji": "✊",
-    "category": "people-body",
-    "aliases": [
-      "fist"
-    ],
-    "keywords": [
-      "power",
-      "solidarity"
-    ],
-    "unicode": "U+270A"
-  },
-  {
-    "id": "people-body:raised-hand",
-    "name": "raised-hand",
-    "emoji": "✋",
-    "category": "people-body",
-    "aliases": [
-      "hand"
-    ],
-    "keywords": [
-      "stop",
-      "high-five"
-    ],
-    "unicode": "U+270B"
-  },
-  {
-    "id": "people-body:raised-hands",
-    "name": "raised-hands",
-    "emoji": "🙌",
-    "category": "people-body",
-    "aliases": [
-      "raised-hands"
-    ],
-    "keywords": [
-      "celebration",
-      "praise"
-    ],
-    "unicode": "U+1F64C"
-  },
-  {
-    "id": "people-body:selfie",
-    "name": "selfie",
-    "emoji": "🤳",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "photo",
-      "camera"
-    ],
-    "unicode": "U+1F933"
-  },
-  {
-    "id": "people-body:sign-of-the-horns",
-    "name": "sign-of-the-horns",
-    "emoji": "🤘",
-    "category": "people-body",
-    "aliases": [
-      "rock-on",
-      "metal"
-    ],
-    "keywords": [
-      "rock",
-      "metal"
-    ],
-    "unicode": "U+1F918"
-  },
-  {
-    "id": "people-body:thumbs-down",
-    "name": "thumbs-down",
-    "emoji": "👎",
-    "category": "people-body",
-    "aliases": [
-      "-1",
-      "thumbsdown"
-    ],
-    "keywords": [
-      "dislike",
-      "no"
-    ],
-    "unicode": "U+1F44E"
-  },
-  {
-    "id": "people-body:thumbs-up",
-    "name": "thumbs-up",
-    "emoji": "👍",
-    "category": "people-body",
-    "aliases": [
-      "+1",
-      "thumbsup"
-    ],
-    "keywords": [
-      "like",
-      "approve",
-      "yes"
-    ],
-    "unicode": "U+1F44D"
-  },
-  {
-    "id": "people-body:tongue",
-    "name": "tongue",
-    "emoji": "👅",
-    "category": "people-body",
-    "aliases": [],
-    "keywords": [
-      "taste",
-      "silly"
-    ],
-    "unicode": "U+1F445"
-  },
-  {
-    "id": "people-body:victory-hand",
-    "name": "victory-hand",
-    "emoji": "✌️",
-    "category": "people-body",
-    "aliases": [
-      "victory",
-      "peace"
-    ],
-    "keywords": [
-      "peace",
-      "win"
-    ],
-    "unicode": "U+270C"
-  },
-  {
-    "id": "people-body:waving-hand",
-    "name": "waving-hand",
-    "emoji": "👋",
-    "category": "people-body",
-    "aliases": [
-      "wave"
-    ],
-    "keywords": [
-      "hello",
-      "hi",
-      "bye"
-    ],
-    "unicode": "U+1F44B"
-  },
-  {
-    "id": "people-body:writing-hand",
-    "name": "writing-hand",
-    "emoji": "✍️",
-    "category": "people-body",
-    "aliases": [
-      "writing"
-    ],
-    "keywords": [
-      "note",
-      "write"
-    ],
-    "unicode": "U+270D"
-  },
-  {
-    "id": "smileys-emotion:angry-face",
-    "name": "angry-face",
-    "emoji": "😠",
-    "category": "smileys-emotion",
-    "aliases": [
-      "angry"
-    ],
-    "keywords": [
-      "mad",
-      "annoyed"
-    ],
-    "unicode": "U+1F620"
-  },
-  {
-    "id": "smileys-emotion:beaming-face-with-smiling-eyes",
-    "name": "beaming-face-with-smiling-eyes",
-    "emoji": "😁",
-    "category": "smileys-emotion",
-    "aliases": [
-      "grin"
-    ],
-    "keywords": [
-      "happy",
-      "smile",
-      "eyes"
-    ],
-    "unicode": "U+1F601"
-  },
-  {
-    "id": "smileys-emotion:crying-face",
-    "name": "crying-face",
-    "emoji": "😢",
-    "category": "smileys-emotion",
-    "aliases": [
-      "cry"
-    ],
-    "keywords": [
-      "sad",
-      "tears"
-    ],
-    "unicode": "U+1F622"
-  },
-  {
-    "id": "smileys-emotion:drooling-face",
-    "name": "drooling-face",
-    "emoji": "🤤",
-    "category": "smileys-emotion",
-    "aliases": [
-      "drool"
-    ],
-    "keywords": [
-      "hungry",
-      "sleepy"
-    ],
-    "unicode": "U+1F924"
-  },
-  {
-    "id": "smileys-emotion:exploding-head",
-    "name": "exploding-head",
-    "emoji": "🤯",
-    "category": "smileys-emotion",
-    "aliases": [
-      "mind-blown"
-    ],
-    "keywords": [
-      "shocked",
-      "wow",
-      "surprised"
-    ],
-    "unicode": "U+1F92F"
-  },
-  {
-    "id": "smileys-emotion:expressionless-face",
-    "name": "expressionless-face",
-    "emoji": "😑",
-    "category": "smileys-emotion",
-    "aliases": [
-      "expressionless"
-    ],
-    "keywords": [
-      "blank",
-      "meh"
-    ],
-    "unicode": "U+1F611"
-  },
-  {
-    "id": "smileys-emotion:face-blowing-a-kiss",
-    "name": "face-blowing-a-kiss",
-    "emoji": "😘",
-    "category": "smileys-emotion",
-    "aliases": [
-      "kissing-heart"
-    ],
-    "keywords": [
-      "love",
-      "kiss"
-    ],
-    "unicode": "U+1F618"
-  },
-  {
-    "id": "smileys-emotion:face-savoring-food",
-    "name": "face-savoring-food",
-    "emoji": "😋",
-    "category": "smileys-emotion",
-    "aliases": [
-      "yum"
-    ],
-    "keywords": [
-      "delicious",
-      "tasty",
-      "hungry"
-    ],
-    "unicode": "U+1F60B"
-  },
-  {
-    "id": "smileys-emotion:face-screaming-in-fear",
-    "name": "face-screaming-in-fear",
-    "emoji": "😱",
-    "category": "smileys-emotion",
-    "aliases": [
-      "scream"
-    ],
-    "keywords": [
-      "shock",
-      "scared",
-      "fear"
-    ],
-    "unicode": "U+1F631"
-  },
-  {
-    "id": "smileys-emotion:face-with-raised-eyebrow",
-    "name": "face-with-raised-eyebrow",
-    "emoji": "🤨",
-    "category": "smileys-emotion",
-    "aliases": [
-      "raised-eyebrow"
-    ],
-    "keywords": [
-      "skeptical",
-      "suspicious"
-    ],
-    "unicode": "U+1F928"
-  },
-  {
-    "id": "smileys-emotion:face-with-tears-of-joy",
-    "name": "face-with-tears-of-joy",
-    "emoji": "😂",
-    "category": "smileys-emotion",
-    "aliases": [
-      "joy"
-    ],
-    "keywords": [
-      "laugh",
-      "lol",
-      "funny"
-    ],
-    "unicode": "U+1F602"
-  },
-  {
-    "id": "smileys-emotion:face-with-tongue",
-    "name": "face-with-tongue",
-    "emoji": "😛",
-    "category": "smileys-emotion",
-    "aliases": [
-      "stuck-out-tongue"
-    ],
-    "keywords": [
-      "silly",
-      "playful"
-    ],
-    "unicode": "U+1F61B"
-  },
-  {
-    "id": "smileys-emotion:grinning-face",
-    "name": "grinning-face",
-    "emoji": "😀",
-    "category": "smileys-emotion",
-    "aliases": [
-      "grinning"
-    ],
-    "keywords": [
-      "smile",
-      "happy",
-      "face"
-    ],
-    "unicode": "U+1F600"
-  },
-  {
-    "id": "smileys-emotion:grinning-face-with-big-eyes",
-    "name": "grinning-face-with-big-eyes",
-    "emoji": "😃",
-    "category": "smileys-emotion",
-    "aliases": [
-      "smiley"
-    ],
-    "keywords": [
-      "smile",
-      "happy",
-      "joy"
-    ],
-    "unicode": "U+1F603"
-  },
-  {
-    "id": "smileys-emotion:grinning-face-with-smiling-eyes",
-    "name": "grinning-face-with-smiling-eyes",
-    "emoji": "😄",
-    "category": "smileys-emotion",
-    "aliases": [
-      "smile"
-    ],
-    "keywords": [
-      "happy",
-      "joy",
-      "laugh"
-    ],
-    "unicode": "U+1F604"
-  },
-  {
-    "id": "smileys-emotion:grinning-face-with-sweat",
-    "name": "grinning-face-with-sweat",
-    "emoji": "😅",
-    "category": "smileys-emotion",
-    "aliases": [
-      "sweat-smile"
-    ],
-    "keywords": [
-      "nervous",
-      "relief",
-      "hot"
-    ],
-    "unicode": "U+1F605"
-  },
-  {
-    "id": "smileys-emotion:grinning-squinting-face",
-    "name": "grinning-squinting-face",
-    "emoji": "😆",
-    "category": "smileys-emotion",
-    "aliases": [
-      "laughing",
-      "satisfied"
-    ],
-    "keywords": [
-      "happy",
-      "haha",
-      "laugh"
-    ],
-    "unicode": "U+1F606"
-  },
-  {
-    "id": "smileys-emotion:hand-over-mouth-face",
-    "name": "hand-over-mouth-face",
-    "emoji": "🤭",
-    "category": "smileys-emotion",
-    "aliases": [],
-    "keywords": [
-      "giggle",
-      "oops",
-      "surprised"
-    ],
-    "unicode": "U+1F92D"
-  },
-  {
-    "id": "smileys-emotion:hugging-face",
-    "name": "hugging-face",
-    "emoji": "🤗",
-    "category": "smileys-emotion",
-    "aliases": [
-      "hug"
-    ],
-    "keywords": [
-      "hug",
-      "warm",
-      "affection"
-    ],
-    "unicode": "U+1F917"
-  },
-  {
-    "id": "smileys-emotion:kissing-face",
-    "name": "kissing-face",
-    "emoji": "😗",
-    "category": "smileys-emotion",
-    "aliases": [
-      "kissing"
-    ],
-    "keywords": [
-      "kiss",
-      "love"
-    ],
-    "unicode": "U+1F617"
-  },
-  {
-    "id": "smileys-emotion:kissing-face-with-closed-eyes",
-    "name": "kissing-face-with-closed-eyes",
-    "emoji": "😚",
-    "category": "smileys-emotion",
-    "aliases": [
-      "kissing-closed-eyes"
-    ],
-    "keywords": [
-      "kiss",
-      "love"
-    ],
-    "unicode": "U+1F61A"
-  },
-  {
-    "id": "smileys-emotion:kissing-face-with-smiling-eyes",
-    "name": "kissing-face-with-smiling-eyes",
-    "emoji": "😙",
-    "category": "smileys-emotion",
-    "aliases": [
-      "kissing-smiling-eyes"
-    ],
-    "keywords": [
-      "kiss",
-      "love"
-    ],
-    "unicode": "U+1F619"
-  },
-  {
-    "id": "smileys-emotion:loudly-crying-face",
-    "name": "loudly-crying-face",
-    "emoji": "😭",
-    "category": "smileys-emotion",
-    "aliases": [
-      "sob"
-    ],
-    "keywords": [
-      "cry",
-      "sad",
-      "tears"
-    ],
-    "unicode": "U+1F62D"
-  },
-  {
-    "id": "smileys-emotion:money-mouth-face",
-    "name": "money-mouth-face",
-    "emoji": "🤑",
-    "category": "smileys-emotion",
-    "aliases": [
-      "money"
-    ],
-    "keywords": [
-      "rich",
-      "cash",
-      "greedy"
-    ],
-    "unicode": "U+1F911"
-  },
-  {
-    "id": "smileys-emotion:neutral-face",
-    "name": "neutral-face",
-    "emoji": "😐",
-    "category": "smileys-emotion",
-    "aliases": [],
-    "keywords": [
-      "meh",
-      "indifferent"
-    ],
-    "unicode": "U+1F610"
-  },
-  {
-    "id": "smileys-emotion:party-popper-face",
-    "name": "party-popper-face",
-    "emoji": "🥳",
-    "category": "smileys-emotion",
-    "aliases": [
-      "celebrating"
-    ],
-    "keywords": [
-      "party",
-      "celebrate",
-      "birthday"
-    ],
-    "unicode": "U+1F973"
-  },
-  {
-    "id": "smileys-emotion:pensive-face",
-    "name": "pensive-face",
-    "emoji": "😔",
-    "category": "smileys-emotion",
-    "aliases": [
-      "pensive"
-    ],
-    "keywords": [
-      "sad",
-      "disappointed"
-    ],
-    "unicode": "U+1F614"
-  },
-  {
-    "id": "smileys-emotion:pouting-face",
-    "name": "pouting-face",
-    "emoji": "😡",
-    "category": "smileys-emotion",
-    "aliases": [
-      "rage"
-    ],
-    "keywords": [
-      "furious",
-      "mad"
-    ],
-    "unicode": "U+1F621"
-  },
-  {
-    "id": "smileys-emotion:relieved-face",
-    "name": "relieved-face",
-    "emoji": "😌",
-    "category": "smileys-emotion",
-    "aliases": [
-      "relieved"
-    ],
-    "keywords": [
-      "calm",
-      "phew"
-    ],
-    "unicode": "U+1F60C"
-  },
-  {
-    "id": "smileys-emotion:rolling-on-the-floor-laughing",
-    "name": "rolling-on-the-floor-laughing",
-    "emoji": "🤣",
-    "category": "smileys-emotion",
-    "aliases": [
-      "rofl"
-    ],
-    "keywords": [
-      "laugh",
-      "funny",
-      "lol"
-    ],
-    "unicode": "U+1F923"
-  },
-  {
-    "id": "smileys-emotion:shushing-face",
-    "name": "shushing-face",
-    "emoji": "🤫",
-    "category": "smileys-emotion",
-    "aliases": [
-      "shush"
-    ],
-    "keywords": [
-      "quiet",
-      "secret"
-    ],
-    "unicode": "U+1F92B"
-  },
-  {
-    "id": "smileys-emotion:sleeping-face",
-    "name": "sleeping-face",
-    "emoji": "😴",
-    "category": "smileys-emotion",
-    "aliases": [
-      "sleeping"
-    ],
-    "keywords": [
-      "tired",
-      "zzz",
-      "sleep"
-    ],
-    "unicode": "U+1F634"
-  },
-  {
-    "id": "smileys-emotion:sleepy-face",
-    "name": "sleepy-face",
-    "emoji": "😪",
-    "category": "smileys-emotion",
-    "aliases": [
-      "sleepy"
-    ],
-    "keywords": [
-      "tired",
-      "yawn"
-    ],
-    "unicode": "U+1F62A"
-  },
-  {
-    "id": "smileys-emotion:slightly-smiling-face",
-    "name": "slightly-smiling-face",
-    "emoji": "🙂",
-    "category": "smileys-emotion",
-    "aliases": [
-      "slight-smile"
-    ],
-    "keywords": [
-      "smile",
-      "happy"
-    ],
-    "unicode": "U+1F642"
-  },
-  {
-    "id": "smileys-emotion:smiling-face-with-halo",
-    "name": "smiling-face-with-halo",
-    "emoji": "😇",
-    "category": "smileys-emotion",
-    "aliases": [
-      "innocent"
-    ],
-    "keywords": [
-      "angel",
-      "halo"
-    ],
-    "unicode": "U+1F607"
-  },
-  {
-    "id": "smileys-emotion:smiling-face-with-heart-eyes",
-    "name": "smiling-face-with-heart-eyes",
-    "emoji": "😍",
-    "category": "smileys-emotion",
-    "aliases": [
-      "heart-eyes"
-    ],
-    "keywords": [
-      "love",
-      "crush",
-      "adore"
-    ],
-    "unicode": "U+1F60D"
-  },
-  {
-    "id": "smileys-emotion:smiling-face-with-hearts",
-    "name": "smiling-face-with-hearts",
-    "emoji": "🥰",
-    "category": "smileys-emotion",
-    "aliases": [
-      "loving"
-    ],
-    "keywords": [
-      "love",
-      "adore",
-      "crush"
-    ],
-    "unicode": "U+1F970"
-  },
-  {
-    "id": "smileys-emotion:smiling-face-with-smiling-eyes",
-    "name": "smiling-face-with-smiling-eyes",
-    "emoji": "😊",
-    "category": "smileys-emotion",
-    "aliases": [
-      "blush"
-    ],
-    "keywords": [
-      "happy",
-      "warm",
-      "pleased"
-    ],
-    "unicode": "U+1F60A"
-  },
-  {
-    "id": "smileys-emotion:smiling-face-with-tear",
-    "name": "smiling-face-with-tear",
-    "emoji": "🥲",
-    "category": "smileys-emotion",
-    "aliases": [],
-    "keywords": [
-      "touched",
-      "proud",
-      "grateful"
-    ],
-    "unicode": "U+1F972"
-  },
-  {
-    "id": "smileys-emotion:smirking-face",
-    "name": "smirking-face",
-    "emoji": "😏",
-    "category": "smileys-emotion",
-    "aliases": [
-      "smirk"
-    ],
-    "keywords": [
-      "sly",
-      "smug"
-    ],
-    "unicode": "U+1F60F"
-  },
-  {
-    "id": "smileys-emotion:squinting-face-with-tongue",
-    "name": "squinting-face-with-tongue",
-    "emoji": "😝",
-    "category": "smileys-emotion",
-    "aliases": [
-      "stuck-out-tongue-closed-eyes"
-    ],
-    "keywords": [
-      "silly",
-      "laughing"
-    ],
-    "unicode": "U+1F61D"
-  },
-  {
-    "id": "smileys-emotion:star-struck",
-    "name": "star-struck",
-    "emoji": "🤩",
-    "category": "smileys-emotion",
-    "aliases": [
-      "grinning-star"
-    ],
-    "keywords": [
-      "amazed",
-      "wow",
-      "excited"
-    ],
-    "unicode": "U+1F929"
-  },
-  {
-    "id": "smileys-emotion:thinking-face",
-    "name": "thinking-face",
-    "emoji": "🤔",
-    "category": "smileys-emotion",
-    "aliases": [
-      "thinking"
-    ],
-    "keywords": [
-      "hmm",
-      "consider",
-      "ponder"
-    ],
-    "unicode": "U+1F914"
-  },
-  {
-    "id": "smileys-emotion:unamused-face",
-    "name": "unamused-face",
-    "emoji": "😒",
-    "category": "smileys-emotion",
-    "aliases": [
-      "unamused"
-    ],
-    "keywords": [
-      "annoyed",
-      "meh"
-    ],
-    "unicode": "U+1F612"
-  },
-  {
-    "id": "smileys-emotion:upside-down-face",
-    "name": "upside-down-face",
-    "emoji": "🙃",
-    "category": "smileys-emotion",
-    "aliases": [],
-    "keywords": [
-      "silly",
-      "sarcasm"
-    ],
-    "unicode": "U+1F643"
-  },
-  {
-    "id": "smileys-emotion:winking-face",
-    "name": "winking-face",
-    "emoji": "😉",
-    "category": "smileys-emotion",
-    "aliases": [
-      "wink"
-    ],
-    "keywords": [
-      "flirt",
-      "joke"
-    ],
-    "unicode": "U+1F609"
-  },
-  {
-    "id": "smileys-emotion:winking-face-with-tongue",
-    "name": "winking-face-with-tongue",
-    "emoji": "😜",
-    "category": "smileys-emotion",
-    "aliases": [
-      "stuck-out-tongue-wink"
-    ],
-    "keywords": [
-      "silly",
-      "joke",
-      "playful"
-    ],
-    "unicode": "U+1F61C"
-  },
-  {
-    "id": "smileys-emotion:zany-face",
-    "name": "zany-face",
-    "emoji": "🤪",
-    "category": "smileys-emotion",
-    "aliases": [
-      "crazy"
-    ],
-    "keywords": [
-      "silly",
-      "wild",
-      "goofy"
-    ],
-    "unicode": "U+1F92A"
-  },
-  {
-    "id": "smileys-emotion:zipper-mouth-face",
-    "name": "zipper-mouth-face",
-    "emoji": "🤐",
-    "category": "smileys-emotion",
-    "aliases": [],
-    "keywords": [
-      "silence",
-      "secret",
-      "quiet"
-    ],
-    "unicode": "U+1F910"
-  },
-  {
-    "id": "symbols:blue-heart",
-    "name": "blue-heart",
-    "emoji": "💙",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "love",
-      "like"
-    ],
-    "unicode": "U+1F499"
-  },
-  {
-    "id": "symbols:broken-heart",
-    "name": "broken-heart",
-    "emoji": "💔",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "sad",
-      "breakup"
-    ],
-    "unicode": "U+1F494"
-  },
-  {
-    "id": "symbols:check-mark-button",
-    "name": "check-mark-button",
-    "emoji": "✅",
-    "category": "symbols",
-    "aliases": [
-      "check",
-      "done"
-    ],
-    "keywords": [
-      "done",
-      "yes",
-      "approved"
-    ],
-    "unicode": "U+2705"
-  },
-  {
-    "id": "symbols:cross-mark",
-    "name": "cross-mark",
-    "emoji": "❌",
-    "category": "symbols",
-    "aliases": [
-      "x"
-    ],
-    "keywords": [
-      "no",
-      "wrong",
-      "cancel"
-    ],
-    "unicode": "U+274C"
-  },
-  {
-    "id": "symbols:exclamation-mark",
-    "name": "exclamation-mark",
-    "emoji": "❗",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "important",
-      "alert"
-    ],
-    "unicode": "U+2757"
-  },
-  {
-    "id": "symbols:fire",
-    "name": "fire",
-    "emoji": "🔥",
-    "category": "symbols",
-    "aliases": [
-      "lit"
-    ],
-    "keywords": [
-      "hot",
-      "trending",
-      "burn"
-    ],
-    "unicode": "U+1F525"
-  },
-  {
-    "id": "symbols:free-button",
-    "name": "free-button",
-    "emoji": "🆓",
-    "category": "symbols",
-    "aliases": [
-      "free"
-    ],
-    "keywords": [
-      "no-cost"
-    ],
-    "unicode": "U+1F193"
-  },
-  {
-    "id": "symbols:glowing-star",
-    "name": "glowing-star",
-    "emoji": "🌟",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "shiny",
-      "special"
-    ],
-    "unicode": "U+1F31F"
-  },
-  {
-    "id": "symbols:green-heart",
-    "name": "green-heart",
-    "emoji": "💚",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "love",
-      "like"
-    ],
-    "unicode": "U+1F49A"
-  },
-  {
-    "id": "symbols:hundred-points",
-    "name": "hundred-points",
-    "emoji": "💯",
-    "category": "symbols",
-    "aliases": [
-      "100"
-    ],
-    "keywords": [
-      "perfect",
-      "score"
-    ],
-    "unicode": "U+1F4AF"
-  },
-  {
-    "id": "symbols:infinity",
-    "name": "infinity",
-    "emoji": "♾️",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "forever",
-      "endless"
-    ],
-    "unicode": "U+267E"
-  },
-  {
-    "id": "symbols:new-button",
-    "name": "new-button",
-    "emoji": "🆕",
-    "category": "symbols",
-    "aliases": [
-      "new"
-    ],
-    "keywords": [
-      "fresh",
-      "latest"
-    ],
-    "unicode": "U+1F195"
-  },
-  {
-    "id": "symbols:no-entry",
-    "name": "no-entry",
-    "emoji": "⛔",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "forbidden",
-      "stop"
-    ],
-    "unicode": "U+26D4"
-  },
-  {
-    "id": "symbols:orange-heart",
-    "name": "orange-heart",
-    "emoji": "🧡",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "love",
-      "like"
-    ],
-    "unicode": "U+1F9E1"
-  },
-  {
-    "id": "symbols:peace-symbol",
-    "name": "peace-symbol",
-    "emoji": "☮️",
-    "category": "symbols",
-    "aliases": [
-      "peace"
-    ],
-    "keywords": [
-      "calm",
-      "harmony"
-    ],
-    "unicode": "U+262E"
-  },
-  {
-    "id": "symbols:prohibited",
-    "name": "prohibited",
-    "emoji": "🚫",
-    "category": "symbols",
-    "aliases": [
-      "no"
-    ],
-    "keywords": [
-      "forbidden",
-      "banned"
-    ],
-    "unicode": "U+1F6AB"
-  },
-  {
-    "id": "symbols:purple-heart",
-    "name": "purple-heart",
-    "emoji": "💜",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "love",
-      "like"
-    ],
-    "unicode": "U+1F49C"
-  },
-  {
-    "id": "symbols:question-mark",
-    "name": "question-mark",
-    "emoji": "❓",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "confused",
-      "ask"
-    ],
-    "unicode": "U+2753"
-  },
-  {
-    "id": "symbols:recycling-symbol",
-    "name": "recycling-symbol",
-    "emoji": "♻️",
-    "category": "symbols",
-    "aliases": [
-      "recycle"
-    ],
-    "keywords": [
-      "eco",
-      "reuse"
-    ],
-    "unicode": "U+267B"
-  },
-  {
-    "id": "symbols:red-heart",
-    "name": "red-heart",
-    "emoji": "❤️",
-    "category": "symbols",
-    "aliases": [
-      "heart"
-    ],
-    "keywords": [
-      "love",
-      "like"
-    ],
-    "unicode": "U+2764"
-  },
-  {
-    "id": "symbols:sparkles",
-    "name": "sparkles",
-    "emoji": "✨",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "shiny",
-      "new",
-      "magic"
-    ],
-    "unicode": "U+2728"
-  },
-  {
-    "id": "symbols:star",
-    "name": "star",
-    "emoji": "⭐",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "favorite",
-      "rating"
-    ],
-    "unicode": "U+2B50"
-  },
-  {
-    "id": "symbols:warning",
-    "name": "warning",
-    "emoji": "⚠️",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "alert",
-      "caution"
-    ],
-    "unicode": "U+26A0"
-  },
-  {
-    "id": "symbols:yellow-heart",
-    "name": "yellow-heart",
-    "emoji": "💛",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "love",
-      "like"
-    ],
-    "unicode": "U+1F49B"
-  },
-  {
-    "id": "symbols:yin-yang",
-    "name": "yin-yang",
-    "emoji": "☯️",
-    "category": "symbols",
-    "aliases": [],
-    "keywords": [
-      "balance",
-      "harmony"
-    ],
-    "unicode": "U+262F"
-  },
-  {
-    "id": "travel-places:airplane",
-    "name": "airplane",
-    "emoji": "✈️",
-    "category": "travel-places",
-    "aliases": [
-      "plane"
-    ],
-    "keywords": [
-      "travel",
-      "flight"
-    ],
-    "unicode": "U+2708"
-  },
-  {
-    "id": "travel-places:ambulance",
-    "name": "ambulance",
-    "emoji": "🚑",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "emergency"
-    ],
-    "unicode": "U+1F691"
-  },
-  {
-    "id": "travel-places:anchor",
-    "name": "anchor",
-    "emoji": "⚓",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "sea",
-      "boat"
-    ],
-    "unicode": "U+2693"
-  },
-  {
-    "id": "travel-places:automobile",
-    "name": "automobile",
-    "emoji": "🚗",
-    "category": "travel-places",
-    "aliases": [
-      "car"
-    ],
-    "keywords": [
-      "vehicle",
-      "drive"
-    ],
-    "unicode": "U+1F697"
-  },
-  {
-    "id": "travel-places:bank",
-    "name": "bank",
-    "emoji": "🏦",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "building",
-      "money"
-    ],
-    "unicode": "U+1F3E6"
-  },
-  {
-    "id": "travel-places:beach-with-umbrella",
-    "name": "beach-with-umbrella",
-    "emoji": "🏖️",
-    "category": "travel-places",
-    "aliases": [
-      "beach"
-    ],
-    "keywords": [
-      "vacation",
-      "summer"
-    ],
-    "unicode": "U+1F3D6"
-  },
-  {
-    "id": "travel-places:bicycle",
-    "name": "bicycle",
-    "emoji": "🚲",
-    "category": "travel-places",
-    "aliases": [
-      "bike"
-    ],
-    "keywords": [
-      "vehicle",
-      "sport"
-    ],
-    "unicode": "U+1F6B2"
-  },
-  {
-    "id": "travel-places:bus",
-    "name": "bus",
-    "emoji": "🚌",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "transport"
-    ],
-    "unicode": "U+1F68C"
-  },
-  {
-    "id": "travel-places:camping",
-    "name": "camping",
-    "emoji": "🏕️",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "outdoors",
-      "tent"
-    ],
-    "unicode": "U+1F3D5"
-  },
-  {
-    "id": "travel-places:fire-engine",
-    "name": "fire-engine",
-    "emoji": "🚒",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "emergency"
-    ],
-    "unicode": "U+1F692"
-  },
-  {
-    "id": "travel-places:globe-showing-europe-africa",
-    "name": "globe-showing-europe-africa",
-    "emoji": "🌍",
-    "category": "travel-places",
-    "aliases": [
-      "globe"
-    ],
-    "keywords": [
-      "world",
-      "earth"
-    ],
-    "unicode": "U+1F30D"
-  },
-  {
-    "id": "travel-places:helicopter",
-    "name": "helicopter",
-    "emoji": "🚁",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "fly"
-    ],
-    "unicode": "U+1F681"
-  },
-  {
-    "id": "travel-places:hospital",
-    "name": "hospital",
-    "emoji": "🏥",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "building",
-      "medical"
-    ],
-    "unicode": "U+1F3E5"
-  },
-  {
-    "id": "travel-places:hotel",
-    "name": "hotel",
-    "emoji": "🏨",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "building",
-      "travel"
-    ],
-    "unicode": "U+1F3E8"
-  },
-  {
-    "id": "travel-places:house",
-    "name": "house",
-    "emoji": "🏠",
-    "category": "travel-places",
-    "aliases": [
-      "home"
-    ],
-    "keywords": [
-      "building",
-      "home"
-    ],
-    "unicode": "U+1F3E0"
-  },
-  {
-    "id": "travel-places:motorcycle",
-    "name": "motorcycle",
-    "emoji": "🏍️",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "ride"
-    ],
-    "unicode": "U+1F3CD"
-  },
-  {
-    "id": "travel-places:mountain",
-    "name": "mountain",
-    "emoji": "⛰️",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "nature",
-      "hike"
-    ],
-    "unicode": "U+26F0"
-  },
-  {
-    "id": "travel-places:night-with-stars",
-    "name": "night-with-stars",
-    "emoji": "🌃",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "night",
-      "city"
-    ],
-    "unicode": "U+1F303"
-  },
-  {
-    "id": "travel-places:office-building",
-    "name": "office-building",
-    "emoji": "🏢",
-    "category": "travel-places",
-    "aliases": [
-      "office"
-    ],
-    "keywords": [
-      "building",
-      "work"
-    ],
-    "unicode": "U+1F3E2"
-  },
-  {
-    "id": "travel-places:police-car",
-    "name": "police-car",
-    "emoji": "🚓",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "emergency"
-    ],
-    "unicode": "U+1F693"
-  },
-  {
-    "id": "travel-places:rocket",
-    "name": "rocket",
-    "emoji": "🚀",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "space",
-      "launch",
-      "fast"
-    ],
-    "unicode": "U+1F680"
-  },
-  {
-    "id": "travel-places:ship",
-    "name": "ship",
-    "emoji": "🚢",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "sea",
-      "travel"
-    ],
-    "unicode": "U+1F6A2"
-  },
-  {
-    "id": "travel-places:taxi",
-    "name": "taxi",
-    "emoji": "🚕",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "cab"
-    ],
-    "unicode": "U+1F695"
-  },
-  {
-    "id": "travel-places:train",
-    "name": "train",
-    "emoji": "🚆",
-    "category": "travel-places",
-    "aliases": [],
-    "keywords": [
-      "vehicle",
-      "travel"
-    ],
-    "unicode": "U+1F686"
-  },
-  {
-    "id": "travel-places:world-map",
-    "name": "world-map",
-    "emoji": "🗺️",
-    "category": "travel-places",
-    "aliases": [
-      "map"
-    ],
-    "keywords": [
-      "travel",
-      "geography"
-    ],
-    "unicode": "U+1F5FA"
-  }
+export const EMOJI_DEFINITIONS: ReadonlyArray<{
+  id: string;
+  name: string;
+  emoji: string;
+  category: string;
+  aliases: string[];
+  keywords: string[];
+  unicode: string;
+}> = [
+  {
+    id: "activities:american-football",
+    name: "american-football",
+    emoji: "🏈",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3C8",
+  },
+  {
+    id: "activities:artist-palette",
+    name: "artist-palette",
+    emoji: "🎨",
+    category: "activities",
+    aliases: ["art"],
+    keywords: ["paint", "creative"],
+    unicode: "U+1F3A8",
+  },
+  {
+    id: "activities:badminton",
+    name: "badminton",
+    emoji: "🏸",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3F8",
+  },
+  {
+    id: "activities:balloon",
+    name: "balloon",
+    emoji: "🎈",
+    category: "activities",
+    aliases: [],
+    keywords: ["party", "celebration"],
+    unicode: "U+1F388",
+  },
+  {
+    id: "activities:baseball",
+    name: "baseball",
+    emoji: "⚾",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+26BE",
+  },
+  {
+    id: "activities:basketball",
+    name: "basketball",
+    emoji: "🏀",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3C0",
+  },
+  {
+    id: "activities:bowling",
+    name: "bowling",
+    emoji: "🎳",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3B3",
+  },
+  {
+    id: "activities:chess-pawn",
+    name: "chess-pawn",
+    emoji: "♟️",
+    category: "activities",
+    aliases: ["chess"],
+    keywords: ["game", "strategy"],
+    unicode: "U+265F",
+  },
+  {
+    id: "activities:confetti-ball",
+    name: "confetti-ball",
+    emoji: "🎊",
+    category: "activities",
+    aliases: [],
+    keywords: ["celebration", "party"],
+    unicode: "U+1F38A",
+  },
+  {
+    id: "activities:cricket-game",
+    name: "cricket-game",
+    emoji: "🏏",
+    category: "activities",
+    aliases: ["cricket"],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3CF",
+  },
+  {
+    id: "activities:direct-hit",
+    name: "direct-hit",
+    emoji: "🎯",
+    category: "activities",
+    aliases: ["dart", "target"],
+    keywords: ["goal", "aim"],
+    unicode: "U+1F3AF",
+  },
+  {
+    id: "activities:drum",
+    name: "drum",
+    emoji: "🥁",
+    category: "activities",
+    aliases: [],
+    keywords: ["music", "instrument"],
+    unicode: "U+1F941",
+  },
+  {
+    id: "activities:first-place-medal",
+    name: "first-place-medal",
+    emoji: "🥇",
+    category: "activities",
+    aliases: ["gold-medal"],
+    keywords: ["win", "award", "first"],
+    unicode: "U+1F947",
+  },
+  {
+    id: "activities:guitar",
+    name: "guitar",
+    emoji: "🎸",
+    category: "activities",
+    aliases: [],
+    keywords: ["music", "instrument"],
+    unicode: "U+1F3B8",
+  },
+  {
+    id: "activities:headphone",
+    name: "headphone",
+    emoji: "🎧",
+    category: "activities",
+    aliases: ["headphones"],
+    keywords: ["music", "listen"],
+    unicode: "U+1F3A7",
+  },
+  {
+    id: "activities:microphone",
+    name: "microphone",
+    emoji: "🎤",
+    category: "activities",
+    aliases: ["mic"],
+    keywords: ["sing", "music"],
+    unicode: "U+1F3A4",
+  },
+  {
+    id: "activities:party-popper",
+    name: "party-popper",
+    emoji: "🎉",
+    category: "activities",
+    aliases: ["tada"],
+    keywords: ["celebration", "congrats"],
+    unicode: "U+1F389",
+  },
+  {
+    id: "activities:ping-pong",
+    name: "ping-pong",
+    emoji: "🏓",
+    category: "activities",
+    aliases: ["table-tennis"],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3D3",
+  },
+  {
+    id: "activities:rugby-football",
+    name: "rugby-football",
+    emoji: "🏉",
+    category: "activities",
+    aliases: ["rugby"],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3C9",
+  },
+  {
+    id: "activities:soccer-ball",
+    name: "soccer-ball",
+    emoji: "⚽",
+    category: "activities",
+    aliases: ["football"],
+    keywords: ["sport", "game"],
+    unicode: "U+26BD",
+  },
+  {
+    id: "activities:sports-medal",
+    name: "sports-medal",
+    emoji: "🏅",
+    category: "activities",
+    aliases: ["medal"],
+    keywords: ["award", "win"],
+    unicode: "U+1F3C5",
+  },
+  {
+    id: "activities:tennis",
+    name: "tennis",
+    emoji: "🎾",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3BE",
+  },
+  {
+    id: "activities:trophy",
+    name: "trophy",
+    emoji: "🏆",
+    category: "activities",
+    aliases: [],
+    keywords: ["win", "award", "champion"],
+    unicode: "U+1F3C6",
+  },
+  {
+    id: "activities:video-game",
+    name: "video-game",
+    emoji: "🎮",
+    category: "activities",
+    aliases: ["controller"],
+    keywords: ["gaming", "play"],
+    unicode: "U+1F3AE",
+  },
+  {
+    id: "activities:volleyball",
+    name: "volleyball",
+    emoji: "🏐",
+    category: "activities",
+    aliases: [],
+    keywords: ["sport", "game"],
+    unicode: "U+1F3D0",
+  },
+  {
+    id: "animals-nature:baby-chick",
+    name: "baby-chick",
+    emoji: "🐤",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "cute", "bird"],
+    unicode: "U+1F424",
+  },
+  {
+    id: "animals-nature:bat",
+    name: "bat",
+    emoji: "🦇",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "night"],
+    unicode: "U+1F987",
+  },
+  {
+    id: "animals-nature:bear",
+    name: "bear",
+    emoji: "🐻",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "wild"],
+    unicode: "U+1F43B",
+  },
+  {
+    id: "animals-nature:bird",
+    name: "bird",
+    emoji: "🐦",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "fly"],
+    unicode: "U+1F426",
+  },
+  {
+    id: "animals-nature:butterfly",
+    name: "butterfly",
+    emoji: "🦋",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["insect", "nature"],
+    unicode: "U+1F98B",
+  },
+  {
+    id: "animals-nature:cat-face",
+    name: "cat-face",
+    emoji: "🐱",
+    category: "animals-nature",
+    aliases: ["cat"],
+    keywords: ["pet", "kitten", "animal"],
+    unicode: "U+1F431",
+  },
+  {
+    id: "animals-nature:chicken",
+    name: "chicken",
+    emoji: "🐔",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "farm", "bird"],
+    unicode: "U+1F414",
+  },
+  {
+    id: "animals-nature:cow-face",
+    name: "cow-face",
+    emoji: "🐮",
+    category: "animals-nature",
+    aliases: ["cow"],
+    keywords: ["animal", "farm"],
+    unicode: "U+1F42E",
+  },
+  {
+    id: "animals-nature:dog-face",
+    name: "dog-face",
+    emoji: "🐶",
+    category: "animals-nature",
+    aliases: ["dog"],
+    keywords: ["pet", "puppy", "animal"],
+    unicode: "U+1F436",
+  },
+  {
+    id: "animals-nature:duck",
+    name: "duck",
+    emoji: "🦆",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "bird", "water"],
+    unicode: "U+1F986",
+  },
+  {
+    id: "animals-nature:eagle",
+    name: "eagle",
+    emoji: "🦅",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "bird", "wild"],
+    unicode: "U+1F985",
+  },
+  {
+    id: "animals-nature:fox",
+    name: "fox",
+    emoji: "🦊",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "wild"],
+    unicode: "U+1F98A",
+  },
+  {
+    id: "animals-nature:frog",
+    name: "frog",
+    emoji: "🐸",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "amphibian"],
+    unicode: "U+1F438",
+  },
+  {
+    id: "animals-nature:hamster",
+    name: "hamster",
+    emoji: "🐹",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["pet", "animal"],
+    unicode: "U+1F439",
+  },
+  {
+    id: "animals-nature:honeybee",
+    name: "honeybee",
+    emoji: "🐝",
+    category: "animals-nature",
+    aliases: ["bee"],
+    keywords: ["insect", "honey"],
+    unicode: "U+1F41D",
+  },
+  {
+    id: "animals-nature:horse-face",
+    name: "horse-face",
+    emoji: "🐴",
+    category: "animals-nature",
+    aliases: ["horse"],
+    keywords: ["animal", "farm"],
+    unicode: "U+1F434",
+  },
+  {
+    id: "animals-nature:koala",
+    name: "koala",
+    emoji: "🐨",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "cute"],
+    unicode: "U+1F428",
+  },
+  {
+    id: "animals-nature:lady-beetle",
+    name: "lady-beetle",
+    emoji: "🐞",
+    category: "animals-nature",
+    aliases: ["ladybug"],
+    keywords: ["insect", "lucky"],
+    unicode: "U+1F41E",
+  },
+  {
+    id: "animals-nature:lion",
+    name: "lion",
+    emoji: "🦁",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "king", "wild"],
+    unicode: "U+1F981",
+  },
+  {
+    id: "animals-nature:monkey-face",
+    name: "monkey-face",
+    emoji: "🐵",
+    category: "animals-nature",
+    aliases: ["monkey"],
+    keywords: ["animal", "silly"],
+    unicode: "U+1F435",
+  },
+  {
+    id: "animals-nature:mouse-face",
+    name: "mouse-face",
+    emoji: "🐭",
+    category: "animals-nature",
+    aliases: ["mouse"],
+    keywords: ["animal", "rodent"],
+    unicode: "U+1F42D",
+  },
+  {
+    id: "animals-nature:owl",
+    name: "owl",
+    emoji: "🦉",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "bird", "wise"],
+    unicode: "U+1F989",
+  },
+  {
+    id: "animals-nature:panda",
+    name: "panda",
+    emoji: "🐼",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "cute"],
+    unicode: "U+1F43C",
+  },
+  {
+    id: "animals-nature:penguin",
+    name: "penguin",
+    emoji: "🐧",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "bird", "cold"],
+    unicode: "U+1F427",
+  },
+  {
+    id: "animals-nature:pig-face",
+    name: "pig-face",
+    emoji: "🐷",
+    category: "animals-nature",
+    aliases: ["pig"],
+    keywords: ["animal", "farm"],
+    unicode: "U+1F437",
+  },
+  {
+    id: "animals-nature:rabbit-face",
+    name: "rabbit-face",
+    emoji: "🐰",
+    category: "animals-nature",
+    aliases: ["rabbit"],
+    keywords: ["bunny", "animal"],
+    unicode: "U+1F430",
+  },
+  {
+    id: "animals-nature:snail",
+    name: "snail",
+    emoji: "🐌",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["slow", "animal"],
+    unicode: "U+1F40C",
+  },
+  {
+    id: "animals-nature:tiger-face",
+    name: "tiger-face",
+    emoji: "🐯",
+    category: "animals-nature",
+    aliases: ["tiger"],
+    keywords: ["animal", "wild", "cat"],
+    unicode: "U+1F42F",
+  },
+  {
+    id: "animals-nature:unicorn",
+    name: "unicorn",
+    emoji: "🦄",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "magic", "fantasy"],
+    unicode: "U+1F984",
+  },
+  {
+    id: "animals-nature:wolf",
+    name: "wolf",
+    emoji: "🐺",
+    category: "animals-nature",
+    aliases: [],
+    keywords: ["animal", "wild"],
+    unicode: "U+1F43A",
+  },
+  {
+    id: "food-drink:avocado",
+    name: "avocado",
+    emoji: "🥑",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food", "healthy"],
+    unicode: "U+1F951",
+  },
+  {
+    id: "food-drink:banana",
+    name: "banana",
+    emoji: "🍌",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F34C",
+  },
+  {
+    id: "food-drink:beer-mug",
+    name: "beer-mug",
+    emoji: "🍺",
+    category: "food-drink",
+    aliases: ["beer"],
+    keywords: ["drink", "alcohol"],
+    unicode: "U+1F37A",
+  },
+  {
+    id: "food-drink:birthday-cake",
+    name: "birthday-cake",
+    emoji: "🎂",
+    category: "food-drink",
+    aliases: ["cake"],
+    keywords: ["party", "celebration", "dessert"],
+    unicode: "U+1F382",
+  },
+  {
+    id: "food-drink:bread",
+    name: "bread",
+    emoji: "🍞",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["food", "bakery"],
+    unicode: "U+1F35E",
+  },
+  {
+    id: "food-drink:carrot",
+    name: "carrot",
+    emoji: "🥕",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["vegetable", "food"],
+    unicode: "U+1F955",
+  },
+  {
+    id: "food-drink:cheese-wedge",
+    name: "cheese-wedge",
+    emoji: "🧀",
+    category: "food-drink",
+    aliases: ["cheese"],
+    keywords: ["food", "dairy"],
+    unicode: "U+1F9C0",
+  },
+  {
+    id: "food-drink:cherries",
+    name: "cherries",
+    emoji: "🍒",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F352",
+  },
+  {
+    id: "food-drink:chocolate-bar",
+    name: "chocolate-bar",
+    emoji: "🍫",
+    category: "food-drink",
+    aliases: ["chocolate"],
+    keywords: ["dessert", "sweet"],
+    unicode: "U+1F36B",
+  },
+  {
+    id: "food-drink:coconut",
+    name: "coconut",
+    emoji: "🥥",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "tropical"],
+    unicode: "U+1F965",
+  },
+  {
+    id: "food-drink:cooking",
+    name: "cooking",
+    emoji: "🍳",
+    category: "food-drink",
+    aliases: ["fried-egg"],
+    keywords: ["food", "breakfast", "cook"],
+    unicode: "U+1F373",
+  },
+  {
+    id: "food-drink:doughnut",
+    name: "doughnut",
+    emoji: "🍩",
+    category: "food-drink",
+    aliases: ["donut"],
+    keywords: ["dessert", "sweet"],
+    unicode: "U+1F369",
+  },
+  {
+    id: "food-drink:ear-of-corn",
+    name: "ear-of-corn",
+    emoji: "🌽",
+    category: "food-drink",
+    aliases: ["corn"],
+    keywords: ["vegetable", "food"],
+    unicode: "U+1F33D",
+  },
+  {
+    id: "food-drink:egg",
+    name: "egg",
+    emoji: "🥚",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["food", "breakfast"],
+    unicode: "U+1F95A",
+  },
+  {
+    id: "food-drink:french-fries",
+    name: "french-fries",
+    emoji: "🍟",
+    category: "food-drink",
+    aliases: ["fries"],
+    keywords: ["food", "fast-food"],
+    unicode: "U+1F35F",
+  },
+  {
+    id: "food-drink:grapes",
+    name: "grapes",
+    emoji: "🍇",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "wine"],
+    unicode: "U+1F347",
+  },
+  {
+    id: "food-drink:green-apple",
+    name: "green-apple",
+    emoji: "🍏",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F34F",
+  },
+  {
+    id: "food-drink:hamburger",
+    name: "hamburger",
+    emoji: "🍔",
+    category: "food-drink",
+    aliases: ["burger"],
+    keywords: ["food", "fast-food"],
+    unicode: "U+1F354",
+  },
+  {
+    id: "food-drink:hot-beverage",
+    name: "hot-beverage",
+    emoji: "☕",
+    category: "food-drink",
+    aliases: ["coffee"],
+    keywords: ["drink", "tea", "morning"],
+    unicode: "U+2615",
+  },
+  {
+    id: "food-drink:hot-dog",
+    name: "hot-dog",
+    emoji: "🌭",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["food", "fast-food"],
+    unicode: "U+1F32D",
+  },
+  {
+    id: "food-drink:hot-pepper",
+    name: "hot-pepper",
+    emoji: "🌶️",
+    category: "food-drink",
+    aliases: ["chili"],
+    keywords: ["spicy", "food"],
+    unicode: "U+1F336",
+  },
+  {
+    id: "food-drink:kiwi-fruit",
+    name: "kiwi-fruit",
+    emoji: "🥝",
+    category: "food-drink",
+    aliases: ["kiwi"],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F95D",
+  },
+  {
+    id: "food-drink:lemon",
+    name: "lemon",
+    emoji: "🍋",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "citrus", "sour"],
+    unicode: "U+1F34B",
+  },
+  {
+    id: "food-drink:mango",
+    name: "mango",
+    emoji: "🥭",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "tropical"],
+    unicode: "U+1F96D",
+  },
+  {
+    id: "food-drink:peach",
+    name: "peach",
+    emoji: "🍑",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F351",
+  },
+  {
+    id: "food-drink:pear",
+    name: "pear",
+    emoji: "🍐",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F350",
+  },
+  {
+    id: "food-drink:pineapple",
+    name: "pineapple",
+    emoji: "🍍",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "tropical"],
+    unicode: "U+1F34D",
+  },
+  {
+    id: "food-drink:pizza",
+    name: "pizza",
+    emoji: "🍕",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["food", "italian"],
+    unicode: "U+1F355",
+  },
+  {
+    id: "food-drink:red-apple",
+    name: "red-apple",
+    emoji: "🍎",
+    category: "food-drink",
+    aliases: ["apple"],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F34E",
+  },
+  {
+    id: "food-drink:strawberry",
+    name: "strawberry",
+    emoji: "🍓",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "food"],
+    unicode: "U+1F353",
+  },
+  {
+    id: "food-drink:sushi",
+    name: "sushi",
+    emoji: "🍣",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["food", "japanese"],
+    unicode: "U+1F363",
+  },
+  {
+    id: "food-drink:taco",
+    name: "taco",
+    emoji: "🌮",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["food", "mexican"],
+    unicode: "U+1F32E",
+  },
+  {
+    id: "food-drink:tangerine",
+    name: "tangerine",
+    emoji: "🍊",
+    category: "food-drink",
+    aliases: ["orange"],
+    keywords: ["fruit", "citrus"],
+    unicode: "U+1F34A",
+  },
+  {
+    id: "food-drink:tomato",
+    name: "tomato",
+    emoji: "🍅",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["vegetable", "food"],
+    unicode: "U+1F345",
+  },
+  {
+    id: "food-drink:watermelon",
+    name: "watermelon",
+    emoji: "🍉",
+    category: "food-drink",
+    aliases: [],
+    keywords: ["fruit", "summer"],
+    unicode: "U+1F349",
+  },
+  {
+    id: "objects:alarm-clock",
+    name: "alarm-clock",
+    emoji: "⏰",
+    category: "objects",
+    aliases: [],
+    keywords: ["time", "wake"],
+    unicode: "U+23F0",
+  },
+  {
+    id: "objects:battery",
+    name: "battery",
+    emoji: "🔋",
+    category: "objects",
+    aliases: [],
+    keywords: ["power", "charge"],
+    unicode: "U+1F50B",
+  },
+  {
+    id: "objects:books",
+    name: "books",
+    emoji: "📚",
+    category: "objects",
+    aliases: [],
+    keywords: ["read", "study", "library"],
+    unicode: "U+1F4DA",
+  },
+  {
+    id: "objects:camera",
+    name: "camera",
+    emoji: "📷",
+    category: "objects",
+    aliases: [],
+    keywords: ["photo", "device"],
+    unicode: "U+1F4F7",
+  },
+  {
+    id: "objects:desktop-computer",
+    name: "desktop-computer",
+    emoji: "🖥️",
+    category: "objects",
+    aliases: [],
+    keywords: ["device", "work"],
+    unicode: "U+1F5A5",
+  },
+  {
+    id: "objects:electric-plug",
+    name: "electric-plug",
+    emoji: "🔌",
+    category: "objects",
+    aliases: ["plug"],
+    keywords: ["power", "charge"],
+    unicode: "U+1F50C",
+  },
+  {
+    id: "objects:hammer",
+    name: "hammer",
+    emoji: "🔨",
+    category: "objects",
+    aliases: ["tool"],
+    keywords: ["build", "fix", "tool"],
+    unicode: "U+1F528",
+  },
+  {
+    id: "objects:key",
+    name: "key",
+    emoji: "🔑",
+    category: "objects",
+    aliases: [],
+    keywords: ["unlock", "access"],
+    unicode: "U+1F511",
+  },
+  {
+    id: "objects:keyboard",
+    name: "keyboard",
+    emoji: "⌨️",
+    category: "objects",
+    aliases: [],
+    keywords: ["device", "type"],
+    unicode: "U+2328",
+  },
+  {
+    id: "objects:laptop",
+    name: "laptop",
+    emoji: "💻",
+    category: "objects",
+    aliases: ["computer"],
+    keywords: ["device", "work"],
+    unicode: "U+1F4BB",
+  },
+  {
+    id: "objects:light-bulb",
+    name: "light-bulb",
+    emoji: "💡",
+    category: "objects",
+    aliases: ["bulb", "idea"],
+    keywords: ["idea", "light"],
+    unicode: "U+1F4A1",
+  },
+  {
+    id: "objects:locked",
+    name: "locked",
+    emoji: "🔒",
+    category: "objects",
+    aliases: ["lock"],
+    keywords: ["security", "private"],
+    unicode: "U+1F512",
+  },
+  {
+    id: "objects:memo",
+    name: "memo",
+    emoji: "📝",
+    category: "objects",
+    aliases: ["note"],
+    keywords: ["write", "notes"],
+    unicode: "U+1F4DD",
+  },
+  {
+    id: "objects:mobile-phone",
+    name: "mobile-phone",
+    emoji: "📱",
+    category: "objects",
+    aliases: ["phone"],
+    keywords: ["device", "call"],
+    unicode: "U+1F4F1",
+  },
+  {
+    id: "objects:movie-camera",
+    name: "movie-camera",
+    emoji: "🎥",
+    category: "objects",
+    aliases: [],
+    keywords: ["film", "movie"],
+    unicode: "U+1F3A5",
+  },
+  {
+    id: "objects:notebook",
+    name: "notebook",
+    emoji: "📓",
+    category: "objects",
+    aliases: [],
+    keywords: ["notes", "write"],
+    unicode: "U+1F4D3",
+  },
+  {
+    id: "objects:open-book",
+    name: "open-book",
+    emoji: "📖",
+    category: "objects",
+    aliases: ["book"],
+    keywords: ["read", "study"],
+    unicode: "U+1F4D6",
+  },
+  {
+    id: "objects:paperclip",
+    name: "paperclip",
+    emoji: "📎",
+    category: "objects",
+    aliases: [],
+    keywords: ["attach", "office"],
+    unicode: "U+1F4CE",
+  },
+  {
+    id: "objects:printer",
+    name: "printer",
+    emoji: "🖨️",
+    category: "objects",
+    aliases: [],
+    keywords: ["device", "office"],
+    unicode: "U+1F5A8",
+  },
+  {
+    id: "objects:pushpin",
+    name: "pushpin",
+    emoji: "📌",
+    category: "objects",
+    aliases: ["pin"],
+    keywords: ["location", "mark"],
+    unicode: "U+1F4CC",
+  },
+  {
+    id: "objects:radio",
+    name: "radio",
+    emoji: "📻",
+    category: "objects",
+    aliases: [],
+    keywords: ["device", "music"],
+    unicode: "U+1F4FB",
+  },
+  {
+    id: "objects:television",
+    name: "television",
+    emoji: "📺",
+    category: "objects",
+    aliases: ["tv"],
+    keywords: ["device", "watch"],
+    unicode: "U+1F4FA",
+  },
+  {
+    id: "objects:video-camera",
+    name: "video-camera",
+    emoji: "📹",
+    category: "objects",
+    aliases: [],
+    keywords: ["video", "record"],
+    unicode: "U+1F4F9",
+  },
+  {
+    id: "objects:watch",
+    name: "watch",
+    emoji: "⌚",
+    category: "objects",
+    aliases: [],
+    keywords: ["time", "wrist"],
+    unicode: "U+231A",
+  },
+  {
+    id: "objects:wrench",
+    name: "wrench",
+    emoji: "🔧",
+    category: "objects",
+    aliases: [],
+    keywords: ["tool", "fix", "settings"],
+    unicode: "U+1F527",
+  },
+  {
+    id: "people-body:backhand-index-pointing-down",
+    name: "backhand-index-pointing-down",
+    emoji: "👇",
+    category: "people-body",
+    aliases: ["point-down"],
+    keywords: ["down", "point"],
+    unicode: "U+1F447",
+  },
+  {
+    id: "people-body:backhand-index-pointing-left",
+    name: "backhand-index-pointing-left",
+    emoji: "👈",
+    category: "people-body",
+    aliases: ["point-left"],
+    keywords: ["left", "point"],
+    unicode: "U+1F448",
+  },
+  {
+    id: "people-body:backhand-index-pointing-right",
+    name: "backhand-index-pointing-right",
+    emoji: "👉",
+    category: "people-body",
+    aliases: ["point-right"],
+    keywords: ["right", "point"],
+    unicode: "U+1F449",
+  },
+  {
+    id: "people-body:backhand-index-pointing-up",
+    name: "backhand-index-pointing-up",
+    emoji: "👆",
+    category: "people-body",
+    aliases: ["point-up-2"],
+    keywords: ["up", "point"],
+    unicode: "U+1F446",
+  },
+  {
+    id: "people-body:brain",
+    name: "brain",
+    emoji: "🧠",
+    category: "people-body",
+    aliases: [],
+    keywords: ["smart", "idea", "think"],
+    unicode: "U+1F9E0",
+  },
+  {
+    id: "people-body:call-me-hand",
+    name: "call-me-hand",
+    emoji: "🤙",
+    category: "people-body",
+    aliases: ["call-me"],
+    keywords: ["call", "phone"],
+    unicode: "U+1F919",
+  },
+  {
+    id: "people-body:clapping-hands",
+    name: "clapping-hands",
+    emoji: "👏",
+    category: "people-body",
+    aliases: ["clap"],
+    keywords: ["applause", "bravo"],
+    unicode: "U+1F44F",
+  },
+  {
+    id: "people-body:crossed-fingers",
+    name: "crossed-fingers",
+    emoji: "🤞",
+    category: "people-body",
+    aliases: ["fingers-crossed"],
+    keywords: ["luck", "hope"],
+    unicode: "U+1F91E",
+  },
+  {
+    id: "people-body:eye",
+    name: "eye",
+    emoji: "👁️",
+    category: "people-body",
+    aliases: [],
+    keywords: ["look", "see"],
+    unicode: "U+1F441",
+  },
+  {
+    id: "people-body:eyes",
+    name: "eyes",
+    emoji: "👀",
+    category: "people-body",
+    aliases: ["eyes"],
+    keywords: ["look", "watching"],
+    unicode: "U+1F440",
+  },
+  {
+    id: "people-body:flexed-biceps",
+    name: "flexed-biceps",
+    emoji: "💪",
+    category: "people-body",
+    aliases: ["muscle"],
+    keywords: ["strong", "gym", "workout"],
+    unicode: "U+1F4AA",
+  },
+  {
+    id: "people-body:folded-hands",
+    name: "folded-hands",
+    emoji: "🙏",
+    category: "people-body",
+    aliases: ["pray"],
+    keywords: ["please", "thanks", "hope"],
+    unicode: "U+1F64F",
+  },
+  {
+    id: "people-body:handshake",
+    name: "handshake",
+    emoji: "🤝",
+    category: "people-body",
+    aliases: ["deal"],
+    keywords: ["agreement", "partnership"],
+    unicode: "U+1F91D",
+  },
+  {
+    id: "people-body:love-you-gesture",
+    name: "love-you-gesture",
+    emoji: "🤟",
+    category: "people-body",
+    aliases: [],
+    keywords: ["love", "ily"],
+    unicode: "U+1F91F",
+  },
+  {
+    id: "people-body:mouth",
+    name: "mouth",
+    emoji: "👄",
+    category: "people-body",
+    aliases: [],
+    keywords: ["lips", "speak"],
+    unicode: "U+1F444",
+  },
+  {
+    id: "people-body:nail-polish",
+    name: "nail-polish",
+    emoji: "💅",
+    category: "people-body",
+    aliases: ["nails"],
+    keywords: ["manicure", "beauty"],
+    unicode: "U+1F485",
+  },
+  {
+    id: "people-body:ok-hand",
+    name: "ok-hand",
+    emoji: "👌",
+    category: "people-body",
+    aliases: ["ok"],
+    keywords: ["okay", "perfect"],
+    unicode: "U+1F44C",
+  },
+  {
+    id: "people-body:oncoming-fist",
+    name: "oncoming-fist",
+    emoji: "👊",
+    category: "people-body",
+    aliases: ["fist-bump", "punch"],
+    keywords: ["fist", "bump"],
+    unicode: "U+1F44A",
+  },
+  {
+    id: "people-body:open-hands",
+    name: "open-hands",
+    emoji: "👐",
+    category: "people-body",
+    aliases: [],
+    keywords: ["hug", "open"],
+    unicode: "U+1F450",
+  },
+  {
+    id: "people-body:palms-up-together",
+    name: "palms-up-together",
+    emoji: "🤲",
+    category: "people-body",
+    aliases: [],
+    keywords: ["pray", "hopeful"],
+    unicode: "U+1F932",
+  },
+  {
+    id: "people-body:raised-fist",
+    name: "raised-fist",
+    emoji: "✊",
+    category: "people-body",
+    aliases: ["fist"],
+    keywords: ["power", "solidarity"],
+    unicode: "U+270A",
+  },
+  {
+    id: "people-body:raised-hand",
+    name: "raised-hand",
+    emoji: "✋",
+    category: "people-body",
+    aliases: ["hand"],
+    keywords: ["stop", "high-five"],
+    unicode: "U+270B",
+  },
+  {
+    id: "people-body:raised-hands",
+    name: "raised-hands",
+    emoji: "🙌",
+    category: "people-body",
+    aliases: ["raised-hands"],
+    keywords: ["celebration", "praise"],
+    unicode: "U+1F64C",
+  },
+  {
+    id: "people-body:selfie",
+    name: "selfie",
+    emoji: "🤳",
+    category: "people-body",
+    aliases: [],
+    keywords: ["photo", "camera"],
+    unicode: "U+1F933",
+  },
+  {
+    id: "people-body:sign-of-the-horns",
+    name: "sign-of-the-horns",
+    emoji: "🤘",
+    category: "people-body",
+    aliases: ["rock-on", "metal"],
+    keywords: ["rock", "metal"],
+    unicode: "U+1F918",
+  },
+  {
+    id: "people-body:thumbs-down",
+    name: "thumbs-down",
+    emoji: "👎",
+    category: "people-body",
+    aliases: ["-1", "thumbsdown"],
+    keywords: ["dislike", "no"],
+    unicode: "U+1F44E",
+  },
+  {
+    id: "people-body:thumbs-up",
+    name: "thumbs-up",
+    emoji: "👍",
+    category: "people-body",
+    aliases: ["+1", "thumbsup"],
+    keywords: ["like", "approve", "yes"],
+    unicode: "U+1F44D",
+  },
+  {
+    id: "people-body:tongue",
+    name: "tongue",
+    emoji: "👅",
+    category: "people-body",
+    aliases: [],
+    keywords: ["taste", "silly"],
+    unicode: "U+1F445",
+  },
+  {
+    id: "people-body:victory-hand",
+    name: "victory-hand",
+    emoji: "✌️",
+    category: "people-body",
+    aliases: ["victory", "peace"],
+    keywords: ["peace", "win"],
+    unicode: "U+270C",
+  },
+  {
+    id: "people-body:waving-hand",
+    name: "waving-hand",
+    emoji: "👋",
+    category: "people-body",
+    aliases: ["wave"],
+    keywords: ["hello", "hi", "bye"],
+    unicode: "U+1F44B",
+  },
+  {
+    id: "people-body:writing-hand",
+    name: "writing-hand",
+    emoji: "✍️",
+    category: "people-body",
+    aliases: ["writing"],
+    keywords: ["note", "write"],
+    unicode: "U+270D",
+  },
+  {
+    id: "smileys-emotion:angry-face",
+    name: "angry-face",
+    emoji: "😠",
+    category: "smileys-emotion",
+    aliases: ["angry"],
+    keywords: ["mad", "annoyed"],
+    unicode: "U+1F620",
+  },
+  {
+    id: "smileys-emotion:beaming-face-with-smiling-eyes",
+    name: "beaming-face-with-smiling-eyes",
+    emoji: "😁",
+    category: "smileys-emotion",
+    aliases: ["grin"],
+    keywords: ["happy", "smile", "eyes"],
+    unicode: "U+1F601",
+  },
+  {
+    id: "smileys-emotion:crying-face",
+    name: "crying-face",
+    emoji: "😢",
+    category: "smileys-emotion",
+    aliases: ["cry"],
+    keywords: ["sad", "tears"],
+    unicode: "U+1F622",
+  },
+  {
+    id: "smileys-emotion:drooling-face",
+    name: "drooling-face",
+    emoji: "🤤",
+    category: "smileys-emotion",
+    aliases: ["drool"],
+    keywords: ["hungry", "sleepy"],
+    unicode: "U+1F924",
+  },
+  {
+    id: "smileys-emotion:exploding-head",
+    name: "exploding-head",
+    emoji: "🤯",
+    category: "smileys-emotion",
+    aliases: ["mind-blown"],
+    keywords: ["shocked", "wow", "surprised"],
+    unicode: "U+1F92F",
+  },
+  {
+    id: "smileys-emotion:expressionless-face",
+    name: "expressionless-face",
+    emoji: "😑",
+    category: "smileys-emotion",
+    aliases: ["expressionless"],
+    keywords: ["blank", "meh"],
+    unicode: "U+1F611",
+  },
+  {
+    id: "smileys-emotion:face-blowing-a-kiss",
+    name: "face-blowing-a-kiss",
+    emoji: "😘",
+    category: "smileys-emotion",
+    aliases: ["kissing-heart"],
+    keywords: ["love", "kiss"],
+    unicode: "U+1F618",
+  },
+  {
+    id: "smileys-emotion:face-savoring-food",
+    name: "face-savoring-food",
+    emoji: "😋",
+    category: "smileys-emotion",
+    aliases: ["yum"],
+    keywords: ["delicious", "tasty", "hungry"],
+    unicode: "U+1F60B",
+  },
+  {
+    id: "smileys-emotion:face-screaming-in-fear",
+    name: "face-screaming-in-fear",
+    emoji: "😱",
+    category: "smileys-emotion",
+    aliases: ["scream"],
+    keywords: ["shock", "scared", "fear"],
+    unicode: "U+1F631",
+  },
+  {
+    id: "smileys-emotion:face-with-raised-eyebrow",
+    name: "face-with-raised-eyebrow",
+    emoji: "🤨",
+    category: "smileys-emotion",
+    aliases: ["raised-eyebrow"],
+    keywords: ["skeptical", "suspicious"],
+    unicode: "U+1F928",
+  },
+  {
+    id: "smileys-emotion:face-with-tears-of-joy",
+    name: "face-with-tears-of-joy",
+    emoji: "😂",
+    category: "smileys-emotion",
+    aliases: ["joy"],
+    keywords: ["laugh", "lol", "funny"],
+    unicode: "U+1F602",
+  },
+  {
+    id: "smileys-emotion:face-with-tongue",
+    name: "face-with-tongue",
+    emoji: "😛",
+    category: "smileys-emotion",
+    aliases: ["stuck-out-tongue"],
+    keywords: ["silly", "playful"],
+    unicode: "U+1F61B",
+  },
+  {
+    id: "smileys-emotion:grinning-face",
+    name: "grinning-face",
+    emoji: "😀",
+    category: "smileys-emotion",
+    aliases: ["grinning"],
+    keywords: ["smile", "happy", "face"],
+    unicode: "U+1F600",
+  },
+  {
+    id: "smileys-emotion:grinning-face-with-big-eyes",
+    name: "grinning-face-with-big-eyes",
+    emoji: "😃",
+    category: "smileys-emotion",
+    aliases: ["smiley"],
+    keywords: ["smile", "happy", "joy"],
+    unicode: "U+1F603",
+  },
+  {
+    id: "smileys-emotion:grinning-face-with-smiling-eyes",
+    name: "grinning-face-with-smiling-eyes",
+    emoji: "😄",
+    category: "smileys-emotion",
+    aliases: ["smile"],
+    keywords: ["happy", "joy", "laugh"],
+    unicode: "U+1F604",
+  },
+  {
+    id: "smileys-emotion:grinning-face-with-sweat",
+    name: "grinning-face-with-sweat",
+    emoji: "😅",
+    category: "smileys-emotion",
+    aliases: ["sweat-smile"],
+    keywords: ["nervous", "relief", "hot"],
+    unicode: "U+1F605",
+  },
+  {
+    id: "smileys-emotion:grinning-squinting-face",
+    name: "grinning-squinting-face",
+    emoji: "😆",
+    category: "smileys-emotion",
+    aliases: ["laughing", "satisfied"],
+    keywords: ["happy", "haha", "laugh"],
+    unicode: "U+1F606",
+  },
+  {
+    id: "smileys-emotion:hand-over-mouth-face",
+    name: "hand-over-mouth-face",
+    emoji: "🤭",
+    category: "smileys-emotion",
+    aliases: [],
+    keywords: ["giggle", "oops", "surprised"],
+    unicode: "U+1F92D",
+  },
+  {
+    id: "smileys-emotion:hugging-face",
+    name: "hugging-face",
+    emoji: "🤗",
+    category: "smileys-emotion",
+    aliases: ["hug"],
+    keywords: ["hug", "warm", "affection"],
+    unicode: "U+1F917",
+  },
+  {
+    id: "smileys-emotion:kissing-face",
+    name: "kissing-face",
+    emoji: "😗",
+    category: "smileys-emotion",
+    aliases: ["kissing"],
+    keywords: ["kiss", "love"],
+    unicode: "U+1F617",
+  },
+  {
+    id: "smileys-emotion:kissing-face-with-closed-eyes",
+    name: "kissing-face-with-closed-eyes",
+    emoji: "😚",
+    category: "smileys-emotion",
+    aliases: ["kissing-closed-eyes"],
+    keywords: ["kiss", "love"],
+    unicode: "U+1F61A",
+  },
+  {
+    id: "smileys-emotion:kissing-face-with-smiling-eyes",
+    name: "kissing-face-with-smiling-eyes",
+    emoji: "😙",
+    category: "smileys-emotion",
+    aliases: ["kissing-smiling-eyes"],
+    keywords: ["kiss", "love"],
+    unicode: "U+1F619",
+  },
+  {
+    id: "smileys-emotion:loudly-crying-face",
+    name: "loudly-crying-face",
+    emoji: "😭",
+    category: "smileys-emotion",
+    aliases: ["sob"],
+    keywords: ["cry", "sad", "tears"],
+    unicode: "U+1F62D",
+  },
+  {
+    id: "smileys-emotion:money-mouth-face",
+    name: "money-mouth-face",
+    emoji: "🤑",
+    category: "smileys-emotion",
+    aliases: ["money"],
+    keywords: ["rich", "cash", "greedy"],
+    unicode: "U+1F911",
+  },
+  {
+    id: "smileys-emotion:neutral-face",
+    name: "neutral-face",
+    emoji: "😐",
+    category: "smileys-emotion",
+    aliases: [],
+    keywords: ["meh", "indifferent"],
+    unicode: "U+1F610",
+  },
+  {
+    id: "smileys-emotion:party-popper-face",
+    name: "party-popper-face",
+    emoji: "🥳",
+    category: "smileys-emotion",
+    aliases: ["celebrating"],
+    keywords: ["party", "celebrate", "birthday"],
+    unicode: "U+1F973",
+  },
+  {
+    id: "smileys-emotion:pensive-face",
+    name: "pensive-face",
+    emoji: "😔",
+    category: "smileys-emotion",
+    aliases: ["pensive"],
+    keywords: ["sad", "disappointed"],
+    unicode: "U+1F614",
+  },
+  {
+    id: "smileys-emotion:pouting-face",
+    name: "pouting-face",
+    emoji: "😡",
+    category: "smileys-emotion",
+    aliases: ["rage"],
+    keywords: ["furious", "mad"],
+    unicode: "U+1F621",
+  },
+  {
+    id: "smileys-emotion:relieved-face",
+    name: "relieved-face",
+    emoji: "😌",
+    category: "smileys-emotion",
+    aliases: ["relieved"],
+    keywords: ["calm", "phew"],
+    unicode: "U+1F60C",
+  },
+  {
+    id: "smileys-emotion:rolling-on-the-floor-laughing",
+    name: "rolling-on-the-floor-laughing",
+    emoji: "🤣",
+    category: "smileys-emotion",
+    aliases: ["rofl"],
+    keywords: ["laugh", "funny", "lol"],
+    unicode: "U+1F923",
+  },
+  {
+    id: "smileys-emotion:shushing-face",
+    name: "shushing-face",
+    emoji: "🤫",
+    category: "smileys-emotion",
+    aliases: ["shush"],
+    keywords: ["quiet", "secret"],
+    unicode: "U+1F92B",
+  },
+  {
+    id: "smileys-emotion:sleeping-face",
+    name: "sleeping-face",
+    emoji: "😴",
+    category: "smileys-emotion",
+    aliases: ["sleeping"],
+    keywords: ["tired", "zzz", "sleep"],
+    unicode: "U+1F634",
+  },
+  {
+    id: "smileys-emotion:sleepy-face",
+    name: "sleepy-face",
+    emoji: "😪",
+    category: "smileys-emotion",
+    aliases: ["sleepy"],
+    keywords: ["tired", "yawn"],
+    unicode: "U+1F62A",
+  },
+  {
+    id: "smileys-emotion:slightly-smiling-face",
+    name: "slightly-smiling-face",
+    emoji: "🙂",
+    category: "smileys-emotion",
+    aliases: ["slight-smile"],
+    keywords: ["smile", "happy"],
+    unicode: "U+1F642",
+  },
+  {
+    id: "smileys-emotion:smiling-face-with-halo",
+    name: "smiling-face-with-halo",
+    emoji: "😇",
+    category: "smileys-emotion",
+    aliases: ["innocent"],
+    keywords: ["angel", "halo"],
+    unicode: "U+1F607",
+  },
+  {
+    id: "smileys-emotion:smiling-face-with-heart-eyes",
+    name: "smiling-face-with-heart-eyes",
+    emoji: "😍",
+    category: "smileys-emotion",
+    aliases: ["heart-eyes"],
+    keywords: ["love", "crush", "adore"],
+    unicode: "U+1F60D",
+  },
+  {
+    id: "smileys-emotion:smiling-face-with-hearts",
+    name: "smiling-face-with-hearts",
+    emoji: "🥰",
+    category: "smileys-emotion",
+    aliases: ["loving"],
+    keywords: ["love", "adore", "crush"],
+    unicode: "U+1F970",
+  },
+  {
+    id: "smileys-emotion:smiling-face-with-smiling-eyes",
+    name: "smiling-face-with-smiling-eyes",
+    emoji: "😊",
+    category: "smileys-emotion",
+    aliases: ["blush"],
+    keywords: ["happy", "warm", "pleased"],
+    unicode: "U+1F60A",
+  },
+  {
+    id: "smileys-emotion:smiling-face-with-tear",
+    name: "smiling-face-with-tear",
+    emoji: "🥲",
+    category: "smileys-emotion",
+    aliases: [],
+    keywords: ["touched", "proud", "grateful"],
+    unicode: "U+1F972",
+  },
+  {
+    id: "smileys-emotion:smirking-face",
+    name: "smirking-face",
+    emoji: "😏",
+    category: "smileys-emotion",
+    aliases: ["smirk"],
+    keywords: ["sly", "smug"],
+    unicode: "U+1F60F",
+  },
+  {
+    id: "smileys-emotion:squinting-face-with-tongue",
+    name: "squinting-face-with-tongue",
+    emoji: "😝",
+    category: "smileys-emotion",
+    aliases: ["stuck-out-tongue-closed-eyes"],
+    keywords: ["silly", "laughing"],
+    unicode: "U+1F61D",
+  },
+  {
+    id: "smileys-emotion:star-struck",
+    name: "star-struck",
+    emoji: "🤩",
+    category: "smileys-emotion",
+    aliases: ["grinning-star"],
+    keywords: ["amazed", "wow", "excited"],
+    unicode: "U+1F929",
+  },
+  {
+    id: "smileys-emotion:thinking-face",
+    name: "thinking-face",
+    emoji: "🤔",
+    category: "smileys-emotion",
+    aliases: ["thinking"],
+    keywords: ["hmm", "consider", "ponder"],
+    unicode: "U+1F914",
+  },
+  {
+    id: "smileys-emotion:unamused-face",
+    name: "unamused-face",
+    emoji: "😒",
+    category: "smileys-emotion",
+    aliases: ["unamused"],
+    keywords: ["annoyed", "meh"],
+    unicode: "U+1F612",
+  },
+  {
+    id: "smileys-emotion:upside-down-face",
+    name: "upside-down-face",
+    emoji: "🙃",
+    category: "smileys-emotion",
+    aliases: [],
+    keywords: ["silly", "sarcasm"],
+    unicode: "U+1F643",
+  },
+  {
+    id: "smileys-emotion:winking-face",
+    name: "winking-face",
+    emoji: "😉",
+    category: "smileys-emotion",
+    aliases: ["wink"],
+    keywords: ["flirt", "joke"],
+    unicode: "U+1F609",
+  },
+  {
+    id: "smileys-emotion:winking-face-with-tongue",
+    name: "winking-face-with-tongue",
+    emoji: "😜",
+    category: "smileys-emotion",
+    aliases: ["stuck-out-tongue-wink"],
+    keywords: ["silly", "joke", "playful"],
+    unicode: "U+1F61C",
+  },
+  {
+    id: "smileys-emotion:zany-face",
+    name: "zany-face",
+    emoji: "🤪",
+    category: "smileys-emotion",
+    aliases: ["crazy"],
+    keywords: ["silly", "wild", "goofy"],
+    unicode: "U+1F92A",
+  },
+  {
+    id: "smileys-emotion:zipper-mouth-face",
+    name: "zipper-mouth-face",
+    emoji: "🤐",
+    category: "smileys-emotion",
+    aliases: [],
+    keywords: ["silence", "secret", "quiet"],
+    unicode: "U+1F910",
+  },
+  {
+    id: "symbols:blue-heart",
+    name: "blue-heart",
+    emoji: "💙",
+    category: "symbols",
+    aliases: [],
+    keywords: ["love", "like"],
+    unicode: "U+1F499",
+  },
+  {
+    id: "symbols:broken-heart",
+    name: "broken-heart",
+    emoji: "💔",
+    category: "symbols",
+    aliases: [],
+    keywords: ["sad", "breakup"],
+    unicode: "U+1F494",
+  },
+  {
+    id: "symbols:check-mark-button",
+    name: "check-mark-button",
+    emoji: "✅",
+    category: "symbols",
+    aliases: ["check", "done"],
+    keywords: ["done", "yes", "approved"],
+    unicode: "U+2705",
+  },
+  {
+    id: "symbols:cross-mark",
+    name: "cross-mark",
+    emoji: "❌",
+    category: "symbols",
+    aliases: ["x"],
+    keywords: ["no", "wrong", "cancel"],
+    unicode: "U+274C",
+  },
+  {
+    id: "symbols:exclamation-mark",
+    name: "exclamation-mark",
+    emoji: "❗",
+    category: "symbols",
+    aliases: [],
+    keywords: ["important", "alert"],
+    unicode: "U+2757",
+  },
+  {
+    id: "symbols:fire",
+    name: "fire",
+    emoji: "🔥",
+    category: "symbols",
+    aliases: ["lit"],
+    keywords: ["hot", "trending", "burn"],
+    unicode: "U+1F525",
+  },
+  {
+    id: "symbols:free-button",
+    name: "free-button",
+    emoji: "🆓",
+    category: "symbols",
+    aliases: ["free"],
+    keywords: ["no-cost"],
+    unicode: "U+1F193",
+  },
+  {
+    id: "symbols:glowing-star",
+    name: "glowing-star",
+    emoji: "🌟",
+    category: "symbols",
+    aliases: [],
+    keywords: ["shiny", "special"],
+    unicode: "U+1F31F",
+  },
+  {
+    id: "symbols:green-heart",
+    name: "green-heart",
+    emoji: "💚",
+    category: "symbols",
+    aliases: [],
+    keywords: ["love", "like"],
+    unicode: "U+1F49A",
+  },
+  {
+    id: "symbols:hundred-points",
+    name: "hundred-points",
+    emoji: "💯",
+    category: "symbols",
+    aliases: ["100"],
+    keywords: ["perfect", "score"],
+    unicode: "U+1F4AF",
+  },
+  {
+    id: "symbols:infinity",
+    name: "infinity",
+    emoji: "♾️",
+    category: "symbols",
+    aliases: [],
+    keywords: ["forever", "endless"],
+    unicode: "U+267E",
+  },
+  {
+    id: "symbols:new-button",
+    name: "new-button",
+    emoji: "🆕",
+    category: "symbols",
+    aliases: ["new"],
+    keywords: ["fresh", "latest"],
+    unicode: "U+1F195",
+  },
+  {
+    id: "symbols:no-entry",
+    name: "no-entry",
+    emoji: "⛔",
+    category: "symbols",
+    aliases: [],
+    keywords: ["forbidden", "stop"],
+    unicode: "U+26D4",
+  },
+  {
+    id: "symbols:orange-heart",
+    name: "orange-heart",
+    emoji: "🧡",
+    category: "symbols",
+    aliases: [],
+    keywords: ["love", "like"],
+    unicode: "U+1F9E1",
+  },
+  {
+    id: "symbols:peace-symbol",
+    name: "peace-symbol",
+    emoji: "☮️",
+    category: "symbols",
+    aliases: ["peace"],
+    keywords: ["calm", "harmony"],
+    unicode: "U+262E",
+  },
+  {
+    id: "symbols:prohibited",
+    name: "prohibited",
+    emoji: "🚫",
+    category: "symbols",
+    aliases: ["no"],
+    keywords: ["forbidden", "banned"],
+    unicode: "U+1F6AB",
+  },
+  {
+    id: "symbols:purple-heart",
+    name: "purple-heart",
+    emoji: "💜",
+    category: "symbols",
+    aliases: [],
+    keywords: ["love", "like"],
+    unicode: "U+1F49C",
+  },
+  {
+    id: "symbols:question-mark",
+    name: "question-mark",
+    emoji: "❓",
+    category: "symbols",
+    aliases: [],
+    keywords: ["confused", "ask"],
+    unicode: "U+2753",
+  },
+  {
+    id: "symbols:recycling-symbol",
+    name: "recycling-symbol",
+    emoji: "♻️",
+    category: "symbols",
+    aliases: ["recycle"],
+    keywords: ["eco", "reuse"],
+    unicode: "U+267B",
+  },
+  {
+    id: "symbols:red-heart",
+    name: "red-heart",
+    emoji: "❤️",
+    category: "symbols",
+    aliases: ["heart"],
+    keywords: ["love", "like"],
+    unicode: "U+2764",
+  },
+  {
+    id: "symbols:sparkles",
+    name: "sparkles",
+    emoji: "✨",
+    category: "symbols",
+    aliases: [],
+    keywords: ["shiny", "new", "magic"],
+    unicode: "U+2728",
+  },
+  {
+    id: "symbols:star",
+    name: "star",
+    emoji: "⭐",
+    category: "symbols",
+    aliases: [],
+    keywords: ["favorite", "rating"],
+    unicode: "U+2B50",
+  },
+  {
+    id: "symbols:warning",
+    name: "warning",
+    emoji: "⚠️",
+    category: "symbols",
+    aliases: [],
+    keywords: ["alert", "caution"],
+    unicode: "U+26A0",
+  },
+  {
+    id: "symbols:yellow-heart",
+    name: "yellow-heart",
+    emoji: "💛",
+    category: "symbols",
+    aliases: [],
+    keywords: ["love", "like"],
+    unicode: "U+1F49B",
+  },
+  {
+    id: "symbols:yin-yang",
+    name: "yin-yang",
+    emoji: "☯️",
+    category: "symbols",
+    aliases: [],
+    keywords: ["balance", "harmony"],
+    unicode: "U+262F",
+  },
+  {
+    id: "travel-places:airplane",
+    name: "airplane",
+    emoji: "✈️",
+    category: "travel-places",
+    aliases: ["plane"],
+    keywords: ["travel", "flight"],
+    unicode: "U+2708",
+  },
+  {
+    id: "travel-places:ambulance",
+    name: "ambulance",
+    emoji: "🚑",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "emergency"],
+    unicode: "U+1F691",
+  },
+  {
+    id: "travel-places:anchor",
+    name: "anchor",
+    emoji: "⚓",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["sea", "boat"],
+    unicode: "U+2693",
+  },
+  {
+    id: "travel-places:automobile",
+    name: "automobile",
+    emoji: "🚗",
+    category: "travel-places",
+    aliases: ["car"],
+    keywords: ["vehicle", "drive"],
+    unicode: "U+1F697",
+  },
+  {
+    id: "travel-places:bank",
+    name: "bank",
+    emoji: "🏦",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["building", "money"],
+    unicode: "U+1F3E6",
+  },
+  {
+    id: "travel-places:beach-with-umbrella",
+    name: "beach-with-umbrella",
+    emoji: "🏖️",
+    category: "travel-places",
+    aliases: ["beach"],
+    keywords: ["vacation", "summer"],
+    unicode: "U+1F3D6",
+  },
+  {
+    id: "travel-places:bicycle",
+    name: "bicycle",
+    emoji: "🚲",
+    category: "travel-places",
+    aliases: ["bike"],
+    keywords: ["vehicle", "sport"],
+    unicode: "U+1F6B2",
+  },
+  {
+    id: "travel-places:bus",
+    name: "bus",
+    emoji: "🚌",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "transport"],
+    unicode: "U+1F68C",
+  },
+  {
+    id: "travel-places:camping",
+    name: "camping",
+    emoji: "🏕️",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["outdoors", "tent"],
+    unicode: "U+1F3D5",
+  },
+  {
+    id: "travel-places:fire-engine",
+    name: "fire-engine",
+    emoji: "🚒",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "emergency"],
+    unicode: "U+1F692",
+  },
+  {
+    id: "travel-places:globe-showing-europe-africa",
+    name: "globe-showing-europe-africa",
+    emoji: "🌍",
+    category: "travel-places",
+    aliases: ["globe"],
+    keywords: ["world", "earth"],
+    unicode: "U+1F30D",
+  },
+  {
+    id: "travel-places:helicopter",
+    name: "helicopter",
+    emoji: "🚁",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "fly"],
+    unicode: "U+1F681",
+  },
+  {
+    id: "travel-places:hospital",
+    name: "hospital",
+    emoji: "🏥",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["building", "medical"],
+    unicode: "U+1F3E5",
+  },
+  {
+    id: "travel-places:hotel",
+    name: "hotel",
+    emoji: "🏨",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["building", "travel"],
+    unicode: "U+1F3E8",
+  },
+  {
+    id: "travel-places:house",
+    name: "house",
+    emoji: "🏠",
+    category: "travel-places",
+    aliases: ["home"],
+    keywords: ["building", "home"],
+    unicode: "U+1F3E0",
+  },
+  {
+    id: "travel-places:motorcycle",
+    name: "motorcycle",
+    emoji: "🏍️",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "ride"],
+    unicode: "U+1F3CD",
+  },
+  {
+    id: "travel-places:mountain",
+    name: "mountain",
+    emoji: "⛰️",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["nature", "hike"],
+    unicode: "U+26F0",
+  },
+  {
+    id: "travel-places:night-with-stars",
+    name: "night-with-stars",
+    emoji: "🌃",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["night", "city"],
+    unicode: "U+1F303",
+  },
+  {
+    id: "travel-places:office-building",
+    name: "office-building",
+    emoji: "🏢",
+    category: "travel-places",
+    aliases: ["office"],
+    keywords: ["building", "work"],
+    unicode: "U+1F3E2",
+  },
+  {
+    id: "travel-places:police-car",
+    name: "police-car",
+    emoji: "🚓",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "emergency"],
+    unicode: "U+1F693",
+  },
+  {
+    id: "travel-places:rocket",
+    name: "rocket",
+    emoji: "🚀",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["space", "launch", "fast"],
+    unicode: "U+1F680",
+  },
+  {
+    id: "travel-places:ship",
+    name: "ship",
+    emoji: "🚢",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "sea", "travel"],
+    unicode: "U+1F6A2",
+  },
+  {
+    id: "travel-places:taxi",
+    name: "taxi",
+    emoji: "🚕",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "cab"],
+    unicode: "U+1F695",
+  },
+  {
+    id: "travel-places:train",
+    name: "train",
+    emoji: "🚆",
+    category: "travel-places",
+    aliases: [],
+    keywords: ["vehicle", "travel"],
+    unicode: "U+1F686",
+  },
+  {
+    id: "travel-places:world-map",
+    name: "world-map",
+    emoji: "🗺️",
+    category: "travel-places",
+    aliases: ["map"],
+    keywords: ["travel", "geography"],
+    unicode: "U+1F5FA",
+  },
 ] as const;

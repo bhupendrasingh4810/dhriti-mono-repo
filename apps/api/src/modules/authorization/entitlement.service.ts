@@ -67,7 +67,8 @@ export class EntitlementService {
       },
       select: { enabled: true, value: true },
     });
-    const planEntitlement = subscription && this.hasPaidAccess(subscription) ? subscription.planRecord?.entitlements[0] : undefined;
+    const planEntitlement =
+      subscription && this.hasPaidAccess(subscription) ? subscription.planRecord?.entitlements[0] : undefined;
     const result = this.resolve(entitlement.kind, planEntitlement, override);
     await this.writeCache(cacheKey, result);
     return result;
@@ -80,7 +81,9 @@ export class EntitlementService {
 
   async listEntitlements(organizationId: string): Promise<Array<EffectiveEntitlement & { key: string }>> {
     const entitlements = await this.prisma.entitlement.findMany({ select: { key: true }, orderBy: { key: "asc" } });
-    return Promise.all(entitlements.map(async ({ key }) => ({ key, ...(await this.getEntitlement(organizationId, key)) })));
+    return Promise.all(
+      entitlements.map(async ({ key }) => ({ key, ...(await this.getEntitlement(organizationId, key)) })),
+    );
   }
 
   async assertFeatureEnabled(organizationId: string, entitlementKey: string): Promise<void> {
@@ -93,11 +96,7 @@ export class EntitlementService {
     }
   }
 
-  async assertWithinLimit(
-    organizationId: string,
-    entitlementKey: string,
-    requestedValue: number,
-  ): Promise<void> {
+  async assertWithinLimit(organizationId: string, entitlementKey: string, requestedValue: number): Promise<void> {
     if (!Number.isSafeInteger(requestedValue) || requestedValue < 0) {
       throw new AppError(
         ErrorCode.VALIDATION_FAILED,
@@ -130,19 +129,38 @@ export class EntitlementService {
   ): EffectiveEntitlement {
     const enabled = override?.enabled ?? plan?.enabled ?? false;
     const value = override?.value ?? plan?.value ?? null;
-    if (kind === "FEATURE") {return { enabled, value: null };}
+    if (kind === "FEATURE") {
+      return { enabled, value: null };
+    }
 
     // A null, negative, or non-integer LIMIT is never interpreted as unlimited access.
-    if (!enabled || value === null || !Number.isSafeInteger(value) || value < 0) {return { enabled: false, value: null };}
+    if (!enabled || value === null || !Number.isSafeInteger(value) || value < 0) {
+      return { enabled: false, value: null };
+    }
     return { enabled: true, value };
   }
 
-  private hasPaidAccess(subscription: { status: SubscriptionStatus; currentPeriodEnd: Date | null; trialEndsAt: Date | null; gracePeriodEndsAt: Date | null }): boolean {
+  private hasPaidAccess(subscription: {
+    status: SubscriptionStatus;
+    currentPeriodEnd: Date | null;
+    trialEndsAt: Date | null;
+    gracePeriodEndsAt: Date | null;
+  }): boolean {
     const now = new Date();
-    if (subscription.status === "ACTIVE") {return subscription.currentPeriodEnd === null || subscription.currentPeriodEnd > now;}
-    if (subscription.status === "TRIALING") {return subscription.trialEndsAt !== null && subscription.trialEndsAt > now;}
-    if (subscription.status === "PAST_DUE") {return subscription.gracePeriodEndsAt !== null && subscription.gracePeriodEndsAt > now;}
-    return subscription.status === "CANCELLED" && subscription.currentPeriodEnd !== null && subscription.currentPeriodEnd > now;
+    if (subscription.status === "ACTIVE") {
+      return subscription.currentPeriodEnd === null || subscription.currentPeriodEnd > now;
+    }
+    if (subscription.status === "TRIALING") {
+      return subscription.trialEndsAt !== null && subscription.trialEndsAt > now;
+    }
+    if (subscription.status === "PAST_DUE") {
+      return subscription.gracePeriodEndsAt !== null && subscription.gracePeriodEndsAt > now;
+    }
+    return (
+      subscription.status === "CANCELLED" &&
+      subscription.currentPeriodEnd !== null &&
+      subscription.currentPeriodEnd > now
+    );
   }
 
   private cacheKey(organizationId: string, entitlementKey: string): string {

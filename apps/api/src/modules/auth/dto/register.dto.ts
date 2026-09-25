@@ -26,7 +26,7 @@ export class RegisterDto {
   })
   password!: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: true,
     description: "Must be true to accept the terms",
   })

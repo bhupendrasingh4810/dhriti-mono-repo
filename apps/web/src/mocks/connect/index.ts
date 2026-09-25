@@ -68,26 +68,35 @@ export const connectUsersById = connectUsers.reduce<Record<string, ConnectUser>>
   return acc;
 }, {});
 
-export const connectConversationsById = connectConversations.reduce<Record<string, ConnectConversation>>((acc, conversation) => {
-  acc[conversation.id] = conversation;
-  return acc;
-}, {});
+export const connectConversationsById = connectConversations.reduce<Record<string, ConnectConversation>>(
+  (acc, conversation) => {
+    acc[conversation.id] = conversation;
+    return acc;
+  },
+  {},
+);
 
-export const connectMessagesByConversation = connectMessages.reduce<Record<string, ConnectMessage[]>>((acc, message) => {
-  if (!acc[message.conversationId]) {
-    acc[message.conversationId] = [];
-  }
+export const connectMessagesByConversation = connectMessages.reduce<Record<string, ConnectMessage[]>>(
+  (acc, message) => {
+    if (!acc[message.conversationId]) {
+      acc[message.conversationId] = [];
+    }
 
-  acc[message.conversationId].push(message);
-  return acc;
-}, {});
+    acc[message.conversationId].push(message);
+    return acc;
+  },
+  {},
+);
 
 export const connectTeamsById = connectTeams.reduce<Record<string, (typeof connectTeams)[number]>>((acc, team) => {
   acc[team.id] = team;
   return acc;
 }, {});
 
-export const connectChannelsById = connectChannels.reduce<Record<string, (typeof connectChannels)[number]>>((acc, channel) => {
-  acc[channel.id] = channel;
-  return acc;
-}, {});
+export const connectChannelsById = connectChannels.reduce<Record<string, (typeof connectChannels)[number]>>(
+  (acc, channel) => {
+    acc[channel.id] = channel;
+    return acc;
+  },
+  {},
+);

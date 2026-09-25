@@ -69,7 +69,12 @@ export function DhritiEmoji({
     >
       {showAnimation && animationData ? (
         <Suspense fallback={definition.emoji}>
-          <AnimatedEmojiPlayer key={playOnHover ? hoverKey : "autoplay"} animationData={animationData} size={size} autoplay />
+          <AnimatedEmojiPlayer
+            key={playOnHover ? hoverKey : "autoplay"}
+            animationData={animationData}
+            size={size}
+            autoplay
+          />
         </Suspense>
       ) : (
         definition.emoji

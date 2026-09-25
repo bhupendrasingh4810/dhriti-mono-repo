@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  forwardRef,
-  useState,
-  useMemo,
-  type ReactNode,
-  type MouseEvent,
-  type ChangeEvent,
-} from "react";
+import { forwardRef, useState, useMemo, type ReactNode, type MouseEvent, type ChangeEvent } from "react";
 import Box from "@mui/material/Box";
 import Card from "@mui/material/Card";
 import CardHeader from "@mui/material/CardHeader";
@@ -62,12 +55,7 @@ import AdminPanelSettingsRounded from "@mui/icons-material/AdminPanelSettingsRou
 
 import { Avatar } from "../../mui/Avatar";
 import { Tooltip, WhiteTooltip } from "../../mui/Tooltip";
-import type {
-  DTableProps,
-  DTableColumn,
-  DTableViewMode,
-  DTableSortOrder,
-} from "./types";
+import type { DTableProps, DTableColumn, DTableViewMode, DTableSortOrder } from "./types";
 import type { ListCardColumnKey, ListCardStatusType } from "../TableListCard";
 
 // ============================================================================
@@ -76,26 +64,24 @@ import type { ListCardColumnKey, ListCardStatusType } from "../TableListCard";
 
 const RootContainer = styled(Card, {
   shouldForwardProp: (prop) => prop !== "variantType" && prop !== "fullWidth",
-})<{ variantType: "elevated" | "outlined" | "flat"; fullWidth: boolean }>(
-  ({ theme, variantType, fullWidth }) => ({
-    width: fullWidth ? "100%" : "auto",
-    overflow: "hidden",
-    borderRadius: theme.shape.borderRadius,
-    backgroundColor: theme.palette.background.paper,
-    transition: theme.transitions.create(["box-shadow", "border-color"], {
-      duration: theme.transitions.duration.shorter,
-    }),
-    ...(variantType === "outlined" && {
-      border: `1px solid ${theme.palette.divider}`,
-      boxShadow: "none",
-    }),
-    ...(variantType === "flat" && {
-      boxShadow: "none",
-      border: "none",
-      backgroundColor: "transparent",
-    }),
+})<{ variantType: "elevated" | "outlined" | "flat"; fullWidth: boolean }>(({ theme, variantType, fullWidth }) => ({
+  width: fullWidth ? "100%" : "auto",
+  overflow: "hidden",
+  borderRadius: theme.shape.borderRadius,
+  backgroundColor: theme.palette.background.paper,
+  transition: theme.transitions.create(["box-shadow", "border-color"], {
+    duration: theme.transitions.duration.shorter,
   }),
-);
+  ...(variantType === "outlined" && {
+    border: `1px solid ${theme.palette.divider}`,
+    boxShadow: "none",
+  }),
+  ...(variantType === "flat" && {
+    boxShadow: "none",
+    border: "none",
+    backgroundColor: "transparent",
+  }),
+}));
 
 const SearchInput = styled(TextField)(({ theme }) => ({
   "& .MuiOutlinedInput-root": {
@@ -325,9 +311,7 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
   const selectedIds = controlledSelectedIds ?? internalSelectedIds;
 
   const handleToggleRow = (item: any, isSelected: boolean) => {
-    const nextSelected = isSelected
-      ? [...selectedIds, item.id]
-      : selectedIds.filter((id) => id !== item.id);
+    const nextSelected = isSelected ? [...selectedIds, item.id] : selectedIds.filter((id) => id !== item.id);
 
     if (controlledSelectedIds === undefined) {
       setInternalSelectedIds(nextSelected);
@@ -376,9 +360,7 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
             return String(val).toLowerCase().includes(q);
           }
           if (typeof val === "object") {
-            return Object.values(val).some(
-              (v) => typeof v === "string" && v.toLowerCase().includes(q),
-            );
+            return Object.values(val).some((v) => typeof v === "string" && v.toLowerCase().includes(q));
           }
           return false;
         });
@@ -457,10 +439,8 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
   }, [columns]);
 
   // Is all visible items selected
-  const isAllVisibleSelected =
-    paginatedItems.length > 0 && paginatedItems.every((it) => selectedIds.includes(it.id));
-  const isSomeVisibleSelected =
-    paginatedItems.some((it) => selectedIds.includes(it.id)) && !isAllVisibleSelected;
+  const isAllVisibleSelected = paginatedItems.length > 0 && paginatedItems.every((it) => selectedIds.includes(it.id));
+  const isSomeVisibleSelected = paginatedItems.some((it) => selectedIds.includes(it.id)) && !isAllVisibleSelected;
 
   // ==========================================================================
   // CELL RENDERER
@@ -493,7 +473,9 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
           return (
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <Avatar size="md">{rawVal.slice(0, 2).toUpperCase()}</Avatar>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>{rawVal}</Typography>
+              <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                {rawVal}
+              </Typography>
             </Box>
           );
         }
@@ -501,23 +483,18 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         const subtitleText =
           u.subtitleType === "none"
             ? null
-            : u.subtitle ??
+            : (u.subtitle ??
               (u.subtitleType === "activity"
                 ? u.activity
                 : u.subtitleType === "team"
-                ? [u.designation, u.teamName].filter(Boolean).join(" • ")
-                : u.subtitleType === "designation"
-                ? u.designation
-                : u.activity ?? [u.designation, u.teamName].filter(Boolean).join(" • ") ?? u.designation);
+                  ? [u.designation, u.teamName].filter(Boolean).join(" • ")
+                  : u.subtitleType === "designation"
+                    ? u.designation
+                    : (u.activity ?? [u.designation, u.teamName].filter(Boolean).join(" • ") ?? u.designation)));
 
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 160 }}>
-            <Avatar
-              src={u.avatarUrl}
-              size="md"
-              variant={u.avatarShape ?? "circular"}
-              color={u.avatarColor}
-            >
+            <Avatar src={u.avatarUrl} size="md" variant={u.avatarShape ?? "circular"} color={u.avatarColor}>
               {u.initials ?? u.name?.slice(0, 2).toUpperCase()}
             </Avatar>
             <Box sx={{ minWidth: 0, flex: 1 }}>
@@ -574,26 +551,25 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
           typeof st === "object" && st.type
             ? st.type
             : st === "high"
-            ? "error"
-            : st === "medium"
-            ? "warning"
-            : st === "low"
-            ? "success"
-            : "default";
+              ? "error"
+              : st === "medium"
+                ? "warning"
+                : st === "low"
+                  ? "success"
+                  : "default";
 
         const paletteObj =
           statusType === "error"
             ? theme.palette.error
             : statusType === "warning"
-            ? theme.palette.warning
-            : statusType === "success"
-            ? theme.palette.success
-            : statusType === "info"
-            ? theme.palette.info
-            : theme.palette.primary;
+              ? theme.palette.warning
+              : statusType === "success"
+                ? theme.palette.success
+                : statusType === "info"
+                  ? theme.palette.info
+                  : theme.palette.primary;
 
-        const formattedLabel =
-          typeof label === "string" ? `${label.charAt(0).toUpperCase()}${label.slice(1)}` : label;
+        const formattedLabel = typeof label === "string" ? `${label.charAt(0).toUpperCase()}${label.slice(1)}` : label;
 
         return (
           <Chip
@@ -605,9 +581,7 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
                   ? theme.palette.action.selected
                   : alpha(paletteObj.main, 0.15),
               color:
-                statusType === "inherit" || statusType === "default"
-                  ? theme.palette.text.primary
-                  : paletteObj.dark,
+                statusType === "inherit" || statusType === "default" ? theme.palette.text.primary : paletteObj.dark,
               fontWeight: 600,
               fontSize: "0.75rem",
               borderRadius: 1,
@@ -623,17 +597,17 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
           <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, maxWidth: 220 }}>
             {tg.map((tag: any, tIdx: number) => {
               const label = typeof tag === "string" ? tag : tag.label;
-              const tagType = typeof tag === "object" ? tag.type ?? "default" : "default";
+              const tagType = typeof tag === "object" ? (tag.type ?? "default") : "default";
               const palette =
                 tagType === "error"
                   ? theme.palette.error
                   : tagType === "warning"
-                  ? theme.palette.warning
-                  : tagType === "success"
-                  ? theme.palette.success
-                  : tagType === "info"
-                  ? theme.palette.info
-                  : theme.palette.primary;
+                    ? theme.palette.warning
+                    : tagType === "success"
+                      ? theme.palette.success
+                      : tagType === "info"
+                        ? theme.palette.info
+                        : theme.palette.primary;
 
               return (
                 <Chip
@@ -659,9 +633,9 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         const prog = item.progress ?? rawVal;
         if (prog == null) return null;
         const val = typeof prog === "number" ? prog : prog.value;
-        const max = typeof prog === "object" ? prog.max ?? 100 : 100;
+        const max = typeof prog === "object" ? (prog.max ?? 100) : 100;
         const pct = Math.round((val / max) * 100);
-        const progColor = typeof prog === "object" ? prog.color ?? "primary" : "primary";
+        const progColor = typeof prog === "object" ? (prog.color ?? "primary") : "primary";
 
         return (
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 120 }}>
@@ -697,14 +671,16 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         const numObj = item.numeric ?? rawVal;
         if (numObj == null) return null;
         const val = typeof numObj === "object" ? numObj.value : numObj;
-        const prefix = typeof numObj === "object" ? numObj.prefix ?? "" : "";
-        const suffix = typeof numObj === "object" ? numObj.suffix ?? "" : "";
+        const prefix = typeof numObj === "object" ? (numObj.prefix ?? "") : "";
+        const suffix = typeof numObj === "object" ? (numObj.suffix ?? "") : "";
         const lbl = typeof numObj === "object" ? numObj.label : undefined;
 
         return (
           <Box sx={{ textAlign: col.align === "right" ? "right" : "left", minWidth: 70 }}>
             <Typography variant="body2" sx={{ fontWeight: 700, color: "text.primary" }}>
-              {prefix}{val}{suffix}
+              {prefix}
+              {val}
+              {suffix}
             </Typography>
             {lbl && (
               <Typography variant="caption" color="text.secondary" noWrap sx={{ display: "block" }}>
@@ -719,7 +695,7 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         const refObj = item.referenceId ?? rawVal;
         if (refObj == null) return null;
         const rawId = typeof refObj === "object" ? refObj.id : refObj;
-        const prefix = typeof refObj === "object" ? refObj.prefix ?? "" : "";
+        const prefix = typeof refObj === "object" ? (refObj.prefix ?? "") : "";
         const href = typeof refObj === "object" ? refObj.href : undefined;
         const displayId = `${prefix}${rawId}`;
 
@@ -858,10 +834,27 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
                 flexShrink: 0,
               }}
             >
-              <Box sx={{ bgcolor: "primary.main", color: "primary.contrastText", fontSize: "0.6rem", fontWeight: 700, py: 0.2 }}>
+              <Box
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "primary.contrastText",
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  py: 0.2,
+                }}
+              >
                 {ev.month?.slice(0, 3).toUpperCase()}
               </Box>
-              <Box sx={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: "0.8rem" }}>
+              <Box
+                sx={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: "0.8rem",
+                }}
+              >
                 {ev.day}
               </Box>
             </Box>
@@ -881,7 +874,10 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         const ap = item.app ?? rawVal;
         if (!ap) return null;
         const appName = typeof ap === "string" ? ap : ap.name;
-        const branding = appBranding[appName] ?? { color: theme.palette.primary.main, icon: <HubRounded fontSize="small" /> };
+        const branding = appBranding[appName] ?? {
+          color: theme.palette.primary.main,
+          icon: <HubRounded fontSize="small" />,
+        };
         const icon = typeof ap === "object" && ap.icon ? ap.icon : branding.icon;
         const color = typeof ap === "object" && ap.color ? ap.color : branding.color;
 
@@ -963,16 +959,20 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
     const selected = selectedIds.includes(item.id);
 
     // Group columns by card roles
-    const headerCol = visibleColumns.find((c) => c.cardRole === "header") ??
+    const headerCol =
+      visibleColumns.find((c) => c.cardRole === "header") ??
       visibleColumns.find((c) => c.type === "primaryText" || c.type === "user" || c.id === "name" || c.id === "title");
 
-    const badgeCol = visibleColumns.find((c) => c.cardRole === "badge") ??
+    const badgeCol =
+      visibleColumns.find((c) => c.cardRole === "badge") ??
       visibleColumns.find((c) => c.type === "status" || c.id === "status" || c.id === "priority");
 
-    const mediaCol = visibleColumns.find((c) => c.cardRole === "media") ??
+    const mediaCol =
+      visibleColumns.find((c) => c.cardRole === "media") ??
       visibleColumns.find((c) => c.type === "media" || c.type === "file" || c.type === "avatarImage");
 
-    const footerCol = visibleColumns.find((c) => c.cardRole === "footer") ??
+    const footerCol =
+      visibleColumns.find((c) => c.cardRole === "footer") ??
       visibleColumns.find((c) => c.type === "progress" || c.type === "dateTime");
 
     const bodyCols = visibleColumns.filter(
@@ -1014,7 +1014,9 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         }}
       >
         {/* Card Header */}
-        <Box sx={{ p: 2.5, pb: 1.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}>
+        <Box
+          sx={{ p: 2.5, pb: 1.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 1.5 }}
+        >
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.25, flex: 1, minWidth: 0 }}>
             {selectable && (
               <Checkbox
@@ -1026,7 +1028,9 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
               />
             )}
             <Box sx={{ minWidth: 0, flex: 1 }}>
-              {headerCol ? renderCellContent(headerCol, item, index) : (
+              {headerCol ? (
+                renderCellContent(headerCol, item, index)
+              ) : (
                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
                   {item.name ?? item.title ?? `Item #${item.id ?? index + 1}`}
                 </Typography>
@@ -1055,11 +1059,7 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         </Box>
 
         {/* Card Media Preview */}
-        {mediaCol && (
-          <Box sx={{ px: 2.5, pb: 1.5 }}>
-            {renderCellContent(mediaCol, item, index)}
-          </Box>
-        )}
+        {mediaCol && <Box sx={{ px: 2.5, pb: 1.5 }}>{renderCellContent(mediaCol, item, index)}</Box>}
 
         <Divider sx={{ opacity: 0.6 }} />
 
@@ -1067,13 +1067,14 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         <CardContent sx={{ p: 2.5, py: 2, flex: 1 }}>
           <Stack spacing={1.5}>
             {bodyCols.map((col) => (
-              <Box key={col.id} sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5 }}>
+              <Box
+                key={col.id}
+                sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 1.5 }}
+              >
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, fontSize: "0.75rem" }}>
                   {col.label}
                 </Typography>
-                <Box sx={{ textAlign: "right" }}>
-                  {renderCellContent(col, item, index)}
-                </Box>
+                <Box sx={{ textAlign: "right" }}>{renderCellContent(col, item, index)}</Box>
               </Box>
             ))}
           </Stack>
@@ -1177,11 +1178,16 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
                     color: isError ? theme.palette.error.main : theme.palette.text.secondary,
                     bgcolor: theme.palette.background.paper,
                     boxShadow: "0 1px 2px rgba(0,0,0,0.02)",
-                    transition: theme.transitions.create(["background-color", "border-color", "color", "transform", "box-shadow"], {
-                      duration: theme.transitions.duration.shorter,
-                    }),
+                    transition: theme.transitions.create(
+                      ["background-color", "border-color", "color", "transform", "box-shadow"],
+                      {
+                        duration: theme.transitions.duration.shorter,
+                      },
+                    ),
                     "&:hover": {
-                      bgcolor: isError ? alpha(theme.palette.error.main, 0.08) : alpha(theme.palette.primary.main, 0.08),
+                      bgcolor: isError
+                        ? alpha(theme.palette.error.main, 0.08)
+                        : alpha(theme.palette.primary.main, 0.08),
                       borderColor: isError ? theme.palette.error.main : alpha(theme.palette.primary.main, 0.4),
                       color: isError ? theme.palette.error.dark : theme.palette.primary.main,
                       transform: "translateY(-1px)",
@@ -1200,7 +1206,13 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
   );
 
   return (
-    <RootContainer variantType={variant} fullWidth={fullWidth} elevation={variant === "elevated" ? elevation : 0} sx={sx} ref={ref}>
+    <RootContainer
+      variantType={variant}
+      fullWidth={fullWidth}
+      elevation={variant === "elevated" ? elevation : 0}
+      sx={sx}
+      ref={ref}
+    >
       {/* 1. Header Bar: Title + Subtitle + Header Buttons */}
       {(title || subtitle || headerIcon || headerButtons || headerActions) && (
         <CardHeader
@@ -1468,9 +1480,15 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
         <Box sx={{ p: 6, textAlign: "center" }} role="status">
           {emptyState && typeof emptyState === "object" && !("props" in emptyState) && "title" in emptyState ? (
             <Box sx={{ maxWidth: 360, mx: "auto" }}>
-              {(emptyState as any).icon && <Box sx={{ mb: 1.5, color: "text.disabled" }}>{(emptyState as any).icon}</Box>}
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>{(emptyState as any).title}</Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>{(emptyState as any).description}</Typography>
+              {(emptyState as any).icon && (
+                <Box sx={{ mb: 1.5, color: "text.disabled" }}>{(emptyState as any).icon}</Box>
+              )}
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                {(emptyState as any).title}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
+                {(emptyState as any).description}
+              </Typography>
               {(emptyState as any).actionLabel && (
                 <Button variant="outlined" size="small" onClick={(emptyState as any).onAction}>
                   {(emptyState as any).actionLabel}
@@ -1481,12 +1499,21 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
             (emptyState as ReactNode)
           ) : (
             <Box sx={{ maxWidth: 360, mx: "auto" }}>
-              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>No records found</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+                No records found
+              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
                 Try adjusting your search query or removing active filters.
               </Typography>
               {(searchQuery || activeFilterCount > 0) && (
-                <Button variant="outlined" size="small" onClick={() => { handleClearSearch(); handleClearAllFilters(); }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    handleClearSearch();
+                    handleClearAllFilters();
+                  }}
+                >
                   Reset Filters
                 </Button>
               )}
@@ -1500,7 +1527,10 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
             <TableHead>
               <TableRow sx={{ bgcolor: alpha(theme.palette.action.hover, 0.25) }}>
                 {selectable && (
-                  <TableCell padding="checkbox" sx={{ width: 48, py: 1.75, pl: 2.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+                  <TableCell
+                    padding="checkbox"
+                    sx={{ width: 48, py: 1.75, pl: 2.5, borderBottom: `1px solid ${theme.palette.divider}` }}
+                  >
                     <Checkbox
                       size="small"
                       checked={isAllVisibleSelected}
@@ -1568,9 +1598,10 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
                     sx={{
                       cursor: onRowClick ? "pointer" : "default",
                       bgcolor: theme.palette.background.paper,
-                      ...(striped && index % 2 === 1 && {
-                        bgcolor: alpha(theme.palette.action.hover, 0.08),
-                      }),
+                      ...(striped &&
+                        index % 2 === 1 && {
+                          bgcolor: alpha(theme.palette.action.hover, 0.08),
+                        }),
                       "&.Mui-selected": {
                         bgcolor: alpha(theme.palette.primary.main, 0.04),
                       },
@@ -1651,8 +1682,8 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
             {/* Left: Summary text */}
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "0.8125rem" }}>
               Showing <strong>{Math.min((page - 1) * rowsPerPage + 1, totalItemCount)}</strong> -{" "}
-              <strong>{Math.min(page * rowsPerPage, totalItemCount)}</strong> of{" "}
-              <strong>{totalItemCount}</strong> records
+              <strong>{Math.min(page * rowsPerPage, totalItemCount)}</strong> of <strong>{totalItemCount}</strong>{" "}
+              records
             </Typography>
 
             {/* Right: Rows per page & MUI Pagination */}
@@ -1724,7 +1755,9 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
                   </Typography>
                   <Select
                     value={currentVal || "all"}
-                    onChange={(e) => handleSetFilterValue(filter.id, e.target.value === "all" ? undefined : e.target.value)}
+                    onChange={(e) =>
+                      handleSetFilterValue(filter.id, e.target.value === "all" ? undefined : e.target.value)
+                    }
                   >
                     <MenuItem value="all">
                       <em>All</em>
@@ -1806,8 +1839,8 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
           setActiveRowItem(null);
         }}
       >
-        {activeRowItem && (
-          rowMenuItems ? (
+        {activeRowItem &&
+          (rowMenuItems ? (
             rowMenuItems(activeRowItem, {
               selectedId: selectedIds[0] ?? null,
               selectedIds,
@@ -1831,21 +1864,14 @@ export const DTable = forwardRef<HTMLDivElement, DTableProps>(function DTable(
             ))
           ) : (
             <>
-              <MenuItem onClick={() => setRowMenuAnchor(null)}>
-                View details
-              </MenuItem>
-              <MenuItem onClick={() => setRowMenuAnchor(null)}>
-                Edit record
-              </MenuItem>
-              <MenuItem onClick={() => setRowMenuAnchor(null)}>
-                Share link
-              </MenuItem>
+              <MenuItem onClick={() => setRowMenuAnchor(null)}>View details</MenuItem>
+              <MenuItem onClick={() => setRowMenuAnchor(null)}>Edit record</MenuItem>
+              <MenuItem onClick={() => setRowMenuAnchor(null)}>Share link</MenuItem>
               <MenuItem sx={{ color: "error.main" }} onClick={() => setRowMenuAnchor(null)}>
                 Delete record
               </MenuItem>
             </>
-          )
-        )}
+          ))}
       </Menu>
     </RootContainer>
   );

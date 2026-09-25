@@ -104,10 +104,7 @@ export class FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   /** Kanban drag-and-drop: persist the move and broadcast to the board. */
   @SubscribeMessage("issue:move")
-  async moveIssue(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: MoveIssuePayload,
-  ): Promise<{ ok: true }> {
+  async moveIssue(@ConnectedSocket() socket: Socket, @MessageBody() payload: MoveIssuePayload): Promise<{ ok: true }> {
     const principal = this.wsAuth.getPrincipal(socket);
     const organizationId = this.assertOrg(principal);
 
@@ -130,10 +127,7 @@ export class FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
 
   /** Generic issue-updated broadcast so other clients refetch the issue. */
   @SubscribeMessage("issue:changed")
-  issueChanged(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: IssueChangedPayload,
-  ): void {
+  issueChanged(@ConnectedSocket() socket: Socket, @MessageBody() payload: IssueChangedPayload): void {
     socket.to(projectRoom(payload.projectId)).emit("issue:changed", {
       projectId: payload.projectId,
       issueId: payload.issueId,

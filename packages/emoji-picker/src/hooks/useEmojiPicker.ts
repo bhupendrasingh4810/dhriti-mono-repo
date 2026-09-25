@@ -35,7 +35,12 @@ export interface UseEmojiPickerResult {
  * independently of `DhritiEmojiPicker`.
  */
 export function useEmojiPicker(options: UseEmojiPickerOptions = {}): UseEmojiPickerResult {
-  const { initialCategory = "smileys-emotion", recentLimit = DEFAULT_RECENT_LIMIT, frequentlyUsedLimit = DEFAULT_FREQUENTLY_USED_LIMIT, onSelect } = options;
+  const {
+    initialCategory = "smileys-emotion",
+    recentLimit = DEFAULT_RECENT_LIMIT,
+    frequentlyUsedLimit = DEFAULT_FREQUENTLY_USED_LIMIT,
+    onSelect,
+  } = options;
 
   const [activeCategory, setActiveCategory] = useState<EmojiCategory>(initialCategory);
   const { query, setQuery, results: searchResults, isSearching } = useEmojiSearch();
@@ -48,7 +53,7 @@ export function useEmojiPicker(options: UseEmojiPickerOptions = {}): UseEmojiPic
       recordEmojiUsage(emoji.name);
       onSelect?.(emoji);
     },
-    [addRecentEmoji, recordEmojiUsage, onSelect]
+    [addRecentEmoji, recordEmojiUsage, onSelect],
   );
 
   const visibleEmojis = useMemo(() => {

@@ -6,12 +6,7 @@ import { PlatformRoles } from "../../../../../common/decorators/platform-roles.d
 import { PlatformRolesGuard } from "../../../../../common/guards/platform-roles.guard";
 
 import { FaqService } from "./faq.service";
-import {
-  CreateFaqGroupDto,
-  CreateFaqItemDto,
-  UpdateFaqGroupDto,
-  UpdateFaqItemDto,
-} from "./dto/faq.dto";
+import { CreateFaqGroupDto, CreateFaqItemDto, UpdateFaqGroupDto, UpdateFaqItemDto } from "./dto/faq.dto";
 
 @ApiTags("content/faq")
 @Controller("content/faq")

@@ -13,5 +13,5 @@ export const emojiDataByCategory: Record<StaticEmojiCategory, EmojiDefinition[]>
     (acc[definition.category] ??= []).push(definition);
     return acc;
   },
-  {} as Record<StaticEmojiCategory, EmojiDefinition[]>
+  {} as Record<StaticEmojiCategory, EmojiDefinition[]>,
 );

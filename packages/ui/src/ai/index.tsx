@@ -15,7 +15,9 @@ export function AIResponse({ text }: { text: string }) {
 export function AIMessage({ role, text }: { role: "user" | "assistant"; text: string }) {
   return (
     <Stack spacing={0.5}>
-      <Typography variant="caption" color="text.secondary">{role}</Typography>
+      <Typography variant="caption" color="text.secondary">
+        {role}
+      </Typography>
       <Typography variant="body2">{text}</Typography>
     </Stack>
   );
@@ -28,7 +30,9 @@ export function AISource({ title, href }: { title: string; href?: string }) {
 export function AIInsight({ title, value }: { title: string; value: string }) {
   return (
     <Box>
-      <Typography variant="caption" color="text.secondary">{title}</Typography>
+      <Typography variant="caption" color="text.secondary">
+        {title}
+      </Typography>
       <Typography variant="body2">{value}</Typography>
     </Box>
   );

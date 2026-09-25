@@ -1,9 +1,4 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  Injectable,
-} from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import type { Request } from "express";
 import type { UserRole } from "@prisma/client";
 import { isUUID } from "class-validator";
@@ -47,8 +42,16 @@ export class TenantGuard implements CanActivate {
     if (!session) {
       throw new ForbiddenException({ code: "SESSION_REVOKED", message: "Session is no longer active" });
     }
-    if (!headerOrganizationId && user.organizationId && session.organizationId && user.organizationId !== session.organizationId) {
-      throw new ForbiddenException({ code: "ORGANIZATION_FORBIDDEN", message: "Session organization context is stale" });
+    if (
+      !headerOrganizationId &&
+      user.organizationId &&
+      session.organizationId &&
+      user.organizationId !== session.organizationId
+    ) {
+      throw new ForbiddenException({
+        code: "ORGANIZATION_FORBIDDEN",
+        message: "Session organization context is stale",
+      });
     }
     const organizationId = headerOrganizationId ?? session.organizationId ?? user.organizationId;
 

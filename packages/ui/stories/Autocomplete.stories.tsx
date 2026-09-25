@@ -1,6 +1,6 @@
 /**
  * AutoComplete Component Stories
- * 
+ *
  * Comprehensive Storybook documentation for Dhriti AutoComplete component.
  */
 
@@ -222,7 +222,7 @@ export const CountrySelectAll: Story = {
 export const ControlledState: Story = {
   name: "Controlled State",
   render: () => {
-    const [value, setValue] = useState<typeof simpleOptions[0] | null>(null);
+    const [value, setValue] = useState<(typeof simpleOptions)[0] | null>(null);
 
     return (
       <div style={{ width: 400 }}>
@@ -247,7 +247,7 @@ export const ControlledState: Story = {
 export const ControlledWithReset: Story = {
   name: "Controlled (With Reset)",
   render: () => {
-    const [value, setValue] = useState<typeof simpleOptions[0] | null>(null);
+    const [value, setValue] = useState<(typeof simpleOptions)[0] | null>(null);
 
     return (
       <div style={{ width: 400 }}>
@@ -448,9 +448,7 @@ export const AsyncLoading: Story = {
       setLoading(true);
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      setOptions(simpleOptions.filter((o) =>
-        o.label.toLowerCase().includes(inputValue.toLowerCase())
-      ));
+      setOptions(simpleOptions.filter((o) => o.label.toLowerCase().includes(inputValue.toLowerCase())));
       setLoading(false);
     };
 
@@ -528,9 +526,7 @@ export const CustomRendering: Story = {
                 {option.description}
               </Typography>
             </Box>
-            {state.selected && (
-              <CheckIcon color="primary" fontSize="small" />
-            )}
+            {state.selected && <CheckIcon color="primary" fontSize="small" />}
           </Box>
         )}
       />

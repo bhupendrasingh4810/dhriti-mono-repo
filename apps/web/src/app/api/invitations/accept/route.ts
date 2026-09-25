@@ -7,10 +7,7 @@ export async function POST(request: NextRequest) {
     const accessToken = request.cookies.get("access_token")?.value;
 
     if (!accessToken) {
-      return NextResponse.json(
-        { error: { message: "Authentication is required." } },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: { message: "Authentication is required." } }, { status: 401 });
     }
 
     const body = await request.json();
@@ -30,9 +27,6 @@ export async function POST(request: NextRequest) {
     const responseBody = await backendResponse.json().catch(() => ({}));
     return NextResponse.json(responseBody, { status: backendResponse.status });
   } catch {
-    return NextResponse.json(
-      { error: { message: "Internal server error" } },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: { message: "Internal server error" } }, { status: 500 });
   }
 }

@@ -123,10 +123,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   // ---------------- Typing ----------------
 
   @SubscribeMessage("typing")
-  async typing(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: TypingEventDto,
-  ): Promise<SocketAck> {
+  async typing(@ConnectedSocket() socket: Socket, @MessageBody() payload: TypingEventDto): Promise<SocketAck> {
     return this.execute(socket, "typing", async (principal, organizationId) => {
       await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId);
       await this.presence.setTyping(organizationId, payload.channelId, principal.userId, payload.isTyping);
@@ -227,7 +224,11 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     this.logger.error("Connect Socket.IO event failed", error instanceof Error ? error.stack : undefined);
     return {
       ok: false,
-      error: { code: ErrorCode.INTERNAL_ERROR, message: "Unable to process Connect event", status: HttpStatus.INTERNAL_SERVER_ERROR },
+      error: {
+        code: ErrorCode.INTERNAL_ERROR,
+        message: "Unable to process Connect event",
+        status: HttpStatus.INTERNAL_SERVER_ERROR,
+      },
     };
   }
 }

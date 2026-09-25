@@ -93,28 +93,30 @@ export class SearchService {
     content: string;
     authorId?: string;
   }): Promise<void> {
-    await this.prisma.searchIndex.upsert({
-      where: {
-        organizationId_entityType_entityId: {
+    await this.prisma.searchIndex
+      .upsert({
+        where: {
+          organizationId_entityType_entityId: {
+            organizationId: params.organizationId,
+            entityType: params.entityType,
+            entityId: params.entityId,
+          },
+        },
+        create: {
           organizationId: params.organizationId,
           entityType: params.entityType,
           entityId: params.entityId,
+          title: params.title,
+          content: params.content,
+          authorId: params.authorId ?? null,
         },
-      },
-      create: {
-        organizationId: params.organizationId,
-        entityType: params.entityType,
-        entityId: params.entityId,
-        title: params.title,
-        content: params.content,
-        authorId: params.authorId ?? null,
-      },
-      update: {
-        title: params.title,
-        content: params.content,
-        authorId: params.authorId ?? null,
-      },
-    }).catch(() => this.upsertFallback(params));
+        update: {
+          title: params.title,
+          content: params.content,
+          authorId: params.authorId ?? null,
+        },
+      })
+      .catch(() => this.upsertFallback(params));
   }
 
   async remove(organizationId: string, entityType: SearchEntityType, entityId: string): Promise<void> {

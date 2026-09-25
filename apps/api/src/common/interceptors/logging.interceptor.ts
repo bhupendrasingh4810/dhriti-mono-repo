@@ -1,12 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  Logger,
-  NestInterceptor,
-} from "@nestjs/common";
+import { CallHandler, ExecutionContext, Injectable, Logger, NestInterceptor } from "@nestjs/common";
 import { ClsService } from "nestjs-cls";
 import type { Request, Response } from "express";
 import { Observable, tap } from "rxjs";
@@ -45,8 +39,7 @@ export class LoggingInterceptor implements NestInterceptor {
     const request = context.switchToHttp().getRequest<Request>();
     const response = context.switchToHttp().getResponse<Response>();
 
-    const correlationId =
-      (request.headers["x-correlation-id"] as string | undefined) ?? randomUUID();
+    const correlationId = (request.headers["x-correlation-id"] as string | undefined) ?? randomUUID();
     this.cls.set("correlationId", correlationId);
     response.setHeader("x-correlation-id", correlationId);
 
@@ -55,19 +48,12 @@ export class LoggingInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: () => this.log(request, response, correlationId, startedAt, null),
-        error: (error: unknown) =>
-          this.log(request, response, correlationId, startedAt, error),
+        error: (error: unknown) => this.log(request, response, correlationId, startedAt, error),
       }),
     );
   }
 
-  private log(
-    request: Request,
-    response: Response,
-    correlationId: string,
-    startedAt: bigint,
-    error: unknown,
-  ): void {
+  private log(request: Request, response: Response, correlationId: string, startedAt: bigint, error: unknown): void {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
     const user = (request as Request & { user?: { userId?: string; organizationId?: string } }).user;
 
@@ -84,9 +70,7 @@ export class LoggingInterceptor implements NestInterceptor {
       userAgent: request.headers["user-agent"] ?? null,
       query: mask(request.query),
       timestamp: new Date().toISOString(),
-      ...(error
-        ? { error: error instanceof Error ? error.message : String(error) }
-        : {}),
+      ...(error ? { error: error instanceof Error ? error.message : String(error) } : {}),
     };
 
     const line = JSON.stringify(entry);

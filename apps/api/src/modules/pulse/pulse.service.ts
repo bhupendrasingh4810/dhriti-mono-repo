@@ -243,12 +243,7 @@ export class PulseService {
 
   // ---------------- RSVP ----------------
 
-  async rsvp(
-    organizationId: string,
-    eventId: string,
-    userId: string,
-    status: RsvpStatus,
-  ): Promise<EventAttendee> {
+  async rsvp(organizationId: string, eventId: string, userId: string, status: RsvpStatus): Promise<EventAttendee> {
     await this.getEvent(organizationId, eventId);
     const attendee = await this.prisma.eventAttendee.findUnique({
       where: { eventId_userId: { eventId, userId } },
@@ -263,12 +258,7 @@ export class PulseService {
     });
   }
 
-  async addAttendee(
-    organizationId: string,
-    eventId: string,
-    actorUserId: string,
-    userId: string,
-  ): Promise<void> {
+  async addAttendee(organizationId: string, eventId: string, actorUserId: string, userId: string): Promise<void> {
     const event = await this.getEvent(organizationId, eventId);
     if (event.createdById !== actorUserId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the organizer can add attendees", HttpStatus.FORBIDDEN);
@@ -282,12 +272,7 @@ export class PulseService {
     });
   }
 
-  async removeAttendee(
-    organizationId: string,
-    eventId: string,
-    actorUserId: string,
-    userId: string,
-  ): Promise<void> {
+  async removeAttendee(organizationId: string, eventId: string, actorUserId: string, userId: string): Promise<void> {
     const event = await this.getEvent(organizationId, eventId);
     if (event.createdById !== actorUserId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the organizer can remove attendees", HttpStatus.FORBIDDEN);

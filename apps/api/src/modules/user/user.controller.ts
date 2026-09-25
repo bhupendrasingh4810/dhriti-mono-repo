@@ -1,15 +1,4 @@
-import {
-	Body,
-	Controller,
-	Delete,
-	Get,
-	HttpCode,
-	HttpStatus,
-	Param,
-	Patch,
-	Post,
-	UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import { PlatformRoles } from "../../common/decorators/platform-roles.decorator";
@@ -23,40 +12,36 @@ import { UserService, type UserDetail, type UserSummary } from "./user.service";
 @PlatformRoles("SUPER_ADMIN", "SUPPORT", "SECURITY")
 @Controller("users")
 export class UserController {
-	constructor(private readonly users: UserService) {}
+  constructor(private readonly users: UserService) {}
 
-	@Get()
-	@ApiOperation({ summary: "List active users" })
-	async findAll(): Promise<UserSummary[]> {
-		return this.users.findAllActiveUsers();
-	}
+  @Get()
+  @ApiOperation({ summary: "List active users" })
+  async findAll(): Promise<UserSummary[]> {
+    return this.users.findAllActiveUsers();
+  }
 
-	@Post()
-	@ApiOperation({ summary: "Provision a pending user account" })
-	async create(@Body() dto: CreateUserDto): Promise<UserDetail> {
-		return this.users.createUser(dto);
-	}
+  @Post()
+  @ApiOperation({ summary: "Provision a pending user account" })
+  async create(@Body() dto: CreateUserDto): Promise<UserDetail> {
+    return this.users.createUser(dto);
+  }
 
-	@Get(":userId")
-	@ApiOperation({ summary: "Get an active user's account details" })
-	async findOne(@Param("userId") userId: string): Promise<UserDetail> {
-		return this.users.findActiveUserById(userId);
-	}
+  @Get(":userId")
+  @ApiOperation({ summary: "Get an active user's account details" })
+  async findOne(@Param("userId") userId: string): Promise<UserDetail> {
+    return this.users.findActiveUserById(userId);
+  }
 
-	@Patch(":userId")
-	@ApiOperation({ summary: "Update a user's account details" })
-	async update(
-		@Param("userId") userId: string,
-		@Body() dto: UpdateUserDto,
-	): Promise<UserDetail> {
-		return this.users.updateUser(userId, dto);
-	}
+  @Patch(":userId")
+  @ApiOperation({ summary: "Update a user's account details" })
+  async update(@Param("userId") userId: string, @Body() dto: UpdateUserDto): Promise<UserDetail> {
+    return this.users.updateUser(userId, dto);
+  }
 
-	@Delete(":userId")
-	@HttpCode(HttpStatus.NO_CONTENT)
-	@ApiOperation({ summary: "Soft-delete a user and revoke active sessions" })
-	async remove(@Param("userId") userId: string): Promise<void> {
-		return this.users.deleteUser(userId);
-	}
-
+  @Delete(":userId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Soft-delete a user and revoke active sessions" })
+  async remove(@Param("userId") userId: string): Promise<void> {
+    return this.users.deleteUser(userId);
+  }
 }

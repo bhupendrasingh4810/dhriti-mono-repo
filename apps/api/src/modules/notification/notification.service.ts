@@ -16,7 +16,7 @@ export class NotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
-  ) { }
+  ) {}
 
   // ---------------- In-app notifications ----------------
 
@@ -38,7 +38,19 @@ export class NotificationService {
         await this.sendEmail(organizationId, dto);
       }
       // Return a non-persisted placeholder shape for the caller.
-      return { id: "", organizationId, userId: dto.userId, type: dto.type, title: dto.title, body: dto.body ?? null, linkUrl: dto.linkUrl ?? null, metadata: null, isRead: false, readAt: null, createdAt: new Date() };
+      return {
+        id: "",
+        organizationId,
+        userId: dto.userId,
+        type: dto.type,
+        title: dto.title,
+        body: dto.body ?? null,
+        linkUrl: dto.linkUrl ?? null,
+        metadata: null,
+        isRead: false,
+        readAt: null,
+        createdAt: new Date(),
+      };
     }
 
     const notification = await this.prisma.notification.create({
@@ -58,11 +70,7 @@ export class NotificationService {
     return notification;
   }
 
-  async list(
-    organizationId: string,
-    userId: string,
-    query: ListNotificationsQueryDto,
-  ): Promise<NotificationPage> {
+  async list(organizationId: string, userId: string, query: ListNotificationsQueryDto): Promise<NotificationPage> {
     const limit = Math.min(query.limit ?? 50, 200);
     const notifications = await this.prisma.notification.findMany({
       where: {
