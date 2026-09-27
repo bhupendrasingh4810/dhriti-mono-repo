@@ -22,7 +22,7 @@ export class BlogPostController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Get("admin")
   @ApiOperation({ summary: "List all blog posts including unpublished (admin)" })
   async listAll() {
@@ -38,7 +38,7 @@ export class BlogPostController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post()
   @ApiOperation({ summary: "Create a blog post (admin)" })
   async create(@Body() dto: CreateBlogPostDto) {
@@ -47,7 +47,7 @@ export class BlogPostController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Patch(":id")
   @ApiOperation({ summary: "Update a blog post (admin)" })
   async update(@Param("id") id: string, @Body() dto: UpdateBlogPostDto) {
@@ -56,7 +56,7 @@ export class BlogPostController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post(":id/publish")
   @ApiOperation({ summary: "Publish a blog post (admin)" })
   async publish(@Param("id") id: string) {
@@ -65,7 +65,7 @@ export class BlogPostController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post(":id/unpublish")
   @ApiOperation({ summary: "Unpublish a blog post (admin)" })
   async unpublish(@Param("id") id: string) {
@@ -74,7 +74,7 @@ export class BlogPostController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Delete(":id")
   @ApiOperation({ summary: "Delete a blog post (admin)" })
   async remove(@Param("id") id: string): Promise<void> {

@@ -8,6 +8,7 @@ import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import type {
   CreateProductDto,
+  CreatePlatformOrganizationDto,
   CreateTicketDto,
   UpdateProductDto,
   UpdateSubscriptionDto,
@@ -40,8 +41,8 @@ export class PlatformService {
   async dashboard(): Promise<PlatformDashboard> {
     const [totalOrgs, suspendedOrgs, totalUsers, activeUsers, mfaUsers, subs, products, openTickets, escalatedTickets] =
       await Promise.all([
-        this.prisma.organization.count(),
-        this.prisma.organization.count({ where: { deletedAt: { not: null } } }),
+          this.prisma.organization.count({ where: { deletedAt: null } }),
+          this.prisma.subscription.count({ where: { organization: { deletedAt: null }, status: "SUSPENDED" } }),
         this.prisma.user.count({ where: { deletedAt: null } }),
         this.prisma.user.count({ where: { deletedAt: null, status: "ACTIVE" } }),
         this.prisma.userAuth.count({ where: { mfaEnabled: true, user: { deletedAt: null } } }),
@@ -76,12 +77,55 @@ export class PlatformService {
    */
   async listOrganizations(): Promise<unknown[]> {
     return this.prisma.organization.findMany({
+      where: { deletedAt: null },
       include: {
         _count: { select: { members: true } },
         subscription: { select: { plan: true, status: true, seats: true } },
       },
       orderBy: { createdAt: "desc" },
     });
+  }
+
+  async createOrganization(actorUserId: string, dto: CreatePlatformOrganizationDto) {
+    const admin = await this.prisma.user.findUnique({
+      where: { email: dto.adminEmail.toLowerCase() },
+      select: { id: true, deletedAt: true },
+    });
+    if (!admin || admin.deletedAt) {
+      throw new AppError(
+        ErrorCode.USER_NOT_FOUND,
+        "The administrator must be an active, registered user",
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    const slug = await this.nextOrganizationSlug(dto.name);
+    const organization = await this.prisma.$transaction((transaction) =>
+      transaction.organization.create({
+        data: {
+          name: dto.name.trim(),
+          slug,
+          members: { create: { userId: admin.id, status: "ACTIVE", isOwner: true } },
+          subscription: {
+            create: { plan: dto.plan, status: "TRIALING", seats: dto.seats },
+          },
+        },
+        include: {
+          _count: { select: { members: true } },
+          subscription: { select: { plan: true, status: true, seats: true } },
+        },
+      }),
+    );
+
+    await this.audit.record({
+      action: "control.org.created",
+      organizationId: organization.id,
+      actorUserId,
+      resourceType: "Organization",
+      resourceId: organization.id,
+      metadata: { adminUserId: admin.id, plan: dto.plan },
+    });
+    return organization;
   }
 
   /**
@@ -97,9 +141,10 @@ export class PlatformService {
       throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Organization not found", HttpStatus.NOT_FOUND);
     }
 
-    await this.prisma.organization.update({
-      where: { id: organizationId },
-      data: { deletedAt: suspended ? new Date() : null },
+      await this.prisma.subscription.upsert({
+        where: { organizationId },
+        create: { organizationId, plan: "FREE", seats: 5, status: suspended ? "SUSPENDED" : "ACTIVE" },
+        update: { status: suspended ? "SUSPENDED" : "ACTIVE" },
     });
 
     await this.audit.record({
@@ -109,6 +154,39 @@ export class PlatformService {
       resourceType: "Organization",
       resourceId: organizationId,
     });
+  }
+
+  async deleteOrganization(organizationId: string, actorUserId: string): Promise<void> {
+    const organization = await this.prisma.organization.findUnique({ where: { id: organizationId } });
+    if (!organization || organization.deletedAt) {
+      throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Organization not found", HttpStatus.NOT_FOUND);
+    }
+
+    await this.prisma.organization.update({ where: { id: organizationId }, data: { deletedAt: new Date() } });
+    await this.audit.record({
+      action: "control.org.deleted",
+      organizationId,
+      actorUserId,
+      resourceType: "Organization",
+      resourceId: organizationId,
+    });
+  }
+
+  private async nextOrganizationSlug(name: string): Promise<string> {
+    const base = name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 56) || "organization";
+
+    for (let suffix = 0; ; suffix += 1) {
+      const slug = suffix === 0 ? base : `${base}-${suffix}`;
+      const existing = await this.prisma.organization.findUnique({ where: { slug }, select: { id: true } });
+      if (!existing) {
+        return slug;
+      }
+    }
   }
 
   // ---------------- Users ----------------

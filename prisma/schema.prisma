@@ -240,21 +240,24 @@ enum CadenceSessionType {
   CHECKIN
 }
 
-// Legacy authorization enums are retained during the data migration. New
-// authorization is represented by PlatformRole and Permission models.
+// Legacy authorization enum retained for compatibility with UserAuth.platformRole.
+// New authorization is represented by PlatformRole and Permission models.
 enum LegacyPlatformRole {
-  SUPER_ADMIN
+  PLATFORM_ADMIN
+  ADMIN
+  PLATFORM_USER
   SUPPORT
   BILLING
   SECURITY
   ENGINEERING
+  ACCOUNTS
 }
 
 // Deprecated after backfill to Subscription.planId; retained for legacy API and data compatibility.
 enum SubscriptionPlan {
   FREE
-  STARTER
-  PRO
+  STANDARD
+  PREMIUM
   ENTERPRISE
 }
 

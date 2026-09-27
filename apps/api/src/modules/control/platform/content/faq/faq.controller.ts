@@ -22,7 +22,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Get("groups/admin")
   @ApiOperation({ summary: "List FAQ groups including draft items (admin)" })
   async listAdminGroups() {
@@ -31,7 +31,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post("groups")
   @ApiOperation({ summary: "Create a FAQ group (admin)" })
   async createGroup(@Body() dto: CreateFaqGroupDto) {
@@ -40,7 +40,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Patch("groups/:groupId")
   @ApiOperation({ summary: "Update a FAQ group (admin)" })
   async updateGroup(@Param("groupId") groupId: string, @Body() dto: UpdateFaqGroupDto) {
@@ -49,7 +49,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Delete("groups/:groupId")
   @ApiOperation({ summary: "Delete a FAQ group and its items (admin)" })
   async removeGroup(@Param("groupId") groupId: string): Promise<void> {
@@ -58,7 +58,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post("groups/:groupId/items")
   @ApiOperation({ summary: "Create a FAQ item within a group (admin)" })
   async createItem(@Param("groupId") groupId: string, @Body() dto: CreateFaqItemDto) {
@@ -67,7 +67,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Patch("items/:itemId")
   @ApiOperation({ summary: "Update a FAQ item (admin)" })
   async updateItem(@Param("itemId") itemId: string, @Body() dto: UpdateFaqItemDto) {
@@ -76,7 +76,7 @@ export class FaqController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Delete("items/:itemId")
   @ApiOperation({ summary: "Delete a FAQ item (admin)" })
   async removeItem(@Param("itemId") itemId: string): Promise<void> {

@@ -1,10 +1,29 @@
 import { jsonRequest, pathSegment, tenantJsonRequest, tenantRequest } from "@/services/request.service";
 import type { ApiEntity } from "@/services/service-types";
 type Input = Record<string, unknown>;
+export interface PlatformOrganization extends ApiEntity {
+  name: string;
+  slug: string;
+  deletedAt: string | null;
+  _count: { members: number };
+  subscription: { plan: string; status: string; seats: number } | null;
+}
+
+export interface CreatePlatformOrganizationInput {
+  name: string;
+  adminEmail: string;
+  plan: "FREE" | "STANDARD" | "PREMIUM" | "ENTERPRISE";
+  seats: number;
+}
+
 const platform = "/api/control/platform";
 export const controlPlatformService = {
   dashboard: () => tenantRequest<ApiEntity>("", `${platform}/dashboard`),
-  listOrganizations: () => tenantRequest<ApiEntity[]>("", `${platform}/organizations`),
+  listOrganizations: () => tenantRequest<PlatformOrganization[]>("", `${platform}/organizations`),
+  createOrganization: (input: CreatePlatformOrganizationInput) =>
+    jsonRequest<PlatformOrganization, CreatePlatformOrganizationInput>(`${platform}/organizations`, "POST", input),
+  deleteOrganization: (organizationId: string) =>
+    tenantRequest<void>("", `${platform}/organizations/${pathSegment(organizationId)}`, { method: "DELETE" }),
   listUsers: () => tenantRequest<ApiEntity[]>("", `${platform}/users`),
   setOrganizationSuspended: (organizationId: string, suspended: boolean) =>
     tenantRequest<void>(

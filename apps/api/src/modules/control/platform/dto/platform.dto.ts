@@ -1,6 +1,28 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
+import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 import { SubscriptionPlan, SubscriptionStatus, SupportTicketPriority, SupportTicketStatus } from "@prisma/client";
+
+export class CreatePlatformOrganizationDto {
+  @ApiProperty({ example: "Acme Technologies" })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  name!: string;
+
+  @ApiProperty({ example: "admin@acme.example" })
+  @IsEmail()
+  adminEmail!: string;
+
+  @ApiProperty({ enum: SubscriptionPlan, default: "FREE" })
+  @IsEnum(SubscriptionPlan)
+  plan!: SubscriptionPlan;
+
+  @ApiProperty({ minimum: 1, maximum: 100000 })
+  @IsInt()
+  @Min(1)
+  @Max(100000)
+  seats!: number;
+}
 
 export class CreateProductDto {
   @ApiProperty({ example: "connect" })

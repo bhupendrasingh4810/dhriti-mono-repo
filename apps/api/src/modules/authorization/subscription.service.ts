@@ -251,7 +251,7 @@ export class SubscriptionService {
 
   private legacyPlan(planKey: string): SubscriptionPlan {
     const value = planKey.toUpperCase();
-    return value === "STARTER" || value === "PRO" || value === "ENTERPRISE" ? value : "FREE";
+    return value === "STANDARD" || value === "PREMIUM" || value === "ENTERPRISE" ? value : "FREE";
   }
 
   private readIdempotencyRecord<T>(value: unknown, fingerprint: string): T | null {

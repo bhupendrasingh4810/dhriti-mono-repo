@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { controlPlatformService, type PlatformOrganization } from "@/services/control.service";
 
-type Plan = "Free" | "Pro" | "Business" | "Enterprise";
+type Plan = "Free" | "Standard" | "Premium" | "Enterprise";
 type Status = "Active" | "Trial" | "Suspended" | "Churned";
 
 interface Org {
+  id: string;
   name: string;
   plan: Plan;
   seats: string;
@@ -17,8 +19,8 @@ interface Org {
 
 const planColors: Record<Plan, { bg: string; color: string }> = {
   Free: { bg: "#f1f5f9", color: "#475569" },
-  Pro: { bg: "#dbeafe", color: "#1d4ed8" },
-  Business: { bg: "#ede9fe", color: "#6d28d9" },
+  Standard: { bg: "#dbeafe", color: "#1d4ed8" },
+  Premium: { bg: "#ede9fe", color: "#6d28d9" },
   Enterprise: { bg: "#e6f4f2", color: "#036c5f" },
 };
 
@@ -29,62 +31,37 @@ const statusColors: Record<Status, { bg: string; color: string }> = {
   Churned: { bg: "#fee2e2", color: "#991b1b" },
 };
 
-const initialOrgs: Org[] = [
-  {
-    name: "Acme Corporation",
-    plan: "Enterprise",
-    seats: "420/500",
-    status: "Active",
-    created: "Jan 15, 2024",
-    mrr: "$8,400/mo",
-  },
-  {
-    name: "TechFlow Inc",
-    plan: "Business",
-    seats: "85/100",
-    status: "Active",
-    created: "Mar 3, 2024",
-    mrr: "$1,700/mo",
-  },
-  { name: "Globex Corp", plan: "Pro", seats: "32/50", status: "Active", created: "Apr 22, 2024", mrr: "$320/mo" },
-  { name: "Initech", plan: "Free", seats: "8/10", status: "Trial", created: "Jun 1, 2024", mrr: "$0/mo" },
-  {
-    name: "Umbrella Corp",
-    plan: "Enterprise",
-    seats: "650/750",
-    status: "Active",
-    created: "Nov 8, 2023",
-    mrr: "$13,000/mo",
-  },
-  {
-    name: "Stark Industries",
-    plan: "Business",
-    seats: "120/100",
-    status: "Suspended",
-    created: "Feb 14, 2024",
-    mrr: "$2,400/mo",
-  },
-  { name: "Wonka Co", plan: "Pro", seats: "28/50", status: "Active", created: "Jul 19, 2024", mrr: "$280/mo" },
-  { name: "Dunder Mifflin", plan: "Free", seats: "15/20", status: "Trial", created: "Aug 5, 2024", mrr: "$0/mo" },
-  {
-    name: "Cyberdyne Systems",
-    plan: "Enterprise",
-    seats: "890/1000",
-    status: "Active",
-    created: "Sep 12, 2023",
-    mrr: "$17,800/mo",
-  },
-  { name: "Pied Piper", plan: "Business", seats: "45/100", status: "Active", created: "May 30, 2024", mrr: "$900/mo" },
-  {
-    name: "Hooli",
-    plan: "Enterprise",
-    seats: "1200/1500",
-    status: "Active",
-    created: "Jun 2, 2023",
-    mrr: "$24,000/mo",
-  },
-  { name: "Veridian Dynamics", plan: "Pro", seats: "38/50", status: "Churned", created: "Oct 11, 2024", mrr: "$0/mo" },
-];
+const planByApiValue: Record<string, Plan> = {
+  FREE: "Free",
+  STANDARD: "Standard",
+  PREMIUM: "Premium",
+  ENTERPRISE: "Enterprise",
+};
+
+function toOrg(organization: PlatformOrganization): Org {
+  const subscription = organization.subscription;
+  const status: Status = subscription?.status === "SUSPENDED"
+    ? "Suspended"
+    : subscription?.status === "TRIALING"
+      ? "Trial"
+      : subscription?.status === "CANCELLED"
+        ? "Churned"
+        : "Active";
+
+  return {
+    id: organization.id,
+    name: organization.name,
+    plan: planByApiValue[subscription?.plan ?? "FREE"] ?? "Free",
+    seats: `${organization._count.members}/${subscription?.seats ?? 0}`,
+    status,
+    created: new Date(organization.createdAt ?? "").toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    mrr: "--",
+  };
+}
 
 interface AddOrgForm {
   name: string;
@@ -115,20 +92,39 @@ const detailTabs: DetailTab[] = [
 
 export default function OrgsPanel() {
   const { toasts, addToast, removeToast } = useToast();
-  const [orgs, setOrgs] = useState<Org[]>(initialOrgs);
+  const [orgs, setOrgs] = useState<Org[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [filterPlan, setFilterPlan] = useState<Plan | "All">("All");
   const [filterStatus, setFilterStatus] = useState<Status | "All">("All");
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
-  const [openMenu, setOpenMenu] = useState<number | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [modal, setModal] = useState<ModalType>("none");
-  const [targetIdx, setTargetIdx] = useState<number | null>(null);
+  const [targetId, setTargetId] = useState<string | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [detailTab, setDetailTab] = useState("overview");
   const [addForm, setAddForm] = useState<AddOrgForm>({ name: "", plan: "Free", seats: "", email: "" });
   const [addErrors, setAddErrors] = useState<AddOrgErrors>({});
+
+  useEffect(() => {
+    void loadOrganizations();
+  }, []);
+
+  async function loadOrganizations() {
+    setIsLoading(true);
+    try {
+      const organizations = await controlPlatformService.listOrganizations();
+      console.log("Loaded organizations:", organizations);
+      setOrgs(organizations.map(toOrg));
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load organizations", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const filtered = orgs.filter((o) => {
     const matchSearch = o.name.toLowerCase().includes(search.toLowerCase());
@@ -141,18 +137,18 @@ export default function OrgsPanel() {
   const pageCount = Math.ceil(filtered.length / perPage);
   const pageOrgs = filtered.slice(page * perPage, (page + 1) * perPage);
 
-  const toggleSelect = (i: number) => {
+  const toggleSelect = (id: string) => {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(i)) next.delete(i);
-      else next.add(i);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
 
   const toggleAll = () => {
     if (selected.size === pageOrgs.length) setSelected(new Set());
-    else setSelected(new Set(pageOrgs.map((_, i) => page * perPage + i)));
+    else setSelected(new Set(pageOrgs.map((organization) => organization.id)));
   };
 
   const validateAdd = (): boolean => {
@@ -166,57 +162,84 @@ export default function OrgsPanel() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleAddOrg = () => {
+  const handleAddOrg = async () => {
     if (!validateAdd()) return;
-    const newOrg: Org = {
-      name: addForm.name,
-      plan: addForm.plan,
-      seats: `0/${addForm.seats}`,
-      status: "Trial",
-      created: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      mrr: "$0/mo",
-    };
-    setOrgs((prev) => [newOrg, ...prev]);
-    setModal("none");
-    setAddForm({ name: "", plan: "Free", seats: "", email: "" });
-    setAddErrors({});
-    addToast(`Organization "${newOrg.name}" created`, "success");
+    setIsSaving(true);
+    try {
+      const created = await controlPlatformService.createOrganization({
+        name: addForm.name,
+        adminEmail: addForm.email,
+        plan: addForm.plan.toUpperCase() as "FREE" | "STANDARD" | "PREMIUM" | "ENTERPRISE",
+        seats: Number(addForm.seats),
+      });
+      const newOrg = toOrg(created);
+      setOrgs((previous) => [newOrg, ...previous]);
+      setModal("none");
+      setAddForm({ name: "", plan: "Free", seats: "", email: "" });
+      setAddErrors({});
+      addToast(`Organization "${newOrg.name}" created`, "success");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to create organization", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSuspend = () => {
-    if (targetIdx === null) return;
-    const org = orgs[targetIdx];
+  const handleSuspend = async () => {
+    const org = orgs.find((organization) => organization.id === targetId);
+    if (!org) return;
     const newStatus: Status = org.status === "Suspended" ? "Active" : "Suspended";
-    setOrgs((prev) => prev.map((o, i) => (i === targetIdx ? { ...o, status: newStatus } : o)));
-    setModal("none");
-    setSuspendReason("");
-    addToast(
-      `${org.name} ${newStatus === "Suspended" ? "suspended" : "reactivated"}`,
-      newStatus === "Suspended" ? "warning" : "success",
-    );
+    setIsSaving(true);
+    try {
+      await controlPlatformService.setOrganizationSuspended(org.id, newStatus === "Suspended");
+      setOrgs((previous) => previous.map((item) => (item.id === org.id ? { ...item, status: newStatus } : item)));
+      setModal("none");
+      setSuspendReason("");
+      addToast(
+        `${org.name} ${newStatus === "Suspended" ? "suspended" : "reactivated"}`,
+        newStatus === "Suspended" ? "warning" : "success",
+      );
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to update organization", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = () => {
-    if (targetIdx === null || deleteConfirm !== "DELETE") return;
-    const name = orgs[targetIdx].name;
-    setOrgs((prev) => prev.filter((_, i) => i !== targetIdx));
-    setModal("none");
-    setDeleteConfirm("");
-    addToast(`Organization "${name}" deleted`, "error");
+  const handleDelete = async () => {
+    const org = orgs.find((organization) => organization.id === targetId);
+    if (!org || deleteConfirm !== "DELETE") return;
+    setIsSaving(true);
+    try {
+      await controlPlatformService.deleteOrganization(org.id);
+      setOrgs((previous) => previous.filter((item) => item.id !== org.id));
+      setSelected((previous) => {
+        const next = new Set(previous);
+        next.delete(org.id);
+        return next;
+      });
+      setModal("none");
+      setDeleteConfirm("");
+      addToast(`Organization "${org.name}" deleted`, "error");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to delete organization", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const openSuspend = (i: number) => {
-    setTargetIdx(i);
+  const openSuspend = (id: string) => {
+    setTargetId(id);
     setModal("suspend");
     setOpenMenu(null);
   };
-  const openDelete = (i: number) => {
-    setTargetIdx(i);
+  const openDelete = (id: string) => {
+    setTargetId(id);
     setModal("delete");
     setOpenMenu(null);
   };
-  const openDetail = (i: number) => {
-    setTargetIdx(i);
+  const openDetail = (id: string) => {
+    setTargetId(id);
     setModal("detail");
     setDetailTab("overview");
     setOpenMenu(null);
@@ -224,12 +247,12 @@ export default function OrgsPanel() {
 
   const closeModal = () => {
     setModal("none");
-    setTargetIdx(null);
+    setTargetId(null);
     setDeleteConfirm("");
     setSuspendReason("");
   };
 
-  const targetOrg = targetIdx !== null ? orgs[targetIdx] : null;
+  const targetOrg = orgs.find((organization) => organization.id === targetId) ?? null;
 
   return (
     <div>
@@ -310,7 +333,7 @@ export default function OrgsPanel() {
           }}
         >
           <option value="All">All Plans</option>
-          {(["Free", "Pro", "Business", "Enterprise"] as Plan[]).map((p) => (
+            {(["Free", "Standard", "Premium", "Enterprise"] as Plan[]).map((p) => (
             <option key={p} value={p}>
               {p}
             </option>
@@ -380,8 +403,7 @@ export default function OrgsPanel() {
             </tr>
           </thead>
           <tbody>
-            {pageOrgs.map((org, ri) => {
-              const globalIdx = page * perPage + ri;
+            {pageOrgs.map((org) => {
               const pc = planColors[org.plan];
               const sc = statusColors[org.status];
               const initials = org.name
@@ -392,17 +414,17 @@ export default function OrgsPanel() {
                 .toUpperCase();
               return (
                 <tr
-                  key={globalIdx}
+                  key={org.id}
                   style={{
                     borderTop: "1px solid #f1f5f9",
-                    backgroundColor: selected.has(globalIdx) ? "#f0fdf4" : "white",
+                    backgroundColor: selected.has(org.id) ? "#f0fdf4" : "white",
                   }}
                 >
                   <td style={{ padding: "12px 16px" }}>
                     <input
                       type="checkbox"
-                      checked={selected.has(globalIdx)}
-                      onChange={() => toggleSelect(globalIdx)}
+                      checked={selected.has(org.id)}
+                      onChange={() => toggleSelect(org.id)}
                       style={{ cursor: "pointer" }}
                     />
                   </td>
@@ -461,7 +483,7 @@ export default function OrgsPanel() {
                   <td style={{ padding: "12px 16px", fontSize: 13, color: "#475569", fontWeight: 500 }}>{org.mrr}</td>
                   <td style={{ padding: "12px 16px", position: "relative" }}>
                     <button
-                      onClick={() => setOpenMenu(openMenu === globalIdx ? null : globalIdx)}
+                      onClick={() => setOpenMenu(openMenu === org.id ? null : org.id)}
                       style={{
                         padding: "5px 10px",
                         borderRadius: 6,
@@ -474,7 +496,7 @@ export default function OrgsPanel() {
                     >
                       •••
                     </button>
-                    {openMenu === globalIdx && (
+                    {openMenu === org.id && (
                       <div
                         style={{
                           position: "absolute",
@@ -490,13 +512,13 @@ export default function OrgsPanel() {
                         }}
                       >
                         {[
-                          { label: "View Details", action: () => openDetail(globalIdx), color: "#0f172a" },
+                          { label: "View Details", action: () => openDetail(org.id), color: "#0f172a" },
                           {
                             label: org.status === "Suspended" ? "Reactivate" : "Suspend",
-                            action: () => openSuspend(globalIdx),
+                            action: () => openSuspend(org.id),
                             color: "#d97706",
                           },
-                          { label: "Delete", action: () => openDelete(globalIdx), color: "#dc2626" },
+                          { label: "Delete", action: () => openDelete(org.id), color: "#dc2626" },
                         ].map((item) => (
                           <button
                             key={item.label}
@@ -687,7 +709,7 @@ export default function OrgsPanel() {
                     backgroundColor: "white",
                   }}
                 >
-                  {(["Free", "Pro", "Business", "Enterprise"] as Plan[]).map((p) => (
+                  {(["Free", "Standard", "Premium", "Enterprise"] as Plan[]).map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>

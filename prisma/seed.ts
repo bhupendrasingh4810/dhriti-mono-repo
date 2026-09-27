@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type LegacyPlatformRole } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -17,7 +17,7 @@ async function main(): Promise<void> {
     upsertUser("priya@acme.com", "Priya Singh", passwordHash),
     upsertUser("marcus@acme.com", "Marcus Chen", passwordHash),
     upsertUser("elena@acme.com", "Elena Rodriguez", passwordHash),
-    upsertUser("admin@dhriti.dev", "Platform Admin", passwordHash, "SUPER_ADMIN"),
+    upsertUser("admin@dhriti.dev", "Platform Admin", passwordHash, "PLATFORM_ADMIN"),
   ]);
   const additionalUsers = await Promise.all(
     Array.from({ length: 5 }, (_, index) => {
@@ -185,11 +185,14 @@ async function main(): Promise<void> {
   );
 
   const legacyPlatformRoles = [
-    { legacyRole: "SUPER_ADMIN", key: "super_admin", name: "Super administrator" },
+    { legacyRole: "PLATFORM_ADMIN", key: "platform_admin", name: "Platform administrator" },
+    { legacyRole: "ADMIN", key: "admin", name: "Administrator" },
+    { legacyRole: "PLATFORM_USER", key: "platform_user", name: "Platform user" },
     { legacyRole: "SUPPORT", key: "support", name: "Support" },
     { legacyRole: "BILLING", key: "billing", name: "Billing" },
     { legacyRole: "SECURITY", key: "security", name: "Security" },
     { legacyRole: "ENGINEERING", key: "engineering", name: "Engineering" },
+    { legacyRole: "ACCOUNTS", key: "accounts", name: "Accounts" },
   ] as const;
   const platformRoles = new Map<string, { id: string }>();
   for (const role of legacyPlatformRoles) {
@@ -200,8 +203,8 @@ async function main(): Promise<void> {
     });
     platformRoles.set(role.legacyRole, platformRole);
   }
-  const platformAdminRole = platformRoles.get("SUPER_ADMIN");
-  if (!platformAdminRole) throw new Error("Super administrator platform role is missing");
+  const platformAdminRole = platformRoles.get("PLATFORM_ADMIN");
+  if (!platformAdminRole) throw new Error("Platform administrator role is missing");
   await prisma.platformRolePermission.createMany({
     data: permissions.map((permission) => ({
       platformRoleId: platformAdminRole.id,
@@ -231,8 +234,8 @@ async function main(): Promise<void> {
 
   const legacyPlans = [
     { legacyPlan: "FREE", key: "free", name: "Free" },
-    { legacyPlan: "STARTER", key: "starter", name: "Starter" },
-    { legacyPlan: "PRO", key: "pro", name: "Pro" },
+    { legacyPlan: "STANDARD", key: "standard", name: "Standard" },
+    { legacyPlan: "PREMIUM", key: "premium", name: "Premium" },
     { legacyPlan: "ENTERPRISE", key: "enterprise", name: "Enterprise" },
   ] as const;
   const plansByLegacyPlan = new Map<string, { id: string }>();
@@ -244,8 +247,8 @@ async function main(): Promise<void> {
     });
     plansByLegacyPlan.set(plan.legacyPlan, record);
   }
-  const proPlan = plansByLegacyPlan.get("PRO");
-  if (!proPlan) throw new Error("Pro plan is missing");
+  const premiumPlan = plansByLegacyPlan.get("PREMIUM");
+  if (!premiumPlan) throw new Error("Premium plan is missing");
   const planEntitlements = [
     { key: "connect.enabled", name: "Connect", kind: "FEATURE" as const, enabled: true },
     { key: "flow.enabled", name: "Flow", kind: "FEATURE" as const, enabled: true },
@@ -265,10 +268,10 @@ async function main(): Promise<void> {
       create: { key: item.key, name: item.name, kind: item.kind },
     });
     await prisma.planEntitlement.upsert({
-      where: { planId_entitlementId: { planId: proPlan.id, entitlementId: entitlement.id } },
+      where: { planId_entitlementId: { planId: premiumPlan.id, entitlementId: entitlement.id } },
       update: { enabled: item.enabled ?? true, value: item.value ?? null },
       create: {
-        planId: proPlan.id,
+        planId: premiumPlan.id,
         entitlementId: entitlement.id,
         enabled: item.enabled ?? true,
         value: item.value ?? null,
@@ -321,11 +324,11 @@ async function main(): Promise<void> {
 
   await prisma.subscription.upsert({
     where: { organizationId: org.id },
-    update: { plan: "PRO", planId: proPlan.id, status: "ACTIVE", seats: 60 },
+    update: { plan: "PREMIUM", planId: premiumPlan.id, status: "ACTIVE", seats: 60 },
     create: {
       organizationId: org.id,
-      plan: "PRO",
-      planId: proPlan.id,
+      plan: "PREMIUM",
+      planId: premiumPlan.id,
       status: "ACTIVE",
       seats: 60,
       currentPeriodEnd: new Date("2026-10-01T00:00:00.000Z"),
@@ -1008,11 +1011,15 @@ async function main(): Promise<void> {
   }
 
   // ---------- HR, support, and operational records ----------
-  const [bobHr, priyaHr] = await Promise.all([
+  const legacyHrFixtures = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT to_regclass('public.attendance_records') IS NOT NULL AS "exists"
+  `;
+  if (legacyHrFixtures[0]?.exists) {
+    const [bobHr, priyaHr] = await Promise.all([
     prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: bob.id } }),
     prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: priya.id } }),
   ]);
-  const attendanceDate = new Date("2026-09-18T00:00:00.000Z");
+    const attendanceDate = new Date("2026-09-18T00:00:00.000Z");
   const attendance = await prisma.attendanceRecord.findFirst({ where: { userId: bobHr.id, date: attendanceDate } });
   if (!attendance) {
     await prisma.attendanceRecord.create({
@@ -1082,10 +1089,10 @@ async function main(): Promise<void> {
       location: "Bengaluru",
     },
   });
-  const insurance = await prisma.healthInsurance.findFirst({
+    const insurance = await prisma.healthInsurance.findFirst({
     where: { organizationId: org.id, userId: bobHr.id, provider: "Acme Health" },
   });
-  if (!insurance) {
+    if (!insurance) {
     await prisma.healthInsurance.create({
       data: {
         organizationId: org.id,
@@ -1098,6 +1105,7 @@ async function main(): Promise<void> {
         isActive: true,
       },
     });
+    }
   }
 
   const supportTicket = await prisma.supportTicket.findFirst({
@@ -1171,30 +1179,40 @@ async function main(): Promise<void> {
       },
     });
   }
-  await prisma.jobPost.upsert({
-    where: { slug: "senior-platform-engineer" },
-    update: { isPublished: true },
-    create: {
-      slug: "senior-platform-engineer",
-      title: "Senior Platform Engineer",
-      description: "Build durable platform services for a growing work OS.",
-      department: "Engineering",
-      location: "Bengaluru / Remote",
-      employmentType: "Full-time",
-      isPublished: true,
-      publishedAt: new Date("2026-09-10T00:00:00.000Z"),
-    },
-  });
+  const jobPosts = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT to_regclass('public.job_posts') IS NOT NULL AS "exists"
+  `;
+  if (jobPosts[0]?.exists) {
+    await prisma.jobPost.upsert({
+      where: { slug: "senior-platform-engineer" },
+      update: { isPublished: true },
+      create: {
+        slug: "senior-platform-engineer",
+        title: "Senior Platform Engineer",
+        description: "Build durable platform services for a growing work OS.",
+        department: "Engineering",
+        location: "Bengaluru / Remote",
+        employmentType: "Full-time",
+        isPublished: true,
+        publishedAt: new Date("2026-09-10T00:00:00.000Z"),
+      },
+    });
+  }
 
   console.log("Seed complete.");
   console.log(`  Login: alice@acme.com / ${PASSWORD} (ORG_ADMIN)`);
   console.log(`         bob@acme.com  / ${PASSWORD} (ADMIN)`);
   console.log(`         priya@acme.com / ${PASSWORD} (MEMBER)`);
-  console.log(`         admin@dhriti.dev / ${PASSWORD} (platform SUPER_ADMIN)`);
+  console.log(`         admin@dhriti.dev / ${PASSWORD} (platform PLATFORM_ADMIN)`);
   console.log(`  Org slug: acme  (id=${org.id})`);
 }
 
 async function backfillLegacyHrmsRecords(): Promise<void> {
+  const legacyTables = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT to_regclass('public.attendance_records') IS NOT NULL AS "exists"
+  `;
+  if (!legacyTables[0]?.exists) return;
+
   const [profiles, employees] = await Promise.all([
     prisma.userHRMSProfile.findMany({ select: { id: true, userId: true } }),
     prisma.hrmsEmployee.findMany({
@@ -1424,22 +1442,22 @@ async function upsertUser(
   email: string,
   name: string,
   passwordHash: string,
-  role: "SUPER_ADMIN" | "ORG_ADMIN" | "ADMIN" | "EMPLOYEE" = "EMPLOYEE",
+  role: "PLATFORM_ADMIN" | "ORG_ADMIN" | "ADMIN" | "EMPLOYEE" = "EMPLOYEE",
 ) {
   return prisma.user.upsert({
     where: { email },
-    update: { name, status: "ACTIVE", role: role === "SUPER_ADMIN" ? "PLATFORM_ADMIN" : role },
+    update: { name, status: "ACTIVE", role: role === "PLATFORM_ADMIN" ? "PLATFORM_ADMIN" : role },
     create: {
       email,
       name,
       status: "ACTIVE",
-      role: role === "SUPER_ADMIN" ? "PLATFORM_ADMIN" : role,
-      isPlatformUser: role === "SUPER_ADMIN",
+      role: role === "PLATFORM_ADMIN" ? "PLATFORM_ADMIN" : role,
+      isPlatformUser: role === "PLATFORM_ADMIN",
       auth: {
         create: {
           passwordHash,
           emailVerifiedAt: new Date(),
-          ...(role === "SUPER_ADMIN" ? { platformRole: "SUPER_ADMIN" } : {}),
+          ...(role === "PLATFORM_ADMIN" ? { platformRole: "PLATFORM_ADMIN" as LegacyPlatformRole } : {}),
         },
       },
     },

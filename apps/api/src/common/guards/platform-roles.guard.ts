@@ -1,10 +1,10 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import type { Request } from "express";
-import type { LegacyPlatformRole } from "@prisma/client";
+import type { LegacyPlatformRole, UserRole } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
-import { PLATFORM_ROLES_KEY } from "../decorators/platform-roles.decorator";
+import { PLATFORM_ROLES_KEY, type PlatformRoleKey } from "../decorators/platform-roles.decorator";
 import type { AuthenticatedUser } from "../decorators/current-user.decorator";
 
 interface PlatformRequest extends Request {
@@ -20,7 +20,7 @@ export class PlatformRolesGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<LegacyPlatformRole[] | undefined>(PLATFORM_ROLES_KEY, [
+    const required = this.reflector.getAllAndOverride<PlatformRoleKey[] | undefined>(PLATFORM_ROLES_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
@@ -48,10 +48,15 @@ export class PlatformRolesGuard implements CanActivate {
 
     const record = await this.prisma.userAuth.findUnique({
       where: { userId: user.userId },
-      select: { platformRole: true },
+      select: { platformRole: true, user: { select: { role: true } } },
     });
 
-    if (!record?.platformRole || !required.includes(record.platformRole)) {
+    const userRole: UserRole | undefined = record?.user.role;
+    const hasCurrentPlatformAdminRole = userRole === "PLATFORM_ADMIN" && required.includes("PLATFORM_ADMIN");
+    const hasLegacyPlatformRole =
+      record?.platformRole !== undefined && required.includes(record.platformRole as LegacyPlatformRole);
+
+    if (!hasCurrentPlatformAdminRole && !hasLegacyPlatformRole) {
       throw new ForbiddenException({
         code: "FORBIDDEN",
         message: "Platform staff access required",

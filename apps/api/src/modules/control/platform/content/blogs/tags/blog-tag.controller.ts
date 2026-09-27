@@ -29,7 +29,7 @@ export class BlogTagController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post()
   @ApiOperation({ summary: "Create a blog tag (admin)" })
   async create(@Body() dto: CreateBlogTagDto) {
@@ -38,7 +38,7 @@ export class BlogTagController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Patch(":id")
   @ApiOperation({ summary: "Update a blog tag (admin)" })
   async update(@Param("id") id: string, @Body() dto: UpdateBlogTagDto) {
@@ -47,7 +47,7 @@ export class BlogTagController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Delete(":id")
   @ApiOperation({ summary: "Delete a blog tag (admin)" })
   async remove(@Param("id") id: string): Promise<void> {

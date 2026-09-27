@@ -1,0 +1,18 @@
+CREATE TABLE "organization_teams" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "organizationId" UUID NOT NULL, "name" TEXT NOT NULL, "slug" TEXT NOT NULL, "description" TEXT, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, "deletedAt" TIMESTAMP(3), CONSTRAINT "organization_teams_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "organization_team_members" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "teamId" UUID NOT NULL, "userId" UUID NOT NULL, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "organization_team_members_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "organization_departments" ("id" UUID NOT NULL DEFAULT gen_random_uuid(), "organizationId" UUID NOT NULL, "parentId" UUID, "name" TEXT NOT NULL, "code" TEXT, "isActive" BOOLEAN NOT NULL DEFAULT true, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" TIMESTAMP(3) NOT NULL, "deletedAt" TIMESTAMP(3), CONSTRAINT "organization_departments_pkey" PRIMARY KEY ("id"));
+CREATE TABLE "organization_department_members" ("departmentId" UUID NOT NULL, "userId" UUID NOT NULL, "isPrimary" BOOLEAN NOT NULL DEFAULT false, "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "organization_department_members_pkey" PRIMARY KEY ("departmentId", "userId"));
+CREATE UNIQUE INDEX "organization_teams_organizationId_slug_key" ON "organization_teams"("organizationId", "slug");
+CREATE INDEX "organization_teams_organizationId_idx" ON "organization_teams"("organizationId");
+CREATE UNIQUE INDEX "organization_team_members_teamId_userId_key" ON "organization_team_members"("teamId", "userId");
+CREATE INDEX "organization_team_members_userId_idx" ON "organization_team_members"("userId");
+CREATE UNIQUE INDEX "organization_departments_organizationId_name_key" ON "organization_departments"("organizationId", "name");
+CREATE INDEX "organization_departments_organizationId_parentId_idx" ON "organization_departments"("organizationId", "parentId");
+CREATE INDEX "organization_department_members_userId_idx" ON "organization_department_members"("userId");
+ALTER TABLE "organization_teams" ADD CONSTRAINT "organization_teams_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "organization_team_members" ADD CONSTRAINT "organization_team_members_teamId_fkey" FOREIGN KEY ("teamId") REFERENCES "organization_teams"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "organization_team_members" ADD CONSTRAINT "organization_team_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "organization_departments" ADD CONSTRAINT "organization_departments_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "organizations"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "organization_departments" ADD CONSTRAINT "organization_departments_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "organization_departments"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "organization_department_members" ADD CONSTRAINT "organization_department_members_departmentId_fkey" FOREIGN KEY ("departmentId") REFERENCES "organization_departments"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "organization_department_members" ADD CONSTRAINT "organization_department_members_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -16,6 +16,7 @@ const NAVIGATION: Record<ControlMode, Array<{ href: string; label: string; enabl
   platform: [
     { href: "platform/dashboard", label: "Overview", enabled: true },
     { href: "platform/orgs", label: "Organizations", enabled: true },
+    { href: "platform/subscriptions", label: "Subscriptions", enabled: true },
     { href: "platform/users", label: "Platform Users", enabled: true },
     { href: "platform/feature-flags", label: "Feature Flags", enabled: true },
     { href: "platform/security-center", label: "Security Center", enabled: true },

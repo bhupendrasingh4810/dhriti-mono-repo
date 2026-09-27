@@ -2,6 +2,18 @@ model Organization {
   id        String    @id @default(uuid()) @db.Uuid
   name      String
   slug      String    @unique
+  type      OrganizationType?
+
+  countryCode String? // ISO 3166-1 alpha-2: IN, US, GB
+  timezone    String  @default("Asia/Kolkata") // IANA timezone
+  locale      String  @default("en-IN")
+
+  activatedAt DateTime?
+  suspendedAt DateTime?
+  archivedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
@@ -63,6 +75,11 @@ model OrganizationMember {
   userId         String           @db.Uuid
   status         OrganizationMemberStatus @default(ACTIVE)
   isOwner        Boolean          @default(false)
+  ownerAssignedAt DateTime?
+  ownerAssignedByUserId String?           @db.Uuid
+
+  invitedAt      DateTime                 @default(now())
+  inviteExpiresAt DateTime?
   createdAt      DateTime         @default(now())
   joinedAt       DateTime         @default(now())
   suspendedAt    DateTime?

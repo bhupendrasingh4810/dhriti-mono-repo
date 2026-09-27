@@ -23,7 +23,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Get(":type")
   @ApiOperation({ summary: "List all versions of a document type (admin)" })
   async listByType(@Param("type", new ParseEnumPipe(LegalDocumentType)) type: LegalDocumentType) {
@@ -32,7 +32,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Get("id/:id")
   @ApiOperation({ summary: "Get a document version by id (admin)" })
   async getById(@Param("id") id: string) {
@@ -41,7 +41,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post()
   @ApiOperation({ summary: "Create a new document version (admin)" })
   async create(@Body() dto: CreateLegalDocumentDto) {
@@ -50,7 +50,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Patch(":id")
   @ApiOperation({ summary: "Update a document's title/content (admin)" })
   async update(@Param("id") id: string, @Body() dto: UpdateLegalDocumentDto) {
@@ -59,7 +59,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post(":id/publish")
   @ApiOperation({ summary: "Publish a document version (admin)" })
   async publish(@Param("id") id: string) {
@@ -68,7 +68,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post(":id/unpublish")
   @ApiOperation({ summary: "Unpublish a document version (admin)" })
   async unpublish(@Param("id") id: string) {
@@ -77,7 +77,7 @@ export class LegalDocumentController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Delete(":id")
   @ApiOperation({ summary: "Delete a document version (admin)" })
   async remove(@Param("id") id: string): Promise<void> {

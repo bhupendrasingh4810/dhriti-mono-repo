@@ -29,7 +29,7 @@ export class BlogCategoryController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Post()
   @ApiOperation({ summary: "Create a blog category (admin)" })
   async create(@Body() dto: CreateBlogCategoryDto) {
@@ -38,7 +38,7 @@ export class BlogCategoryController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Patch(":id")
   @ApiOperation({ summary: "Update a blog category (admin)" })
   async update(@Param("id") id: string, @Body() dto: UpdateBlogCategoryDto) {
@@ -47,7 +47,7 @@ export class BlogCategoryController {
 
   @ApiBearerAuth()
   @UseGuards(PlatformRolesGuard)
-  @PlatformRoles("SUPER_ADMIN")
+  @PlatformRoles("PLATFORM_ADMIN")
   @Delete(":id")
   @ApiOperation({ summary: "Delete a blog category (admin)" })
   async remove(@Param("id") id: string): Promise<void> {
