@@ -157,7 +157,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
           <div className="w-full max-w-md">
             <div className="flex gap-2">
               <span className="bg-brand-muted px-3 py-1.5 text-xs font-semibold text-brand">Team invitation</span>
-              <span className="border border-border px-3 py-1.5 text-xs font-semibold text-warning">Secure link</span>
+              {/* <span className="border border-border px-3 py-1.5 text-xs font-semibold text-warning">Secure link</span> */}
             </div>
             <div className="mt-8">
               <div className="mb-6 flex items-center">
@@ -181,8 +181,8 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
               <h1 className="font-display text-3xl font-black leading-tight">
                 You have been invited
                 <br />
-                to join
-                <span className="text-brand">a workspace</span>
+                to join a
+                <span className="text-brand"> workspace</span>
               </h1>
               <p className="mt-3 text-sm leading-6 text-text-secondary">
                 Your teammate is inviting you to collaborate in their Dhriti OS workspace as a member.
@@ -238,7 +238,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
                 onClick={handleAccept}
                 disabled={isSubmitting}
                 className="inline-flex w-full items-center justify-center gap-2 bg-brand px-4 py-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark disabled:opacity-80"
-                style={{ borderRadius: "20p/x" }}
+                style={{ borderRadius: "20px" }}
               >
                 {isSubmitting ? "Joining workspace..." : "Accept invitation"}
                 <CheckRoundedIcon fontSize="small" />

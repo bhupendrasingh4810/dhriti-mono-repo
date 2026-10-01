@@ -49,6 +49,15 @@ enum OrganizationType {
   OTHER
 }
 
+enum EnabledProduct {
+  FLOW
+  CONNECT
+  ATLAS
+  NEXUS
+  CADENCE
+  PULSE
+}
+
 enum ChannelType {
   CHANNEL
   DIRECT

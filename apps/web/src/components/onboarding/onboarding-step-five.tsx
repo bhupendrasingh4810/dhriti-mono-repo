@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 
 interface OnboardingStepFiveProps {
   emails: string;
@@ -167,11 +168,12 @@ export default function OnboardingStepFive({
       </div>
 
       {/* Skip confirmation modal */}
-      {showSkipModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-        >
+      {showSkipModal &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center"
+            style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
+          >
           <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900 mb-2" style={{ fontFamily: "var(--font-display)" }}>
               Skip without inviting?
@@ -210,8 +212,9 @@ export default function OnboardingStepFive({
               </button>
             </div>
           </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

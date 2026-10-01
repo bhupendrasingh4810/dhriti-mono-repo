@@ -9,7 +9,8 @@ import { TenantGuard } from "../../../common/guards/tenant.guard";
 
 import { OrganizationService, type MemberWithUser } from "../services/organization.service";
 import { SessionService } from "../../auth/services/session.service";
-import { CreateOrganizationDto, UpdateOrganizationDto } from "../dto/organization.dto";
+import { CreateOrganizationDto, UpdateOrganizationBillingDto, UpdateOrganizationDto } from "../dto/organization.dto";
+import { CreateAddressDto, UpdateAddressDto } from "../dto/address.dto";
 import {
   InviteMemberDto,
   TransferOwnershipDto,
@@ -58,9 +59,71 @@ export class OrganizationController {
   @Patch("organization")
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.settings.manage")
-  @ApiOperation({ summary: "Rename the active organization" })
-  async updateActive(@CurrentOrganization() organization: OrganizationContext, @Body() dto: UpdateOrganizationDto) {
-    return this.organizations.updateOrganization(organization.organizationId, dto.name);
+  @ApiOperation({ summary: "Update the active organization profile" })
+  async updateActive(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateOrganizationDto,
+  ) {
+    return this.organizations.updateOrganization(organization.organizationId, user.userId, dto);
+  }
+
+  @Patch("organization/billing")
+  @UseGuards(TenantGuard, AccessGuard)
+  @RequirePermission("organization.settings.manage")
+  @ApiOperation({ summary: "Update billing details for the active organization" })
+  async updateBilling(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateOrganizationBillingDto,
+  ) {
+    return this.organizations.updateBilling(organization.organizationId, user.userId, dto);
+  }
+
+  @Get("organization/addresses")
+  @UseGuards(TenantGuard, AccessGuard)
+  @RequirePermission("organization.members.read")
+  @ApiOperation({ summary: "List addresses for the active organization" })
+  async listAddresses(@CurrentOrganization() organization: OrganizationContext) {
+    return this.organizations.listAddresses(organization.organizationId);
+  }
+
+  @Post("organization/addresses")
+  @UseGuards(TenantGuard, AccessGuard)
+  @RequirePermission("organization.settings.manage")
+  @ApiOperation({ summary: "Create an address for the active organization" })
+  async createAddress(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateAddressDto,
+  ) {
+    return this.organizations.createAddress(organization.organizationId, user.userId, dto);
+  }
+
+  @Patch("organization/addresses/:addressId")
+  @UseGuards(TenantGuard, AccessGuard)
+  @RequirePermission("organization.settings.manage")
+  @ApiOperation({ summary: "Update an address for the active organization" })
+  async updateAddress(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("addressId") addressId: string,
+    @Body() dto: UpdateAddressDto,
+  ) {
+    return this.organizations.updateAddress(organization.organizationId, addressId, user.userId, dto);
+  }
+
+  @Delete("organization/addresses/:addressId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(TenantGuard, AccessGuard)
+  @RequirePermission("organization.settings.manage")
+  @ApiOperation({ summary: "Delete an address for the active organization" })
+  async deleteAddress(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("addressId") addressId: string,
+  ): Promise<void> {
+    return this.organizations.deleteAddress(organization.organizationId, addressId, user.userId);
   }
 
   @Get("organization/members")

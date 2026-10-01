@@ -3,10 +3,21 @@ model Organization {
   name      String
   slug      String    @unique
   type      OrganizationType?
+  primaryEmail String?
+  enabledProducts EnabledProduct[] @default([])
+  description String? @db.Text
+  notes       String? @db.Text
+  seats       Int     @default(10)
 
   countryCode String? // ISO 3166-1 alpha-2: IN, US, GB
   timezone    String  @default("Asia/Kolkata") // IANA timezone
   locale      String  @default("en-IN")
+
+  billingLegalEntityName String?
+  billingGstin           String?
+  billingAddressId       String? @unique @db.Uuid
+  invoiceContactEmails   String[] @default([])
+  paymentProviderIds     Json? @db.JsonB
 
   activatedAt DateTime?
   suspendedAt DateTime?
@@ -14,10 +25,10 @@ model Organization {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
+  addresses Address[] @relation("OrganizationAddresses")
+  billingAddress Address? @relation("OrganizationBillingAddress", fields: [billingAddressId], references: [id], onDelete: SetNull)
   members  OrganizationMember[]
   teams    Team[]
   organizationTeams OrganizationTeam[]
@@ -66,6 +77,8 @@ model Organization {
   holidayCalendars HolidayCalendar[]
   healthInsurancePlans HealthInsurance[]
 
+  @@index([primaryEmail])
+  @@index([billingGstin])
   @@map("organizations")
 }
 

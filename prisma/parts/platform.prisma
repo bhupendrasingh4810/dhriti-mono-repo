@@ -17,6 +17,7 @@ model User {
   sessions              UserSession[]
   tokens                VerificationToken[]
   recoveryCodes         MfaRecoveryCode[]
+  addresses             Address[] @relation("UserAddresses")
   memberships           OrganizationMember[]
   teamMemberships       TeamMember[]
   uploadedFiles         StoredFile[]

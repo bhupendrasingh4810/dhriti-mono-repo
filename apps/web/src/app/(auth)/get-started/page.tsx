@@ -65,7 +65,7 @@ export default function SignupPage() {
         password: form.password,
         isTermsAccepted,
       });
-      router.push(`/verify?email=${encodeURIComponent(response.email)}&token=${encodeURIComponent(response.token)}`);
+      router.push(`/verify-email-success?email=${encodeURIComponent(response.email)}`);
     } catch (error) {
       showAlert({
         message: error instanceof Error ? error.message : "Unable to create your account.",

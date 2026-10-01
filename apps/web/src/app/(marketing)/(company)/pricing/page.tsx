@@ -285,7 +285,7 @@ const PLAN_BULLETS: Record<PlanId, string[]> = {
   ],
   premium: [
     "Everything in Standard, plus:",
-    "Up to 2,500 members",
+    "Up to 750 members",
     "200 GB storage per user",
     "Video calls up to 100 people",
     "Unlimited AI queries & agents",
@@ -418,7 +418,7 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f8fafc", fontFamily: "var(--font-sans)" }}>
       {/* ── Hero ── */}
-      <section className="max-w-4xl mx-auto px-6 pt-16 pb-12 text-center">
+      <section className="max-w-4xl mx-auto mt-4 px-6 pt-16 pb-12 text-center">
         <div
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold mb-5"
           style={{ backgroundColor: "#e6f4f2", color: "#036c5f" }}
@@ -472,7 +472,7 @@ export default function PricingPage() {
                     setTeamSize(clamped);
                     setInputVal(String(clamped));
                   }}
-                  className="w-full px-4 py-3 rounded-xl text-slate-900 font-bold text-lg outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  className="w-full px-4 py-2 rounded-xl text-slate-900 font-bold text-lg outline-none transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   style={{ border: "1.5px solid #036c5f", boxShadow: "0 0 0 3px rgba(3,108,95,0.10)" }}
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-medium pointer-events-none">
@@ -509,10 +509,10 @@ export default function PricingPage() {
                     >
                       {active && <div className="w-2 h-2 rounded-full" style={{ backgroundColor: "#036c5f" }} />}
                     </div>
-                    <div>
+                    <div className="flex items-baseline">
                       <p className="text-sm font-semibold text-slate-800">{label}</p>
                       {val === "yearly" && (
-                        <p className="text-xs font-semibold" style={{ color: "#036c5f" }}>
+                        <p className="text-xs font-semibold ml-2" style={{ color: "#036c5f" }}>
                           Save up to 20%
                         </p>
                       )}
@@ -556,7 +556,7 @@ export default function PricingPage() {
             }
             bullets={PLAN_BULLETS.free}
             cta="Get started free"
-            ctaAction={() => router.push("get-started")}
+            ctaAction={() => router.push(`get-started?plan=free&cycle=${cycle}&seats=${teamSize}`)}
           />
 
           {/* STANDARD */}
@@ -590,7 +590,7 @@ export default function PricingPage() {
             }
             bullets={PLAN_BULLETS.standard}
             cta="Start free trial"
-            ctaAction={() => router.push("get-started")}
+            ctaAction={() => router.push(`get-started?plan=standard&cycle=${cycle}&seats=${teamSize}`)}
           />
 
           {/* PREMIUM */}
@@ -626,7 +626,7 @@ export default function PricingPage() {
             }
             bullets={PLAN_BULLETS.premium}
             cta="Start free trial"
-            ctaAction={() => router.push("get-started")}
+            ctaAction={() => router.push(`get-started?plan=premium&cycle=${cycle}&seats=${teamSize}`)}
           />
 
           {/* ENTERPRISE */}

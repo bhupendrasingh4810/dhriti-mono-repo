@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Group, Organization, OrganizationMember, Team, User, UserRole } from "@prisma/client";
+import type { Address, EnabledProduct, Group, Organization, OrganizationMember, Team, User, UserRole } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
@@ -11,6 +11,35 @@ export interface MemberWithUser extends OrganizationMember {
   user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;
 }
 
+type OrganizationProfileInput = {
+  name?: string;
+  primaryEmail?: string;
+  enabledProducts?: EnabledProduct[];
+  description?: string;
+  notes?: string;
+  seats?: number;
+};
+
+type OrganizationBillingInput = {
+  billingLegalEntityName?: string;
+  billingGstin?: string;
+  billingAddressId?: string | null;
+  invoiceContactEmails?: string[];
+  paymentProviderIds?: Record<string, string>;
+};
+
+type AddressInput = {
+  label?: string;
+  recipientName?: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  state?: string;
+  postalCode?: string;
+  countryCode: string;
+  phoneNumber?: string;
+};
+
 @Injectable()
 export class OrganizationService {
   constructor(
@@ -21,7 +50,7 @@ export class OrganizationService {
 
   // ---------------- Organizations ----------------
 
-  async createOrganization(creatorUserId: string, input: { name: string; slug: string }): Promise<Organization> {
+  async createOrganization(creatorUserId: string, input: OrganizationProfileInput & { name: string; slug: string }): Promise<Organization> {
     const slugTaken = await this.prisma.organization.findUnique({
       where: { slug: input.slug },
       select: { id: true },
@@ -50,6 +79,11 @@ export class OrganizationService {
       data: {
         name: input.name.trim(),
         slug: input.slug,
+        primaryEmail: input.primaryEmail?.toLowerCase(),
+        enabledProducts: input.enabledProducts,
+        description: input.description?.trim(),
+        notes: input.notes?.trim(),
+        seats: input.seats,
         members: {
           create: { userId: creatorUserId, status: "ACTIVE", isOwner: true, joinedAt: new Date() },
         },
@@ -80,11 +114,116 @@ export class OrganizationService {
     return organization;
   }
 
-  async updateOrganization(organizationId: string, name: string): Promise<Organization> {
+  async updateOrganization(
+    organizationId: string,
+    actorUserId: string,
+    input: OrganizationProfileInput,
+  ): Promise<Organization> {
     await this.getOrganization(organizationId);
-    return this.prisma.organization.update({
+    const organization = await this.prisma.organization.update({
       where: { id: organizationId },
-      data: { name: name.trim() },
+      data: {
+        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+        ...(input.primaryEmail !== undefined ? { primaryEmail: input.primaryEmail.toLowerCase() } : {}),
+        ...(input.enabledProducts !== undefined ? { enabledProducts: input.enabledProducts } : {}),
+        ...(input.description !== undefined ? { description: input.description.trim() } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes.trim() } : {}),
+        ...(input.seats !== undefined ? { seats: input.seats } : {}),
+      },
+    });
+    await this.audit.record({
+      action: "organization.profile.updated",
+      organizationId,
+      actorUserId,
+      resourceType: "Organization",
+      resourceId: organizationId,
+    });
+    return organization;
+  }
+
+  async updateBilling(
+    organizationId: string,
+    actorUserId: string,
+    input: OrganizationBillingInput,
+  ): Promise<Organization> {
+    await this.getOrganization(organizationId);
+    if (input.billingAddressId) {
+      await this.getAddress(organizationId, input.billingAddressId);
+    }
+    const organization = await this.prisma.organization.update({
+      where: { id: organizationId },
+      data: {
+        ...(input.billingLegalEntityName !== undefined ? { billingLegalEntityName: input.billingLegalEntityName.trim() } : {}),
+        ...(input.billingGstin !== undefined ? { billingGstin: input.billingGstin.trim() } : {}),
+        ...(input.billingAddressId !== undefined ? { billingAddressId: input.billingAddressId } : {}),
+        ...(input.invoiceContactEmails !== undefined
+          ? { invoiceContactEmails: input.invoiceContactEmails.map((email) => email.toLowerCase()) }
+          : {}),
+        ...(input.paymentProviderIds !== undefined ? { paymentProviderIds: input.paymentProviderIds } : {}),
+      },
+    });
+    await this.audit.record({
+      action: "organization.billing.updated",
+      organizationId,
+      actorUserId,
+      resourceType: "Organization",
+      resourceId: organizationId,
+    });
+    return organization;
+  }
+
+  async listAddresses(organizationId: string): Promise<Address[]> {
+    return this.prisma.address.findMany({ where: { organizationId }, orderBy: { createdAt: "asc" } });
+  }
+
+  async createAddress(organizationId: string, actorUserId: string, input: AddressInput): Promise<Address> {
+    const address = await this.prisma.address.create({
+      data: {
+        organizationId,
+        label: input.label?.trim() ?? "primary",
+        line1: input.line1.trim(),
+        city: input.city.trim(),
+        countryCode: input.countryCode.toUpperCase(),
+        ...this.addressData(input),
+      },
+    });
+    await this.audit.record({
+      action: "organization.address.created",
+      organizationId,
+      actorUserId,
+      resourceType: "Address",
+      resourceId: address.id,
+    });
+    return address;
+  }
+
+  async updateAddress(
+    organizationId: string,
+    addressId: string,
+    actorUserId: string,
+    input: Partial<AddressInput>,
+  ): Promise<Address> {
+    await this.getAddress(organizationId, addressId);
+    const address = await this.prisma.address.update({ where: { id: addressId }, data: this.addressData(input) });
+    await this.audit.record({
+      action: "organization.address.updated",
+      organizationId,
+      actorUserId,
+      resourceType: "Address",
+      resourceId: addressId,
+    });
+    return address;
+  }
+
+  async deleteAddress(organizationId: string, addressId: string, actorUserId: string): Promise<void> {
+    await this.getAddress(organizationId, addressId);
+    await this.prisma.address.delete({ where: { id: addressId } });
+    await this.audit.record({
+      action: "organization.address.deleted",
+      organizationId,
+      actorUserId,
+      resourceType: "Address",
+      resourceId: addressId,
     });
   }
 
@@ -506,6 +645,28 @@ export class OrganizationService {
   }
 
   // ---------------- Internals ----------------
+
+  private addressData(input: Partial<AddressInput>) {
+    return {
+      ...(input.label !== undefined ? { label: input.label.trim() } : {}),
+      ...(input.recipientName !== undefined ? { recipientName: input.recipientName.trim() } : {}),
+      ...(input.line1 !== undefined ? { line1: input.line1.trim() } : {}),
+      ...(input.line2 !== undefined ? { line2: input.line2.trim() } : {}),
+      ...(input.city !== undefined ? { city: input.city.trim() } : {}),
+      ...(input.state !== undefined ? { state: input.state.trim() } : {}),
+      ...(input.postalCode !== undefined ? { postalCode: input.postalCode.trim() } : {}),
+      ...(input.countryCode !== undefined ? { countryCode: input.countryCode.toUpperCase() } : {}),
+      ...(input.phoneNumber !== undefined ? { phoneNumber: input.phoneNumber.trim() } : {}),
+    };
+  }
+
+  private async getAddress(organizationId: string, addressId: string): Promise<Address> {
+    const address = await this.prisma.address.findFirst({ where: { id: addressId, organizationId } });
+    if (!address) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Organization address not found", HttpStatus.NOT_FOUND);
+    }
+    return address;
+  }
 
   private async getMember(organizationId: string, memberId: string): Promise<OrganizationMember> {
     const member = await this.prisma.organizationMember.findFirst({

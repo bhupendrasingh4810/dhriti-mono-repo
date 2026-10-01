@@ -52,7 +52,7 @@ function toOrg(organization: PlatformOrganization): Org {
     id: organization.id,
     name: organization.name,
     plan: planByApiValue[subscription?.plan ?? "FREE"] ?? "Free",
-    seats: `${organization._count.members}/${subscription?.seats ?? 0}`,
+    seats: `${organization?.seats ?? 0}`,
     status,
     created: new Date(organization.createdAt ?? "").toLocaleDateString("en-US", {
       month: "short",
