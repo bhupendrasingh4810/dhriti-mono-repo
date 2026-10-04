@@ -40,13 +40,14 @@ const planByApiValue: Record<string, Plan> = {
 
 function toOrg(organization: PlatformOrganization): Org {
   const subscription = organization.subscription;
-  const status: Status = subscription?.status === "SUSPENDED"
-    ? "Suspended"
-    : subscription?.status === "TRIALING"
-      ? "Trial"
-      : subscription?.status === "CANCELLED"
-        ? "Churned"
-        : "Active";
+  const status: Status =
+    subscription?.status === "SUSPENDED"
+      ? "Suspended"
+      : subscription?.status === "TRIALING"
+        ? "Trial"
+        : subscription?.status === "CANCELLED"
+          ? "Churned"
+          : "Active";
 
   return {
     id: organization.id,
@@ -333,7 +334,7 @@ export default function OrgsPanel() {
           }}
         >
           <option value="All">All Plans</option>
-            {(["Free", "Standard", "Premium", "Enterprise"] as Plan[]).map((p) => (
+          {(["Free", "Standard", "Premium", "Enterprise"] as Plan[]).map((p) => (
             <option key={p} value={p}>
               {p}
             </option>

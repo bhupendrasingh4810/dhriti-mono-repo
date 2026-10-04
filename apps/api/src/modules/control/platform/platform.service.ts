@@ -41,8 +41,8 @@ export class PlatformService {
   async dashboard(): Promise<PlatformDashboard> {
     const [totalOrgs, suspendedOrgs, totalUsers, activeUsers, mfaUsers, subs, products, openTickets, escalatedTickets] =
       await Promise.all([
-          this.prisma.organization.count({ where: { deletedAt: null } }),
-          this.prisma.subscription.count({ where: { organization: { deletedAt: null }, status: "SUSPENDED" } }),
+        this.prisma.organization.count({ where: { deletedAt: null } }),
+        this.prisma.subscription.count({ where: { organization: { deletedAt: null }, status: "SUSPENDED" } }),
         this.prisma.user.count({ where: { deletedAt: null } }),
         this.prisma.user.count({ where: { deletedAt: null, status: "ACTIVE" } }),
         this.prisma.userAuth.count({ where: { mfaEnabled: true, user: { deletedAt: null } } }),
@@ -141,10 +141,10 @@ export class PlatformService {
       throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Organization not found", HttpStatus.NOT_FOUND);
     }
 
-      await this.prisma.subscription.upsert({
-        where: { organizationId },
-        create: { organizationId, plan: "FREE", seats: 5, status: suspended ? "SUSPENDED" : "ACTIVE" },
-        update: { status: suspended ? "SUSPENDED" : "ACTIVE" },
+    await this.prisma.subscription.upsert({
+      where: { organizationId },
+      create: { organizationId, plan: "FREE", seats: 5, status: suspended ? "SUSPENDED" : "ACTIVE" },
+      update: { status: suspended ? "SUSPENDED" : "ACTIVE" },
     });
 
     await this.audit.record({
@@ -173,12 +173,13 @@ export class PlatformService {
   }
 
   private async nextOrganizationSlug(name: string): Promise<string> {
-    const base = name
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 56) || "organization";
+    const base =
+      name
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 56) || "organization";
 
     for (let suffix = 0; ; suffix += 1) {
       const slug = suffix === 0 ? base : `${base}-${suffix}`;

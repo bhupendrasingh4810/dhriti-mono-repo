@@ -1,5 +1,16 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsEmail, IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
+import {
+  IsBoolean,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { SubscriptionPlan, SubscriptionStatus, SupportTicketPriority, SupportTicketStatus } from "@prisma/client";
 
 export class CreatePlatformOrganizationDto {

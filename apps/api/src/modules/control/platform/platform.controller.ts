@@ -99,10 +99,7 @@ export class PlatformController {
   @Post("organizations")
   @PlatformRoles("PLATFORM_ADMIN")
   @ApiOperation({ summary: "Create an organization with an existing user as its owner" })
-  async createOrganization(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreatePlatformOrganizationDto,
-  ) {
+  async createOrganization(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePlatformOrganizationDto) {
     return this.platform.createOrganization(user.userId, dto);
   }
 

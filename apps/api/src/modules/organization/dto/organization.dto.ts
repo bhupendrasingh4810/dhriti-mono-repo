@@ -1,6 +1,19 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { ArrayUnique, IsArray, IsEmail, IsEnum, IsInt, IsObject, IsOptional, IsString, Matches, MaxLength, Min, MinLength } from "class-validator";
+import {
+  ArrayUnique,
+  IsArray,
+  IsEmail,
+  IsEnum,
+  IsInt,
+  IsObject,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { EnabledProduct } from "@prisma/client";
 
 class OrganizationProfileDto {

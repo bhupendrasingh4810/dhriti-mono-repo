@@ -2,12 +2,14 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { AppView } from "@/types/app.types";
 import { useAuth } from "@/hooks/use-auth";
 interface NavItem {
   id: AppView;
   label: string;
   icon: React.ReactNode;
+  href: string;
   badge?: number;
 }
 
@@ -15,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "home",
     label: "Home",
+    href: "home",
     icon: (
       <svg
         width="22"
@@ -36,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "connect",
     label: "Connect",
+    href: "connect",
     badge: 3,
     icon: (
       <svg
@@ -54,7 +58,8 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "pulse",
-    label: "Pulse",
+    label: "Pulse", 
+    href: "pulse",
     icon: (
       <svg
         width="22"
@@ -76,6 +81,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "flow",
     label: "Flow",
+    href: "flow/dashboard",
     badge: 12,
     icon: (
       <svg
@@ -96,6 +102,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "atlas",
     label: "Atlas",
+    href: "atlas",
     icon: (
       <svg
         width="22"
@@ -117,6 +124,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "cadence",
     label: "Cadence",
+    href: "cadence",
     icon: (
       <svg
         width="22"
@@ -135,6 +143,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     id: "control",
     label: "Control",
+    href: "control",
     icon: (
       <svg
         width="22"
@@ -168,15 +177,13 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
     setSelectedView(activeView);
   }, [activeView]);
 
-  const handleNavClick = (item: NavItem) => {
-    setSelectedView(item.id);
-    onViewChange(item.id);
-    const controlPath = user?.isPlatformUser ? "platform" : "org";
-    if (item.id == "control") {
-      router.push(`/${organizationSlug}/${item.id}/${controlPath}/dashboard`);
-    } else {
-      router.push(`/${organizationSlug}/${item.id}`);
+  const getNavHref = (item: NavItem) => {
+    if (item.id === "control") {
+      const controlPath = user?.isPlatformUser ? "platform" : "org";
+      return `/${organizationSlug}/${item.id}/${controlPath}/dashboard`;
     }
+
+    return `/${organizationSlug}/${item.href}`;
   };
 
   return (
@@ -186,9 +193,9 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
         {NAV_ITEMS.map((item) => {
           const active = selectedView === item.id;
           return (
-            <button
+            <Link
               key={item.id}
-              onClick={() => handleNavClick(item)}
+              href={getNavHref(item)}
               className="relative flex flex-col items-center gap-1 w-14 py-2.5 rounded-xl cursor-pointer transition-all duration-300 ease-out hover:bg-slate-50"
               style={{
                 backgroundColor: active ? "#e6f4f2" : "transparent",
@@ -220,7 +227,7 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
                   {item.badge > 9 ? "9+" : item.badge}
                 </span>
               )}
-            </button>
+            </Link>
           );
         })}
       </nav>

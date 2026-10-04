@@ -1,5 +1,14 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Address, EnabledProduct, Group, Organization, OrganizationMember, Team, User, UserRole } from "@prisma/client";
+import type {
+  Address,
+  EnabledProduct,
+  Group,
+  Organization,
+  OrganizationMember,
+  Team,
+  User,
+  UserRole,
+} from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
@@ -50,7 +59,10 @@ export class OrganizationService {
 
   // ---------------- Organizations ----------------
 
-  async createOrganization(creatorUserId: string, input: OrganizationProfileInput & { name: string; slug: string }): Promise<Organization> {
+  async createOrganization(
+    creatorUserId: string,
+    input: OrganizationProfileInput & { name: string; slug: string },
+  ): Promise<Organization> {
     const slugTaken = await this.prisma.organization.findUnique({
       where: { slug: input.slug },
       select: { id: true },
@@ -153,7 +165,9 @@ export class OrganizationService {
     const organization = await this.prisma.organization.update({
       where: { id: organizationId },
       data: {
-        ...(input.billingLegalEntityName !== undefined ? { billingLegalEntityName: input.billingLegalEntityName.trim() } : {}),
+        ...(input.billingLegalEntityName !== undefined
+          ? { billingLegalEntityName: input.billingLegalEntityName.trim() }
+          : {}),
         ...(input.billingGstin !== undefined ? { billingGstin: input.billingGstin.trim() } : {}),
         ...(input.billingAddressId !== undefined ? { billingAddressId: input.billingAddressId } : {}),
         ...(input.invoiceContactEmails !== undefined

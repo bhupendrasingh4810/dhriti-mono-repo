@@ -13,10 +13,7 @@ function backendUrl(request: NextRequest, path: string[]): URL {
   return url;
 }
 
-export async function proxyBackendRequest(
-  request: NextRequest,
-  context: { params: Promise<{ path: string[] }> },
-) {
+export async function proxyBackendRequest(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try {
     const { path } = await context.params;
     const headers = new Headers();

@@ -181,8 +181,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
               <h1 className="font-display text-3xl font-black leading-tight">
                 You have been invited
                 <br />
-                to join a
-                <span className="text-brand"> workspace</span>
+                to join a<span className="text-brand"> workspace</span>
               </h1>
               <p className="mt-3 text-sm leading-6 text-text-secondary">
                 Your teammate is inviting you to collaborate in their Dhriti OS workspace as a member.

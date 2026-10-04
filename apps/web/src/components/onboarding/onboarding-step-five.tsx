@@ -174,44 +174,44 @@ export default function OnboardingStepFive({
             className="fixed inset-0 z-50 flex min-h-screen w-screen items-center justify-center"
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
           >
-          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900 mb-2" style={{ fontFamily: "var(--font-display)" }}>
-              Skip without inviting?
-            </h3>
-            <p className="text-sm text-slate-500 mb-5">
-              Dhriti OS works best with your team. You can still invite people later from Settings.
-            </p>
-            <div className="space-y-2 mb-5">
-              {[
-                { text: "Real-time team messaging" },
-                { text: "Shared project boards" },
-                { text: "Collaborative documents" },
-              ].map((item) => (
-                <div key={item.text} className="flex items-center gap-3">
-                  {/* <span>{item.icon}</span> */}
-                  <span className="text-sm text-slate-600">{item.text}</span>
-                </div>
-              ))}
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
+              <h3 className="text-lg font-bold text-slate-900 mb-2" style={{ fontFamily: "var(--font-display)" }}>
+                Skip without inviting?
+              </h3>
+              <p className="text-sm text-slate-500 mb-5">
+                Dhriti OS works best with your team. You can still invite people later from Settings.
+              </p>
+              <div className="space-y-2 mb-5">
+                {[
+                  { text: "Real-time team messaging" },
+                  { text: "Shared project boards" },
+                  { text: "Collaborative documents" },
+                ].map((item) => (
+                  <div key={item.text} className="flex items-center gap-3">
+                    {/* <span>{item.icon}</span> */}
+                    <span className="text-sm text-slate-600">{item.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowSkipModal(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+                >
+                  Go back
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSkipModal(false);
+                    onNext();
+                  }}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+                  style={{ backgroundColor: "#036c5f" }}
+                >
+                  Skip anyway
+                </button>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSkipModal(false)}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
-              >
-                Go back
-              </button>
-              <button
-                onClick={() => {
-                  setShowSkipModal(false);
-                  onNext();
-                }}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-                style={{ backgroundColor: "#036c5f" }}
-              >
-                Skip anyway
-              </button>
-            </div>
-          </div>
           </div>,
           document.body,
         )}
