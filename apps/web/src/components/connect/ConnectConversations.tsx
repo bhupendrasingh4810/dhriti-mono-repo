@@ -3,19 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
 import type { ConversationUser, ConnectConversationMessage, ConversationAttachment } from "@/types/connect.types";
-import {
-  DescriptionOutlined,
-  DownloadRounded,
-  LinkRounded,
-  MoreVertRounded,
-  OpenInNewRounded,
-  PlayArrowRounded,
-  ShareRounded,
-  PriorityHighRounded,
-} from "@mui/icons-material";
-import { Avatar, Box, IconButton, Stack, Typography } from "@mui/material";
 import { ConnectMessageHoverActions } from "./ConnectMessageHoverActions";
-import { ConnectMessageInput } from "./ConnectMessageInput";
+import ConnectMessageInput from "./ConnectMessageInput";
 import { RenderMessageContent, getMessagePriority, isSingleEmojiMessage } from "./RenderMessageContent";
 import { connectUsers } from "@/mocks/connect";
 import { ConversationHeader } from "./ConversationHeader";
@@ -151,12 +140,12 @@ export function ConnectConversations({
         {
           id: "open-in-browser",
           label: "Open In Browser",
-          icon: <OpenInNewRounded fontSize="small" />,
+          icon: <ConversationIcon name="open" />,
           onClick: handleOpenInBrowser,
         },
-        { id: "download", label: "Download", icon: <DownloadRounded fontSize="small" />, onClick: handleDownload },
-        { id: "share", label: "Share", icon: <ShareRounded fontSize="small" />, onClick: handleShare },
-        { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" />, onClick: handleCopyLink },
+        { id: "download", label: "Download", icon: <ConversationIcon name="download" />, onClick: handleDownload },
+        { id: "share", label: "Share", icon: <ConversationIcon name="share" />, onClick: handleShare },
+        { id: "copy-link", label: "Copy link", icon: <ConversationIcon name="link" />, onClick: handleCopyLink },
       ]
     : [];
 
@@ -204,18 +193,9 @@ export function ConnectConversations({
   );
 
   return (
-    <Box
-      sx={{
-        flex: 1,
-        minWidth: 0,
-        display: "flex",
-        flexDirection: "column",
-        bgcolor: "background.paper",
-        overflow: "hidden",
-      }}
-    >
+    <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
       <ConversationHeader conversation={conversation} teamLabel={teamLabel} onOpenDetails={onOpenDetails} />
-      <Box sx={{ flex: 1, overflowY: "auto", p: 3, display: "flex", flexDirection: "column", gap: 3 }}>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
         {sortedMessages.map((message, index) => {
           const sender = usersById[message.senderId];
           const isOwn = message.senderId === currentUserId;
@@ -238,90 +218,58 @@ export function ConnectConversations({
           const quoted = message.quotedMessageId ? getQuotedMessageById(message.quotedMessageId) : undefined;
           const singleEmojiOnly = isSingleEmojiMessage(message.content);
           const isEditingMessage = editingMessageId === message.id;
+          const priority = getMessagePriority(message.content);
 
           if (message.contentType === "system") {
             return <SystemMessage key={message.id} message={message} />;
           }
 
           return (
-            <Stack
+            <div
               key={message.id}
-              direction={isOwn ? "row-reverse" : "row"}
-              spacing={1.25}
-              sx={{ alignItems: "flex-start" }}
+              className={`flex items-start gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
             >
               {!isOwn && !isContinuation ? (
-                <Avatar
-                  src={sender?.avatar}
+                <button
+                  type="button"
                   onMouseEnter={(event: MouseEvent<HTMLElement>) => onOpenUserHover(event, message.senderId)}
                   onMouseLeave={onCloseUserHover}
-                  sx={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: (theme) => theme.tokens.radius.md,
-                    flexShrink: 0,
-                    cursor: "pointer",
-                  }}
-                />
+                  className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-200"
+                  aria-label={`View ${sender?.displayName ?? "user"} details`}
+                >
+                  {sender?.avatar ? (
+                    <img src={sender.avatar} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="grid h-full w-full place-items-center text-xs font-bold text-slate-600">
+                      {(sender?.displayName ?? "U").slice(0, 1)}
+                    </span>
+                  )}
+                </button>
               ) : (
-                <Box sx={{ width: 34, flexShrink: 0 }} />
+                <div className="w-[34px] shrink-0" />
               )}
 
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: isOwn ? "flex-end" : "flex-start",
-                  maxWidth: "75%",
-                  position: "relative",
-                }}
-              >
+              <div className={`relative flex max-w-[75%] flex-col ${isOwn ? "items-end" : "items-start"}`}>
                 {!isOwn && !isContinuation ? (
-                  <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", mb: 0.4 }}>
-                    <Typography
-                      sx={{ fontSize: 13, fontWeight: 700, color: "text.primary", cursor: "pointer" }}
-                      onClick={onOpenDetails}
-                    >
+                  <div className="mb-0.5 flex items-baseline gap-2">
+                    <button type="button" onClick={onOpenDetails} className="text-[13px] font-bold text-slate-900">
                       {sender?.displayName ?? "Unknown User"}
-                    </Typography>
+                    </button>
                     {showTimeByGap ? (
-                      <Typography variant="overline" color="text.disabled">
-                        {formatTime(message.createdAt)}
-                      </Typography>
+                      <span className="text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
                     ) : null}
-                  </Stack>
+                  </div>
                 ) : null}
 
                 {isOwn && showTimeByGap ? (
-                  <Typography variant="overline" color="text.disabled" sx={{ mb: 0.4 }}>
-                    {formatTime(message.createdAt)}
-                  </Typography>
+                  <span className="mb-0.5 text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
                 ) : null}
 
-                <Stack direction="row" spacing={0.6} sx={{ alignItems: "flex-start", maxWidth: "100%" }}>
-                  {isOwn
-                    ? (() => {
-                        const priority = getMessagePriority(message.content);
-                        return priority ? (
-                          <Box
-                            sx={{
-                              width: "fit-content",
-                              flexShrink: 0,
-                              py: 0.25,
-                              fontSize: 14,
-                              fontWeight: 800,
-                              color: priority === "IMPORTANT" ? "warning.dark" : "error.main",
-                            }}
-                          >
-                            <PriorityHighRounded sx={{ fontSize: 20, mr: 0.4, verticalAlign: "middle" }} />
-                            {priority.at(0)?.toUpperCase() + priority.slice(1).toLowerCase()}
-                          </Box>
-                        ) : null;
-                      })()
-                    : null}
+                <div className="flex max-w-full items-start gap-1.5">
+                  {isOwn && priority ? <PriorityBadge priority={priority} /> : null}
 
                   {isEditingMessage ? (
-                    <Box sx={{ minWidth: { xs: 320, sm: 420 }, width: "min(560px, 100%)" }}>
+                    <div className="min-w-[320px] max-w-[560px] sm:min-w-[420px]">
                       <ConnectMessageInput
                         mode="edit"
                         conversationLabel={conversation.name}
@@ -339,116 +287,56 @@ export function ConnectConversations({
                         onClearQuotedMessage={onCancelEditMessage}
                         onAttachFiles={() => undefined}
                       />
-                    </Box>
+                    </div>
                   ) : (
-                    <Box
-                      sx={{
-                        width: "fit-content",
-                        maxWidth: "100%",
-                        p: singleEmojiOnly ? 0 : 1.25,
-                        borderRadius: (theme) => theme.tokens.radius.sm,
-                        bgcolor: singleEmojiOnly
-                          ? "transparent"
-                          : isOwn
-                            ? "surfaces.surfaceSelected"
-                            : "surfaces.surfaceHover",
-                      }}
+                    <div
+                      className={`w-fit max-w-full ${singleEmojiOnly ? "" : `rounded-md p-1.5 ${isOwn ? "bg-emerald-50" : "bg-slate-50"}`}`}
                       onMouseEnter={() => handleHoverStart(message.id)}
                       onMouseLeave={() => handleHoverEnd(message.id)}
                     >
                       {quoted ? (
-                        <Box
-                          sx={{
-                            mb: 1,
-                            py: 3,
-                            px: 3,
-                            borderRadius: (theme) => theme.tokens.radius.sm,
-                            bgcolor: "background.paper",
-                            borderLeft: 3,
-                            borderColor: "primary.main",
-                          }}
-                        >
-                          <Typography variant="caption" sx={{ color: "primary.main", fontWeight: 700, mb: 0.2 }}>
+                        <div className="mb-1 rounded-md border-l-[3px] border-emerald-600 bg-white px-3 py-3">
+                          <p className="mb-0.5 text-xs font-bold text-emerald-700">
                             {usersById[quoted.senderId]?.displayName ?? "Unknown"}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap>
-                            {quoted.content}
-                          </Typography>
-                        </Box>
+                          </p>
+                          <p className="truncate text-xs text-slate-500">{quoted.content}</p>
+                        </div>
                       ) : null}
 
-                      <Box
-                        component="div"
-                        sx={{
-                          fontSize: 14,
-                          color: "text.secondary",
-                          lineHeight: 1.65,
-                          wordBreak: "break-word",
-                          p: 1.5,
-                        }}
-                      >
+                      <div className="break-words p-1.5 text-sm leading-[1.65] text-slate-600">
                         <RenderMessageContent
                           message={message}
                           connectUsers={connectUsers}
                           openMentionHover={onOpenUserHover}
                         />
-                      </Box>
+                      </div>
 
                       {message.attachments?.length ? (
                         <AttachmentsMessage message={message} openAttachmentMenu={openAttachmentMenu} />
                       ) : null}
-                    </Box>
+                    </div>
                   )}
 
-                  {!isOwn
-                    ? (() => {
-                        const priority = getMessagePriority(message.content);
-                        return priority ? (
-                          <Box
-                            sx={{
-                              width: "fit-content",
-                              flexShrink: 0,
-                              py: 0.25,
-                              fontSize: 14,
-                              fontWeight: 800,
-                              color: priority === "IMPORTANT" ? "warning.dark" : "error.main",
-                            }}
-                          >
-                            <PriorityHighRounded sx={{ fontSize: 20, mr: 0.4, verticalAlign: "middle" }} />
-                            {priority.at(0)?.toUpperCase() + priority.slice(1).toLowerCase()}
-                          </Box>
-                        ) : null;
-                      })()
-                    : null}
-                </Stack>
+                  {!isOwn && priority ? <PriorityBadge priority={priority} /> : null}
+                </div>
 
                 {message.reactions?.length ? (
-                  <Stack direction={isOwn ? "row-reverse" : "row"} spacing={1} sx={{ mt: 1.2 }}>
+                  <div className={`mt-1 flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
                     {message.reactions.map((reaction) => (
-                      <Box
+                      <button
+                        type="button"
                         key={`${message.id}-${reaction.emoji}`}
                         onMouseEnter={(event: MouseEvent<HTMLElement>) =>
                           onOpenReactionHover(event, reaction.emoji, reaction.userIds)
                         }
                         onMouseLeave={onCloseReactionHover}
                         onClick={() => onAddReaction(message.id, reaction.emoji)}
-                        sx={{
-                          px: 1,
-                          py: 0.45,
-                          borderRadius: (theme) => theme.tokens.radius.sm,
-                          fontSize: 14,
-                          fontWeight: 700,
-                          bgcolor: "surfaces.surfaceHover",
-                          border: 1,
-                          borderColor: "borders.borderSubtle",
-                          color: "text.secondary",
-                          cursor: "pointer",
-                        }}
+                        className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-600"
                       >
                         {reaction.emoji} {reaction.count}
-                      </Box>
+                      </button>
                     ))}
-                  </Stack>
+                  </div>
                 ) : null}
 
                 <ConnectMessageHoverActions
@@ -472,12 +360,12 @@ export function ConnectConversations({
                   onHoverStart={() => handleHoverStart(message.id)}
                   onHoverEnd={() => handleHoverEnd(message.id)}
                 />
-              </Box>
-            </Stack>
+              </div>
+            </div>
           );
         })}
-        <Box ref={messagesBottomRef} />
-      </Box>
+        <div ref={messagesBottomRef} />
+      </div>
 
       <ConnectCascadingMenu
         anchorEl={attachmentMenu?.anchorEl ?? null}
@@ -488,6 +376,29 @@ export function ConnectConversations({
       />
 
       {children}
-    </Box>
+    </div>
   );
+}
+
+function PriorityBadge({ priority }: { priority: "IMPORTANT" | "URGENT" }) {
+  const urgent = priority === "URGENT";
+
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-1 py-1 text-sm font-extrabold ${urgent ? "text-red-600" : "text-amber-700"}`}>
+      <ConversationIcon name="priority" />
+      {priority.slice(0, 1) + priority.slice(1).toLowerCase()}
+    </span>
+  );
+}
+
+function ConversationIcon({ name }: { name: "download" | "link" | "open" | "priority" | "share" }) {
+  const paths = {
+    open: <><path d="M14 3h7v7" /><path d="M10 14 21 3" /><path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" /></>,
+    download: <><path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M5 21h14" /></>,
+    share: <><circle cx="18" cy="5" r="2" /><circle cx="6" cy="12" r="2" /><circle cx="18" cy="19" r="2" /><path d="m8 11 8-5M8 13l8 5" /></>,
+    link: <><path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" /><path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" /></>,
+    priority: <><path d="M12 3v12" /><path d="M12 21h.01" /></>,
+  }[name];
+
+  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths}</svg>;
 }

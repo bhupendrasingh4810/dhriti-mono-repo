@@ -1,9 +1,9 @@
 "use client";
 
-import { use, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { Box } from "@dhriti/ui";
-import { ConnectHeader } from "@/features/connect";
+import { ConnectHeader } from "@/components/connect/ConnectHeader";
 import Sidebar from "@/components/layout/workspace/sidebar";
 import Header from "@/components/layout/workspace/header";
 import { connectSearchResults, connectUsers } from "@/mocks/connect";

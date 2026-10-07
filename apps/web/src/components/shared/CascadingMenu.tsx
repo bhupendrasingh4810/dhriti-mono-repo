@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { ConnectCascadingMenuItem, SubmenuState } from "@/types/menu.types";
@@ -212,8 +212,29 @@ export function ConnectCascadingMenu({
 }
 
 function MenuSurface({ children, level, style, onEscape }: { children: ReactNode; level: number; style: CSSProperties; onEscape: () => void }) {
+  const surfaceRef = useRef<HTMLDivElement>(null);
+  const [top, setTop] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const surface = surfaceRef.current;
+    const requestedTop = typeof style.top === "number" ? style.top : VIEWPORT_GUTTER;
+
+    if (!surface) return;
+
+    const updateTop = () => {
+      const maxTop = window.innerHeight - surface.offsetHeight - VIEWPORT_GUTTER;
+      setTop(Math.max(VIEWPORT_GUTTER, Math.min(requestedTop, maxTop)));
+    };
+
+    updateTop();
+    window.addEventListener("resize", updateTop);
+
+    return () => window.removeEventListener("resize", updateTop);
+  }, [style.top]);
+
   return (
     <div
+      ref={surfaceRef}
       data-connect-cascading-menu
       role="presentation"
       onKeyDown={(event) => {
@@ -222,8 +243,8 @@ function MenuSurface({ children, level, style, onEscape }: { children: ReactNode
           onEscape();
         }
       }}
-      className="fixed z-50 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
-      style={{ ...style, zIndex: 50 + level }}
+      className="fixed z-50 max-h-[calc(100vh-16px)] overflow-y-auto rounded-md border border-slate-200 bg-white shadow-lg"
+      style={{ ...style, top: top ?? style.top, zIndex: 50 + level }}
     >
       {children}
     </div>

@@ -1,6 +1,5 @@
-import React, { Fragment, MouseEvent, useState } from "react";
-import { DownloadRounded, MoreVertRounded, OpenInNewRounded } from "@mui/icons-material";
-import { Box, Button, IconButton, Stack, Typography } from "@dhriti/ui";
+import { Fragment, useState } from "react";
+import type { MouseEvent } from "react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 
@@ -64,19 +63,14 @@ const MentionToken = ({ token, connectUsers, openMentionHover }: MentionTokenPro
   const matchedUser = connectUsers.find((u) => u.displayName.toLowerCase() === displayName.toLowerCase());
 
   return (
-    <Box
-      component="span"
+    <span
       onMouseEnter={(e: MouseEvent<HTMLElement>) => {
         if (matchedUser) openMentionHover(e, matchedUser.id);
       }}
-      sx={{
-        color: "primary.main",
-        fontWeight: 700,
-        cursor: matchedUser ? "pointer" : "default",
-      }}
+      className={`font-bold text-emerald-600 ${matchedUser ? "cursor-pointer" : "cursor-default"}`}
     >
       @{displayName}
-    </Box>
+    </span>
   );
 };
 
@@ -112,75 +106,56 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
 
         if (/^`[^`]+`$/.test(token)) {
           return (
-            <Box
-              key={`${currentKey}-code`}
-              component="span"
-              sx={{
-                px: 0.7,
-                py: 0.15,
-                mx: 0.2,
-                borderRadius: (theme) => theme.tokens.radius.sm,
-                bgcolor: "surfaces.surfaceHover",
-                border: 1,
-                borderColor: "borders.borderSubtle",
-                fontFamily: "monospace",
-                fontSize: "0.75rem",
-              }}
-            >
+            <code key={`${currentKey}-code`} className="mx-0.5 rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-xs">
               {token.slice(1, -1)}
-            </Box>
+            </code>
           );
         }
 
         if (/^\*\*[^*]+\*\*$/.test(token)) {
           return (
-            <Box key={`${currentKey}-bold`} component="span" sx={{ fontWeight: 800 }}>
+            <strong key={`${currentKey}-bold`}>
               {token.slice(2, -2)}
-            </Box>
+            </strong>
           );
         }
 
         if (/^\*[^*]+\*$/.test(token)) {
           return (
-            <Box key={`${currentKey}-italic`} component="span" sx={{ fontStyle: "italic" }}>
+            <em key={`${currentKey}-italic`}>
               {token.slice(1, -1)}
-            </Box>
+            </em>
           );
         }
 
         if (/^~~[^~]+~~$/.test(token)) {
           return (
-            <Box key={`${currentKey}-strike`} component="span" sx={{ textDecoration: "line-through" }}>
+            <s key={`${currentKey}-strike`}>
               {token.slice(2, -2)}
-            </Box>
+            </s>
           );
         }
 
         if (/^==[^=]+==$/.test(token)) {
           return (
-            <Box
-              key={`${currentKey}-highlight`}
-              component="span"
-              sx={{ px: 0.45, borderRadius: (theme) => theme.tokens.radius.sm, bgcolor: "warning.light" }}
-            >
+            <span key={`${currentKey}-highlight`} className="rounded bg-amber-100 px-1">
               {token.slice(2, -2)}
-            </Box>
+            </span>
           );
         }
 
         const linkMatch = token.match(LINK_PATTERN);
         if (linkMatch) {
           return (
-            <Box
+            <a
               key={`${currentKey}-link`}
-              component="a"
               href={linkMatch[2]}
               target="_blank"
               rel="noreferrer"
-              sx={{ color: "interactive.interactive", textDecoration: "underline", cursor: "pointer" }}
+              className="cursor-pointer text-emerald-600 underline"
             >
               {linkMatch[1]}
-            </Box>
+            </a>
           );
         }
 
@@ -232,45 +207,20 @@ function LinkPreviewCard({ url, label }: { url: string; label: string }) {
   if (!meta) return null;
 
   return (
-    <Stack
-      direction="row"
-      spacing={1.25}
-      sx={{
-        mt: 0.75,
-        p: 1,
-        borderRadius: (theme) => theme.tokens.radius.sm,
-        bgcolor: "background.paper",
-        border: 1,
-        borderColor: "borders.border",
-        alignItems: "center",
-        maxWidth: 360,
-      }}
-    >
-      <Box
-        component="img"
+    <div className="mt-3 flex max-w-[360px] items-center gap-3 rounded border border-slate-200 bg-white p-2">
+      <img
         src={meta.thumbnail}
         alt=""
-        sx={{
-          width: 36,
-          height: 36,
-          borderRadius: (theme) => theme.tokens.radius.sm,
-          bgcolor: "surfaces.surfaceHover",
-          border: 1,
-          borderColor: "borders.borderSubtle",
-        }}
+        className="h-9 w-9 rounded border border-slate-100 bg-slate-50"
       />
-      <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography variant="body2" sx={{ fontWeight: 800 }} noWrap>
-          {label}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" noWrap>
-          {meta.domain}
-        </Typography>
-      </Box>
-      <IconButton size="small" component="a" href={meta.href} target="_blank" rel="noreferrer">
-        <OpenInNewRounded sx={{ fontSize: 17 }} />
-      </IconButton>
-    </Stack>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-extrabold text-slate-900">{label}</p>
+        <p className="truncate text-xs text-slate-500">{meta.domain}</p>
+      </div>
+      <a aria-label={`Open ${label}`} href={meta.href} target="_blank" rel="noreferrer" className="rounded p-1 text-slate-500 hover:bg-slate-50">
+        <OpenInNewIcon />
+      </a>
+    </div>
   );
 }
 
@@ -289,61 +239,24 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
   }
 
   const menuItems: ConnectCascadingMenuItem[] = [
-    { id: "download-code", label: "Download", icon: <DownloadRounded sx={{ fontSize: 18 }} />, onClick: downloadCode },
+    { id: "download-code", label: "Download", icon: <DownloadIcon />, onClick: downloadCode },
   ];
 
   return (
-    <Box
-      key={blockKey}
-      sx={{
-        borderRadius: (theme) => theme.tokens.radius.sm,
-        overflow: "hidden",
-        bgcolor: "grey.900",
-        border: 1,
-        borderColor: "grey.800",
-      }}
-    >
-      <Stack
-        direction="row"
-        sx={{
-          px: 1,
-          py: 0.6,
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderBottom: 1,
-          borderColor: "grey.800",
-        }}
-      >
-        <Typography variant="overline" sx={{ color: "grey.400" }}>
-          Code
-        </Typography>
-        <IconButton size="small" onClick={(event) => setMenuAnchor(event.currentTarget)} sx={{ color: "grey.300" }}>
-          <MoreVertRounded sx={{ fontSize: 18 }} />
-        </IconButton>
-      </Stack>
-      <Box
-        component="pre"
-        sx={{
-          m: 0,
-          maxHeight: expanded ? "none" : 250,
-          p: 1.2,
-          color: "grey.200",
-          fontFamily: "monospace",
-          fontSize: "0.75rem",
-          overflow: expanded ? "auto" : "hidden",
-          whiteSpace: "pre-wrap",
-        }}
-      >
+    <div key={blockKey} className="overflow-hidden rounded border border-slate-800 bg-slate-900">
+      <div className="flex items-center justify-between border-b border-slate-800 px-2 py-1.5">
+        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Code</span>
+        <button type="button" aria-label="Code options" onClick={(event) => setMenuAnchor(event.currentTarget)} className="rounded p-1 text-slate-300 hover:bg-slate-800">
+          <MoreIcon />
+        </button>
+      </div>
+      <pre className={`m-0 whitespace-pre-wrap p-3 font-mono text-xs text-slate-200 ${expanded ? "overflow-auto" : "max-h-[250px] overflow-hidden"}`}>
         {code}
-      </Box>
+      </pre>
       {!expanded ? (
-        <Button
-          size="small"
-          onClick={() => setExpanded(true)}
-          sx={{ m: 0, borderRadius: 0, bgcolor: "grey.800", color: "info.light", fontWeight: 800, width: "100%" }}
-        >
+        <button type="button" onClick={() => setExpanded(true)} className="w-full bg-slate-800 px-3 py-2 text-xs font-extrabold text-sky-300 hover:bg-slate-700">
           Show more
-        </Button>
+        </button>
       ) : null}
       <ConnectCascadingMenu
         anchorEl={menuAnchor}
@@ -352,7 +265,7 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
         items={menuItems}
         minWidth={210}
       />
-    </Box>
+    </div>
   );
 }
 
@@ -373,9 +286,9 @@ export function RenderMessageContent({ message, connectUsers, openMentionHover }
   const trimmedContent = content.trim();
   if (!priority && isSingleEmojiMessage(trimmedContent)) {
     return (
-      <Typography component="div" sx={{ fontSize: 52, lineHeight: 1.1, letterSpacing: 0 }}>
+      <div className="text-[52px] leading-[1.1] tracking-normal">
         {trimmedContent}
-      </Typography>
+      </div>
     );
   }
 
@@ -384,7 +297,7 @@ export function RenderMessageContent({ message, connectUsers, openMentionHover }
   const linkPreviews = extractLinks(content);
 
   return (
-    <Stack spacing={0.75}>
+    <div className="space-y-3">
       {blocks.map((block, blockIndex) => {
         const blockKey = `${message.id}-block-${blockIndex}`;
 
@@ -396,76 +309,74 @@ export function RenderMessageContent({ message, connectUsers, openMentionHover }
         // 📝 Render Odd Indices as Standard Lines (Quotes, Lists, Paragraphs)
         const lines = block.split("\n");
         return (
-          <Stack key={blockKey} spacing={0.35}>
+          <div key={blockKey} className="space-y-1.5">
             {lines.map((line, lineIndex) => {
               const lineKey = `${message.id}-l-${blockIndex}-${lineIndex}`;
 
               // Handle Line-breaks Spacing
               if (!line.trim()) {
-                return <Box key={lineKey} sx={{ height: 6 }} />;
+                return <div key={lineKey} className="h-1.5" />;
               }
 
               // Handle Blockquote Elements
               if (/^\s*>\s?/.test(line)) {
                 return (
-                  <Box
-                    key={lineKey}
-                    sx={{
-                      pl: 1,
-                      borderLeft: 3,
-                      borderColor: "borders.border",
-                      color: "text.secondary",
-                      fontStyle: "italic",
-                    }}
-                  >
+                  <blockquote key={lineKey} className="border-l-[3px] border-slate-200 pl-2 text-sm italic text-slate-500">
                     <InlineMarkdown
                       text={line.replace(/^\s*>\s?/, "")}
                       keyPrefix={`${lineKey}-q`}
                       connectUsers={connectUsers}
                       openMentionHover={openMentionHover}
                     />
-                  </Box>
+                  </blockquote>
                 );
               }
 
               // Handle List Elements (Fixed original unfinished cutoff bug layout)
               if (/^\s*[-*]\s+/.test(line) || /^\s*\d+\.\s+/.test(line)) {
                 return (
-                  <Typography
-                    key={lineKey}
-                    component="div"
-                    variant="body2"
-                    sx={{ lineHeight: 1.6, color: "text.secondary" }}
-                  >
+                  <div key={lineKey} className="text-sm leading-6 text-slate-500">
                     <InlineMarkdown
                       text={line}
                       keyPrefix={`${lineKey}-lst`}
                       connectUsers={connectUsers}
                       openMentionHover={openMentionHover}
                     />
-                  </Typography>
+                  </div>
                 );
               }
 
               // Standard Paragraph Text Fallback Lines
               return (
-                <Typography key={lineKey} component="div" variant="body2" sx={{ lineHeight: 1.5 }}>
+                <div key={lineKey} className="text-sm leading-6 text-slate-900">
                   <InlineMarkdown
                     text={line}
                     keyPrefix={`${lineKey}-p`}
                     connectUsers={connectUsers}
                     openMentionHover={openMentionHover}
                   />
-                </Typography>
+                </div>
               );
             })}
-          </Stack>
+          </div>
         );
       })}
 
       {linkPreviews.map((preview) => (
         <LinkPreviewCard key={preview.url} url={preview.url} label={preview.label} />
       ))}
-    </Stack>
+    </div>
   );
+}
+
+function DownloadIcon() {
+  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" /></svg>;
+}
+
+function OpenInNewIcon() {
+  return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 3h7v7M10 14 21 3M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" /></svg>;
+}
+
+function MoreIcon() {
+  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></svg>;
 }

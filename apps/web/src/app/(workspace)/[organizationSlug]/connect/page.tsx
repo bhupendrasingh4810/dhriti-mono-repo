@@ -41,26 +41,26 @@ import {
   type ConnectConversation,
   type ConnectMessage,
 } from "@/mocks/connect";
-import { ConnectSidebar } from "@/features/connect";
+import ConnectSidebar from "@/components/connect/ConnectSidebar";
 import { getMenuItems } from "@/utils/connect-menu-item.util";
-import { CreateChannelDialog } from "@/features/connect/dialogs/create-channel.dialog";
-import { CreateTeamDialog } from "@/features/connect/dialogs/create-team.dialog";
-import { CreateSectionDialog } from "@/features/connect/dialogs/create-section.dialog";
-import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
+import { CreateChannelDialog } from "@/components/dialogs/create-channel.dialog";
+import { CreateTeamDialog } from "@/components/dialogs/create-team.dialog";
+import { CreateSectionDialog } from "@/components/dialogs/create-section.dialog";
+import { ConnectConversations } from "@/components/connect/ConnectConversations";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
-import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
+import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
 import {
   ConnectConversationMessage,
   ConnectPendingAttachment,
   ConnectSidebarMenuContext,
   ConnectSidebarTeamGroup,
 } from "@/types/connect.types";
-import { ConnectMessageInput } from "@/features/connect/components/ConnectMessageInput";
-import { ConnectMentionsFilter, ConnectMentionsView } from "@/features/connect/components/ConnectMentionsView";
-import { ConnectChannelDetailsPanel } from "@/features/connect/components/ConnectChannelDetailsPanel";
-import { ConnectReactionUsersList } from "@/features/connect/components/ConnectReactionUsersList";
-import { ConnectUserDetailsCard } from "@/features/connect/components/ConnectUserDetailsCard";
+import ConnectMessageInput from "@/components/connect/ConnectMessageInput";
+import { ConnectMentionsFilter, ConnectMentionsView } from "@/components/connect/ConnectMentionsView";
+import { ConnectChannelDetailsPanel } from "@/components/connect/ConnectChannelDetailsPanel";
+import { ConnectReactionUsersList } from "@/components/connect/ConnectReactionUsersList";
+import ConnectUserDetailsCard from "@/components/connect/ConnectUserDetailsCard";
 
 const quickViewsConfig = [
   { icon: AlternateEmailRounded, label: "Mentions" },
@@ -178,25 +178,25 @@ export default function ConnectPage() {
 
     const withPersonal = currentUser
       ? [
-          {
-            id: `personal_${currentUser.id}`,
-            type: "direct" as const,
-            organizationId: selectedConversation.organizationId,
-            name: `${currentUser.displayName} (You)`,
-            avatar: currentUser.avatar,
-            createdBy: currentUser.id,
-            createdAt: currentUser.createdAt,
-            participants: [currentUser.id],
-            lastMessageAt: new Date().toISOString(),
-            unreadCount: 0,
-            isFavorite: true,
-            muted: false,
-            pinned: true,
-            archived: false,
-            description: "Personal messages visible only to you.",
-          },
-          ...items,
-        ]
+        {
+          id: `personal_${currentUser.id}`,
+          type: "direct" as const,
+          organizationId: selectedConversation.organizationId,
+          name: `${currentUser.displayName} (You)`,
+          avatar: currentUser.avatar,
+          createdBy: currentUser.id,
+          createdAt: currentUser.createdAt,
+          participants: [currentUser.id],
+          lastMessageAt: new Date().toISOString(),
+          unreadCount: 0,
+          isFavorite: true,
+          muted: false,
+          pinned: true,
+          archived: false,
+          description: "Personal messages visible only to you.",
+        },
+        ...items,
+      ]
       : items;
 
     return sectionViewMode.favorites === "unread"
@@ -493,10 +493,10 @@ export default function ConnectPage() {
             reactions: reactions.map((reaction) =>
               reaction.emoji === emoji
                 ? {
-                    ...reaction,
-                    count: reaction.count + 1,
-                    userIds: hasUser ? reaction.userIds : [...reaction.userIds, currentUser.id],
-                  }
+                  ...reaction,
+                  count: reaction.count + 1,
+                  userIds: hasUser ? reaction.userIds : [...reaction.userIds, currentUser.id],
+                }
                 : reaction,
             ),
           };
@@ -658,10 +658,10 @@ export default function ConnectPage() {
       [selectedConversation.id]: (previous[selectedConversation.id] ?? []).map((message) =>
         message.id === editingMessageId
           ? {
-              ...message,
-              content: nextContent,
-              mentions: payload.mentionUserIds,
-            }
+            ...message,
+            content: nextContent,
+            mentions: payload.mentionUserIds,
+          }
           : message,
       ),
     }));
@@ -736,17 +736,17 @@ export default function ConnectPage() {
 
   const quotedPreview = quotedMessage
     ? {
-        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-        content: quotedMessage.content,
-      }
+      senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+      content: quotedMessage.content,
+    }
     : null;
 
   const mentionQuotedPreview =
     quotedMessage && selectedMention
       ? {
-          senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-          content: quotedMessage.content,
-        }
+        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+        content: quotedMessage.content,
+      }
       : null;
 
   const isMentionsView = activeQuickViewId === "mentions";
@@ -760,176 +760,181 @@ export default function ConnectPage() {
         overflow: "hidden",
         bgcolor: "background.default",
         color: "text.primary",
+        padding: 4,
       }}
     >
-      <Box sx={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        <ConnectSidebar
-          quickViews={sidebarQuickViews}
-          favoriteConversations={favoriteConversations.map((conversation) => ({
-            id: conversation.id,
-            name: conversation.name,
-            type: conversation.type,
-            avatar: conversation.avatar,
-            unreadCount: conversation.unreadCount,
-            isSelfSpace: conversation.id.startsWith("personal_"),
-          }))}
-          chatConversations={visibleChatConversations.map((conversation) => ({
-            id: conversation.id,
-            name: conversation.name,
-            type: conversation.type,
-            avatar: conversation.avatar,
-            unreadCount: connectSidebarState.unread[conversation.id] ?? conversation.unreadCount,
-          }))}
-          teams={sidebarTeams}
-          selectedConversationId={selectedConversation.id}
-          activeQuickViewId={activeQuickViewId}
-          onToggleTeam={handleToggleTeam}
-          onSelectConversation={handleSelectConversation}
-          onSelectQuickView={handleSelectQuickView}
-          onOpenSidebarMenu={openSidebarMenu}
-        />
-
-        {isMentionsView ? (
-          <ConnectMentionsView
-            items={mentionItems}
-            usersById={Object.fromEntries(
-              Object.values(connectUsersById).map((user) => [
-                user.id,
-                { id: user.id, displayName: user.displayName, avatar: user.avatar, jobTitle: user.jobTitle },
-              ]),
-            )}
-            selectedMentionId={selectedMentionId}
-            filter={mentionsFilter}
-            detail={mentionDetail}
-            onSelectMention={setSelectedMentionId}
-            onFilterChange={setMentionsFilter}
-            onOpenChannelMenu={(event, mentionId) => {
-              setMentionSourceMenuAnchor(event.currentTarget);
-              setActiveMentionMenuId(mentionId);
-            }}
-            onOpenCallOptions={(event, mentionId) => {
-              setMentionCallMenuAnchor(event.currentTarget);
-              setActiveMentionMenuId(mentionId);
-            }}
-            onOpenInNewWindow={() => {
-              pushSystemMessage("Open in new window requested from mentions.");
-            }}
-            onGoToChannel={(conversationId) => {
-              if (!conversationId) return;
-              setSelectedConversationId(conversationId);
-              setActiveQuickViewId(null);
-              setShowDetails(false);
-            }}
-            composer={
-              selectedMention ? (
-                <ConnectMessageInput
-                  conversationLabel={getConversationLabel(
-                    conversationsById[selectedMention.conversationId] ?? selectedConversation,
-                  )}
-                  value={mentionComposerMessage}
-                  users={connectUsers.map((user) => ({
-                    id: user.id,
-                    displayName: user.displayName,
-                    avatar: user.avatar,
-                    subtitle: user.jobTitle,
-                  }))}
-                  currentUserId={currentUser.id}
-                  quotedMessage={mentionQuotedPreview}
-                  pendingAttachments={mentionPendingAttachments}
-                  onChange={setMentionComposerMessage}
-                  onSend={(payload) => {
-                    handleSendMessageToConversation(
-                      selectedMention.conversationId,
-                      payload,
-                      mentionPendingAttachments.length ? mentionPendingAttachments : undefined,
-                    );
-                    setMentionComposerMessage("");
-                    setMentionPendingAttachments([]);
-                    setQuotedMessage(null);
-                  }}
-                  onClearQuotedMessage={() => setQuotedMessage(null)}
-                  onAttachFiles={handleAttachFilesForMention}
-                  onRemovePendingAttachment={handleRemoveMentionPendingAttachment}
-                />
-              ) : null
-            }
+      <Box sx={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
+        <Box sx={{ mr: 2, borderRadius: 2.5 }}>
+          <ConnectSidebar
+            quickViews={sidebarQuickViews}
+            favoriteConversations={favoriteConversations.map((conversation) => ({
+              id: conversation.id,
+              name: conversation.name,
+              type: conversation.type,
+              avatar: conversation.avatar,
+              unreadCount: conversation.unreadCount,
+              isSelfSpace: conversation.id.startsWith("personal_"),
+            }))}
+            chatConversations={visibleChatConversations.map((conversation) => ({
+              id: conversation.id,
+              name: conversation.name,
+              type: conversation.type,
+              avatar: conversation.avatar,
+              unreadCount: connectSidebarState.unread[conversation.id] ?? conversation.unreadCount,
+            }))}
+            teams={sidebarTeams}
+            selectedConversationId={selectedConversation.id}
+            activeQuickViewId={activeQuickViewId}
+            onToggleTeam={handleToggleTeam}
+            onSelectConversation={handleSelectConversation}
+            onSelectQuickView={handleSelectQuickView}
+            onOpenSidebarMenu={openSidebarMenu}
           />
-        ) : (
-          <ConnectConversations
-            conversation={{
-              id: selectedConversation.id,
-              name: selectedConversation.name,
-              type: selectedConversation.type,
-              isFavorite: selectedConversation.isFavorite,
-              participants: selectedConversation.participants,
-            }}
-            teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
-            currentUserId={currentUser.id}
-            usersById={connectUsersById}
-            messages={selectedMessages as ConnectConversationMessage[]}
-            activeMessageMenuId={activeMessageId}
-            activeMessageEmojiId={activeMessageForEmoji}
-            getQuotedMessageById={(id) =>
-              (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as
-                ConnectConversationMessage | undefined
-            }
-            onOpenDetails={() => setShowDetails(true)}
-            onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
-            onOpenMessageEmoji={openMessageEmojiMenu}
-            onOpenMessageMenu={openMessageMenu}
-            onQuoteMessage={(message) => setQuotedMessage(message as ConnectMessage)}
-            onOpenReactionHover={openReactionHover}
-            onCloseReactionHover={scheduleReactionHoverClose}
-            onOpenUserHover={openMentionHover}
-            onCloseUserHover={scheduleMentionHoverClose}
-            editingMessageId={editingMessageId}
-            editingMessageValue={editingMessageDraft}
-            onStartEditMessage={startEditMessage}
-            onChangeEditMessage={setEditingMessageDraft}
-            onSaveEditMessage={saveEditMessage}
-            onCancelEditMessage={requestCancelEditMessage}
-            disableHoverActions={Boolean(mentionHover)}
-          >
-            <ConnectMessageInput
-              conversationLabel={getConversationLabel(selectedConversation)}
-              value={composerMessage}
-              users={connectUsers.map((user) => ({
-                id: user.id,
-                displayName: user.displayName,
-                avatar: user.avatar,
-                subtitle: user.jobTitle,
-              }))}
-              currentUserId={currentUser.id}
-              quotedMessage={quotedPreview}
-              pendingAttachments={pendingAttachments}
-              onChange={setComposerMessage}
-              onSend={handleSendMessage}
-              onClearQuotedMessage={() => setQuotedMessage(null)}
-              onAttachFiles={handleAttachFiles}
-              onRemovePendingAttachment={handleRemovePendingAttachment}
+        </Box>
+
+        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", ml: 2, borderRadius: 2.5 }}>
+          {isMentionsView ? (
+            <ConnectMentionsView
+              items={mentionItems}
+              usersById={Object.fromEntries(
+                Object.values(connectUsersById).map((user) => [
+                  user.id,
+                  { id: user.id, displayName: user.displayName, avatar: user.avatar, jobTitle: user.jobTitle },
+                ]),
+              )}
+              selectedMentionId={selectedMentionId}
+              filter={mentionsFilter}
+              detail={mentionDetail}
+              onSelectMention={setSelectedMentionId}
+              onFilterChange={setMentionsFilter}
+              onOpenChannelMenu={(event, mentionId) => {
+                setMentionSourceMenuAnchor(event.currentTarget);
+                setActiveMentionMenuId(mentionId);
+              }}
+              onOpenCallOptions={(event, mentionId) => {
+                setMentionCallMenuAnchor(event.currentTarget);
+                setActiveMentionMenuId(mentionId);
+              }}
+              onOpenInNewWindow={() => {
+                pushSystemMessage("Open in new window requested from mentions.");
+              }}
+              onGoToChannel={(conversationId) => {
+                if (!conversationId) return;
+                setSelectedConversationId(conversationId);
+                setActiveQuickViewId(null);
+                setShowDetails(false);
+              }}
+              composer={
+                selectedMention ? (
+                  <ConnectMessageInput
+                    conversationLabel={getConversationLabel(
+                      conversationsById[selectedMention.conversationId] ?? selectedConversation,
+                    )}
+                    value={mentionComposerMessage}
+                    users={connectUsers.map((user) => ({
+                      id: user.id,
+                      displayName: user.displayName,
+                      avatar: user.avatar,
+                      subtitle: user.jobTitle,
+                    }))}
+                    currentUserId={currentUser.id}
+                    quotedMessage={mentionQuotedPreview}
+                    pendingAttachments={mentionPendingAttachments}
+                    onChange={setMentionComposerMessage}
+                    onSend={(payload) => {
+                      handleSendMessageToConversation(
+                        selectedMention.conversationId,
+                        payload,
+                        mentionPendingAttachments.length ? mentionPendingAttachments : undefined,
+                      );
+                      setMentionComposerMessage("");
+                      setMentionPendingAttachments([]);
+                      setQuotedMessage(null);
+                    }}
+                    onClearQuotedMessage={() => setQuotedMessage(null)}
+                    onAttachFiles={handleAttachFilesForMention}
+                    onRemovePendingAttachment={handleRemoveMentionPendingAttachment}
+                  />
+                ) : null
+              }
             />
-          </ConnectConversations>
-        )}
+          ) : (
+            <ConnectConversations
+              conversation={{
+                id: selectedConversation.id,
+                name: selectedConversation.name,
+                type: selectedConversation.type,
+                isFavorite: selectedConversation.isFavorite,
+                participants: selectedConversation.participants,
+              }}
+              teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
+              currentUserId={currentUser.id}
+              usersById={connectUsersById}
+              messages={selectedMessages as ConnectConversationMessage[]}
+              activeMessageMenuId={activeMessageId}
+              activeMessageEmojiId={activeMessageForEmoji}
+              getQuotedMessageById={(id) =>
+                (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as
+                ConnectConversationMessage | undefined
+              }
+              onOpenDetails={() => setShowDetails(true)}
+              onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
+              onOpenMessageEmoji={openMessageEmojiMenu}
+              onOpenMessageMenu={openMessageMenu}
+              onQuoteMessage={(message) => setQuotedMessage(message as ConnectMessage)}
+              onOpenReactionHover={openReactionHover}
+              onCloseReactionHover={scheduleReactionHoverClose}
+              onOpenUserHover={openMentionHover}
+              onCloseUserHover={scheduleMentionHoverClose}
+              editingMessageId={editingMessageId}
+              editingMessageValue={editingMessageDraft}
+              onStartEditMessage={startEditMessage}
+              onChangeEditMessage={setEditingMessageDraft}
+              onSaveEditMessage={saveEditMessage}
+              onCancelEditMessage={requestCancelEditMessage}
+              disableHoverActions={Boolean(mentionHover)}
+            >
+              <ConnectMessageInput
+                conversationLabel={getConversationLabel(selectedConversation)}
+                value={composerMessage}
+                users={connectUsers.map((user) => ({
+                  id: user.id,
+                  displayName: user.displayName,
+                  avatar: user.avatar,
+                  subtitle: user.jobTitle,
+                }))}
+                currentUserId={currentUser.id}
+                quotedMessage={quotedPreview}
+                pendingAttachments={pendingAttachments}
+                onChange={setComposerMessage}
+                onSend={handleSendMessage}
+                onClearQuotedMessage={() => setQuotedMessage(null)}
+                onAttachFiles={handleAttachFiles}
+                onRemovePendingAttachment={handleRemovePendingAttachment}
+              />
+            </ConnectConversations>
+          )}
 
-        {!isMentionsView ? (
-          <ConnectChannelDetailsPanel
-            open={showDetails}
-            title={selectedConversation.name}
-            type={selectedConversation.type}
-            teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
-            description={selectedConversation.description ?? ""}
-            memberCount={selectedConversation.participants.length}
-            pinnedCount={pinnedCount}
-            linkCount={
-              (messagesByConversation[selectedConversation.id] ?? []).filter((message) =>
-                message.content.includes("http"),
-              ).length
-            }
-            files={conversationFiles.map((file) => ({ id: file.id, originalName: file.originalName, size: file.size }))}
-            meetings={relatedMeetings.map((meeting) => ({ id: meeting.id, title: meeting.title }))}
-            onClose={() => setShowDetails(false)}
-          />
-        ) : null}
+          {!isMentionsView ? (
+            <ConnectChannelDetailsPanel
+              open={showDetails}
+              title={selectedConversation.name}
+              type={selectedConversation.type}
+              teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
+              description={selectedConversation.description ?? ""}
+              memberCount={selectedConversation.participants.length}
+              pinnedCount={pinnedCount}
+              linkCount={
+                (messagesByConversation[selectedConversation.id] ?? []).filter((message) =>
+                  message.content.includes("http"),
+                ).length
+              }
+              files={conversationFiles.map((file) => ({ id: file.id, originalName: file.originalName, size: file.size }))}
+              meetings={relatedMeetings.map((meeting) => ({ id: meeting.id, title: meeting.title }))}
+              onClose={() => setShowDetails(false)}
+            />
+          ) : null}
+        </Box>
       </Box>
 
       <ConnectCascadingMenu
@@ -1089,30 +1094,30 @@ export default function ConnectPage() {
         <Box>
           {mentionHover
             ? (() => {
-                const user = connectUsersById[mentionHover.userId];
-                if (!user) return null;
+              const user = connectUsersById[mentionHover.userId];
+              if (!user) return null;
 
-                const reportsToUserId = connectReportsToByUserId[user.id];
-                const reportsToUser = reportsToUserId ? connectUsersById[reportsToUserId] : undefined;
+              const reportsToUserId = connectReportsToByUserId[user.id];
+              const reportsToUser = reportsToUserId ? connectUsersById[reportsToUserId] : undefined;
 
-                return (
-                  <ConnectUserDetailsCard
-                    avatar={user.avatar}
-                    displayName={user.displayName}
-                    jobTitle={user.jobTitle}
-                    email={user.email}
-                    phone={user.phone}
-                    location={user.location}
-                    timezone={user.timezone}
-                    viewerTimezone={currentUser.timezone}
-                    reportsTo={
-                      reportsToUser
-                        ? { displayName: reportsToUser.displayName, jobTitle: reportsToUser.jobTitle }
-                        : undefined
-                    }
-                  />
-                );
-              })()
+              return (
+                <ConnectUserDetailsCard
+                  avatar={user.avatar}
+                  displayName={user.displayName}
+                  jobTitle={user.jobTitle}
+                  email={user.email}
+                  phone={user.phone}
+                  location={user.location}
+                  timezone={user.timezone}
+                  viewerTimezone={currentUser.timezone}
+                  reportsTo={
+                    reportsToUser
+                      ? { displayName: reportsToUser.displayName, jobTitle: reportsToUser.jobTitle }
+                      : undefined
+                  }
+                />
+              );
+            })()
             : null}
         </Box>
       </Popover>

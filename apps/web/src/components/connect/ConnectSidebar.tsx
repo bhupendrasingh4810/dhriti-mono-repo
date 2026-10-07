@@ -1,0 +1,249 @@
+import { useState } from "react";
+import type { ElementType, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import {
+  ConnectSidebarConversation,
+  ConnectSidebarMenuContext,
+  ConnectSidebarQuickView,
+  ConnectSidebarSectionId,
+  ConnectSidebarTeamGroup,
+} from "@/types/connect.types";
+
+type ConnectSidebarProps = {
+  quickViews: ConnectSidebarQuickView[];
+  favoriteConversations: ConnectSidebarConversation[];
+  chatConversations: ConnectSidebarConversation[];
+  teams: ConnectSidebarTeamGroup[];
+  selectedConversationId: string;
+  activeQuickViewId?: string | null;
+  onToggleTeam: (teamId: string) => void;
+  onSelectConversation: (conversationId: string) => void;
+  onSelectQuickView: (quickViewId: ConnectSidebarQuickView["id"]) => void;
+  onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
+};
+
+type SidebarSectionProps = {
+  sectionId: ConnectSidebarSectionId;
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  onOpenMenu: (event: MouseEvent<HTMLElement>) => void;
+  hoveredSectionId: ConnectSidebarSectionId | null;
+  onHoverSection: (sectionId: ConnectSidebarSectionId | null) => void;
+  menuTooltip: string;
+  children: ReactNode;
+};
+
+function SidebarSection({
+  sectionId,
+  title,
+  open,
+  onToggle,
+  onOpenMenu,
+  hoveredSectionId,
+  onHoverSection,
+  menuTooltip,
+  children,
+}: SidebarSectionProps) {
+  const hovered = hoveredSectionId === sectionId;
+
+  return (
+    <section
+      className="relative"
+      onMouseEnter={() => onHoverSection(sectionId)}
+      onMouseLeave={() => onHoverSection(null)}
+    >
+      <div className="relative mb-1 flex h-7 items-center">
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between px-1.5 text-left"
+        >
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</span>
+          <ChevronIcon className={`h-[18px] w-[18px] text-slate-400 transition-transform duration-150 ${open ? "rotate-0" : "-rotate-90"}`} />
+        </button>
+        <button
+          type="button"
+          title={menuTooltip}
+          aria-label={menuTooltip}
+          onClick={onOpenMenu}
+          className={`absolute right-7 grid h-7 w-7 place-items-center rounded text-slate-400 transition-opacity duration-150 hover:bg-slate-100 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        >
+          <MoreIcon />
+        </button>
+      </div>
+      {open ? children : null}
+    </section>
+  );
+}
+
+function SidebarTrailingSlot({
+  hovered,
+  count,
+  tooltip,
+  onOpenMenu,
+}: {
+  hovered: boolean;
+  count?: number;
+  tooltip: string;
+  onOpenMenu: (event: MouseEvent<HTMLElement>) => void;
+}) {
+  return (
+    <div className="relative h-7 w-7 shrink-0">
+      {(count ?? 0) > 0 ? (
+        <span className={`absolute inset-0 grid place-items-center text-xs font-semibold text-emerald-600 transition-opacity duration-150 ${hovered ? "opacity-0" : "opacity-100"}`}>
+          {count}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        title={tooltip}
+        aria-label={tooltip}
+        onClick={onOpenMenu}
+        className={`absolute inset-0 grid place-items-center rounded text-slate-400 transition-opacity duration-150 hover:bg-slate-100 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
+      >
+        <MoreIcon />
+      </button>
+    </div>
+  );
+}
+
+function ConversationAvatar({ conversation }: { conversation: ConnectSidebarConversation }) {
+  if (!conversation.avatar) {
+    return <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-600">{conversation.name.slice(0, 1)}</span>;
+  }
+
+  return <img src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />;
+}
+
+function handleRowKeyDown(event: KeyboardEvent<HTMLDivElement>, onSelect: () => void) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    onSelect();
+  }
+}
+
+export default function ConnectSidebar({
+  quickViews,
+  favoriteConversations,
+  chatConversations,
+  teams,
+  selectedConversationId,
+  activeQuickViewId,
+  onToggleTeam,
+  onSelectConversation,
+  onSelectQuickView,
+  onOpenSidebarMenu,
+}: ConnectSidebarProps) {
+  const [quickViewsOpen, setQuickViewsOpen] = useState(true);
+  const [favouritesOpen, setFavouritesOpen] = useState(true);
+  const [chatsOpen, setChatsOpen] = useState(true);
+  const [teamsOpen, setTeamsOpen] = useState(true);
+  const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
+  const [hoveredSectionId, setHoveredSectionId] = useState<ConnectSidebarSectionId | null>(null);
+
+  const sectionProps = (sectionId: ConnectSidebarSectionId, title: string, menuTooltip: string) => ({
+    sectionId,
+    title,
+    hoveredSectionId,
+    onHoverSection: setHoveredSectionId,
+    menuTooltip,
+    onOpenMenu: (event: MouseEvent<HTMLElement>) => onOpenSidebarMenu(event, { kind: "section", id: sectionId, label: title, sectionId }),
+  });
+
+  return (
+    <aside className="hidden h-full min-h-0 w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] bg-white lg:flex">
+      <div className="flex items-center justify-between p-4">
+        <span className="text-sm font-bold text-slate-900">Connect</span>
+        <MoreIcon className="text-slate-400" />
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-scroll p-3">
+        <div className="space-y-6">
+          <SidebarSection {...sectionProps("quick-views", "Quick Views", "More quick view options")} open={quickViewsOpen} onToggle={() => setQuickViewsOpen((value) => !value)}>
+            <div className="space-y-1">
+              {quickViews.map((view) => {
+                const Icon = view.icon;
+                const rowId = `quick-view-${view.id}`;
+                const active = activeQuickViewId === view.id;
+                const hovered = hoveredRowId === rowId;
+                const select = () => onSelectQuickView(view.id);
+
+                return (
+                  <div key={view.id} role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (value === rowId ? null : value))} className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-1 transition-colors hover:bg-slate-50 ${active ? "bg-emerald-50" : ""}`}>
+                    <div className="flex min-w-0 items-center gap-3 text-slate-600">
+                      <Icon className={`h-4 w-4 shrink-0 ${active ? "text-emerald-600" : "text-slate-400"}`} />
+                      <span className={`truncate text-sm ${active ? "font-bold" : "font-semibold"}`}>{view.label}</span>
+                    </div>
+                    <SidebarTrailingSlot hovered={hovered} count={view.value} tooltip={view.id === "drafts" ? "More draft options" : "More quick view options"} onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "quick-view", id: view.id, label: view.label, sectionId: "quick-views" })} />
+                  </div>
+                );
+              })}
+            </div>
+          </SidebarSection>
+
+          <SidebarSection {...sectionProps("favorites", "Favorites", "More section options")} open={favouritesOpen} onToggle={() => setFavouritesOpen((value) => !value)}>
+            <ConversationList conversations={favoriteConversations} sectionId="favorites" selectedConversationId={selectedConversationId} hoveredRowId={hoveredRowId} setHoveredRowId={setHoveredRowId} onSelectConversation={onSelectConversation} onOpenSidebarMenu={onOpenSidebarMenu} />
+          </SidebarSection>
+
+          <SidebarSection {...sectionProps("chats", "Chats", "More section options")} open={chatsOpen} onToggle={() => setChatsOpen((value) => !value)}>
+            <ConversationList conversations={chatConversations} sectionId="chats" selectedConversationId={selectedConversationId} hoveredRowId={hoveredRowId} setHoveredRowId={setHoveredRowId} onSelectConversation={onSelectConversation} onOpenSidebarMenu={onOpenSidebarMenu} />
+          </SidebarSection>
+
+          <SidebarSection {...sectionProps("teams", "Teams & Channels", "More section options")} open={teamsOpen} onToggle={() => setTeamsOpen((value) => !value)}>
+            <div className="space-y-1 px-1.5">
+              {teams.map((team) => {
+                const TeamIcon = team.icon ?? ArchiveIcon;
+                const teamRowId = `team-${team.id}`;
+                const teamHovered = hoveredRowId === teamRowId;
+                return (
+                  <div key={team.id} className="space-y-1">
+                    <div onMouseEnter={() => setHoveredRowId(teamRowId)} onMouseLeave={() => setHoveredRowId((value) => (value === teamRowId ? null : value))} className="flex items-center justify-between">
+                      <button type="button" onClick={() => onToggleTeam(team.id)} aria-expanded={team.isExpanded} className="flex min-w-0 items-center gap-1.5 rounded py-1 text-left hover:bg-slate-50">
+                        <ChevronIcon className={`h-[18px] w-[18px] shrink-0 text-slate-500 transition-transform ${team.isExpanded ? "rotate-0" : "-rotate-90"}`} />
+                        <TeamIcon className="h-[18px] w-[18px] shrink-0 text-slate-400" />
+                        <span className="truncate text-sm font-bold text-slate-700">{team.label}</span>
+                      </button>
+                      <SidebarTrailingSlot hovered={teamHovered} tooltip="More team options" onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "team", id: team.id, label: team.label, sectionId: "teams" })} />
+                    </div>
+                    {team.isExpanded ? <div className="space-y-1 pl-8">{team.channels.map((channel) => {
+                      const selected = selectedConversationId === channel.id;
+                      const rowId = `channel-${channel.id}`;
+                      const hovered = hoveredRowId === rowId;
+                      const select = () => onSelectConversation(channel.id);
+                      return <div key={channel.id} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (value === rowId ? null : value))} className="flex items-center justify-between"><div role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} className={`min-w-0 cursor-pointer rounded px-1.5 py-1 text-sm hover:bg-slate-50 ${selected ? "font-bold text-emerald-600" : "font-medium text-slate-600"}`}>{channel.isPrivate ? "lock " : "# "}{channel.slug}</div><SidebarTrailingSlot hovered={hovered} tooltip="More channel options" onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "channel", id: channel.id, label: channel.name, parentId: team.id, sectionId: "teams" })} /></div>;
+                    })}</div> : null}
+                  </div>
+                );
+              })}
+            </div>
+          </SidebarSection>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function ConversationList({ conversations, sectionId, selectedConversationId, hoveredRowId, setHoveredRowId, onSelectConversation, onOpenSidebarMenu }: {
+  conversations: ConnectSidebarConversation[];
+  sectionId: "favorites" | "chats";
+  selectedConversationId: string;
+  hoveredRowId: string | null;
+  setHoveredRowId: (value: string | null | ((previous: string | null) => string | null)) => void;
+  onSelectConversation: (conversationId: string) => void;
+  onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
+}) {
+  return <div className="space-y-1">{conversations.map((conversation) => {
+    const rowId = `${sectionId}-${conversation.id}`;
+    const selected = selectedConversationId === conversation.id;
+    const unread = conversation.unreadCount ?? 0;
+    const hovered = hoveredRowId === rowId;
+    const select = () => onSelectConversation(conversation.id);
+    const context: ConnectSidebarMenuContext = { kind: conversation.isSelfSpace ? "personal" : conversation.type === "channel" ? "channel" : "user", id: conversation.id, label: conversation.name, sectionId };
+    return <div key={conversation.id} role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (typeof value === "function" ? value : value === rowId ? null : value))} className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-1 transition-colors hover:bg-slate-50 ${selected ? "bg-emerald-50" : ""}`}><div className="flex min-w-0 items-center gap-2.5">{conversation.type === "channel" ? <span className={`text-sm font-bold ${selected ? "text-emerald-600" : "text-slate-400"}`}>#</span> : <ConversationAvatar conversation={conversation} />}<span className={`truncate text-sm text-slate-600 ${sectionId === "chats" && unread > 0 || selected ? "font-bold" : "font-medium"}`}>{conversation.name}</span></div><SidebarTrailingSlot hovered={hovered} count={unread} tooltip={conversation.isSelfSpace ? "More personal options" : conversation.type === "channel" ? "More channel options" : "More chat options"} onOpenMenu={(event) => onOpenSidebarMenu(event, context)} /></div>;
+  })}</div>;
+}
+
+function MoreIcon({ className = "" }: { className?: string }) { return <svg aria-hidden="true" className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></svg>; }
+function ChevronIcon({ className = "" }: { className?: string }) { return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>; }
+function ArchiveIcon({ className = "" }: { className?: string }) { return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16v13H4zM3 4h18v3H3zM10 12h4" /></svg>; }
