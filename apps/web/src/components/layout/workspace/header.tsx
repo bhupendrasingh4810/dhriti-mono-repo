@@ -1,5 +1,8 @@
-import { AppView } from "@/types/app.types";
+import type { AppView } from "@/types/app.types";
 import { useState } from "react";
+import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
+import { useAuth } from "@/hooks/use-auth";
+import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 // import { useOrganization } from "@/hooks/use-organization";
 
 interface Props {
@@ -19,6 +22,103 @@ const APP_VIEW_TITLES: Partial<Record<AppView, string>> = {
 export default function Header({ activeView, onViewChange }: Props) {
   // const { currentOrg, organization } = useOrganization();
   const [appsOpen, setAppsOpen] = useState(false);
+  const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
+  const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
+  const { user, logout } = useAuth();
+  const userName = user?.name ?? "User";
+  const userEmail = user?.email ?? "user@dhriti.app";
+  const userInitials = userName
+    .split(" ")
+    .map((name) => name[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const settingsItems: ConnectCascadingMenuItem[] = [
+    {
+      id: "general-settings",
+      label: "General Settings",
+      icon: <SettingsMenuIcon kind="general" />,
+      sectionTitle: "Personal Settings",
+    },
+    { id: "notification-settings", label: "Notification Settings", icon: <SettingsMenuIcon kind="notification" /> },
+    {
+      id: "system-settings",
+      label: "System",
+      icon: <SettingsMenuIcon kind="system" />,
+      sectionTitle: "Flow Admin Settings",
+      dividerAbove: true,
+    },
+    { id: "space-settings", label: "Spaces", icon: <SettingsMenuIcon kind="spaces" /> },
+    { id: "work-item-settings", label: "Work Items", icon: <SettingsMenuIcon kind="workItems" /> },
+    // {
+    //   id: "connect-settings",
+    //   label: "Connect Settings",
+    //   icon: <SettingsMenuIcon kind="connect" />,
+    //   sectionTitle: "Connect Settings",
+    //   dividerAbove: true,
+    // },
+    // {
+    //   id: "pulse-settings",
+    //   label: "Pulse Settings",
+    //   icon: <SettingsMenuIcon kind="pulse" />,
+    //   sectionTitle: "Pulse Settings",
+    //   dividerAbove: true,
+    // },
+    // {
+    //   id: "atlas-settings",
+    //   label: "Atlas Settings",
+    //   icon: <SettingsMenuIcon kind="atlas" />,
+    //   sectionTitle: "Atlas Settings",
+    //   dividerAbove: true,
+    // },
+    // {
+    //   id: "cadence-settings",
+    //   label: "Cadence Settings",
+    //   icon: <SettingsMenuIcon kind="cadence" />,
+    //   sectionTitle: "Cadence Settings",
+    //   dividerAbove: true,
+    // },
+    // {
+    //   id: "hrms-settings",
+    //   label: "HRMS Settings",
+    //   icon: <SettingsMenuIcon kind="hrms" />,
+    //   sectionTitle: "HRMS Settings",
+    //   dividerAbove: true,
+    // },
+    {
+      id: "user-management",
+      label: "User Management",
+      icon: <SettingsMenuIcon kind="users" />,
+      sectionTitle: "Dhriti Admin Settings",
+      dividerAbove: true,
+    },
+    { id: "billing", label: "Billing", icon: <SettingsMenuIcon kind="billing" /> },
+  ];
+
+  const userItems: ConnectCascadingMenuItem[] = [
+    {
+      id: "user-card",
+      label: userName,
+      description: userEmail,
+      icon: (
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#036c5f] text-xs font-bold text-white">
+          {userInitials}
+        </span>
+      ),
+      closeOnClick: false,
+    },
+    { id: "profile", label: "Profile", icon: <SettingsMenuIcon kind="profile" />, dividerAbove: true },
+    { id: "theme", label: "Theme", icon: <SettingsMenuIcon kind="theme" /> },
+    {
+      id: "logout",
+      label: "Logout",
+      icon: <SettingsMenuIcon kind="logout" />,
+      dividerAbove: true,
+      danger: true,
+      onClick: () => void logout(),
+    },
+  ];
 
   return (
     <header
@@ -154,9 +254,44 @@ export default function Header({ activeView, onViewChange }: Props) {
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </button>
-        <div className="flex items-center gap-2 ml-1 cursor-pointer group">
+        <button
+          type="button"
+          onClick={(event) => {
+            setSettingsAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
+            setUserAnchor(null);
+          }}
+          aria-label="Open settings"
+          aria-haspopup="menu"
+          aria-expanded={Boolean(settingsAnchor)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg cursor-pointer text-slate-500 transition-all hover:bg-slate-50"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V20.3h-3v-.1a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.04 15 1.7 1.7 0 0 0 5.48 13.96h-.1v-3h.1A1.7 1.7 0 0 0 7.04 9.92 1.7 1.7 0 0 0 6.7 8.04l-.06-.06 2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56v-.1h3v.1a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04h.1v3h-.1A1.7 1.7 0 0 0 19.4 15Z" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            setUserAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
+            setSettingsAnchor(null);
+          }}
+          aria-label="Open user menu"
+          aria-haspopup="menu"
+          aria-expanded={Boolean(userAnchor)}
+          className="ml-1 flex items-center gap-2 rounded-lg p-1 transition-all hover:bg-slate-50"
+        >
           <div className="w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
-            <span className="text-white text-xs font-bold">JS</span>
+            <span className="text-white text-xs font-bold">{userInitials}</span>
           </div>
           <svg
             width="12"
@@ -170,8 +305,150 @@ export default function Header({ activeView, onViewChange }: Props) {
           >
             <polyline points="6 9 12 15 18 9" />
           </svg>
-        </div>
+        </button>
       </div>
+      <ConnectCascadingMenu
+        anchorEl={settingsAnchor}
+        open={Boolean(settingsAnchor)}
+        onClose={() => setSettingsAnchor(null)}
+        items={settingsItems}
+        minWidth={248}
+      />
+      <ConnectCascadingMenu
+        anchorEl={userAnchor}
+        open={Boolean(userAnchor)}
+        onClose={() => setUserAnchor(null)}
+        items={userItems}
+        minWidth={248}
+      />
     </header>
+  );
+}
+
+type SettingsMenuIconProps = {
+  kind:
+    | "general"
+    | "notification"
+    | "system"
+    | "spaces"
+    | "workItems"
+    | "connect"
+    | "pulse"
+    | "atlas"
+    | "cadence"
+    | "hrms"
+    | "users"
+    | "billing"
+    | "profile"
+    | "theme"
+    | "logout";
+};
+
+function SettingsMenuIcon({ kind }: SettingsMenuIconProps) {
+  const paths = {
+    general: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.1 2.1-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.04 1.56V20.3h-3v-.1a1.7 1.7 0 0 0-1.04-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-2.1-2.1.06-.06A1.7 1.7 0 0 0 7.04 15 1.7 1.7 0 0 0 5.48 13.96h-.1v-3h.1A1.7 1.7 0 0 0 7.04 9.92 1.7 1.7 0 0 0 6.7 8.04l-.06-.06 2.1-2.1.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.04-1.56v-.1h3v.1a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.1 2.1-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.04h.1v3h-.1A1.7 1.7 0 0 0 19.4 15Z" />
+      </>
+    ),
+    notification: (
+      <>
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </>
+    ),
+    system: (
+      <>
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <path d="M8 8h8M8 12h8M8 16h5" />
+      </>
+    ),
+    spaces: (
+      <>
+        <rect x="3" y="3" width="7" height="7" rx="1" />
+        <rect x="14" y="3" width="7" height="7" rx="1" />
+        <rect x="3" y="14" width="7" height="7" rx="1" />
+        <rect x="14" y="14" width="7" height="7" rx="1" />
+      </>
+    ),
+    workItems: (
+      <>
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+        <path d="m8 12 2.5 2.5L16 9" />
+      </>
+    ),
+    connect: (
+      <>
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      </>
+    ),
+    pulse: <path d="M3 12h4l2-6 4 12 2-6h6" />,
+    atlas: (
+      <>
+        <path d="m9 18-6-3V5l6 3 6-3 6 3v10l-6-3z" />
+        <path d="M9 8v10M15 5v10" />
+      </>
+    ),
+    cadence: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    hrms: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <circle cx="17" cy="10" r="2" />
+        <path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M15 16c2.5 0 4 1.3 4 4" />
+      </>
+    ),
+    users: (
+      <>
+        <circle cx="9" cy="8" r="3" />
+        <circle cx="17" cy="10" r="2" />
+        <path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M15 16c2.5 0 4 1.3 4 4" />
+      </>
+    ),
+    billing: (
+      <>
+        <rect x="3" y="5" width="18" height="14" rx="2" />
+        <path d="M3 10h18M7 15h3" />
+      </>
+    ),
+    profile: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+      </>
+    ),
+    theme: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+        <path d="m16 17 5-5-5-5M21 12H9" />
+      </>
+    ),
+  }[kind];
+
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      {paths}
+    </svg>
   );
 }

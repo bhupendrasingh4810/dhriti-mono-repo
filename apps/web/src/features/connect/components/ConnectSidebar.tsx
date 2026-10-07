@@ -78,7 +78,7 @@ function SidebarAccordionSection({
       elevation={0}
       onMouseEnter={() => onHoverSection(sectionId)}
       onMouseLeave={() => onHoverSection(null)}
-      sx={{ bgcolor: "transparent", border: 0, boxShadow: "none", "&::before": { display: "none" } }}
+      sx={{ position: "relative", bgcolor: "transparent", border: 0, boxShadow: "none", "&::before": { display: "none" } }}
     >
       <AccordionSummary
         sx={{
@@ -93,26 +93,7 @@ function SidebarAccordionSection({
         <Typography variant="overline" color="text.disabled">
           {title}
         </Typography>
-        <Stack direction="row" spacing={0.2} sx={{ alignItems: "center" }}>
-          <Box sx={{ width: 28, height: 28, display: "grid", placeItems: "center" }}>
-            <Tooltip title={menuTooltip}>
-              <IconButton
-                size="small"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onOpenMenu(event);
-                }}
-                sx={{
-                  ...sidebarMenuButtonSx,
-                  opacity: hovered ? 1 : 0,
-                  pointerEvents: hovered ? "auto" : "none",
-                  transition: (theme) => theme.transitions.create("opacity", { duration: 120 }),
-                }}
-              >
-                <MoreHorizRounded sx={{ fontSize: 17, color: "text.disabled" }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
+        <Stack direction="row" sx={{ alignItems: "center" }}>
           <ExpandMoreRounded
             sx={{
               fontSize: 18,
@@ -123,6 +104,25 @@ function SidebarAccordionSection({
           />
         </Stack>
       </AccordionSummary>
+      <Box sx={{ position: "absolute", right: 30, top: 0, width: 28, height: 28, display: "grid", placeItems: "center", zIndex: 1 }}>
+        <Tooltip title={menuTooltip}>
+          <IconButton
+            size="small"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpenMenu(event);
+            }}
+            sx={{
+              ...sidebarMenuButtonSx,
+              opacity: hovered ? 1 : 0,
+              pointerEvents: hovered ? "auto" : "none",
+              transition: (theme) => theme.transitions.create("opacity", { duration: 120 }),
+            }}
+          >
+            <MoreHorizRounded sx={{ fontSize: 17, color: "text.disabled" }} />
+          </IconButton>
+        </Tooltip>
+      </Box>
       <AccordionDetails sx={{ p: 0 }}>{children}</AccordionDetails>
     </Accordion>
   );

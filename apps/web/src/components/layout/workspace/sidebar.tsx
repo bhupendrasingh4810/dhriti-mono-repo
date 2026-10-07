@@ -233,7 +233,7 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
       </nav>
 
       {/* Bottom */}
-      <div className="flex flex-col items-center gap-1 py-3 border-t border-slate-100">
+      {/* <div className="flex flex-col items-center gap-1 py-3 border-t border-slate-100">
         <button
           className="flex flex-col items-center gap-1 w-14 py-2.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
           title="Settings"
@@ -273,14 +273,14 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
           <span style={{ fontSize: "9px", fontWeight: 500 }}>Logout</span>
-        </button>
+        </button> */}
         {/* Avatar */}
-        <div className="mt-1 w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
+        {/* <div className="mt-1 w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
           <span className="text-white font-bold" style={{ fontSize: "10px" }}>
             JS
           </span>
         </div>
-      </div>
+      </div> */}
     </aside>
   );
 }
