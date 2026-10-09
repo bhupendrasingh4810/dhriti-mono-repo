@@ -58,7 +58,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "pulse",
-    label: "Pulse", 
+    label: "Pulse",
     href: "pulse",
     icon: (
       <svg
@@ -231,56 +231,6 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
           );
         })}
       </nav>
-
-      {/* Bottom */}
-      {/* <div className="flex flex-col items-center gap-1 py-3 border-t border-slate-100">
-        <button
-          className="flex flex-col items-center gap-1 w-14 py-2.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
-          title="Settings"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="12" cy="12" r="3" />
-            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-          </svg>
-          <span style={{ fontSize: "9px", fontWeight: 500 }}>Settings</span>
-        </button>
-        <button
-          onClick={onLogout}
-          className="flex flex-col items-center gap-1 w-14 py-2.5 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-50 transition-all"
-          title="Logout"
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          <span style={{ fontSize: "9px", fontWeight: 500 }}>Logout</span>
-        </button> */}
-        {/* Avatar */}
-        {/* <div className="mt-1 w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
-          <span className="text-white font-bold" style={{ fontSize: "10px" }}>
-            JS
-          </span>
-        </div>
-      </div> */}
     </aside>
   );
 }

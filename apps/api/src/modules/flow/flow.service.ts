@@ -5,7 +5,7 @@ import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
-import { EntitlementService } from "../authorization/entitlement.service";
+import { EntitlementService } from "../authorization/services/entitlement.service";
 import type { CreateProjectDto, UpdateProjectDto } from "./dto/project.dto";
 import type { CreateIssueDto, ListIssuesQueryDto, MoveIssueDto, UpdateIssueDto } from "./dto/issue.dto";
 import type { CreateSprintDto, UpdateSprintDto } from "./dto/sprint.dto";

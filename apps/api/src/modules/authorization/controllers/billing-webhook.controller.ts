@@ -2,9 +2,9 @@ import { BadRequestException, Controller, Headers, HttpCode, Post, Req, UseGuard
 import { ApiTags } from "@nestjs/swagger";
 import type { Request } from "express";
 
-import { Public } from "../../common/decorators/public.decorator";
-import { BillingWebhookService } from "./billing-webhook.service";
-import { BillingWebhookRateLimitGuard } from "./billing-webhook-rate-limit.guard";
+import { Public } from "../../../common/decorators/public.decorator";
+import { BillingWebhookService } from "../services/billing-webhook.service";
+import { BillingWebhookRateLimitGuard } from "../billing-webhook-rate-limit.guard";
 
 interface RawBodyRequest extends Request {
   rawBody?: Buffer;

@@ -15,6 +15,8 @@ interface ControlLayoutProps {
 const NAVIGATION: Record<ControlMode, Array<{ href: string; label: string; enabled: boolean }>> = {
   platform: [
     { href: "platform/dashboard", label: "Overview", enabled: true },
+    { href: "platform/entitlements", label: "Entitlements", enabled: true },
+    { href: "platform/plans", label: "Plans", enabled: true },
     { href: "platform/orgs", label: "Organizations", enabled: true },
     { href: "platform/subscriptions", label: "Subscriptions", enabled: true },
     { href: "platform/users", label: "Platform Users", enabled: true },

@@ -13,12 +13,12 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
-import { RequirePermission } from "../../common/decorators/access.decorator";
-import { CurrentOrganization, type OrganizationContext } from "../../common/decorators/organization.decorator";
-import { CurrentUser, type AuthenticatedUser } from "../../common/decorators/current-user.decorator";
-import { AccessGuard } from "../../common/guards/access.guard";
-import { OrganizationContextGuard } from "../../common/guards/organization-context.guard";
-import { TenantGuard } from "../../common/guards/tenant.guard";
+import { RequirePermission } from "../../../common/decorators/access.decorator";
+import { CurrentOrganization, type OrganizationContext } from "../../../common/decorators/organization.decorator";
+import { CurrentUser, type AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
+import { AccessGuard } from "../../../common/guards/access.guard";
+import { OrganizationContextGuard } from "../../../common/guards/organization-context.guard";
+import { TenantGuard } from "../../../common/guards/tenant.guard";
 import {
   AddPermissionDto,
   AssignPermissionGroupDto,
@@ -28,13 +28,13 @@ import {
   UpdateDepartmentDto,
   UpdateOrganizationTeamDto,
   UpdatePermissionGroupDto,
-} from "./dto/organization-access.dto";
-import { OrganizationDepartmentService } from "./organization-department.service";
-import { OrganizationPermissionGroupService } from "./organization-permission-group.service";
-import { OrganizationTeamService } from "./organization-team.service";
-import { EntitlementService } from "./entitlement.service";
-import { SubscriptionService } from "./subscription.service";
-import { CreateSubscriptionDto, UpdateSubscriptionDto } from "./dto/subscription.dto";
+} from "../dto/organization-access.dto";
+import { OrganizationDepartmentService } from "../services/organization-department.service";
+import { OrganizationPermissionGroupService } from "../services/organization-permission-group.service";
+import { OrganizationTeamService } from "../services/organization-team.service";
+import { EntitlementService } from "../services/entitlement.service";
+import { SubscriptionService } from "../services/subscription.service";
+import { CreateSubscriptionDto, UpdateSubscriptionDto } from "../dto/subscription.dto";
 
 @ApiTags("organization access")
 @ApiBearerAuth()

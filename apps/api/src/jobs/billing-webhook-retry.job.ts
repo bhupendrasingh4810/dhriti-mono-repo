@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
 
-import { BillingWebhookService } from "../modules/authorization/billing-webhook.service";
+import { BillingWebhookService } from "../modules/authorization/services/billing-webhook.service";
 import { RedisService } from "../redis/redis.service";
 import { ApiConfigService } from "../config/config.service";
 

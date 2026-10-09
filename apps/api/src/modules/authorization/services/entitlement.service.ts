@@ -1,11 +1,11 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import type { EntitlementKind, SubscriptionStatus } from "@prisma/client";
 
-import { AppError } from "../../common/errors/app-error";
-import { ErrorCode } from "../../common/errors/error-codes";
-import { PrismaService } from "../../database/prisma.service";
-import { RedisService } from "../../redis/redis.service";
-import { ApiConfigService } from "../../config/config.service";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
+import { PrismaService } from "../../../database/prisma.service";
+import { RedisService } from "../../../redis/redis.service";
+import { ApiConfigService } from "../../../config/config.service";
 
 export interface EffectiveEntitlement {
   enabled: boolean;

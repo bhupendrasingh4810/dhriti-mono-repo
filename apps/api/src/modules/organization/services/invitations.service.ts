@@ -9,7 +9,7 @@ import { ApiConfigService } from "../../../config/config.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
-import { EntitlementService } from "../../authorization/entitlement.service";
+import { EntitlementService } from "../../authorization/services/entitlement.service";
 import { AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
 import { OrganizationContext } from "../../../common/decorators/organization.decorator";
 

@@ -1,29 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent } from "react";
+import type { CSSProperties, HTMLAttributes, MouseEvent, ReactNode } from "react";
 import Emoji, { type EmojiClickData } from "emoji-picker-react";
-import {
-  FlagOutlined,
-  FormatListBulletedRounded,
-  ForwardToInboxRounded,
-  Inventory2Rounded,
-  LinkRounded,
-  MailOutlineRounded,
-  MarkEmailUnreadRounded,
-  MoreVertRounded,
-  OpenInNewRounded,
-  PaletteRounded,
-  PeopleRounded,
-  PushPinRounded,
-  SaveAltRounded,
-  TranslateRounded,
-  VisibilityOffRounded,
-  AlternateEmailRounded,
-  DeleteOutlineRounded,
-  EditRounded,
-} from "@mui/icons-material";
-import { Box, Button, Popover, Stack, Typography } from "@mui/material";
 import {
   connectChannels,
   connectMentionFeed,
@@ -63,10 +42,32 @@ import { ConnectReactionUsersList } from "@/components/connect/ConnectReactionUs
 import ConnectUserDetailsCard from "@/components/connect/ConnectUserDetailsCard";
 
 const quickViewsConfig = [
-  { icon: AlternateEmailRounded, label: "Mentions" },
-  { icon: FormatListBulletedRounded, label: "Threads" },
-  { icon: MailOutlineRounded, label: "Drafts" },
+  { icon: MentionIcon, label: "Mentions" },
+  { icon: ListIcon, label: "Threads" },
+  { icon: MailIcon, label: "Drafts" },
 ];
+
+function PageIcon({ name, className = "" }: { name: string; className?: string }) {
+  const paths: Record<string, ReactNode> = {
+    mention: <path d="M16 8a4 4 0 1 0-8 0v5a4 4 0 0 0 8 0v-1h-3" />,
+    list: <><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3" cy="6" r="1" fill="currentColor" /><circle cx="3" cy="12" r="1" fill="currentColor" /><circle cx="3" cy="18" r="1" fill="currentColor" /></>,
+    mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
+    palette: <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h2a7 7 0 0 0 0-10Z" />,
+    archive: <><path d="M4 7h16v13H4zM3 4h18v3H3zM10 12h4" /></>,
+    eye: <path d="M2 12s3-6 10-6 10 6 10 6-3 6-10 6-10-6-10-6Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />,
+    link: <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" />,
+    users: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="10" r="2" /><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M15 16c2.5 0 4 1.3 4 4" /></>,
+    pin: <path d="m14 4 6 6-3 1-4 4-1 5-2-2-5 1 1-5-2-2 5-1 4-4z" />,
+    trash: <><path d="M4 7h16M10 11v5M14 11v5M6 7l1 13h10l1-13M9 7V4h6v3" /></>,
+    flag: <path d="M5 21V4m0 1h12l-1 4 1 4H5" />,
+  };
+  return <svg aria-hidden="true" className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{paths[name] ?? paths.mail}</svg>;
+}
+function MentionIcon({ className }: { className?: string }) { return <PageIcon name="mention" className={className} />; }
+function ListIcon({ className }: { className?: string }) { return <PageIcon name="list" className={className} />; }
+function MailIcon({ className }: { className?: string }) { return <PageIcon name="mail" className={className} />; }
+function PaletteIcon({ className }: { className?: string }) { return <PageIcon name="palette" className={className} />; }
+function ArchiveIcon({ className }: { className?: string }) { return <PageIcon name="archive" className={className} />; }
 
 type MentionHoverState = {
   anchorEl: HTMLElement;
@@ -84,6 +85,81 @@ type DeletedMessageState = {
   message: ConnectMessage;
   index: number;
 };
+
+type PopoverOrigin = {
+  vertical: "top" | "center" | "bottom";
+  horizontal: "left" | "center" | "right";
+};
+
+function Box({ children, ...props }: HTMLAttributes<HTMLDivElement>) {
+  return <div {...props}>{children}</div>;
+}
+
+function Popover({
+  open,
+  anchorEl,
+  children,
+  onClose,
+  anchorOrigin = { vertical: "bottom", horizontal: "left" },
+  transformOrigin = { vertical: "top", horizontal: "left" },
+}: {
+  open: boolean;
+  anchorEl: HTMLElement | null;
+  children: ReactNode;
+  onClose?: () => void;
+  anchorOrigin?: PopoverOrigin;
+  transformOrigin?: PopoverOrigin;
+}) {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open || !onClose) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+
+      if (
+        target &&
+        !popoverRef.current?.contains(target) &&
+        !anchorEl?.contains(target)
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [anchorEl, onClose, open]);
+
+  if (!open || !anchorEl) return null;
+  const rect = anchorEl.getBoundingClientRect();
+  const anchorLeft = {
+    left: rect.left,
+    center: rect.left + rect.width / 2,
+    right: rect.right,
+  }[anchorOrigin.horizontal];
+  const anchorTop = {
+    top: rect.top,
+    center: rect.top + rect.height / 2,
+    bottom: rect.bottom,
+  }[anchorOrigin.vertical];
+  const translateX = { left: "0%", center: "-50%", right: "-100%" }[transformOrigin.horizontal];
+  const translateY = { top: "0%", center: "-50%", bottom: "-100%" }[transformOrigin.vertical];
+
+  return (
+    <div
+      ref={popoverRef}
+      className="fixed z-50 rounded-lg border border-slate-200 bg-white shadow-lg"
+      style={{
+        left: anchorLeft,
+        top: anchorTop,
+        transform: `translate(${translateX}, ${translateY})`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 function getConversationLabel(conversation: ConnectConversation) {
   if (conversation.type === "channel") {
@@ -263,7 +339,7 @@ export default function ConnectPage() {
       connectTeams.map((team) => ({
         id: team.id,
         label: team.name,
-        icon: team.name === "Design" ? PaletteRounded : Inventory2Rounded,
+        icon: team.name === "Design" ? PaletteIcon : ArchiveIcon,
         isExpanded: expandedTeamIds[team.id] ?? false,
         channels: connectChannels
           .filter((channel) => channel.teamId === team.id && !channel.isArchived)
@@ -367,15 +443,15 @@ export default function ConnectPage() {
     }
 
     return [
-      { id: "unfollow-thread", label: "Unfollow thread", icon: <VisibilityOffRounded fontSize="small" /> },
-      { id: "mark-unread", label: "Mark as unread", icon: <MarkEmailUnreadRounded fontSize="small" /> },
-      { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
+      { id: "unfollow-thread", label: "Unfollow thread", icon: <PageIcon name="eye" /> },
+      { id: "mark-unread", label: "Mark as unread", icon: <PageIcon name="mail" /> },
+      { id: "copy-link", label: "Copy link", icon: <PageIcon name="link" /> },
     ];
   }, [activeMentionMenuId, selectedMention]);
 
   const mentionCallMenuItems: ConnectCascadingMenuItem[] = [
-    { id: "video-call", label: "Video Call", icon: <OpenInNewRounded fontSize="small" /> },
-    { id: "audio-call", label: "Audio Call", icon: <PeopleRounded fontSize="small" /> },
+    { id: "video-call", label: "Video Call", icon: <PageIcon name="link" /> },
+    { id: "audio-call", label: "Audio Call", icon: <PageIcon name="users" /> },
   ];
 
   const sidebarMenuItems = useMemo<ConnectCascadingMenuItem[]>(
@@ -406,16 +482,16 @@ export default function ConnectPage() {
   const canEditActiveMessage = Boolean(activeMenuMessage && activeMenuMessage.senderId === currentUser.id);
 
   const messageMenuItems: ConnectCascadingMenuItem[] = [
-    ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <EditRounded fontSize="small" /> }] : []),
-    { id: "forward", label: "Forward", icon: <ForwardToInboxRounded fontSize="small" /> },
-    { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
-    { id: "pin", label: "Pin", icon: <PushPinRounded fontSize="small" /> },
-    { id: "save", label: "Save this Message", icon: <SaveAltRounded fontSize="small" /> },
-    { id: "mark-unread", label: "Mark as unread", icon: <MarkEmailUnreadRounded fontSize="small" /> },
-    { id: "translate", label: "Translations", icon: <TranslateRounded fontSize="small" /> },
-    { id: "delete", label: "Delete Message", icon: <DeleteOutlineRounded fontSize="small" />, danger: true },
-    { id: "report", label: "Report this Message", icon: <FlagOutlined fontSize="small" />, danger: true },
-    { id: "more", label: "More actions", icon: <MoreVertRounded fontSize="small" /> },
+    ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <PageIcon name="link" /> }] : []),
+    { id: "forward", label: "Forward", icon: <PageIcon name="link" /> },
+    { id: "copy-link", label: "Copy Link", icon: <PageIcon name="link" /> },
+    { id: "pin", label: "Pin", icon: <PageIcon name="pin" /> },
+    { id: "save", label: "Save this Message", icon: <PageIcon name="archive" /> },
+    { id: "mark-unread", label: "Mark as unread", icon: <PageIcon name="mail" /> },
+    { id: "translate", label: "Translations", icon: <PageIcon name="mention" /> },
+    { id: "delete", label: "Delete Message", icon: <PageIcon name="trash" />, danger: true },
+    { id: "report", label: "Report this Message", icon: <PageIcon name="flag" />, danger: true },
+    { id: "more", label: "More actions", icon: <PageIcon name="list" /> },
   ];
 
   function handleSelectConversation(conversationId: string) {
@@ -752,19 +828,9 @@ export default function ConnectPage() {
   const isMentionsView = activeQuickViewId === "mentions";
 
   return (
-    <Box
-      sx={{
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        bgcolor: "background.default",
-        color: "text.primary",
-        padding: 4,
-      }}
-    >
-      <Box sx={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
-        <Box sx={{ mr: 2, borderRadius: 2.5 }}>
+    <div className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="mr-2 rounded-[10px]">
           <ConnectSidebar
             quickViews={sidebarQuickViews}
             favoriteConversations={favoriteConversations.map((conversation) => ({
@@ -790,10 +856,11 @@ export default function ConnectPage() {
             onSelectQuickView={handleSelectQuickView}
             onOpenSidebarMenu={openSidebarMenu}
           />
-        </Box>
+        </div>
 
-        <Box sx={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", ml: 2, borderRadius: 2.5 }}>
-          {isMentionsView ? (
+        <div className="ml-2 flex min-w-0 flex-1 overflow-hidden rounded-[10px]">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            {isMentionsView ? (
             <ConnectMentionsView
               items={mentionItems}
               usersById={Object.fromEntries(
@@ -858,7 +925,7 @@ export default function ConnectPage() {
                 ) : null
               }
             />
-          ) : (
+            ) : (
             <ConnectConversations
               conversation={{
                 id: selectedConversation.id,
@@ -913,7 +980,8 @@ export default function ConnectPage() {
                 onRemovePendingAttachment={handleRemovePendingAttachment}
               />
             </ConnectConversations>
-          )}
+            )}
+          </div>
 
           {!isMentionsView ? (
             <ConnectChannelDetailsPanel
@@ -934,8 +1002,8 @@ export default function ConnectPage() {
               onClose={() => setShowDetails(false)}
             />
           ) : null}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
       <ConnectCascadingMenu
         anchorEl={sidebarMenuAnchor}
@@ -1010,29 +1078,10 @@ export default function ConnectPage() {
       />
 
       {deletedMessage ? (
-        <Stack
-          direction="row"
-          spacing={2}
-          sx={{
-            position: "fixed",
-            left: "50%",
-            bottom: 24,
-            transform: "translateX(-50%)",
-            alignItems: "center",
-            px: 2,
-            py: 1.2,
-            bgcolor: "grey.900",
-            color: "common.white",
-            borderRadius: (theme) => theme.tokens.radius.sm,
-            boxShadow: (theme) => theme.tokens.elevation.high,
-            zIndex: "snackbar",
-          }}
-        >
-          <Typography sx={{ fontSize: 13, fontWeight: 700 }}>Message deleted</Typography>
-          <Button size="small" onClick={undoDeleteMessage} sx={{ color: "warning.light", fontWeight: 800 }}>
-            UNDO
-          </Button>
-        </Stack>
+        <div className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-4 rounded bg-slate-900 px-4 py-2.5 text-white shadow-lg">
+          <span className="text-sm font-bold">Message deleted</span>
+          <button type="button" onClick={undoDeleteMessage} className="text-xs font-extrabold text-amber-300">UNDO</button>
+        </div>
       ) : null}
 
       <Popover
@@ -1042,7 +1091,6 @@ export default function ConnectPage() {
           setMessageEmojiAnchor(null);
           setActiveMessageForEmoji(null);
         }}
-        disableScrollLock
         anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
         transformOrigin={{ vertical: "top", horizontal: "left" }}
       >
@@ -1063,7 +1111,6 @@ export default function ConnectPage() {
         open={Boolean(reactionHover)}
         anchorEl={reactionHover?.anchorEl ?? null}
         onClose={scheduleReactionHoverClose}
-        disableScrollLock
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         transformOrigin={{ vertical: "bottom", horizontal: "center" }}
       >
@@ -1087,7 +1134,6 @@ export default function ConnectPage() {
         open={Boolean(mentionHover)}
         anchorEl={mentionHover?.anchorEl ?? null}
         onClose={() => setMentionHover(null)}
-        disableScrollLock
         anchorOrigin={{ vertical: "center", horizontal: "right" }}
         transformOrigin={{ vertical: "center", horizontal: "left" }}
       >
@@ -1142,6 +1188,6 @@ export default function ConnectPage() {
         pushSystemMessage={pushSystemMessage}
         closeSidebarMenus={closeSidebarMenus}
       />
-    </Box>
+    </div>
   );
 }

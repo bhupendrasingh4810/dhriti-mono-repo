@@ -1,9 +1,9 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 
-import { AppError } from "../../common/errors/app-error";
-import { ErrorCode } from "../../common/errors/error-codes";
-import { PrismaService } from "../../database/prisma.service";
-import { AuditService } from "../audit/audit.service";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
+import { PrismaService } from "../../../database/prisma.service";
+import { AuditService } from "../../audit/audit.service";
 
 @Injectable()
 export class PlatformRoleService {

@@ -14,7 +14,7 @@ import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
-import { EntitlementService } from "../../authorization/entitlement.service";
+import { EntitlementService } from "../../authorization/services/entitlement.service";
 
 export interface MemberWithUser extends OrganizationMember {
   user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;

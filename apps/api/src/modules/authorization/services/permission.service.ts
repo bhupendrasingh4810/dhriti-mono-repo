@@ -1,8 +1,8 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 
-import { AppError } from "../../common/errors/app-error";
-import { ErrorCode } from "../../common/errors/error-codes";
-import { PrismaService } from "../../database/prisma.service";
+import { AppError } from "../../../common/errors/app-error";
+import { ErrorCode } from "../../../common/errors/error-codes";
+import { PrismaService } from "../../../database/prisma.service";
 
 export interface PermissionResource {
   type: string;

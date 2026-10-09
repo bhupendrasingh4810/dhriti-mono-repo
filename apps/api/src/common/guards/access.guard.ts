@@ -5,8 +5,8 @@ import type { Request } from "express";
 import { ACCESS_REQUIREMENTS_KEY, type AccessRequirements } from "../decorators/access.decorator";
 import type { AuthenticatedUser } from "../decorators/current-user.decorator";
 import type { OrganizationContext } from "../decorators/organization.decorator";
-import { EntitlementService } from "../../modules/authorization/entitlement.service";
-import { PermissionService } from "../../modules/authorization/permission.service";
+import { EntitlementService } from "../../modules/authorization/services/entitlement.service";
+import { PermissionService } from "../../modules/authorization/services/permission.service";
 import { PrismaService } from "../../database/prisma.service";
 
 interface AccessRequest extends Request {

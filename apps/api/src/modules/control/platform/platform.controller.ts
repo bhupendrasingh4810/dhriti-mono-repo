@@ -15,7 +15,7 @@ import {
   UpdateSubscriptionDto,
   UpdateTicketDto,
 } from "./dto/platform.dto";
-import { PlatformRoleService } from "../../authorization/platform-role.service";
+import { PlatformRoleService } from "../../authorization/services/platform-role.service";
 
 @ApiTags("control/platform")
 @ApiBearerAuth()
