@@ -12,6 +12,7 @@ import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
 import { AttachmentsMessage } from "./AttachmentsMessage";
+import type { CallKind } from "@/components/connect/WorkspaceCallProvider";
 
 function getFileExtension(name: string) {
   const parts = name.split(".");
@@ -34,6 +35,7 @@ interface ConnectConversationProps {
   activeMessageEmojiId?: string | null;
   getQuotedMessageById: (id: string) => ConnectConversationMessage | undefined;
   onOpenDetails: () => void;
+  onStartCall: (kind: CallKind) => void;
   onAddReaction: (messageId: string, emoji: string) => void;
   onOpenMessageEmoji: (event: React.MouseEvent<HTMLElement>, messageId: string) => void;
   onOpenMessageMenu: (event: React.MouseEvent<HTMLElement>, messageId: string) => void;
@@ -69,6 +71,7 @@ export function ConnectConversations({
   activeMessageEmojiId,
   getQuotedMessageById,
   onOpenDetails,
+  onStartCall,
   onAddReaction,
   onOpenMessageEmoji,
   onOpenMessageMenu,
@@ -194,7 +197,7 @@ export function ConnectConversations({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
-      <ConversationHeader conversation={conversation} teamLabel={teamLabel} onOpenDetails={onOpenDetails} />
+      <ConversationHeader conversation={conversation} teamLabel={teamLabel} onOpenDetails={onOpenDetails} onStartCall={onStartCall} />
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
         {sortedMessages.map((message, index) => {
           const sender = usersById[message.senderId];

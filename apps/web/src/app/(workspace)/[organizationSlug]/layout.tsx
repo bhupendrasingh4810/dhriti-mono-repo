@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { decodeJWT, isTokenExpired, type JWTPayload } from "@/lib/auth/tokens";
+import { WorkspaceCallProvider } from "@/components/connect/WorkspaceCallProvider";
 
 interface OrgLayoutProps {
   children: ReactNode;
@@ -100,5 +101,5 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
     redirect(unauthorizedUrl.pathname + unauthorizedUrl.search);
   }
 
-  return <>{children}</>;
+  return <WorkspaceCallProvider>{children}</WorkspaceCallProvider>;
 }

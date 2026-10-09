@@ -1,0 +1,797 @@
+"use client";
+
+import { createContext, useContext, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import {
+  AddReactionRounded,
+  CallEndRounded,
+  ChatBubbleOutlineRounded,
+  CloseRounded,
+  DragIndicatorRounded,
+  ExpandMoreRounded,
+  FrontHandRounded,
+  GridViewRounded,
+  MicOffRounded,
+  MicRounded,
+  MinimizeRounded,
+  MoreHorizRounded,
+  PeopleAltRounded,
+  ScreenShareRounded,
+  VideocamOffRounded,
+  VideocamRounded,
+} from "@mui/icons-material";
+import { connectSidebarState, connectUsers, connectUsersById } from "@/mocks/connect";
+
+export type CallKind = "audio" | "video";
+
+export type CallContext = {
+  conversationId: string;
+  conversationName: string;
+  participantIds: string[];
+  kind: CallKind;
+};
+
+type ActiveCall = CallContext & {
+  id: string;
+  minimized: boolean;
+  onHold: boolean;
+  joined: boolean;
+};
+
+type SessionType = "call" | "meeting";
+type CallLayout = "Gallery" | "Spotlight" | "Together";
+type CallPanel = "people" | "chat" | "settings" | "notes" | "apps" | null;
+type RecordingMetadata = {
+  callId: string;
+  initiator: string;
+  startedAt: string;
+  endedAt: string;
+  participants: string[];
+  storageUrl: string;
+  durationSeconds: number;
+  processingStatus: "processing";
+};
+
+const CALL_BACKGROUNDS = [
+  { name: "Bright office", url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
+  { name: "Meeting room", url: "https://images.unsplash.com/photo-1706074740295-d7a79c079562?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
+  { name: "Window office", url: "https://images.unsplash.com/photo-1698653223247-09aaf01166fc?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
+];
+
+type CallControls = {
+  startCall: (context: CallContext) => void;
+};
+
+const WorkspaceCallContext = createContext<CallControls | null>(null);
+
+export function useWorkspaceCall() {
+  const context = useContext(WorkspaceCallContext);
+
+  if (!context) {
+    throw new Error("useWorkspaceCall must be used inside WorkspaceCallProvider");
+  }
+
+  return context;
+}
+
+export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
+  const [calls, setCalls] = useState<ActiveCall[]>([]);
+  const [pendingCall, setPendingCall] = useState<CallContext | null>(null);
+  const [switchingCallId, setSwitchingCallId] = useState<string | null>(null);
+
+  function createCall(context: CallContext): ActiveCall {
+    return {
+      ...context,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      minimized: false,
+      onHold: false,
+      joined: false,
+    };
+  }
+
+  function startCall(context: CallContext) {
+    const currentCall = calls.find((item) => item.joined && !item.onHold)
+      ?? calls.find((item) => !item.minimized);
+    if (currentCall?.joined) {
+      setSwitchingCallId(currentCall.id);
+      setPendingCall(context);
+      return;
+    }
+
+    setCalls((current) => [
+      ...current.filter((item) => item.id !== currentCall?.id),
+      createCall(context),
+    ]);
+  }
+
+  function minimizeCall(callId: string) {
+    setCalls((current) => current.map((item) => item.id === callId ? { ...item, minimized: true } : item));
+  }
+
+  function restoreCall(callId: string) {
+    setCalls((current) => current.map((item) => item.id === callId
+      ? { ...item, minimized: false, onHold: false }
+      : !item.minimized ? { ...item, minimized: true, onHold: true } : item));
+  }
+
+  function endCall(callId: string) {
+    setCalls((current) => {
+      const remaining = current.filter((item) => item.id !== callId);
+      if (remaining.some((item) => !item.minimized) || remaining.length === 0) return remaining;
+      const resume = remaining[remaining.length - 1];
+      return remaining.map((item) => item.id === resume.id ? { ...item, minimized: false, onHold: false } : item);
+    });
+  }
+
+  function setCallOnHold(callId: string, onHold: boolean) {
+    setCalls((current) => current.map((item) => item.id === callId ? { ...item, onHold } : item));
+  }
+
+  function launchPendingCall(keepCurrentOnHold: boolean) {
+    if (!pendingCall) return;
+    const nextCall = createCall(pendingCall);
+    setCalls((current) => {
+      const withoutCurrent = current.filter((item) => keepCurrentOnHold || item.id !== switchingCallId);
+      const callsWithCurrentOnHold = keepCurrentOnHold
+        ? withoutCurrent.map((item) => item.id === switchingCallId ? { ...item, minimized: true, onHold: true } : item)
+        : withoutCurrent;
+      return [...callsWithCurrentOnHold, nextCall];
+    });
+    setPendingCall(null);
+    setSwitchingCallId(null);
+  }
+
+  return (
+    <WorkspaceCallContext.Provider value={{ startCall }}>
+      {children}
+      {calls.map((call) => (
+          <CallSurface
+            key={call.id}
+            call={call}
+            onMinimize={() => minimizeCall(call.id)}
+            onRestore={() => restoreCall(call.id)}
+            onEnd={() => endCall(call.id)}
+            onJoin={() => setCalls((current) => current.map((item) => item.id === call.id ? { ...item, joined: true } : item))}
+            onHoldChange={(onHold) => setCallOnHold(call.id, onHold)}
+        />
+      ))}
+      {pendingCall ? (
+        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/40 p-4" role="presentation">
+          <section role="alertdialog" aria-modal="true" aria-labelledby="switch-call-title" className="w-full max-w-md rounded-lg border border-border bg-surface p-6 text-text-primary shadow-2xl">
+            <h2 id="switch-call-title" className="text-lg font-semibold">You’re already in a call</h2>
+            <p className="mt-2 text-sm leading-6 text-text-secondary">Keep your current call on hold, or disconnect it before starting the new call?</p>
+            <div className="mt-6 flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={() => { setPendingCall(null); setSwitchingCallId(null); }} className="rounded-md border border-border px-3 py-2 text-sm font-semibold text-text-secondary hover:bg-surface-raised">Cancel</button>
+              <button type="button" onClick={() => launchPendingCall(false)} className="rounded-md border border-error px-3 py-2 text-sm font-semibold text-error hover:bg-error/10">Disconnect current</button>
+              <button type="button" onClick={() => launchPendingCall(true)} className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark">Keep on hold</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </WorkspaceCallContext.Provider>
+  );
+}
+
+function CallSurface({
+  call,
+  onMinimize,
+  onRestore,
+  onEnd,
+  onJoin,
+  onHoldChange,
+}: {
+  call: ActiveCall;
+  onMinimize: () => void;
+  onRestore: () => void;
+  onEnd: () => void;
+  onJoin: () => void;
+  onHoldChange: (onHold: boolean) => void;
+}) {
+  const [phase, setPhase] = useState<"lobby" | "call">("lobby");
+  const [muted, setMuted] = useState(false);
+  const [cameraOn, setCameraOn] = useState(call.kind === "video");
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [screen, setScreen] = useState<MediaStream | null>(null);
+  const [error, setError] = useState("");
+  const [elapsed, setElapsed] = useState(0);
+  const [joinedAt, setJoinedAt] = useState<number | null>(null);
+  const [sessionType, setSessionType] = useState<SessionType>("call");
+  const [background, setBackground] = useState("None");
+  const [customBackground, setCustomBackground] = useState("");
+  const [devicesOpen, setDevicesOpen] = useState(true);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [microphoneId, setMicrophoneId] = useState("");
+  const [speakerId, setSpeakerId] = useState("");
+  const [cameraId, setCameraId] = useState("");
+  const [permissions, setPermissions] = useState({ mic: "Checking", camera: "Checking" });
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unavailable">("default");
+  const [panel, setPanel] = useState<CallPanel>(null);
+  const [layout, setLayout] = useState<CallLayout>("Spotlight");
+  const [handRaised, setHandRaised] = useState(false);
+  const [reaction, setReaction] = useState("");
+  const [captions, setCaptions] = useState(false);
+  const [transcription, setTranscription] = useState(false);
+  const onHold = call.onHold;
+  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
+  const [recording, setRecording] = useState<RecordingMetadata | null>(null);
+  const [recordConfirmOpen, setRecordConfirmOpen] = useState(false);
+  const [participants, setParticipants] = useState(() => Array.from(new Set([connectSidebarState.currentUser, ...call.participantIds])));
+  const [inviteSearch, setInviteSearch] = useState("");
+  const [chatMessages, setChatMessages] = useState<{ author: string; text: string; time: string }[]>([]);
+  const [chatDraft, setChatDraft] = useState("");
+  const [notes, setNotes] = useState("");
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferSearch, setTransferSearch] = useState("");
+  const [minimizedPosition, setMinimizedPosition] = useState<{ x: number; y: number } | null>(null);
+  const minimizedWindowRef = useRef<HTMLDivElement>(null);
+  const minimizedDragOffset = useRef<{ x: number; y: number } | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const screenRef = useRef<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const screenVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function requestMedia() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Camera and microphone access requires a supported browser and secure connection.");
+        return;
+      }
+
+      try {
+        const media = await navigator.mediaDevices.getUserMedia({
+          audio: microphoneId ? { deviceId: { exact: microphoneId } } : true,
+          video: call.kind === "video" ? (cameraId ? { deviceId: { exact: cameraId } } : true) : false,
+        });
+        if (cancelled) {
+          media.getTracks().forEach((track) => track.stop());
+          return;
+        }
+        streamRef.current = media;
+        setStream(media);
+        setPermissions({ mic: "Allowed", camera: call.kind === "video" ? "Allowed" : permissions.camera });
+        setError("");
+      } catch {
+        if (!cancelled) {
+          setPermissions({ mic: "Unavailable", camera: "Unavailable" });
+          setError("Device access was denied or unavailable. Check browser permissions and try again.");
+        }
+      }
+    }
+
+    void requestMedia();
+    return () => {
+      cancelled = true;
+    };
+  }, [call.conversationId, call.kind]);
+
+  useEffect(() => {
+    let active = true;
+    async function refreshDevices() {
+      const mediaDevices = navigator.mediaDevices;
+      if (!mediaDevices?.enumerateDevices) return;
+      try {
+        const available = await mediaDevices.enumerateDevices();
+        if (active) setDevices(available);
+      } catch {
+        if (active) setDevices([]);
+      }
+    }
+    void refreshDevices();
+    navigator.mediaDevices?.addEventListener?.("devicechange", refreshDevices);
+    return () => {
+      active = false;
+      navigator.mediaDevices?.removeEventListener?.("devicechange", refreshDevices);
+    };
+  }, [permissions.mic, permissions.camera]);
+
+  useEffect(() => {
+    stream?.getAudioTracks().forEach((track) => {
+      track.enabled = !muted && !onHold;
+    });
+    stream?.getVideoTracks().forEach((track) => {
+      track.enabled = cameraOn && !onHold;
+    });
+    if (onHold && screenRef.current) {
+      screenRef.current.getTracks().forEach((track) => track.stop());
+      screenRef.current = null;
+      setScreen(null);
+    }
+  }, [cameraOn, muted, onHold, stream]);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.srcObject = stream;
+    if (screenVideoRef.current) screenVideoRef.current.srcObject = screen;
+  }, [call.minimized, phase, screen, stream]);
+
+  useEffect(() => {
+    if (joinedAt === null) return;
+    if (onHold) return;
+    const timer = window.setInterval(() => setElapsed((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [joinedAt, onHold]);
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    screenRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  useEffect(() => {
+    const objectUrl = customBackground;
+    return () => {
+      if (objectUrl.startsWith("blob:")) URL.revokeObjectURL(objectUrl);
+    };
+  }, [customBackground]);
+
+  async function toggleScreenShare() {
+    if (screenRef.current) {
+      screenRef.current.getTracks().forEach((track) => track.stop());
+      screenRef.current = null;
+      setScreen(null);
+      return;
+    }
+
+    try {
+      const nextScreen = await navigator.mediaDevices.getDisplayMedia({ video: true });
+      screenRef.current = nextScreen;
+      setScreen(nextScreen);
+      nextScreen.getVideoTracks()[0]?.addEventListener("ended", () => {
+        screenRef.current = null;
+        setScreen(null);
+      });
+    } catch {
+      setError("Screen sharing could not be started.");
+    }
+  }
+
+  async function requestVideo() {
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({
+        audio: microphoneId ? { deviceId: { exact: microphoneId } } : true,
+        video: cameraId ? { deviceId: { exact: cameraId } } : true,
+      });
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = media;
+      setStream(media);
+      setCameraOn(true);
+      setPermissions({ mic: "Allowed", camera: "Allowed" });
+      setError("");
+    } catch {
+      setPermissions({ mic: "Unavailable", camera: "Unavailable" });
+      setError("Camera or microphone access is blocked or unavailable. Check browser permissions and retry.");
+    }
+  }
+
+  async function changeInputDevice(kind: "audio" | "video", deviceId: string) {
+    if (kind === "audio") setMicrophoneId(deviceId);
+    else setCameraId(deviceId);
+    if (!streamRef.current || (kind === "video" && !cameraOn)) return;
+
+    try {
+      const media = await navigator.mediaDevices.getUserMedia({
+        audio: (kind === "audio" ? deviceId : microphoneId)
+          ? { deviceId: { exact: kind === "audio" ? deviceId : microphoneId } }
+          : true,
+        video: call.kind === "video" && cameraOn
+          ? (kind === "video" ? deviceId : cameraId)
+            ? { deviceId: { exact: kind === "video" ? deviceId : cameraId } }
+            : true
+          : false,
+      });
+      media.getAudioTracks().forEach((track) => { track.enabled = !muted && !onHold; });
+      media.getVideoTracks().forEach((track) => { track.enabled = cameraOn && !onHold; });
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = media;
+      setStream(media);
+      setError("");
+    } catch {
+      setError(`The selected ${kind === "audio" ? "microphone" : "camera"} could not be started.`);
+    }
+  }
+
+  async function toggleCamera() {
+    if (!cameraOn) {
+      if (!streamRef.current?.getVideoTracks().length) {
+        await requestVideo();
+        return;
+      }
+      setCameraOn(true);
+      return;
+    }
+    setCameraOn(false);
+  }
+
+  function endCall() {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    screenRef.current?.getTracks().forEach((track) => track.stop());
+    onEnd();
+  }
+
+  async function requestNotificationPermission() {
+    if (!("Notification" in window)) {
+      setNotificationPermission("unavailable");
+      return;
+    }
+
+    if (Notification.permission === "default") {
+      setNotificationPermission(await Notification.requestPermission());
+      return;
+    }
+
+    setNotificationPermission(Notification.permission);
+  }
+
+  function toggleParticipant(userId: string) {
+    setParticipants((current) => current.includes(userId)
+      ? current.filter((id) => id !== userId)
+      : [...current, userId]);
+  }
+
+  function startRecording() {
+    setRecordingStartedAt(Date.now());
+    setTranscription(true);
+    setRecordConfirmOpen(false);
+  }
+
+  function stopRecording() {
+    if (recordingStartedAt === null) return;
+    const endedAt = Date.now();
+    setRecording({
+      callId: `call_${endedAt}`,
+      initiator: connectUsersById[connectSidebarState.currentUser]?.displayName ?? "You",
+      startedAt: new Date(recordingStartedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      participants,
+      storageUrl: `https://recordings.dhriti.example/${call.conversationId}/${endedAt}`,
+      durationSeconds: Math.max(1, Math.round((endedAt - recordingStartedAt) / 1000)),
+      processingStatus: "processing",
+    });
+    setRecordingStartedAt(null);
+  }
+
+  const currentUser = connectUsersById[connectSidebarState.currentUser];
+  const availableUsers = connectUsers.filter((user) => !participants.includes(user.id)
+    && `${user.displayName} ${user.email}`.toLowerCase().includes(inviteSearch.toLowerCase()));
+  const backgroundUrl = background === "Custom"
+    ? customBackground
+    : CALL_BACKGROUNDS.find((item) => item.name === background)?.url;
+
+  const time = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
+  const participantLabel = participants.length === 1 ? "1 participant" : `${participants.length} participants`;
+  const visibleParticipants = layout === "Spotlight"
+    ? participants.filter((userId) => userId !== connectSidebarState.currentUser).slice(0, 1)
+    : participants.slice(0, layout === "Gallery" ? 4 : 6);
+
+  if (call.minimized) {
+    return (
+      <div
+        ref={minimizedWindowRef}
+        style={minimizedPosition ? { left: minimizedPosition.x, top: minimizedPosition.y, right: "auto", bottom: "auto" } : undefined}
+        className="fixed bottom-4 right-4 z-[140] flex w-[min(22rem,calc(100vw-2rem))] items-center gap-3 rounded-lg border border-brand bg-brand p-3 pt-5 text-white shadow-2xl"
+      >
+        <button
+          type="button"
+          aria-label="Move minimized call window"
+          title="Drag to move; use arrow keys to reposition"
+          className="absolute left-1/2 top-0 grid h-5 w-10 -translate-x-1/2 cursor-move touch-none place-items-center rounded-b text-white/70 hover:bg-white/15 hover:text-white"
+          onPointerDown={(event) => {
+            const bounds = minimizedWindowRef.current?.getBoundingClientRect();
+            if (!bounds) return;
+            minimizedDragOffset.current = { x: event.clientX - bounds.left, y: event.clientY - bounds.top };
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setMinimizedPosition({ x: bounds.left, y: bounds.top });
+          }}
+          onPointerMove={(event) => {
+            const offset = minimizedDragOffset.current;
+            const element = minimizedWindowRef.current;
+            if (!offset || !element) return;
+            setMinimizedPosition({
+              x: Math.max(0, Math.min(window.innerWidth - element.offsetWidth, event.clientX - offset.x)),
+              y: Math.max(0, Math.min(window.innerHeight - element.offsetHeight, event.clientY - offset.y)),
+            });
+          }}
+          onPointerUp={() => { minimizedDragOffset.current = null; }}
+          onPointerCancel={() => { minimizedDragOffset.current = null; }}
+          onKeyDown={(event) => {
+            const bounds = minimizedWindowRef.current?.getBoundingClientRect();
+            if (!bounds || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+            event.preventDefault();
+            const deltaX = event.key === "ArrowLeft" ? -24 : event.key === "ArrowRight" ? 24 : 0;
+            const deltaY = event.key === "ArrowUp" ? -24 : event.key === "ArrowDown" ? 24 : 0;
+            setMinimizedPosition({
+              x: Math.max(0, Math.min(window.innerWidth - bounds.width, bounds.left + deltaX)),
+              y: Math.max(0, Math.min(window.innerHeight - bounds.height, bounds.top + deltaY)),
+            });
+          }}
+        >
+          <DragIndicatorRounded fontSize="small" />
+        </button>
+        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${phase === "call" ? "bg-emerald-400" : "bg-amber-400"}`} />
+        <button type="button" onClick={onRestore} className="min-w-0 flex-1 text-left" aria-label="Restore call window">
+          <span className="block truncate text-sm font-semibold">{call.conversationName}</span>
+          <span className="block text-xs text-white/80">{phase === "call" ? time : "Connecting devices"}</span>
+        </button>
+        {phase === "call" ? (
+          <button type="button" onClick={() => setMuted((value) => !value)} className="grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/15" aria-label={muted ? "Unmute microphone" : "Mute microphone"} title={muted ? "Unmute microphone" : "Mute microphone"}>
+            {muted ? <MicOffRounded fontSize="small" /> : <MicRounded fontSize="small" />}
+          </button>
+        ) : null}
+        <button type="button" onClick={onRestore} className="grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/15" aria-label="Expand call" title="Expand call"><ExpandMoreRounded fontSize="small" /></button>
+        <button type="button" onClick={onEnd} className="grid h-9 w-9 place-items-center rounded-md bg-error text-white hover:bg-error/90" aria-label="End call" title="End call"><CallEndRounded fontSize="small" /></button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-text-primary/35 p-2 sm:p-3" role="presentation">
+      <section role="dialog" aria-modal="true" aria-label={`${call.kind} call with ${call.conversationName}`} className="flex h-[97dvh] w-[97vw] max-w-[1720px] flex-col overflow-hidden rounded-xl border border-border bg-background text-text-primary shadow-2xl">
+        <header className="flex shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3 sm:px-6">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-base font-semibold">{call.conversationName}</h2>
+              {recordingStartedAt !== null ? (
+                <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-error" role="status" aria-label="Recording in progress">
+                  <span className="relative flex h-3 w-3" aria-hidden="true">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-70" />
+                    <span className="relative inline-flex h-3 w-3 rounded-full bg-error ring-2 ring-error/20" />
+                  </span>
+                  Recording
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-0.5 text-xs text-text-secondary">
+              {phase === "call" ? `${time} · ${participantLabel}` : `${call.kind === "video" ? "Video" : "Audio"} call · ${participantLabel}`}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <button type="button" onClick={onMinimize} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Minimize call" title="Minimize call"><MinimizeRounded fontSize="small" /></button>
+            {phase === "lobby" && (
+              <button type="button" onClick={onEnd} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Cancel call" title="Cancel call"><CloseRounded fontSize="small" /></button>
+            ) 
+            // : (
+            //   <button type="button" onClick={onEnd} className="rounded-md px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-raised" aria-label="End call">End</button>
+            // )
+            }
+          </div>
+        </header>
+
+        {phase === "lobby" ? (
+          <div className="grid min-h-0 gap-5 overflow-y-auto p-4 sm:p-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.8fr)]">
+            <div className="space-y-4">
+            <div className="relative flex h-[min(56dvh,480px)] w-full flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-800" style={backgroundUrl ? { backgroundImage: `linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08)), url(${backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
+              {call.kind === "video" && cameraOn && stream?.getVideoTracks().length ? (
+                <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} />
+              ) : (
+                <div className="text-center">
+                  <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-slate-700 text-2xl font-semibold text-white">{currentUser?.displayName.slice(0, 1) ?? "Y"}</span>
+                  <p className="mt-3 text-sm text-slate-300">{call.kind === "video" ? "Camera is off" : "Audio call"}</p>
+                </div>
+              )}
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-lg bg-slate-950/90 p-2">
+                <button type="button" onClick={() => setMuted((value) => !value)} title={muted ? "Unmute microphone" : "Mute microphone"} aria-label={muted ? "Unmute microphone" : "Mute microphone"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${muted ? "bg-error" : "bg-slate-800 hover:bg-slate-700"}`}>{muted ? <MicOffRounded fontSize="small" /> : <MicRounded fontSize="small" />}</button>
+                {call.kind === "video" ? <button type="button" onClick={toggleCamera} title={cameraOn ? "Turn camera off" : "Turn camera on"} aria-label={cameraOn ? "Turn camera off" : "Turn camera on"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${cameraOn ? "bg-slate-800 hover:bg-slate-700" : "bg-error"}`}>{cameraOn ? <VideocamRounded fontSize="small" /> : <VideocamOffRounded fontSize="small" />}</button> : null}
+                <button type="button" onClick={() => setDevicesOpen((value) => !value)} className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700">{devicesOpen ? "Hide devices" : "Device settings"}</button>
+              </div>
+              <div className="absolute left-3 top-3 rounded bg-black/80 px-2 py-1 text-[11px] font-medium text-white shadow-sm">{background === "None" ? "No background effect" : `${background} background`}</div>
+              {error ? <p role="alert" className="absolute inset-x-3 top-11 rounded-md bg-rose-950/90 px-3 py-2 text-xs text-white">{error}</p> : null}
+            </div>
+            <section className="rounded-lg border border-border bg-surface p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div><h3 className="text-sm font-semibold">Background and effects</h3><p className="mt-1 text-xs text-text-secondary">Your selection is kept for this call.</p></div>
+                <label className="cursor-pointer rounded-md border border-border-strong px-3 py-2 text-xs font-semibold hover:bg-surface-raised">Upload image<input type="file" accept="image/*" className="sr-only" onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  if (customBackground.startsWith("blob:")) URL.revokeObjectURL(customBackground);
+                  setCustomBackground(URL.createObjectURL(file));
+                  setBackground("Custom");
+                }} /></label>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {["None", "Blur", ...CALL_BACKGROUNDS.map((item) => item.name), ...(customBackground ? ["Custom"] : [])].map((item) => {
+                  const image = item === "Custom" ? customBackground : CALL_BACKGROUNDS.find((entry) => entry.name === item)?.url;
+                  return <button key={item} type="button" onClick={() => setBackground(item)} aria-pressed={background === item} className={`relative aspect-video overflow-hidden rounded border-2 bg-surface-raised text-[10px] font-semibold ${background === item ? "border-brand" : "border-transparent"}`} style={image ? { backgroundImage: `url(${image})`, backgroundSize: "cover" } : undefined}><span className="absolute inset-x-0 bottom-0 bg-text-primary/70 px-1 py-1 text-white">{item}</span></button>;
+                })}
+              </div>
+            </section>
+            </div>
+            <div className="flex flex-col justify-center rounded-lg border border-border bg-surface p-5">
+              <p className="text-lg font-semibold">Ready to join?</p>
+              <p className="mt-1 text-sm text-text-secondary">{call.conversationName}</p>
+              <div className="mt-4 grid grid-cols-2 gap-1 rounded-md bg-surface-raised p-1">
+                {(["call", "meeting"] as SessionType[]).map((item) => <button key={item} type="button" onClick={() => setSessionType(item)} className={`rounded px-3 py-2 text-xs font-semibold ${sessionType === item ? "bg-surface text-brand shadow-sm" : "text-text-secondary hover:text-text-primary"}`}>{item === "call" ? "Direct call" : "Meet now"}</button>)}
+              </div>
+              <p className="mt-3 rounded-md bg-surface-raised p-3 text-xs leading-5 text-text-secondary">{sessionType === "call" ? "A chat call with this conversation." : "A meeting session with chat, participants, notes, and organizer tools."}</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                <p className="w-full text-xs text-text-secondary">{participantLabel} · {currentUser?.displayName ?? "You"}</p>
+              </div>
+              {devicesOpen ? <div className="mt-5 space-y-3 border-t border-border pt-4">
+                <DeviceSelect label="Microphone" devices={devices.filter((device) => device.kind === "audioinput")} value={microphoneId} onChange={setMicrophoneId} />
+                  <DeviceSelect label="Microphone" devices={devices.filter((device) => device.kind === "audioinput")} value={microphoneId} onChange={(value) => void changeInputDevice("audio", value)} />
+                <DeviceSelect label="Speaker" devices={devices.filter((device) => device.kind === "audiooutput")} value={speakerId} onChange={setSpeakerId} />
+                  {call.kind === "video" ? <DeviceSelect label="Camera" devices={devices.filter((device) => device.kind === "videoinput")} value={cameraId} onChange={(value) => void changeInputDevice("video", value)} /> : null}
+                <div className="grid grid-cols-2 gap-2 text-[11px]"><p className="rounded bg-surface-raised px-2 py-2">Microphone: {permissions.mic}</p><p className="rounded bg-surface-raised px-2 py-2">Camera: {permissions.camera}</p><p className="col-span-2 rounded bg-surface-raised px-2 py-2">Notifications: {notificationPermission === "default" ? "Not requested" : notificationPermission === "granted" ? "Allowed" : notificationPermission === "denied" ? "Blocked" : "Unavailable"}</p></div>
+              </div> : null}
+              {error ? <button type="button" onClick={() => void requestVideo()} className="mt-3 text-left text-xs font-semibold text-error underline">Retry device access</button> : null}
+              <button type="button" onClick={() => { void requestNotificationPermission(); onJoin(); setPhase("call"); setJoinedAt(Date.now()); }} className="mt-6 rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark">Join {sessionType === "meeting" ? "meeting" : "call"}</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex min-h-0 flex-1">
+            <main className="flex min-w-0 flex-1 flex-col p-3 sm:p-5">
+              {onHold ? <div className="mb-3 flex items-center justify-between rounded-md bg-warning/10 px-4 py-3 text-sm text-text-primary"><span>Call on hold. Your microphone and camera are paused.</span><button type="button" onClick={() => onHoldChange(false)} className="font-semibold text-text-primary">Resume</button></div> : null}
+              {error ? <div role="alert" className="mb-3 flex items-center justify-between rounded-md bg-error/10 px-3 py-2 text-xs text-error"><span>{error}</span><button type="button" onClick={() => setError("")} className="font-semibold">Dismiss</button></div> : null}
+              <div className={`grid min-h-0 flex-1 gap-2 ${layout === "Gallery" ? "grid-cols-2 grid-rows-2" : "grid-cols-1 grid-rows-1"}`}>
+                {screen ? (
+                  <div className="relative col-span-2 row-span-2 min-h-64 overflow-hidden rounded-lg bg-slate-900"><video ref={screenVideoRef} autoPlay playsInline className="h-full w-full object-contain" /><span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-1 text-xs">{currentUser?.displayName ?? "You"} is presenting</span><button type="button" onClick={toggleScreenShare} className="absolute right-3 top-3 rounded bg-rose-700 px-3 py-2 text-xs font-semibold">Stop presenting</button></div>
+                ) : layout === "Together" ? (
+                  <div className="relative col-span-2 row-span-2 flex min-h-64 items-end justify-center gap-3 overflow-hidden rounded-lg bg-gradient-to-b from-sky-900 to-slate-800 p-5 sm:gap-6">{participants.slice(0, 6).map((userId) => <div key={userId} className="flex flex-col items-center"><ParticipantAvatar userId={userId} /><span className="mt-2 max-w-24 truncate rounded bg-slate-950/70 px-2 py-1 text-[10px] text-white">{connectUsersById[userId]?.displayName ?? "Guest"}</span></div>)}<span className="absolute left-3 top-3 rounded bg-slate-950/70 px-2 py-1 text-xs text-white">Together mode</span></div>
+                ) : visibleParticipants.map((userId, index) => (
+                  <div key={userId} className={`relative min-h-32 overflow-hidden rounded-lg bg-slate-900 ${layout === "Spotlight" ? "col-span-1 row-span-1" : ""}`}>
+                    {userId === connectSidebarState.currentUser && call.kind === "video" && cameraOn && stream?.getVideoTracks().length ? <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} style={backgroundUrl && background !== "Blur" ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: "cover" } : undefined} /> : <div className="flex h-full min-h-32 items-center justify-center">{userId === connectSidebarState.currentUser && backgroundUrl && background !== "Blur" ? <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: `url(${backgroundUrl})` }} /> : null}<ParticipantAvatar userId={userId} className="relative h-20 w-20 text-2xl" /></div>}
+                    <span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-1 text-xs text-white">{userId === connectSidebarState.currentUser ? "You" : connectUsersById[userId]?.displayName ?? "Guest"}</span>
+                    {index === 1 ? <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-1 text-[10px] text-white">Speaking</span> : null}
+                  </div>
+                ))}
+              </div>
+              {captions ? <div className="mx-auto mt-3 max-w-2xl rounded bg-surface-raised px-4 py-2 text-center text-sm text-text-primary"><strong>{connectUsers[1]?.displayName ?? "Participant"}:</strong> Live captions are enabled for this call.</div> : null}
+              {reaction ? <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-2xl text-slate-900 shadow-xl">{reaction}</div> : null}
+              <footer className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border bg-surface px-2 py-3">
+                <CallAction label={muted ? "Unmute microphone" : "Mute microphone"} active={muted} icon={muted ? <MicOffRounded /> : <MicRounded />} onClick={() => setMuted((value) => !value)} />
+                {call.kind === "video" ? <CallAction label={cameraOn ? "Turn camera off" : "Turn camera on"} active={!cameraOn} icon={cameraOn ? <VideocamRounded /> : <VideocamOffRounded />} onClick={() => void toggleCamera()} /> : null}
+                <CallAction label={screen ? "Stop screen sharing" : "Share screen"} active={Boolean(screen)} icon={<ScreenShareRounded />} onClick={() => void toggleScreenShare()} />
+                <CallAction label={handRaised ? "Lower hand" : "Raise hand"} active={handRaised} icon={<FrontHandRounded />} onClick={() => { setHandRaised((value) => !value); setReaction(handRaised ? "" : "✋"); }} />
+                <CallAction label="React" active={false} icon={<AddReactionRounded />} onClick={() => setReaction((value) => value ? "" : "👍")} />
+                <CallAction label="People" active={panel === "people"} icon={<PeopleAltRounded />} onClick={() => setPanel(panel === "people" ? null : "people")} />
+                <CallAction label="Chat" active={panel === "chat"} icon={<ChatBubbleOutlineRounded />} onClick={() => setPanel(panel === "chat" ? null : "chat")} />
+                <CallAction label={`Change layout, currently ${layout}`} active={false} icon={<GridViewRounded />} onClick={() => setLayout((value) => value === "Gallery" ? "Spotlight" : value === "Spotlight" ? "Together" : "Gallery")} />
+                <CallAction label="More call options" active={panel === "apps"} icon={<MoreHorizRounded />} onClick={() => setPanel(panel === "apps" ? null : "apps")} />
+                {/* <CallAction label="Minimize call" active={false} icon={<MinimizeRounded />} onClick={onMinimize} /> */}
+                <button type="button" onClick={endCall} className="flex h-10 items-center gap-2 rounded-md bg-error px-3 text-sm font-semibold text-white hover:bg-error/90"><CallEndRounded fontSize="small" /></button>
+              </footer>
+              <div className="flex flex-wrap justify-center gap-2 border-t border-border bg-surface px-2 py-2 text-xs">
+                <button type="button" onClick={() => setPanel(panel === "settings" ? null : "settings")} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Settings</button>
+                <button type="button" onClick={() => setCaptions((value) => !value)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{captions ? "Turn captions off" : "Live captions"}</button>
+                <button type="button" onClick={() => setTranscription((value) => !value)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{transcription ? "Stop transcription" : "Transcription"}</button>
+                <button type="button" onClick={() => recordingStartedAt === null ? setRecordConfirmOpen(true) : stopRecording()} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{recordingStartedAt === null ? "Record" : "Stop recording"}</button>
+                <button type="button" onClick={() => onHoldChange(!onHold)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{onHold ? "Resume call" : "Put on hold"}</button>
+                <button type="button" onClick={() => setPanel(panel === "notes" ? null : "notes")} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Meeting notes</button>
+                <button type="button" onClick={() => setTransferOpen(true)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Transfer call</button>
+              </div>
+              {recording ? <p className="mt-2 text-center text-xs text-success">Recording saved for processing · {recording.durationSeconds}s</p> : null}
+            </main>
+            {panel ? <CallSidePanel panel={panel} close={() => setPanel(null)} participants={participants} availableUsers={availableUsers} inviteSearch={inviteSearch} setInviteSearch={setInviteSearch} toggleParticipant={toggleParticipant} chatMessages={chatMessages} chatDraft={chatDraft} setChatDraft={setChatDraft} sendChat={() => {
+              if (!chatDraft.trim()) return;
+              setChatMessages((items) => [...items, { author: currentUser?.displayName ?? "You", text: chatDraft.trim(), time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) }]);
+              setChatDraft("");
+            }} notes={notes} setNotes={setNotes} devices={devices} microphoneId={microphoneId} setMicrophoneId={(value) => void changeInputDevice("audio", value)} speakerId={speakerId} setSpeakerId={setSpeakerId} cameraId={cameraId} setCameraId={(value) => void changeInputDevice("video", value)} setCaptions={setCaptions} captions={captions} setTranscription={setTranscription} transcription={transcription} /> : null}
+          </div>
+        )}
+      </section>
+      {recordConfirmOpen ? <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={() => setRecordConfirmOpen(false)}><section role="dialog" aria-modal="true" aria-labelledby="record-confirm-title" className="w-full max-w-md rounded-lg bg-white p-5 text-slate-900 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><h3 id="record-confirm-title" className="text-lg font-semibold">Start recording and transcription?</h3><p className="mt-2 text-sm leading-6 text-slate-600">Everyone in this {sessionType === "meeting" ? "meeting" : "call"} should be notified. The recording is marked for processing when stopped.</p><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setRecordConfirmOpen(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button><button type="button" onClick={startRecording} className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white">Start recording</button></div></section></div> : null}
+      {transferOpen ? <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={() => setTransferOpen(false)}><section role="dialog" aria-modal="true" aria-labelledby="transfer-title" className="w-full max-w-md rounded-lg bg-white p-5 text-slate-900 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between"><h3 id="transfer-title" className="text-lg font-semibold">Transfer this call</h3><button type="button" onClick={() => setTransferOpen(false)} aria-label="Close transfer dialog">Close</button></div><input value={transferSearch} onChange={(event) => setTransferSearch(event.target.value)} placeholder="Search colleagues" className="mt-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /><div className="mt-3 max-h-64 space-y-1 overflow-y-auto">{connectUsers.filter((user) => user.id !== connectSidebarState.currentUser && `${user.displayName} ${user.email}`.toLowerCase().includes(transferSearch.toLowerCase())).map((user) => <button key={user.id} type="button" onClick={() => { setParticipants((items) => Array.from(new Set([...items, user.id]))); setTransferOpen(false); }} className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-slate-100"><ParticipantAvatar userId={user.id} className="h-9 w-9 text-sm" /><span><span className="block text-sm font-semibold">{user.displayName}</span><span className="block text-xs text-slate-500">Consult and transfer to this person</span></span></button>)}</div></section></div> : null}
+    </div>
+  );
+}
+
+function DeviceSelect({
+  label,
+  devices,
+  value,
+  onChange,
+}: {
+  label: string;
+  devices: MediaDeviceInfo[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block text-xs font-semibold text-text-secondary">
+      <span className="mb-1 block">{label}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className="w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm font-normal text-text-primary">
+        <option value="">Default device</option>
+        {devices.map((device, index) => <option key={device.deviceId || `${device.kind}-${index}`} value={device.deviceId}>{device.label || `${label} ${index + 1}`}</option>)}
+      </select>
+    </label>
+  );
+}
+
+function ParticipantAvatar({ userId, className = "h-12 w-12 text-base" }: { userId: string; className?: string }) {
+  const user = connectUsersById[userId];
+  const initials = user ? `${user.firstName.slice(0, 1)}${user.lastName.slice(0, 1)}` : "G";
+  return user?.avatar
+    ? <img src={user.avatar} alt="" className={`shrink-0 rounded-full object-cover ${className}`} />
+    : <span className={`grid shrink-0 place-items-center rounded-full bg-brand font-semibold text-white ${className}`}>{initials}</span>;
+}
+
+function CallAction({ label, active, icon, onClick }: { label: string; active: boolean; icon: ReactNode; onClick: () => void }) {
+  return <button type="button" onClick={onClick} aria-label={label} aria-pressed={active} title={label} className={`grid h-10 w-10 place-items-center rounded-md border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${active ? "border-brand bg-brand-muted text-brand" : "border-border bg-surface text-text-secondary hover:bg-surface-raised hover:text-text-primary"}`}>{icon}</button>;
+}
+
+function CallSidePanel({
+  panel,
+  close,
+  participants,
+  availableUsers,
+  inviteSearch,
+  setInviteSearch,
+  toggleParticipant,
+  chatMessages,
+  chatDraft,
+  setChatDraft,
+  sendChat,
+  notes,
+  setNotes,
+  devices,
+  microphoneId,
+  setMicrophoneId,
+  speakerId,
+  setSpeakerId,
+  cameraId,
+  setCameraId,
+  setCaptions,
+  captions,
+  setTranscription,
+  transcription,
+}: {
+  panel: Exclude<CallPanel, null>;
+  close: () => void;
+  participants: string[];
+  availableUsers: typeof connectUsers;
+  inviteSearch: string;
+  setInviteSearch: (value: string) => void;
+  toggleParticipant: (userId: string) => void;
+  chatMessages: { author: string; text: string; time: string }[];
+  chatDraft: string;
+  setChatDraft: (value: string) => void;
+  sendChat: () => void;
+  notes: string;
+  setNotes: (value: string) => void;
+  devices: MediaDeviceInfo[];
+  microphoneId: string;
+  setMicrophoneId: (value: string) => void;
+  speakerId: string;
+  setSpeakerId: (value: string) => void;
+  cameraId: string;
+  setCameraId: (value: string) => void;
+  setCaptions: (value: boolean | ((current: boolean) => boolean)) => void;
+  captions: boolean;
+  setTranscription: (value: boolean | ((current: boolean) => boolean)) => void;
+  transcription: boolean;
+}) {
+  const titles: Record<Exclude<CallPanel, null>, string> = {
+    people: "People",
+    chat: "Call chat",
+    settings: "Device settings",
+    notes: "Meeting notes",
+    apps: "More options",
+  };
+
+  return (
+    <aside className="flex w-[min(22rem,88vw)] shrink-0 flex-col border-l border-border bg-surface">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+        <h3 className="text-sm font-semibold">{titles[panel]}</h3>
+        <button type="button" onClick={close} aria-label={`Close ${titles[panel]}`} className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface-raised">Close</button>
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {panel === "people" ? <>
+          <p className="text-xs text-text-secondary">In this call · {participants.length}</p>
+          <div className="mt-2 space-y-1">{participants.map((userId, index) => <div key={userId} className="flex items-center gap-2 rounded p-2 hover:bg-surface-raised"><ParticipantAvatar userId={userId} className="h-9 w-9 text-xs" /><span className="min-w-0 flex-1 truncate text-sm">{connectUsersById[userId]?.displayName ?? "Guest"}{userId === connectSidebarState.currentUser ? " (You)" : ""}<span className="block text-[10px] text-text-secondary">{index === 0 ? "Organizer" : "In call"}</span></span>{userId !== connectSidebarState.currentUser ? <button type="button" onClick={() => toggleParticipant(userId)} aria-label={`Remove ${connectUsersById[userId]?.displayName ?? "participant"}`} className="rounded px-2 py-1 text-xs text-text-secondary hover:bg-surface-raised">Remove</button> : null}</div>)}</div>
+          <label className="mt-5 block text-xs font-semibold text-text-secondary">Invite someone<input value={inviteSearch} onChange={(event) => setInviteSearch(event.target.value)} placeholder="Search name or email" className="mt-2 w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm font-normal text-text-primary" /></label>
+          <div className="mt-2 space-y-1">{availableUsers.slice(0, 8).map((user) => <button key={user.id} type="button" onClick={() => toggleParticipant(user.id)} className="flex w-full items-center gap-2 rounded p-2 text-left hover:bg-surface-raised"><ParticipantAvatar userId={user.id} className="h-8 w-8 text-xs" /><span className="min-w-0 flex-1 truncate text-xs">{user.displayName}<span className="block truncate text-[10px] text-text-secondary">{user.email}</span></span><span className="text-xs text-brand">Invite</span></button>)}</div>
+        </> : null}
+        {panel === "chat" ? <div className="flex min-h-80 flex-col">
+          <div className="flex-1 space-y-3">{chatMessages.length ? chatMessages.map((message, index) => <div key={`${message.time}-${index}`}><div className="flex gap-2 text-xs"><strong>{message.author}</strong><span className="text-text-muted">{message.time}</span></div><p className="mt-1 text-sm text-text-primary">{message.text}</p></div>) : <p className="text-xs text-text-secondary">No messages yet.</p>}</div>
+          <div className="mt-4"><textarea value={chatDraft} onChange={(event) => setChatDraft(event.target.value)} rows={3} placeholder="Write a message" className="w-full resize-none rounded-md border border-border-strong bg-surface p-2 text-sm text-text-primary" /><button type="button" onClick={sendChat} className="mt-2 w-full rounded-md bg-brand px-3 py-2 text-xs font-semibold text-white hover:bg-brand-dark">Send</button></div>
+        </div> : null}
+        {panel === "settings" ? <div className="space-y-4"><DeviceSelect label="Microphone" devices={devices.filter((device) => device.kind === "audioinput")} value={microphoneId} onChange={setMicrophoneId} /><DeviceSelect label="Speaker" devices={devices.filter((device) => device.kind === "audiooutput")} value={speakerId} onChange={setSpeakerId} /><DeviceSelect label="Camera" devices={devices.filter((device) => device.kind === "videoinput")} value={cameraId} onChange={setCameraId} /><div className="border-t border-border pt-4"><SettingToggle label="Live captions" checked={captions} onChange={() => setCaptions((value) => !value)} /><SettingToggle label="Transcription" checked={transcription} onChange={() => setTranscription((value) => !value)} /></div></div> : null}
+        {panel === "notes" ? <><div className="rounded-md bg-surface-raised p-3 text-xs leading-5 text-text-secondary"><strong className="block text-text-primary">Meeting notes</strong>Capture decisions and follow-ups during the conversation.</div><textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Add notes and follow-ups" className="mt-3 min-h-72 w-full resize-y rounded-md border border-border-strong bg-surface p-3 text-sm leading-6 text-text-primary" /><p className="mt-2 text-[10px] text-text-secondary">Notes are kept for this call session.</p></> : null}
+        {panel === "apps" ? <div className="space-y-2"><SettingToggle label="Live captions" checked={captions} onChange={() => setCaptions((value) => !value)} /><SettingToggle label="Transcription" checked={transcription} onChange={() => setTranscription((value) => !value)} /><button type="button" onClick={() => setCaptions((value) => !value)} className="w-full rounded-md border border-border p-3 text-left text-sm hover:bg-surface-raised">Captions<span className="mt-1 block text-xs text-text-secondary">Show live text during this call.</span></button><button type="button" onClick={() => setTranscription((value) => !value)} className="w-full rounded-md border border-border p-3 text-left text-sm hover:bg-surface-raised">Transcription<span className="mt-1 block text-xs text-text-secondary">Toggle call transcription.</span></button><button type="button" onClick={() => alert("Whiteboard is not connected in this workspace yet.")} className="w-full rounded-md border border-border p-3 text-left text-sm hover:bg-surface-raised">Whiteboard<span className="mt-1 block text-xs text-text-secondary">Open a collaborative whiteboard.</span></button></div> : null}
+      </div>
+    </aside>
+  );
+}
+
+function SettingToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
+  return <label className="flex items-center justify-between gap-3 py-2 text-sm"><span>{label}</span><input type="checkbox" checked={checked} onChange={onChange} className="h-4 w-4 accent-emerald-600" /></label>;
+}

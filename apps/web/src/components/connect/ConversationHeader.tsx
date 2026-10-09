@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { connectUsers } from "@/mocks/connect/users";
 import { connectUsersById } from "@/mocks/connect";
+import type { CallKind } from "@/components/connect/WorkspaceCallProvider";
 
 interface ConversationHeaderProps {
   conversation: {
@@ -12,9 +13,10 @@ interface ConversationHeaderProps {
   };
   teamLabel: string;
   onOpenDetails: () => void;
+  onStartCall: (kind: CallKind) => void;
 }
 
-export function ConversationHeader({ conversation, teamLabel, onOpenDetails }: ConversationHeaderProps) {
+export function ConversationHeader({ conversation, teamLabel, onOpenDetails, onStartCall }: ConversationHeaderProps) {
   const currentUser = connectUsers[0]; // Assuming the first user is the current user for this example
   const [participantsAnchor, setParticipantsAnchor] = useState<HTMLElement | null>(null);
   const [participantSearch, setParticipantSearch] = useState("");
@@ -128,15 +130,15 @@ export function ConversationHeader({ conversation, teamLabel, onOpenDetails }: C
               {conversation.participants.length}
             </button>
           )}
-          {[
-            { label: "Start video call", icon: VideoIcon },
-            { label: "Start audio call", icon: CallIcon },
-            { label: "More conversation actions", icon: MoreIcon },
-          ].map(({ label, icon: Icon }) => (
-            <button key={label} type="button" aria-label={label} title={label} className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100">
-              <Icon className="h-[22px] w-[22px]" />
-            </button>
-          ))}
+          <button type="button" onClick={() => onStartCall("video")} aria-label="Start video call" title="Start video call" className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100">
+            <VideoIcon className="h-[22px] w-[22px]" />
+          </button>
+          <button type="button" onClick={() => onStartCall("audio")} aria-label="Start audio call" title="Start audio call" className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100">
+            <CallIcon className="h-[22px] w-[22px]" />
+          </button>
+          <button type="button" aria-label="More conversation actions" title="More conversation actions" className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100">
+            <MoreIcon className="h-[22px] w-[22px]" />
+          </button>
         </div>
       </header>
 

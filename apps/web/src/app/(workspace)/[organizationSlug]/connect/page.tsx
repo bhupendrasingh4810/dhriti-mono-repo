@@ -40,6 +40,7 @@ import { ConnectMentionsFilter, ConnectMentionsView } from "@/components/connect
 import { ConnectChannelDetailsPanel } from "@/components/connect/ConnectChannelDetailsPanel";
 import { ConnectReactionUsersList } from "@/components/connect/ConnectReactionUsersList";
 import ConnectUserDetailsCard from "@/components/connect/ConnectUserDetailsCard";
+import { useWorkspaceCall } from "@/components/connect/WorkspaceCallProvider";
 
 const quickViewsConfig = [
   { icon: MentionIcon, label: "Mentions" },
@@ -176,6 +177,7 @@ function getConversationTypeLabel(conversation: ConnectConversation) {
 }
 
 export default function ConnectPage() {
+  const { startCall } = useWorkspaceCall();
   const initialConversationId = connectSidebarState.recentChats[0] ?? connectConversations[0]?.id ?? "";
 
   const [selectedConversationId, setSelectedConversationId] = useState(initialConversationId);
@@ -945,6 +947,12 @@ export default function ConnectPage() {
                 ConnectConversationMessage | undefined
               }
               onOpenDetails={() => setShowDetails(true)}
+              onStartCall={(kind) => startCall({
+                conversationId: selectedConversation.id,
+                conversationName: selectedConversation.name,
+                participantIds: selectedConversation.participants,
+                kind,
+              })}
               onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
               onOpenMessageEmoji={openMessageEmojiMenu}
               onOpenMessageMenu={openMessageMenu}
