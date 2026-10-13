@@ -12,6 +12,7 @@ export type ConnectSidebarMenuContext = {
 
 export type ConnectSidebarConversation = {
   id: string;
+  userId?: string;
   name: string;
   type: "channel" | "direct" | "group";
   avatar?: string;
@@ -71,6 +72,7 @@ export type ConnectConversationMessage = {
   content: string;
   contentType: string;
   createdAt: string;
+  status?: "sending" | "sent" | "delivered" | "read";
   quotedMessageId?: string;
   attachments?: ConversationAttachment[];
   reactions?: ConversationReaction[];

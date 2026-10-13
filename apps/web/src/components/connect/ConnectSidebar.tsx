@@ -17,6 +17,7 @@ type ConnectSidebarProps = {
     activeQuickViewId?: string | null;
     onToggleTeam: (teamId: string) => void;
     onSelectConversation: (conversationId: string) => void;
+    onSelectUser?: (userId: string) => void;
     onSelectQuickView: (quickViewId: ConnectSidebarQuickView["id"]) => void;
     onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
 };
@@ -132,12 +133,14 @@ export default function ConnectSidebar({
     activeQuickViewId,
     onToggleTeam,
     onSelectConversation,
+    onSelectUser,
     onSelectQuickView,
     onOpenSidebarMenu,
 }: ConnectSidebarProps) {
     const [quickViewsOpen, setQuickViewsOpen] = useState(true);
     const [favouritesOpen, setFavouritesOpen] = useState(true);
     const [chatsOpen, setChatsOpen] = useState(true);
+    const [visibleChatCount, setVisibleChatCount] = useState(10);
     const [teamsOpen, setTeamsOpen] = useState(true);
     const [hoveredRowId, setHoveredRowId] = useState<string | null>(null);
     const [hoveredSectionId, setHoveredSectionId] = useState<ConnectSidebarSectionId | null>(null);
@@ -206,14 +209,24 @@ export default function ConnectSidebar({
                         onToggle={() => setChatsOpen((value) => !value)}
                     >
                         <ConversationList
-                            conversations={chatConversations}
+                            conversations={chatConversations.slice(0, visibleChatCount)}
                             sectionId="chats"
                             selectedConversationId={selectedConversationId}
                             hoveredRowId={hoveredRowId}
                             setHoveredRowId={setHoveredRowId}
                             onSelectConversation={onSelectConversation}
+                            onSelectUser={onSelectUser}
                             onOpenSidebarMenu={onOpenSidebarMenu}
                         />
+                        {visibleChatCount < chatConversations.length ? (
+                            <button
+                                type="button"
+                                onClick={() => setVisibleChatCount((count) => count + 10)}
+                                className="mt-1 rounded-md px-3 py-2 text-sm font-semibold text-white/90 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                            >
+                                Show More
+                            </button>
+                        ) : null}
                     </SidebarSection>
 
                     <SidebarSection
@@ -267,13 +280,14 @@ export default function ConnectSidebar({
     );
 }
 
-function ConversationList({ conversations, sectionId, selectedConversationId, hoveredRowId, setHoveredRowId, onSelectConversation, onOpenSidebarMenu }: {
+function ConversationList({ conversations, sectionId, selectedConversationId, hoveredRowId, setHoveredRowId, onSelectConversation, onSelectUser, onOpenSidebarMenu }: {
     conversations: ConnectSidebarConversation[];
     sectionId: "favorites" | "chats";
     selectedConversationId: string;
     hoveredRowId: string | null;
     setHoveredRowId: (value: string | null | ((previous: string | null) => string | null)) => void;
     onSelectConversation: (conversationId: string) => void;
+    onSelectUser?: (userId: string) => void;
     onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
 }) {
     return <div className="space-y-1">{conversations.map((conversation) => {
@@ -281,9 +295,12 @@ function ConversationList({ conversations, sectionId, selectedConversationId, ho
         const selected = selectedConversationId === conversation.id;
         const unread = conversation.unreadCount ?? 0;
         const hovered = hoveredRowId === rowId;
-        const select = () => onSelectConversation(conversation.id);
+        const select = () => {
+            if (conversation.userId) onSelectUser?.(conversation.userId);
+            else onSelectConversation(conversation.id);
+        };
         const context: ConnectSidebarMenuContext = { kind: conversation.isSelfSpace ? "personal" : conversation.type === "channel" ? "channel" : "user", id: conversation.id, label: conversation.name, sectionId };
-        return <div key={conversation.id} role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (typeof value === "function" ? value : value === rowId ? null : value))} className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-1 transition-colors hover:bg-white/10 ${selected ? "bg-white/20" : ""}`}><div className="flex min-w-0 items-center gap-2.5">{conversation.type === "channel" ? <span className={`text-sm font-bold ${selected ? "text-white" : "text-white/70"}`}>#</span> : <ConversationAvatar conversation={conversation} />}<span className={`truncate text-sm text-white/90 ${sectionId === "chats" && unread > 0 || selected ? "font-bold" : "font-medium"}`}>{conversation.name}</span></div><SidebarTrailingSlot hovered={hovered} count={unread} tooltip={conversation.isSelfSpace ? "More personal options" : conversation.type === "channel" ? "More channel options" : "More chat options"} onOpenMenu={(event) => onOpenSidebarMenu(event, context)} /></div>;
+        return <div key={conversation.id} role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (typeof value === "function" ? value : value === rowId ? null : value))} className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-1 transition-colors hover:bg-white/10 ${selected ? "bg-white/20" : ""}`}><div className="flex min-w-0 items-center gap-2.5">{conversation.type === "channel" ? <span className={`text-sm font-bold ${selected ? "text-white" : "text-white/70"}`}>#</span> : <ConversationAvatar conversation={conversation} />}<span className={`truncate text-sm text-white/90 ${sectionId === "chats" && unread > 0 || selected ? "font-bold" : "font-medium"}`}>{conversation.name}</span></div>{!conversation.userId ? <SidebarTrailingSlot hovered={hovered} count={unread} tooltip={conversation.isSelfSpace ? "More personal options" : conversation.type === "channel" ? "More channel options" : "More chat options"} onOpenMenu={(event) => onOpenSidebarMenu(event, context)} /> : null}</div>;
     })}</div>;
 }
 

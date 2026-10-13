@@ -59,15 +59,15 @@ interface MentionTokenProps {
 }
 
 const MentionToken = ({ token, connectUsers, openMentionHover }: MentionTokenProps) => {
-  const displayName = token.slice(2, -1);
-  const matchedUser = connectUsers.find((u) => u.displayName.toLowerCase() === displayName.toLowerCase());
+  const displayName = (token.startsWith("@[") ? token.slice(2, -1) : token.slice(1)).trim();
+  const matchedUser = connectUsers.find((user) => user.displayName.trim().toLowerCase() === displayName.toLowerCase());
 
   return (
     <span
       onMouseEnter={(e: MouseEvent<HTMLElement>) => {
         if (matchedUser) openMentionHover(e, matchedUser.id);
       }}
-      className={`font-bold text-emerald-600 ${matchedUser ? "cursor-pointer" : "cursor-default"}`}
+      className={`font-bold text-brand ${matchedUser ? "cursor-pointer" : "cursor-default"}`}
     >
       @{displayName}
     </span>
@@ -159,7 +159,17 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
           );
         }
 
-        return <Fragment key={`${currentKey}-txt`}>{token}</Fragment>;
+        const names = connectUsers.map((user) => user.displayName.trim())
+          .filter(Boolean)
+          .sort((first, second) => second.length - first.length)
+          .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        if (!names.length) return <Fragment key={`${currentKey}-txt`}>{token}</Fragment>;
+        const mentionPattern = new RegExp(`(?<![\\p{L}\\p{N}_@])(@(?:${names.join("|")}))(?![\\p{L}\\p{N}_])`, "giu");
+        return <Fragment key={`${currentKey}-txt`}>{token.split(mentionPattern).map((part, partIndex) => (
+          partIndex % 2 === 1
+            ? <MentionToken key={`${currentKey}-${partIndex}`} token={part} connectUsers={connectUsers} openMentionHover={openMentionHover} />
+            : <Fragment key={`${currentKey}-${partIndex}`}>{part}</Fragment>
+        ))}</Fragment>;
       })}
     </>
   );

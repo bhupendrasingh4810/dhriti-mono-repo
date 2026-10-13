@@ -27,7 +27,7 @@ import {
   SendMessageEventDto,
   TypingEventDto,
 } from "./connect/dto/connect-events.dto";
-import { channelRoom, organizationRoom } from "./connect/rooms";
+import { channelRoom, organizationRoom, userRoom } from "./connect/rooms";
 
 const allowedOrigins = (process.env.CONNECT_SOCKET_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS ?? "")
   .split(",")
@@ -69,6 +69,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       if (principal.organizationId) {
         const status = await this.presence.connected(principal.organizationId, principal.userId, socket.id);
         await socket.join(organizationRoom(principal.organizationId));
+        await socket.join(userRoom(principal.organizationId, principal.userId));
         this.publisher.presenceChanged(principal.organizationId, principal.userId, status);
       }
       this.metrics.wsConnected();
@@ -102,7 +103,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @MessageBody() payload: ChannelRoomEventDto,
   ): Promise<SocketAck> {
     return this.execute(socket, "channel:join", async (principal, organizationId) => {
-      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId);
+      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId, true);
       await socket.join(channelRoom(organizationId, payload.channelId));
       return { ok: true };
     });
@@ -125,7 +126,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   @SubscribeMessage("typing")
   async typing(@ConnectedSocket() socket: Socket, @MessageBody() payload: TypingEventDto): Promise<SocketAck> {
     return this.execute(socket, "typing", async (principal, organizationId) => {
-      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId);
+      await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId, true);
       await this.presence.setTyping(organizationId, payload.channelId, principal.userId, payload.isTyping);
       this.publisher.typingChanged(organizationId, payload.channelId, socket.id, principal.userId, payload.isTyping);
       return { ok: true };
@@ -145,7 +146,6 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         parentId: payload.parentId,
         clientMessageId: payload.clientMessageId,
       });
-      this.publisher.messageCreated(organizationId, payload.channelId, message);
       return { ok: true, message };
     });
   }
@@ -170,8 +170,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @MessageBody() payload: MarkChannelReadEventDto,
   ): Promise<SocketAck> {
     return this.execute(socket, "channel:mark-read", async (principal, organizationId) => {
-      await this.connect.markChannelRead(organizationId, payload.channelId, principal.userId);
-      this.publisher.channelRead(organizationId, payload.channelId, principal.userId);
+      await this.connect.markChannelRead(organizationId, payload.channelId, principal.userId, payload.messageId);
       return { ok: true };
     });
   }

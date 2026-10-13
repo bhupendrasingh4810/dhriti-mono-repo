@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type { Server } from "socket.io";
 
-import { channelRoom, organizationRoom } from "./rooms";
+import { channelRoom, organizationRoom, userRoom } from "./rooms";
 import type { PresenceStatus } from "./dto/connect-events.dto";
 
 @Injectable()
@@ -23,8 +23,27 @@ export class ConnectPublisherService {
       .emit("typing", { channelId, userId, isTyping });
   }
 
-  messageCreated(organizationId: string, channelId: string, message: unknown): void {
-    this.serverOrThrow().to(channelRoom(organizationId, channelId)).emit("message:created", message);
+  messageCreated(organizationId: string, channelId: string, userIds: string[], message: unknown): void {
+    const server = this.serverOrThrow();
+    for (const userId of userIds) {
+      server.to(userRoom(organizationId, userId)).emit("message:created", { channelId, message });
+    }
+  }
+
+  sidebarFavoritesChanged(organizationId: string, userId: string, favorites: unknown): void {
+    this.server?.to(userRoom(organizationId, userId)).emit("sidebar:favorites-changed", { favorites });
+  }
+
+  publishToUsers(organizationId: string, userIds: string[], event: string, payload: unknown): void {
+    for (const userId of new Set(userIds)) {
+      this.server?.to(userRoom(organizationId, userId)).emit(event, payload);
+    }
+  }
+
+  chatActivityChanged(organizationId: string, userIds: string[], activity: unknown): void {
+    for (const userId of userIds) {
+      this.server?.to(userRoom(organizationId, userId)).emit("sidebar:chat-activity", activity);
+    }
   }
 
   channelRead(organizationId: string, channelId: string, userId: string): void {

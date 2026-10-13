@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
 import { Type } from "class-transformer";
 
 export class CreateMessageDto {
@@ -34,6 +34,16 @@ export class UpdateMessageDto {
 }
 
 export class ListMessagesQueryDto {
+  @ApiPropertyOptional({ enum: ["unread"] })
+  @IsOptional()
+  @IsIn(["unread"])
+  initial?: "unread";
+
+  @ApiPropertyOptional({ description: "Return messages newer than this message id" })
+  @IsOptional()
+  @IsUUID()
+  after?: string;
+
   @ApiPropertyOptional({ description: "Return messages older than this cursor (message id)" })
   @IsOptional()
   @IsUUID()
@@ -54,4 +64,10 @@ export class AddReactionDto {
   @MinLength(1)
   @MaxLength(32)
   emoji!: string;
+}
+
+export class MarkMessagesReadDto {
+  @ApiProperty({ description: "Newest message actually viewed" })
+  @IsUUID()
+  messageId!: string;
 }

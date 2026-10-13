@@ -12,6 +12,7 @@ import { AuditService } from "../../audit/audit.service";
 import { EntitlementService } from "../../authorization/services/entitlement.service";
 import { AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
 import { OrganizationContext } from "../../../common/decorators/organization.decorator";
+import { assignDefaultUserPermissionGroups } from "./default-permission-groups";
 
 export interface MemberWithUser extends OrganizationMember {
   user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;
@@ -206,6 +207,7 @@ export class InvitationsService {
         create: { organizationId: invitation.organizationId, userId, status: "ACTIVE", joinedAt: new Date() },
         update: { status: "ACTIVE", joinedAt: new Date(), suspendedAt: null, removedAt: null, deletedAt: null },
       });
+      await assignDefaultUserPermissionGroups(transaction, invitation.organizationId, userId, userId);
     });
 
     await this.audit.record({

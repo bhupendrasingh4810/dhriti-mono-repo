@@ -146,6 +146,7 @@ export type ConnectMessage = {
   createdAt: string;
   editedAt?: string | null;
   deletedAt?: string | null;
+  isDeleted?: boolean;
   status?: MessageDeliveryState;
   isPinned?: boolean;
   replyCount?: number;

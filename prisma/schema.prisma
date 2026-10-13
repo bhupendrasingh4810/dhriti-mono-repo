@@ -94,6 +94,20 @@ model BlogPostTag {
   @@map("blog_post_tags")
 }
 
+model ConnectSidebarPreference {
+	id             String   @id @default(uuid()) @db.Uuid
+	organizationId String   @db.Uuid
+	userId         String   @db.Uuid
+	preferences    Json     @db.JsonB
+	createdAt      DateTime @default(now())
+	updatedAt      DateTime @updatedAt
+
+	organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+	user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+	@@unique([organizationId, userId])
+	@@map("connect_sidebar_preferences")
+}
 
 
 model LegalDocument {
@@ -1178,6 +1192,7 @@ model Organization {
   settings      OrganizationSettings?
   notifications Notification[]
   notificationPreferences NotificationPreference[]
+  connectSidebarPreferences ConnectSidebarPreference[]
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
   invitations   Invitation[]
@@ -1376,6 +1391,7 @@ model User {
   supportTickets        SupportTicket[]
   notifications         Notification[]
   notificationPrefs     NotificationPreference[]
+  connectSidebarPreferences ConnectSidebarPreference[]
   sentInvitations       Invitation[]
   groupMemberships      GroupMember[]
   organizationTeamMemberships OrganizationTeamMember[]
@@ -2319,6 +2335,7 @@ model Message {
   content          String    @db.Text
   contentHtml      String?   @db.Text
   isEdited         Boolean   @default(false)
+  isDeleted        Boolean   @default(false)
   createdAt        DateTime  @default(now())
   editedAt         DateTime?
   deletedAt        DateTime?

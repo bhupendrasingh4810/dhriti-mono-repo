@@ -2,6 +2,8 @@ import { PermissionService } from "./permission.service";
 
 function makePrisma() {
   return {
+    user: { findFirst: jest.fn().mockResolvedValue(null) },
+    permission: { findMany: jest.fn() },
     organizationMember: { findFirst: jest.fn() },
     platformUserRoleAssignment: { findFirst: jest.fn(), findMany: jest.fn() },
     organizationPermissionGroupAssignment: { findMany: jest.fn() },
@@ -9,6 +11,60 @@ function makePrisma() {
 }
 
 describe("PermissionService", () => {
+  it("returns the full permission catalog for an active platform administrator", async () => {
+    const prisma = makePrisma();
+    prisma.organizationMember.findFirst.mockResolvedValue({ id: "member-a" });
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN" });
+    prisma.permission.findMany.mockResolvedValue([{ key: "connect.channel.read" }, { key: "flow.project.read" }]);
+    const service = new PermissionService(prisma as never);
+    await expect(service.getUserPermissions("user-a", "org-a")).resolves.toEqual(["connect.channel.read", "flow.project.read"]);
+  });
+
+  it("does not grant administrator access to a missing or inactive user", async () => {
+    const prisma = makePrisma();
+    const service = new PermissionService(prisma as never);
+    await expect(service.isPlatformAdministrator("user-a")).resolves.toBe(false);
+    expect(prisma.platformUserRoleAssignment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("does not grant administrator access without an active platform_admin assignment", async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE" });
+    prisma.platformUserRoleAssignment.findFirst.mockResolvedValue(null);
+    const service = new PermissionService(prisma as never);
+    await expect(service.isPlatformAdministrator("user-a")).resolves.toBe(false);
+  });
+
+  it("does not bypass tenant membership for platform administrators", async () => {
+    const prisma = makePrisma();
+    prisma.organizationMember.findFirst.mockResolvedValue(null);
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN" });
+    const service = new PermissionService(prisma as never);
+    await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(false);
+    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("allows an active platform administrator after confirming tenant membership", async () => {
+    const prisma = makePrisma();
+    prisma.organizationMember.findFirst.mockResolvedValue({ id: "member-a" });
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN" });
+    const service = new PermissionService(prisma as never);
+    await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(true);
+    expect(prisma.organizationPermissionGroupAssignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("recognizes a non-revoked platform_admin role assignment", async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE" });
+    prisma.platformUserRoleAssignment.findFirst.mockResolvedValue({ userId: "user-a" });
+    const service = new PermissionService(prisma as never);
+    await expect(service.isPlatformAdministrator("user-a")).resolves.toBe(true);
+    expect(prisma.platformUserRoleAssignment.findFirst).toHaveBeenCalledWith({
+      where: { userId: "user-a", revokedAt: null, platformRole: { key: "platform_admin" } },
+      select: { userId: true },
+    });
+  });
+
   it("denies a user without an active organization membership", async () => {
     const prisma = makePrisma();
     prisma.organizationMember.findFirst.mockResolvedValue(null);

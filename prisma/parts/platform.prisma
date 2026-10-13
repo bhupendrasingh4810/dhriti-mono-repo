@@ -32,6 +32,7 @@ model User {
   supportTickets        SupportTicket[]
   notifications         Notification[]
   notificationPrefs     NotificationPreference[]
+  connectSidebarPreferences ConnectSidebarPreference[]
   sentInvitations       Invitation[]
   groupMemberships      GroupMember[]
   organizationTeamMemberships OrganizationTeamMember[]

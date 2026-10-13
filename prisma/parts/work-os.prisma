@@ -40,6 +40,7 @@ model Message {
   content          String    @db.Text
   contentHtml      String?   @db.Text
   isEdited         Boolean   @default(false)
+  isDeleted        Boolean   @default(false)
   createdAt        DateTime  @default(now())
   editedAt         DateTime?
   deletedAt        DateTime?

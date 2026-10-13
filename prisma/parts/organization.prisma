@@ -69,6 +69,7 @@ model Organization {
   settings      OrganizationSettings?
   notifications Notification[]
   notificationPreferences NotificationPreference[]
+  connectSidebarPreferences ConnectSidebarPreference[]
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
   invitations   Invitation[]

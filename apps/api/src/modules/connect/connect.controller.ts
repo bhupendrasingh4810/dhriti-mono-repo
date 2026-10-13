@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from "@nestjs/common";
@@ -21,7 +22,8 @@ import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
-import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, UpdateMessageDto } from "./dto/message.dto";
+import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
+import { CreateDirectConversationDto, SetSidebarFavoriteDto } from "./dto/sidebar.dto";
 
 @ApiTags("connect")
 @ApiBearerAuth()
@@ -30,6 +32,51 @@ import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, UpdateMessageDt
 export class ConnectController {
   constructor(private readonly connect: ConnectService) {}
 
+  // ---------------- Sidebar and conversations ----------------
+
+  @Get("users")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "List active Connect users in the current organization" })
+  async listUsers(@CurrentOrganization() organization: OrganizationContext) {
+    return this.connect.listUsers(organization.organizationId);
+  }
+
+  @Get("sidebar")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Get the current user's Connect sidebar state" })
+  async getSidebar(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
+    return this.connect.getSidebar(organization.organizationId, user.userId);
+  }
+
+  @Put("sidebar/favorites")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Add or remove a chat, team, or channel favorite" })
+  async setSidebarFavorite(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: SetSidebarFavoriteDto,
+  ) {
+    return this.connect.setSidebarFavorite(organization.organizationId, user.userId, dto);
+  }
+
+  @Get("conversations")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "List the current user's direct and group conversations" })
+  async listConversations(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
+    return this.connect.listConversations(organization.organizationId, user.userId);
+  }
+
+  @Post("conversations/direct")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Find or create a direct conversation with an organization member" })
+  async createDirectConversation(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: CreateDirectConversationDto,
+  ) {
+    return this.connect.createDirectConversation(organization.organizationId, user.userId, dto.userId);
+  }
+
   // ---------------- Channels ----------------
 
   @Get("channels")
@@ -37,6 +84,18 @@ export class ConnectController {
   @ApiOperation({ summary: "List channels visible to the current user" })
   async listChannels(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
     return this.connect.listChannels(organization.organizationId, user.userId);
+  }
+
+  @Post("channels/:channelId/join")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Join a public channel in the current organization" })
+  async joinPublicChannel(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId") channelId: string,
+  ): Promise<void> {
+    return this.connect.joinPublicChannel(organization.organizationId, channelId, user.userId);
   }
 
   @Post("channels")
@@ -102,7 +161,21 @@ export class ConnectController {
     return this.connect.listMessages(organization.organizationId, channelId, user.userId, {
       cursor: query.cursor,
       limit: query.limit,
+      initial: query.initial,
+      after: query.after,
     });
+  }
+
+  @Post("channels/:channelId/read")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  async markMessagesRead(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId") channelId: string,
+    @Body() dto: MarkMessagesReadDto,
+  ) {
+    const lastReadAt = await this.connect.markChannelRead(organization.organizationId, channelId, user.userId, dto.messageId);
+    return { lastReadAt };
   }
 
   @Post("channels/:channelId/messages")
@@ -139,6 +212,17 @@ export class ConnectController {
     @Param("messageId") messageId: string,
   ): Promise<void> {
     return this.connect.deleteMessage(organization.organizationId, messageId, user.userId);
+  }
+
+  @Post("messages/:messageId/restore")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.delete" })
+  @ApiOperation({ summary: "Restore a deleted message (author only)" })
+  async restoreMessage(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("messageId") messageId: string,
+  ) {
+    return this.connect.restoreMessage(organization.organizationId, messageId, user.userId);
   }
 
   // ---------------- Reactions ----------------

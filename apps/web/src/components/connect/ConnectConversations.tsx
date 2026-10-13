@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { CircularProgress } from "@mui/material";
+import { CheckCircleOutlineRounded, DoneAllRounded } from "@mui/icons-material";
 import type { MouseEvent, ReactNode } from "react";
 import type { ConversationUser, ConnectConversationMessage, ConversationAttachment } from "@/types/connect.types";
 import { ConnectMessageHoverActions } from "./ConnectMessageHoverActions";
 import ConnectMessageInput from "./ConnectMessageInput";
 import { RenderMessageContent, getMessagePriority, isSingleEmojiMessage } from "./RenderMessageContent";
-import { connectUsers } from "@/mocks/connect";
 import { ConversationHeader } from "./ConversationHeader";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
@@ -31,6 +32,15 @@ interface ConnectConversationProps {
   currentUserId: string;
   usersById: Record<string, ConversationUser>;
   messages: ConnectConversationMessage[];
+  messagesLoading?: boolean;
+  historyError?: string;
+  firstUnreadId?: string | null;
+  hasOlderMessages?: boolean;
+  hasNewerMessages?: boolean;
+  loadingMoreMessages?: boolean;
+  onLoadMoreMessages?: (direction: "older" | "newer") => void;
+  onReadMessage?: (messageId: string) => void;
+  onRetryMessages?: () => void;
   activeMessageMenuId?: string | null;
   activeMessageEmojiId?: string | null;
   getQuotedMessageById: (id: string) => ConnectConversationMessage | undefined;
@@ -67,6 +77,15 @@ export function ConnectConversations({
   currentUserId,
   usersById,
   messages,
+  messagesLoading = false,
+  historyError = "",
+  firstUnreadId = null,
+  hasOlderMessages = false,
+  hasNewerMessages = false,
+  loadingMoreMessages = false,
+  onLoadMoreMessages,
+  onReadMessage,
+  onRetryMessages,
   activeMessageMenuId,
   activeMessageEmojiId,
   getQuotedMessageById,
@@ -94,7 +113,12 @@ export function ConnectConversations({
     anchorEl: HTMLElement;
     attachment: ConversationAttachment;
   } | null>(null);
-  const messagesBottomRef = useRef<HTMLDivElement | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const initializedConversation = useRef<string | null>(null);
+  const [positioned, setPositioned] = useState(false);
+  const previousLastMessage = useRef<string | null>(null);
+  const nearBottom = useRef(true);
+  const scrollAnchor = useRef<{ id: string; offset: number } | null>(null);
   const hoverActionCloseTimerRef = useRef<number | null>(null);
 
   function openAttachmentMenu(event: MouseEvent<HTMLElement>, attachment: ConversationAttachment) {
@@ -172,10 +196,6 @@ export function ConnectConversations({
     }, 160);
   }
 
-  useEffect(() => {
-    messagesBottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [conversation.id, messages.length]);
-
   useEffect(
     () => () => {
       clearHoverActionCloseTimer();
@@ -194,12 +214,88 @@ export function ConnectConversations({
     () => [...messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     [messages],
   );
+  const connectUsers = Object.values(usersById);
+  const lastOutgoingMessage = sortedMessages.findLast((message) => message.senderId === currentUserId && message.contentType !== "system");
+  const notifyRead = useEffectEvent((messageId: string) => onReadMessage?.(messageId));
+
+  useLayoutEffect(() => {
+    const list = messageListRef.current;
+    if (!list || messagesLoading || historyError) return;
+    const lastMessage = sortedMessages[sortedMessages.length - 1];
+    if (initializedConversation.current !== conversation.id) {
+      const unreadElement = firstUnreadId ? list.querySelector<HTMLElement>(`[data-message-id="${firstUnreadId}"]`) : null;
+      list.scrollTop = unreadElement
+        ? unreadElement.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop
+        : list.scrollHeight;
+      initializedConversation.current = conversation.id;
+      setPositioned(true);
+    } else if (scrollAnchor.current) {
+      const anchor = scrollAnchor.current;
+      const element = list.querySelector<HTMLElement>(`[data-message-id="${anchor.id}"]`);
+      if (element) list.scrollTop += element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
+      if (!loadingMoreMessages) scrollAnchor.current = null;
+    } else if (lastMessage?.id !== previousLastMessage.current && !hasNewerMessages
+      && (nearBottom.current || lastMessage?.senderId === currentUserId)) {
+      list.scrollTop = list.scrollHeight;
+    }
+    previousLastMessage.current = lastMessage?.id ?? null;
+    nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
+  }, [conversation.id, currentUserId, firstUnreadId, hasNewerMessages, historyError, loadingMoreMessages, messagesLoading, sortedMessages]);
+
+  useEffect(() => {
+    const list = messageListRef.current;
+    if (!list || messagesLoading || !positioned || historyError) return;
+    const visibleIncoming = new Map<string, ConnectConversationMessage>();
+    const reportVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      const latest = [...visibleIncoming.values()].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))[0];
+      if (latest) notifyRead(latest.id);
+    };
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const messageId = (entry.target as HTMLElement).dataset.messageId;
+        const message = sortedMessages.find((item) => item.id === messageId);
+        if (!message || message.senderId === currentUserId) continue;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) visibleIncoming.set(message.id, message);
+        else visibleIncoming.delete(message.id);
+      }
+      reportVisible();
+    }, { root: list, threshold: [0, 0.5] });
+    list.querySelectorAll("[data-message-id]").forEach((element) => observer.observe(element));
+    document.addEventListener("visibilitychange", reportVisible);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", reportVisible);
+    };
+  }, [currentUserId, historyError, messagesLoading, positioned, sortedMessages]);
+
+  function loadMore(direction: "older" | "newer") {
+    if (loadingMoreMessages || messagesLoading) return;
+    const list = messageListRef.current;
+    if (direction === "older" && list) {
+      const first = list.querySelector<HTMLElement>("[data-message-id]");
+      if (first) scrollAnchor.current = { id: first.dataset.messageId!, offset: first.getBoundingClientRect().top - list.getBoundingClientRect().top };
+    }
+    onLoadMoreMessages?.(direction);
+  }
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
       <ConversationHeader conversation={conversation} teamLabel={teamLabel} onOpenDetails={onOpenDetails} onStartCall={onStartCall} />
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
-        {sortedMessages.map((message, index) => {
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        {messagesLoading || (!positioned && !historyError) ? <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface text-brand"><CircularProgress color="inherit" aria-label="Loading messages" /></div> : null}
+        {historyError ? <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-error"><p>{historyError}</p><button type="button" onClick={onRetryMessages} className="rounded border border-border px-3 py-2 text-sm text-text-primary">Retry</button></div> : null}
+      <div ref={messageListRef} className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
+        onScroll={(event) => {
+          const list = event.currentTarget;
+          nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
+          if (!positioned || loadingMoreMessages || messagesLoading) return;
+          if (list.scrollTop < 48 && hasOlderMessages) loadMore("older");
+          else if (nearBottom.current && hasNewerMessages) loadMore("newer");
+        }}>
+        {hasOlderMessages ? <button type="button" onClick={() => loadMore("older")} disabled={loadingMoreMessages} className="self-center text-xs font-semibold text-brand disabled:opacity-50">Load earlier messages</button> : null}
+        {!messagesLoading && !historyError && sortedMessages.length === 0 ? <p className="m-auto text-sm text-text-secondary">No messages yet.</p> : null}
+        {!messagesLoading && sortedMessages.map((message, index) => {
           const sender = usersById[message.senderId];
           const isOwn = message.senderId === currentUserId;
           const showActions =
@@ -230,6 +326,7 @@ export function ConnectConversations({
           return (
             <div
               key={message.id}
+              data-message-id={message.id}
               className={`flex items-start gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
             >
               {!isOwn && !isContinuation ? (
@@ -321,6 +418,11 @@ export function ConnectConversations({
                   )}
 
                   {!isOwn && priority ? <PriorityBadge priority={priority} /> : null}
+                  {conversation.type === "direct" && message.id === lastOutgoingMessage?.id && (message.status === "sent" || message.status === "delivered" || message.status === "read") ? (
+                    <span role="img" aria-label={message.status === "read" ? "Seen" : "Sent"} title={message.status === "read" ? "Seen" : "Sent"} className={`shrink-0 self-end ${message.status === "read" ? "text-brand" : "text-text-secondary"}`}>
+                      {message.status === "read" ? <DoneAllRounded fontSize="small" /> : <CheckCircleOutlineRounded fontSize="small" />}
+                    </span>
+                  ) : null}
                 </div>
 
                 {message.reactions?.length ? (
@@ -367,7 +469,8 @@ export function ConnectConversations({
             </div>
           );
         })}
-        <div ref={messagesBottomRef} />
+        {loadingMoreMessages ? <div className="flex justify-center py-2 text-brand"><CircularProgress size="1.25rem" color="inherit" aria-label="Loading more messages" /></div> : hasNewerMessages ? <button type="button" onClick={() => loadMore("newer")} className="self-center text-xs font-semibold text-brand">Load newer messages</button> : null}
+      </div>
       </div>
 
       <ConnectCascadingMenu

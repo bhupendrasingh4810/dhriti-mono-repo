@@ -39,6 +39,9 @@ export class AccessGuard implements CanActivate {
       return false;
     }
     const { organizationId } = request.organization;
+    if (await this.permissions.isPlatformAdministrator(request.user.userId)) {
+      return true;
+    }
     if (requirements.entitlement) {
       await this.entitlement.assertFeatureEnabled(organizationId, requirements.entitlement);
     }

@@ -30,6 +30,10 @@ export class PresenceSetEventDto {
   status!: PresenceStatus;
 }
 
-export class MarkChannelReadEventDto extends ChannelRoomEventDto {}
+export class MarkChannelReadEventDto extends ChannelRoomEventDto {
+  @IsOptional()
+  @IsUUID()
+  messageId?: string;
+}
 
 export type PresenceStatus = "online" | "away" | "dnd" | "in-meeting" | "offline";

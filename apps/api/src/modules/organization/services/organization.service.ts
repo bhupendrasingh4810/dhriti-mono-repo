@@ -15,6 +15,10 @@ import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import { EntitlementService } from "../../authorization/services/entitlement.service";
+import { assignDefaultUserPermissionGroups } from "./default-permission-groups";
+
+const ORGANIZATION_APPS = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"] as const;
+const DEFAULT_PERMISSION_GROUP_TYPES = ["admins", "users", "guest"] as const;
 
 export interface MemberWithUser extends OrganizationMember {
   user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;
@@ -75,31 +79,79 @@ export class OrganizationService {
       );
     }
 
-    await this.prisma.onBoardingProfile.upsert({
-      where: { userId: creatorUserId },
-      create: {
-        userId: creatorUserId,
-        isOrgAdded: true,
-        legalAcceptedAt: new Date(),
-      },
-      update: {
-        isOrgAdded: true,
-      },
-    });
+    const organizationName = input.name.trim();
 
-    return this.prisma.organization.create({
-      data: {
-        name: input.name.trim(),
-        slug: input.slug,
-        primaryEmail: input.primaryEmail?.toLowerCase(),
-        enabledProducts: input.enabledProducts,
-        description: input.description?.trim(),
-        notes: input.notes?.trim(),
-        seats: input.seats,
-        members: {
-          create: { userId: creatorUserId, status: "ACTIVE", isOwner: true, joinedAt: new Date() },
+    return this.prisma.$transaction(async (transaction) => {
+      const organization = await transaction.organization.create({
+        data: {
+          name: organizationName,
+          slug: input.slug,
+          primaryEmail: input.primaryEmail?.toLowerCase(),
+          enabledProducts: input.enabledProducts,
+          description: input.description?.trim(),
+          notes: input.notes?.trim(),
+          seats: input.seats,
+          members: {
+            create: { userId: creatorUserId, status: "ACTIVE", isOwner: true, joinedAt: new Date() },
+          },
         },
-      },
+      });
+
+      await transaction.onBoardingProfile.upsert({
+        where: { userId: creatorUserId },
+        create: {
+          userId: creatorUserId,
+          isOrgAdded: true,
+          legalAcceptedAt: new Date(),
+        },
+        update: {
+          isOrgAdded: true,
+        },
+      });
+
+      const managePermission = await transaction.permission.findUnique({
+        where: { key: "organization.permissions.manage" },
+        select: { id: true },
+      });
+      if (!managePermission) {
+        throw new AppError(
+          ErrorCode.INTERNAL_ERROR,
+          "Required organization permission is missing",
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      const groupNames = ORGANIZATION_APPS.flatMap((appName) =>
+        DEFAULT_PERMISSION_GROUP_TYPES.map((groupType) => `${organizationName}-${appName}-${groupType}`),
+      );
+      await transaction.organizationPermissionGroup.createMany({
+        data: groupNames.map((name) => ({
+          organizationId: organization.id,
+          name,
+          description: "System default permission group",
+          isSystem: true,
+        })),
+      });
+
+      const adminGroupNames = ORGANIZATION_APPS.map((appName) => `${organizationName}-${appName}-admins`);
+      const adminGroups = await transaction.organizationPermissionGroup.findMany({
+        where: { organizationId: organization.id, name: { in: adminGroupNames } },
+        select: { id: true },
+      });
+      await transaction.organizationPermissionGroupPermission.createMany({
+        data: adminGroups.map(({ id }) => ({ permissionGroupId: id, permissionId: managePermission.id })),
+      });
+      await transaction.organizationPermissionGroupAssignment.createMany({
+        data: adminGroups.map(({ id }) => ({
+          organizationId: organization.id,
+          permissionGroupId: id,
+          userId: creatorUserId,
+          scopeType: "ORGANIZATION",
+          assignedByUserId: creatorUserId,
+        })),
+      });
+
+      return organization;
     });
   }
 
@@ -285,7 +337,7 @@ export class OrganizationService {
 
     const membership = await this.prisma.$transaction(async (transaction) => {
       await transaction.user.update({ where: { id: user.id }, data: { role } });
-      return transaction.organizationMember.upsert({
+      const member = await transaction.organizationMember.upsert({
         where: { organizationId_userId: { organizationId, userId: user.id } },
         create: { organizationId, userId: user.id, status: "ACTIVE", joinedAt: new Date() },
         update: { status: "ACTIVE", joinedAt: new Date(), suspendedAt: null, removedAt: null, deletedAt: null },
@@ -293,6 +345,8 @@ export class OrganizationService {
           user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
         },
       });
+      await assignDefaultUserPermissionGroups(transaction, organizationId, user.id, actorUserId);
+      return member;
     });
     await this.audit.record({
       action: "iam.member.activated",

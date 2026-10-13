@@ -84,8 +84,8 @@ export default function ConnectUserDetailsCard({ avatar, displayName, jobTitle, 
           <div className="space-y-1.5"><ContactRow icon="mail" value={email ?? "Not available"} /><ContactRow icon="phone" value={phone ?? "Not available"} /><ContactRow icon="location" value={location ?? "Not available"} /></div>
         </div>
 
-        <button type="button" onClick={() => setShowMore((previous) => !previous)} className="flex items-center gap-0.5 pt-0.5 text-xs font-bold text-blue-600 hover:text-blue-700">
-          Show more <DetailIcon name={showMore ? "chevronUp" : "chevronDown"} className="h-3.5 w-3.5" />
+        <button type="button" onClick={() => setShowMore((previous) => !previous)} className="flex items-center gap-0.5 pt-0.5 text-xs font-bold text-blue-600 cursor-pointer">
+          Show more
         </button>
 
         {reactionContext && reactionContext.users.length > 0 ? <div className="border-t border-gray-100 pt-2.5">
@@ -93,7 +93,7 @@ export default function ConnectUserDetailsCard({ avatar, displayName, jobTitle, 
           <div className="space-y-1.5">{reactionContext.users.slice(0, 6).map((user) => <div key={user.id} className="flex items-center gap-2"><img src={user.avatar} alt="" className="h-[22px] w-[22px] rounded-full object-cover" /><div className="min-w-0"><p className="truncate text-xs font-bold text-gray-900">{user.displayName}</p><p className="truncate text-[11px] text-gray-500">{user.jobTitle}</p></div></div>)}</div>
         </div> : null}
 
-        {showMore ? <div className="border-t border-gray-100 pt-2.5"><p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-gray-400">Reports To</p><p className="text-xs font-bold leading-5 text-gray-900">{reportsTo?.displayName ?? "Not assigned"}</p>{reportsTo?.jobTitle ? <p className="text-[11px] leading-5 text-gray-500">{reportsTo.jobTitle}</p> : null}</div> : null}
+        <div className="border-t border-gray-100 pt-2.5"><p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-gray-400">Reports To</p><p className="text-xs font-bold leading-5 text-gray-900">{reportsTo?.displayName ?? "Not assigned"}</p>{reportsTo?.jobTitle ? <p className="text-[11px] leading-5 text-gray-500">{reportsTo.jobTitle}</p> : null}</div>
       </div>
     </div>
   );

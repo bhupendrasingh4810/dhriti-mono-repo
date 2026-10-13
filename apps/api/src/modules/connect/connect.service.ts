@@ -1,12 +1,25 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Channel, Message, MessageReaction, User } from "@prisma/client";
+import type { Channel, Message, MessageReaction, User, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
+import { ConnectPublisherService } from "../../websocket/connect/connect-publisher.service";
 import type { CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import type { CreateMessageDto, UpdateMessageDto } from "./dto/message.dto";
+import type { UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
+
+type SidebarFavoriteType = "chat" | "team" | "channel";
+type SidebarFavorites = { chats: string[]; teams: string[]; channels: string[] };
+
+function toSidebarPreferences(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function toStringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
 
 export type MessageWithMeta = Message & {
   author: Pick<User, "id" | "name" | "avatarUrl">;
@@ -43,18 +56,215 @@ export class ConnectService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly publisher: ConnectPublisherService,
   ) {}
+
+  async getSidebar(organizationId: string, userId: string) {
+    await this.assertOrganizationMember(organizationId, userId);
+    const record = await this.prisma.connectSidebarPreference.findUnique({
+      where: { organizationId_userId: { organizationId, userId } },
+      select: { preferences: true },
+    });
+    const preferences = toSidebarPreferences(record?.preferences);
+    const favoriteValues = toSidebarPreferences(preferences.favorites);
+
+    return {
+      favorites: {
+        chats: toStringList(favoriteValues.chats),
+        teams: toStringList(favoriteValues.teams),
+        channels: toStringList(favoriteValues.channels),
+      },
+      recentChats: toStringList(preferences.recentChats),
+      settings: toSidebarPreferences(preferences.settings),
+      savedMessageIds: toStringList(preferences.savedMessageIds),
+      followedThreadIds: toStringList(preferences.followedThreadIds),
+    };
+  }
+
+  async setSidebarFavorite(
+    organizationId: string,
+    userId: string,
+    input: { itemType: SidebarFavoriteType; itemId: string; isFavorite: boolean },
+  ): Promise<{ favorites: SidebarFavorites; recentChats: string[] }> {
+    if (input.itemType === "team") {
+      const team = await this.prisma.team.findFirst({
+        where: { id: input.itemId, organizationId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!team) throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+    } else {
+      const channel = await this.getChannelForMember(organizationId, input.itemId, userId);
+      const expectedTypes = input.itemType === "chat" ? ["DIRECT", "GROUP"] : ["CHANNEL"];
+      if (!expectedTypes.includes(channel.type)) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Item type does not match the Connect resource", HttpStatus.BAD_REQUEST);
+      }
+    }
+
+    const updated = await this.mutatePreferences(organizationId, userId, (current) => {
+    const currentFavorites = toSidebarPreferences(current.favorites);
+    const key = input.itemType === "chat" ? "chats" : input.itemType === "team" ? "teams" : "channels";
+    const items = new Set(toStringList(currentFavorites[key]));
+    if (input.isFavorite) items.add(input.itemId);
+    else items.delete(input.itemId);
+
+    const favorites: SidebarFavorites = {
+      chats: toStringList(currentFavorites.chats),
+      teams: toStringList(currentFavorites.teams),
+      channels: toStringList(currentFavorites.channels),
+    };
+    favorites[key] = [...items];
+    return { ...current, favorites };
+    });
+
+    this.publisher.sidebarFavoritesChanged(organizationId, userId, updated.favorites);
+    return this.getSidebar(organizationId, userId);
+  }
+
+  async updateSidebarSettings(organizationId: string, userId: string, settings: UpdateSidebarSettingsDto) {
+    await this.assertOrganizationMember(organizationId, userId);
+    const conversationIds = new Set([
+      ...(settings.hiddenConversationIds ?? []),
+      ...(settings.customSections ?? []).flatMap((section) => section.conversationIds),
+    ]);
+    for (const channelId of conversationIds) {
+      await this.getChannelForMember(organizationId, channelId, userId, true);
+    }
+    for (const teamId of settings.expandedTeamIds ?? []) {
+      const membership = await this.prisma.teamMember.findFirst({
+        where: { teamId, userId, team: { organizationId, deletedAt: null } },
+        select: { id: true },
+      });
+      if (!membership) throw new AppError(ErrorCode.FORBIDDEN, "Team is not accessible", HttpStatus.FORBIDDEN);
+    }
+    const patch = Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined));
+    const updated = await this.mutatePreferences(organizationId, userId, (current) => ({
+      ...current,
+      settings: { ...toSidebarPreferences(current.settings), ...patch },
+    }));
+    this.publisher.publishToUsers(organizationId, [userId], "sidebar:settings-changed", { settings: updated.settings });
+    return this.getSidebar(organizationId, userId);
+  }
+
+  async setPersonalMessage(organizationId: string, userId: string, messageId: string, kind: "saved" | "followed", enabled: boolean) {
+    const message = await this.getMessage(organizationId, messageId);
+    await this.getChannelForMember(organizationId, message.channelId, userId, true);
+    const key = kind === "saved" ? "savedMessageIds" : "followedThreadIds";
+    const targetId = kind === "followed" ? message.parentId ?? message.id : message.id;
+    const updated = await this.mutatePreferences(organizationId, userId, (current) => {
+      const ids = new Set(toStringList(current[key]));
+      if (enabled) ids.add(targetId);
+      else ids.delete(targetId);
+      if (ids.size > 500) throw new AppError(ErrorCode.VALIDATION_FAILED, "Personal message limit reached", HttpStatus.BAD_REQUEST);
+      return { ...current, [key]: [...ids] };
+    });
+    this.publisher.publishToUsers(organizationId, [userId], "sidebar:personal-messages-changed", { [key]: updated[key] });
+    return this.getSidebar(organizationId, userId);
+  }
+
+  async listConversations(organizationId: string, userId: string) {
+    await this.assertOrganizationMember(organizationId, userId);
+    const conversations = await this.prisma.channel.findMany({
+      where: {
+        organizationId,
+        type: { in: ["DIRECT", "GROUP"] },
+        deletedAt: null,
+        members: { some: { userId } },
+      },
+      include: {
+        members: { select: { userId: true } },
+        messages: {
+          where: { deletedAt: null },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { id: true, authorId: true, content: true, createdAt: true },
+        },
+      },
+    });
+
+    return conversations.sort((left, right) =>
+      (right.messages[0]?.createdAt.getTime() ?? right.createdAt.getTime())
+        - (left.messages[0]?.createdAt.getTime() ?? left.createdAt.getTime()),
+    );
+  }
+
+  async listUsers(organizationId: string) {
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        status: "ACTIVE",
+        deletedAt: null,
+        user: { deletedAt: null },
+      },
+      select: {
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+    return memberships.map(({ user }) => user);
+  }
+
+  async createDirectConversation(organizationId: string, creatorUserId: string, otherUserId: string) {
+    if (creatorUserId === otherUserId) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "A direct conversation requires another user", HttpStatus.BAD_REQUEST);
+    }
+
+    const members = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        userId: { in: [creatorUserId, otherUserId] },
+        status: "ACTIVE",
+        deletedAt: null,
+      },
+      select: { userId: true },
+    });
+    if (members.length !== 2) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Both users must be active organization members", HttpStatus.BAD_REQUEST);
+    }
+
+    const candidates = await this.prisma.channel.findMany({
+      where: {
+        organizationId,
+        type: "DIRECT",
+        deletedAt: null,
+        AND: [
+          { members: { some: { userId: creatorUserId } } },
+          { members: { some: { userId: otherUserId } } },
+        ],
+      },
+      include: { members: { select: { userId: true } } },
+    });
+    const existing = candidates.find((conversation) => conversation.members.length === 2);
+    if (existing) return existing;
+
+    return this.prisma.channel.create({
+      data: {
+        organizationId,
+        name: "Direct conversation",
+        type: "DIRECT",
+        visibility: "PRIVATE",
+        createdById: creatorUserId,
+        members: { create: [{ userId: creatorUserId }, { userId: otherUserId }] },
+      },
+      include: { members: { select: { userId: true } } },
+    });
+  }
 
   // ---------------- Channels ----------------
 
   async listChannels(organizationId: string, userId: string): Promise<Channel[]> {
-    // Public channels + private channels the user is a member of.
+    await this.assertOrganizationMember(organizationId, userId);
+    const teamMemberships = await this.prisma.teamMember.findMany({
+      where: { userId, team: { organizationId, deletedAt: null } },
+      select: { teamId: true },
+    });
     return this.prisma.channel.findMany({
       where: {
         organizationId,
+        type: "CHANNEL",
         deletedAt: null,
         isArchived: false,
         OR: [{ visibility: "PUBLIC" }, { members: { some: { userId } } }],
+        AND: [{ OR: [{ teamId: null }, { teamId: { in: teamMemberships.map(({ teamId }) => teamId) } }] }],
       },
       orderBy: { createdAt: "asc" },
     });
@@ -110,7 +320,13 @@ export class ConnectService {
     return channel;
   }
 
-  async getChannelForMember(organizationId: string, channelId: string, userId: string): Promise<Channel> {
+  async getChannelForMember(
+    organizationId: string,
+    channelId: string,
+    userId: string,
+    requireChannelMembership = false,
+  ): Promise<Channel> {
+    await this.assertOrganizationMember(organizationId, userId);
     const channel = await this.prisma.channel.findFirst({
       where: { id: channelId, organizationId, deletedAt: null },
     });
@@ -118,15 +334,36 @@ export class ConnectService {
       throw new AppError(ErrorCode.CHANNEL_NOT_FOUND, "Channel not found", HttpStatus.NOT_FOUND);
     }
 
-    if (channel.visibility === "PRIVATE") {
-      const member = await this.prisma.channelMember.findUnique({
-        where: { channelId_userId: { channelId, userId } },
+    const member = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+      select: { id: true },
+    });
+    if ((channel.visibility === "PRIVATE" || channel.type !== "CHANNEL" || requireChannelMembership) && !member) {
+      throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this channel", HttpStatus.FORBIDDEN);
+    }
+
+    if (channel.teamId) {
+      const teamMember = await this.prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId: channel.teamId, userId } },
+        select: { id: true },
       });
-      if (!member) {
-        throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this private channel", HttpStatus.FORBIDDEN);
+      if (!teamMember) {
+        throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this channel's team", HttpStatus.FORBIDDEN);
       }
     }
     return channel;
+  }
+
+  async joinPublicChannel(organizationId: string, channelId: string, userId: string): Promise<void> {
+    const channel = await this.getChannelForMember(organizationId, channelId, userId);
+    if (channel.type !== "CHANNEL" || channel.visibility !== "PUBLIC") {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only public channels can be joined directly", HttpStatus.FORBIDDEN);
+    }
+    await this.prisma.channelMember.upsert({
+      where: { channelId_userId: { channelId, userId } },
+      create: { channelId, userId },
+      update: {},
+    });
   }
 
   async updateChannel(
@@ -148,9 +385,9 @@ export class ConnectService {
   }
 
   async addMember(organizationId: string, channelId: string, actorUserId: string, userId: string): Promise<void> {
-    await this.getChannelForMember(organizationId, channelId, actorUserId);
+    const channel = await this.getChannelForMember(organizationId, channelId, actorUserId);
     const membership = await this.prisma.organizationMember.findFirst({
-      where: { organizationId, userId, deletedAt: null },
+      where: { organizationId, userId, status: "ACTIVE", deletedAt: null },
       select: { id: true },
     });
     if (!membership) {
@@ -159,6 +396,15 @@ export class ConnectService {
         "User is not an active organization member",
         HttpStatus.BAD_REQUEST,
       );
+    }
+    if (channel.teamId) {
+      const teamMember = await this.prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId: channel.teamId, userId } },
+        select: { id: true },
+      });
+      if (!teamMember) {
+        throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User must be a member of the channel's team", HttpStatus.BAD_REQUEST);
+      }
     }
     await this.prisma.channelMember.upsert({
       where: { channelId_userId: { channelId, userId } },
@@ -178,16 +424,34 @@ export class ConnectService {
     organizationId: string,
     channelId: string,
     userId: string,
-    options: { cursor?: string; limit?: number },
-  ): Promise<{ messages: MessageWithMeta[]; nextCursor: string | null }> {
-    await this.getChannelForMember(organizationId, channelId, userId);
+    options: { cursor?: string; limit?: number; initial?: "unread"; after?: string },
+  ) {
+    await this.getChannelForMember(organizationId, channelId, userId, true);
 
+    const members = await this.prisma.channelMember.findMany({
+      where: { channelId }, select: { userId: true, lastReadAt: true },
+    });
+    const lastReadAt = members.find((member) => member.userId === userId)?.lastReadAt;
+    const firstUnread = options.initial === "unread"
+      ? await this.prisma.message.findFirst({
+          where: { organizationId, channelId, deletedAt: null, authorId: { not: userId }, ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}) },
+          orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true },
+        })
+      : null;
+    const cursorId = options.after ?? options.cursor;
+    if (cursorId) {
+      const cursorMessage = await this.getMessage(organizationId, cursorId);
+      if (cursorMessage.channelId !== channelId) {
+        throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message cursor not found in this channel", HttpStatus.NOT_FOUND);
+      }
+    }
+    const forward = Boolean(options.after || firstUnread);
     const limit = Math.min(options.limit ?? 50, 100);
     const messages = await this.prisma.message.findMany({
       where: { organizationId, channelId, deletedAt: null },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ createdAt: forward ? "asc" : "desc" }, { id: forward ? "asc" : "desc" }],
       take: limit + 1,
-      ...(options.cursor ? { cursor: { id: options.cursor }, skip: 1 } : {}),
+      ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : firstUnread ? { cursor: { id: firstUnread.id } } : {}),
       include: this.messageInclude,
     });
 
@@ -195,7 +459,10 @@ export class ConnectService {
     const page = hasMore ? messages.slice(0, limit) : messages;
     return {
       messages: page,
-      nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null,
+      nextCursor: forward ? (page[0]?.id ?? null) : hasMore ? (page[page.length - 1]?.id ?? null) : null,
+      newerCursor: forward && hasMore ? (page[page.length - 1]?.id ?? null) : null,
+      firstUnreadId: firstUnread?.id ?? null,
+      readReceipts: members,
     };
   }
 
@@ -205,7 +472,7 @@ export class ConnectService {
     authorId: string,
     dto: CreateMessageDto,
   ): Promise<MessageWithMeta> {
-    await this.getChannelForMember(organizationId, channelId, authorId);
+    const channel = await this.getChannelForMember(organizationId, channelId, authorId, true);
 
     if (dto.parentId) {
       const parent = await this.prisma.message.findFirst({
@@ -217,7 +484,7 @@ export class ConnectService {
       }
     }
 
-    const mentionUserIds = await this.resolveMentions(channelId, dto.content, dto.mentionUserIds);
+    const mentionUserIds = await this.resolveMentions(organizationId, dto.content, dto.mentionUserIds);
 
     const message = dto.clientMessageId
       ? await (this.prisma.message as unknown as IdempotentMessageDelegate).upsert({
@@ -264,7 +531,43 @@ export class ConnectService {
       resourceId: message.id,
       metadata: { channelId, mentions: mentionUserIds.length },
     });
+    const recipientUserIds = await this.getRecipientUserIds(organizationId, channel);
+    this.publisher.messageCreated(organizationId, channelId, recipientUserIds, message);
+    if (channel.type === "DIRECT" || channel.type === "GROUP") {
+      await Promise.all(recipientUserIds.map((userId) => this.recordRecentChat(organizationId, userId, channelId)));
+      this.publisher.chatActivityChanged(organizationId, recipientUserIds, {
+        channelId,
+        messageId: message.id,
+        senderId: authorId,
+        createdAt: message.createdAt,
+      });
+    }
     return message;
+  }
+
+  private async getRecipientUserIds(organizationId: string, channel: Channel): Promise<string[]> {
+    const channelMembers = await this.prisma.channelMember.findMany({ where: { channelId: channel.id }, select: { userId: true } });
+    const organizationMembers = channelMembers.length > 0
+      ? await this.prisma.organizationMember.findMany({
+          where: {
+            organizationId,
+            userId: { in: channelMembers.map(({ userId }) => userId) },
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+          select: { userId: true },
+        })
+      : [];
+    const eligibleMembers = channel.teamId
+      ? await this.prisma.teamMember.findMany({
+          where: {
+            teamId: channel.teamId,
+            userId: { in: organizationMembers.map(({ userId }) => userId) },
+          },
+          select: { userId: true },
+        })
+      : organizationMembers;
+    return eligibleMembers.map(({ userId }) => userId);
   }
 
   async updateMessage(
@@ -277,10 +580,11 @@ export class ConnectService {
     if (message.authorId !== userId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the author can edit a message", HttpStatus.FORBIDDEN);
     }
+    const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
-    const mentionUserIds = await this.resolveMentions(message.channelId, dto.content, undefined);
+    const mentionUserIds = await this.resolveMentions(organizationId, dto.content, undefined);
 
-    return this.prisma.message.update({
+    const updated = await this.prisma.message.update({
       where: { id: messageId },
       data: {
         content: dto.content,
@@ -293,6 +597,8 @@ export class ConnectService {
       },
       include: this.messageInclude,
     });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", { channelId: channel.id, message: updated });
+    return updated;
   }
 
   async deleteMessage(organizationId: string, messageId: string, userId: string): Promise<void> {
@@ -300,10 +606,11 @@ export class ConnectService {
     if (message.authorId !== userId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the author can delete a message", HttpStatus.FORBIDDEN);
     }
+    const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
     await this.prisma.message.update({
       where: { id: messageId },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: new Date(), isDeleted: true },
     });
 
     await this.audit.record({
@@ -313,32 +620,78 @@ export class ConnectService {
       resourceType: "Message",
       resourceId: messageId,
     });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:deleted", { channelId: channel.id, messageId, isDeleted: true });
+  }
+
+  async restoreMessage(organizationId: string, messageId: string, userId: string): Promise<MessageWithMeta> {
+    const message = await this.prisma.message.findFirst({
+      where: { id: messageId, organizationId },
+    });
+    if (!message) {
+      throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);
+    }
+    if (message.authorId !== userId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the author can restore a message", HttpStatus.FORBIDDEN);
+    }
+    const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
+    const restored = await this.prisma.message.update({
+      where: { id: messageId },
+      data: { deletedAt: null, isDeleted: false },
+      include: this.messageInclude,
+    });
+    await this.audit.record({
+      action: "connect.message.restored",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Message",
+      resourceId: messageId,
+    });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", { channelId: channel.id, message: restored });
+    return restored;
   }
 
   // ---------------- Reactions ----------------
 
   async addReaction(organizationId: string, messageId: string, userId: string, emoji: string): Promise<void> {
     const message = await this.getMessage(organizationId, messageId);
-    await this.getChannelForMember(organizationId, message.channelId, userId);
+    const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
     await this.prisma.messageReaction.upsert({
       where: { messageId_userId_emoji: { messageId, userId, emoji } },
       create: { messageId, userId, emoji },
       update: {},
     });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:reaction-changed", { channelId: channel.id, messageId, userId, emoji, added: true });
   }
 
   async removeReaction(organizationId: string, messageId: string, userId: string, emoji: string): Promise<void> {
-    await this.getMessage(organizationId, messageId);
+    const message = await this.getMessage(organizationId, messageId);
+    const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
     await this.prisma.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:reaction-changed", { channelId: channel.id, messageId, userId, emoji, added: false });
   }
 
-  async markChannelRead(organizationId: string, channelId: string, userId: string): Promise<void> {
-    await this.getChannelForMember(organizationId, channelId, userId);
-    await this.prisma.channelMember.update({
-      where: { channelId_userId: { channelId, userId } },
-      data: { lastReadAt: new Date() },
+  async markChannelRead(organizationId: string, channelId: string, userId: string, messageId?: string) {
+    const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
+    const message = await this.prisma.message.findFirst({
+      where: { organizationId, channelId, deletedAt: null, ...(messageId ? { id: messageId } : {}) },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { createdAt: true },
     });
+    if (!message) {
+      if (messageId) throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);
+      return null;
+    }
+    await this.prisma.channelMember.updateMany({
+      where: { channelId, userId, OR: [{ lastReadAt: null }, { lastReadAt: { lt: message.createdAt } }] },
+      data: { lastReadAt: message.createdAt },
+    });
+    const member = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } }, select: { lastReadAt: true },
+    });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "channel:marked-read", {
+      channelId, userId, lastReadAt: member?.lastReadAt ?? null,
+    });
+    return member?.lastReadAt ?? null;
   }
 
   // ---------------- Internals ----------------
@@ -349,6 +702,29 @@ export class ConnectService {
     reactions: { select: { userId: true, emoji: true } },
     _count: { select: { replies: true } },
   } as const;
+
+  private async recordRecentChat(organizationId: string, userId: string, channelId: string): Promise<void> {
+    await this.mutatePreferences(organizationId, userId, (current) => ({
+      ...current,
+      recentChats: [channelId, ...toStringList(current.recentChats).filter((id) => id !== channelId)].slice(0, 100),
+    }));
+  }
+
+  private async mutatePreferences(organizationId: string, userId: string, mutate: (current: Record<string, unknown>) => Record<string, unknown>) {
+    return this.prisma.$transaction(async (transaction) => {
+      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`connect-sidebar:${organizationId}:${userId}`}, 0))`;
+      const record = await transaction.connectSidebarPreference.findUnique({
+        where: { organizationId_userId: { organizationId, userId } },
+      });
+      const preferences = mutate(toSidebarPreferences(record?.preferences));
+      await transaction.connectSidebarPreference.upsert({
+        where: { organizationId_userId: { organizationId, userId } },
+        create: { organizationId, userId, preferences: preferences as Prisma.InputJsonObject },
+        update: { preferences: preferences as Prisma.InputJsonObject },
+      });
+      return preferences;
+    });
+  }
 
   private async getMessage(organizationId: string, messageId: string): Promise<Message> {
     const message = await this.prisma.message.findFirst({
@@ -365,7 +741,7 @@ export class ConnectService {
    * in the content, restricted to members of the channel's organization.
    */
   private async resolveMentions(
-    channelId: string,
+    organizationId: string,
     content: string,
     explicitIds: string[] | undefined,
   ): Promise<string[]> {
@@ -375,7 +751,10 @@ export class ConnectService {
     if (tokens.length > 0) {
       const names = tokens.map((token) => token.slice(1).toLowerCase());
       const users = await this.prisma.user.findMany({
-        where: { deletedAt: null },
+        where: {
+          deletedAt: null,
+          memberships: { some: { organizationId, status: "ACTIVE", deletedAt: null } },
+        },
         select: { id: true, name: true, email: true },
       });
       for (const user of users) {
@@ -392,14 +771,20 @@ export class ConnectService {
     }
 
     // Only org members of the channel can be mentioned.
-    const channel = await this.prisma.channel.findUnique({
-      where: { id: channelId },
-      select: { organizationId: true },
-    });
     const valid = await this.prisma.organizationMember.findMany({
-      where: { organizationId: channel?.organizationId, userId: { in: [...ids] }, deletedAt: null },
+      where: { organizationId, userId: { in: [...ids] }, status: "ACTIVE", deletedAt: null },
       select: { userId: true },
     });
     return valid.map((row) => row.userId);
+  }
+
+  private async assertOrganizationMember(organizationId: string, userId: string): Promise<void> {
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { organizationId, userId, status: "ACTIVE", deletedAt: null },
+      select: { id: true },
+    });
+    if (!membership) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.FORBIDDEN);
+    }
   }
 }
