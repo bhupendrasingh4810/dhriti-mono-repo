@@ -861,6 +861,7 @@ export default function ConnectPage() {
               currentUserId={currentUser.id}
               usersById={connectUsersById}
               messages={selectedMessages as ConnectConversationMessage[]}
+              typingUserIds={live.typingUsers[selectedConversation.id] ?? []}
               messagesLoading={live.historyState[selectedConversation.id]?.loading ?? true}
               historyError={live.historyState[selectedConversation.id]?.error}
               firstUnreadId={live.historyState[selectedConversation.id]?.firstUnreadId}

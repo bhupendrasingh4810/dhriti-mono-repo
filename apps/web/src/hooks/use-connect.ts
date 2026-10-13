@@ -60,6 +60,8 @@ export function useConnect(selectedConversationId: string) {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState("");
   const socketRef = useRef<Socket | null>(null);
+  const typingStopTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const outgoingTyping = useRef<{ channelId: string; sentAt: number } | null>(null);
   const activeChannelRef = useRef(selectedConversationId);
   const generation = useRef(0);
   const reloadRef = useRef<(() => Promise<void>) | null>(null);
@@ -183,7 +185,7 @@ export function useConnect(selectedConversationId: string) {
     }
     let cancelled = false;
     let socket: Socket | null = null;
-    let typingTimer: ReturnType<typeof setTimeout> | undefined;
+    const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
     async function reload() {
       const [peopleResult, chatsResult, channelsResult, preferencesResult, teamsResult] = await Promise.allSettled([
@@ -254,7 +256,13 @@ export function useConnect(selectedConversationId: string) {
           void history(activeChannelRef.current);
         }
       });
-      socket.on("disconnect", () => setConnected(false));
+      socket.on("disconnect", () => {
+        setConnected(false);
+        setTypingUsers({});
+        typingTimers.forEach((timer) => clearTimeout(timer));
+        typingTimers.clear();
+        outgoingTyping.current = null;
+      });
       socket.on("connect_error", () => { setConnected(false); setError("Real-time connection unavailable. Messages can still be sent using the API."); });
       socket.on("connect:error", (payload: { message: string }) => setError(payload.message));
       socket.on("message:created", (payload: { channelId: string; message: ConnectApiMessage }) => {
@@ -285,17 +293,34 @@ export function useConnect(selectedConversationId: string) {
         }
       });
       socket.on("typing", (payload: { channelId: string; userId: string; isTyping: boolean }) => {
+        if (payload.userId === user!.id) return;
+        const key = `${payload.channelId}:${payload.userId}`;
+        clearTimeout(typingTimers.get(key));
+        typingTimers.delete(key);
         setTypingUsers((previous) => ({ ...previous, [payload.channelId]: payload.isTyping
           ? [...new Set([...(previous[payload.channelId] ?? []), payload.userId])]
           : (previous[payload.channelId] ?? []).filter((id) => id !== payload.userId) }));
-        clearTimeout(typingTimer);
-        typingTimer = setTimeout(() => setTypingUsers({}), 5000);
+        if (payload.isTyping) typingTimers.set(key, setTimeout(() => {
+          typingTimers.delete(key);
+          setTypingUsers((previous) => ({ ...previous, [payload.channelId]:
+            (previous[payload.channelId] ?? []).filter((id) => id !== payload.userId) }));
+        }, 5000));
       });
       socket.connect();
     }
 
     void reload().then(connectSocket).catch(reportError).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; generation.current++; clearTimeout(typingTimer); socket?.disconnect(); socketRef.current = null; reloadRef.current = null; };
+    return () => {
+      cancelled = true;
+      generation.current++;
+      typingTimers.forEach((timer) => clearTimeout(timer));
+      if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+      typingStopTimer.current = null;
+      outgoingTyping.current = null;
+      socket?.disconnect();
+      socketRef.current = null;
+      reloadRef.current = null;
+    };
   }, [organizationId, user?.id]);
 
   useEffect(() => {
@@ -305,7 +330,15 @@ export function useConnect(selectedConversationId: string) {
     socket?.emit("channel:join", { channelId: selectedConversationId }, (ack: Ack) => {
       if (!ack.ok) { setError(ack.error?.message ?? "Unable to join channel."); return; }
     });
-    return () => { socket?.emit("typing", { channelId: selectedConversationId, isTyping: false }); socket?.emit("channel:leave", { channelId: selectedConversationId }); };
+    return () => {
+      if (outgoingTyping.current?.channelId === selectedConversationId) {
+        if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+        typingStopTimer.current = null;
+        outgoingTyping.current = null;
+      }
+      socket?.emit("typing", { channelId: selectedConversationId, isTyping: false });
+      socket?.emit("channel:leave", { channelId: selectedConversationId });
+    };
   }, [organizationId, selectedConversationId]);
 
   async function send(channelId: string, input: CreateMessageInput) {
@@ -330,7 +363,25 @@ export function useConnect(selectedConversationId: string) {
   }
 
   function typing(isTyping: boolean) {
-    if (selectedConversationId) socketRef.current?.emit("typing", { channelId: selectedConversationId, isTyping });
+    if (typingStopTimer.current) clearTimeout(typingStopTimer.current);
+    typingStopTimer.current = null;
+    const socket = socketRef.current;
+    if (!selectedConversationId || !socket?.connected) return;
+    if (!isTyping) {
+      socket.emit("typing", { channelId: selectedConversationId, isTyping: false });
+      outgoingTyping.current = null;
+      return;
+    }
+    const now = Date.now();
+    if (outgoingTyping.current?.channelId !== selectedConversationId || now - outgoingTyping.current.sentAt >= 1500) {
+      socket.emit("typing", { channelId: selectedConversationId, isTyping: true });
+      outgoingTyping.current = { channelId: selectedConversationId, sentAt: now };
+    }
+    typingStopTimer.current = setTimeout(() => {
+      socket.emit("typing", { channelId: selectedConversationId, isTyping: false });
+      outgoingTyping.current = null;
+      typingStopTimer.current = null;
+    }, 2500);
   }
 
   return { user, organizationId, users, conversations, teams, sidebar, messages, historyState, readReceipts, unread, typingUsers, loading, connected, error, setError, send, favorite, startDirect, typing, loadMessages, loadMoreMessages, markVisibleMessageRead, reportError, refresh: () => reloadRef.current?.() };

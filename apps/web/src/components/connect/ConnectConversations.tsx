@@ -32,6 +32,7 @@ interface ConnectConversationProps {
   currentUserId: string;
   usersById: Record<string, ConversationUser>;
   messages: ConnectConversationMessage[];
+  typingUserIds?: string[];
   messagesLoading?: boolean;
   historyError?: string;
   firstUnreadId?: string | null;
@@ -77,6 +78,7 @@ export function ConnectConversations({
   currentUserId,
   usersById,
   messages,
+  typingUserIds = [],
   messagesLoading = false,
   historyError = "",
   firstUnreadId = null,
@@ -164,16 +166,16 @@ export function ConnectConversations({
 
   const attachmentMenuItems: ConnectCascadingMenuItem[] = attachmentMenu
     ? [
-        {
-          id: "open-in-browser",
-          label: "Open In Browser",
-          icon: <ConversationIcon name="open" />,
-          onClick: handleOpenInBrowser,
-        },
-        { id: "download", label: "Download", icon: <ConversationIcon name="download" />, onClick: handleDownload },
-        { id: "share", label: "Share", icon: <ConversationIcon name="share" />, onClick: handleShare },
-        { id: "copy-link", label: "Copy link", icon: <ConversationIcon name="link" />, onClick: handleCopyLink },
-      ]
+      {
+        id: "open-in-browser",
+        label: "Open In Browser",
+        icon: <ConversationIcon name="open" />,
+        onClick: handleOpenInBrowser,
+      },
+      { id: "download", label: "Download", icon: <ConversationIcon name="download" />, onClick: handleDownload },
+      { id: "share", label: "Share", icon: <ConversationIcon name="share" />, onClick: handleShare },
+      { id: "copy-link", label: "Copy link", icon: <ConversationIcon name="link" />, onClick: handleCopyLink },
+    ]
     : [];
 
   function clearHoverActionCloseTimer() {
@@ -215,6 +217,9 @@ export function ConnectConversations({
     [messages],
   );
   const connectUsers = Object.values(usersById);
+  const typingNames = typingUserIds
+    .filter((userId) => userId !== currentUserId && usersById[userId])
+    .map((userId) => usersById[userId].displayName);
   const lastOutgoingMessage = sortedMessages.findLast((message) => message.senderId === currentUserId && message.contentType !== "system");
   const notifyRead = useEffectEvent((messageId: string) => onReadMessage?.(messageId));
 
@@ -285,192 +290,191 @@ export function ConnectConversations({
       <div className="relative flex min-h-0 flex-1 flex-col">
         {messagesLoading || (!positioned && !historyError) ? <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface text-brand"><CircularProgress color="inherit" aria-label="Loading messages" /></div> : null}
         {historyError ? <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-error"><p>{historyError}</p><button type="button" onClick={onRetryMessages} className="rounded border border-border px-3 py-2 text-sm text-text-primary">Retry</button></div> : null}
-      <div ref={messageListRef} className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
-        onScroll={(event) => {
-          const list = event.currentTarget;
-          nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
-          if (!positioned || loadingMoreMessages || messagesLoading) return;
-          if (list.scrollTop < 48 && hasOlderMessages) loadMore("older");
-          else if (nearBottom.current && hasNewerMessages) loadMore("newer");
-        }}>
-        {hasOlderMessages ? <button type="button" onClick={() => loadMore("older")} disabled={loadingMoreMessages} className="self-center text-xs font-semibold text-brand disabled:opacity-50">Load earlier messages</button> : null}
-        {!messagesLoading && !historyError && sortedMessages.length === 0 ? <p className="m-auto text-sm text-text-secondary">No messages yet.</p> : null}
-        {!messagesLoading && sortedMessages.map((message, index) => {
-          const sender = usersById[message.senderId];
-          const isOwn = message.senderId === currentUserId;
-          const showActions =
-            !disableHoverActions &&
-            (hoveredMessageId === message.id ||
-              activeMessageMenuId === message.id ||
-              activeMessageEmojiId === message.id);
-          const previousMessage = sortedMessages[index - 1];
-          const previousTime = previousMessage ? new Date(previousMessage.createdAt).getTime() : 0;
-          const currentTime = new Date(message.createdAt).getTime();
-          const showTimeByGap = !previousMessage || currentTime - previousTime > 60_000;
-          const isContinuation =
-            Boolean(previousMessage) &&
-            previousMessage.senderId === message.senderId &&
-            message.contentType !== "system" &&
-            previousMessage.contentType !== "system" &&
-            !showTimeByGap;
+        <div ref={messageListRef} className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
+          onScroll={(event) => {
+            const list = event.currentTarget;
+            nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
+            if (!positioned || loadingMoreMessages || messagesLoading) return;
+            if (list.scrollTop < 48 && hasOlderMessages) loadMore("older");
+            else if (nearBottom.current && hasNewerMessages) loadMore("newer");
+          }}>
+          {!messagesLoading && !historyError && sortedMessages.length === 0 ? <p className="m-auto text-sm text-text-secondary">No messages yet.</p> : null}
+          {!messagesLoading && sortedMessages.map((message, index) => {
+            const sender = usersById[message.senderId];
+            const isOwn = message.senderId === currentUserId;
+            const showActions =
+              !disableHoverActions &&
+              (hoveredMessageId === message.id ||
+                activeMessageMenuId === message.id ||
+                activeMessageEmojiId === message.id);
+            const previousMessage = sortedMessages[index - 1];
+            const previousTime = previousMessage ? new Date(previousMessage.createdAt).getTime() : 0;
+            const currentTime = new Date(message.createdAt).getTime();
+            const showTimeByGap = !previousMessage || currentTime - previousTime > 60_000;
+            const isContinuation =
+              Boolean(previousMessage) &&
+              previousMessage.senderId === message.senderId &&
+              message.contentType !== "system" &&
+              previousMessage.contentType !== "system" &&
+              !showTimeByGap;
 
-          const quoted = message.quotedMessageId ? getQuotedMessageById(message.quotedMessageId) : undefined;
-          const singleEmojiOnly = isSingleEmojiMessage(message.content);
-          const isEditingMessage = editingMessageId === message.id;
-          const priority = getMessagePriority(message.content);
+            const quoted = message.quotedMessageId ? getQuotedMessageById(message.quotedMessageId) : undefined;
+            const singleEmojiOnly = isSingleEmojiMessage(message.content);
+            const isEditingMessage = editingMessageId === message.id;
+            const priority = getMessagePriority(message.content);
 
-          if (message.contentType === "system") {
-            return <SystemMessage key={message.id} message={message} />;
-          }
+            if (message.contentType === "system") {
+              return <SystemMessage key={message.id} message={message} />;
+            }
 
-          return (
-            <div
-              key={message.id}
-              data-message-id={message.id}
-              className={`flex items-start gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
-            >
-              {!isOwn && !isContinuation ? (
-                <button
-                  type="button"
-                  onMouseEnter={(event: MouseEvent<HTMLElement>) => onOpenUserHover(event, message.senderId)}
-                  onMouseLeave={onCloseUserHover}
-                  className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-200"
-                  aria-label={`View ${sender?.displayName ?? "user"} details`}
-                >
-                  {sender?.avatar ? (
-                    <img src={sender.avatar} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="grid h-full w-full place-items-center text-xs font-bold text-slate-600">
-                      {(sender?.displayName ?? "U").slice(0, 1)}
-                    </span>
-                  )}
-                </button>
-              ) : (
-                <div className="w-[34px] shrink-0" />
-              )}
-
-              <div className={`relative flex max-w-[75%] flex-col ${isOwn ? "items-end" : "items-start"}`}>
+            return (
+              <div
+                key={message.id}
+                data-message-id={message.id}
+                className={`flex items-start gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}
+              >
                 {!isOwn && !isContinuation ? (
-                  <div className="mb-0.5 flex items-baseline gap-2">
-                    <button type="button" onClick={onOpenDetails} className="text-[13px] font-bold text-slate-900">
-                      {sender?.displayName ?? "Unknown User"}
-                    </button>
-                    {showTimeByGap ? (
-                      <span className="text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
-                    ) : null}
-                  </div>
-                ) : null}
+                  <button
+                    type="button"
+                    onMouseEnter={(event: MouseEvent<HTMLElement>) => onOpenUserHover(event, message.senderId)}
+                    onMouseLeave={onCloseUserHover}
+                    className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-200"
+                    aria-label={`View ${sender?.displayName ?? "user"} details`}
+                  >
+                    {sender?.avatar ? (
+                      <img src={sender.avatar} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="grid h-full w-full place-items-center text-xs font-bold text-slate-600">
+                        {(sender?.displayName ?? "U").slice(0, 1)}
+                      </span>
+                    )}
+                  </button>
+                ) : (
+                  <div className="w-[34px] shrink-0" />
+                )}
 
-                {isOwn && showTimeByGap ? (
-                  <span className="mb-0.5 text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
-                ) : null}
-
-                <div className="flex max-w-full items-start gap-1.5">
-                  {isOwn && priority ? <PriorityBadge priority={priority} /> : null}
-
-                  {isEditingMessage ? (
-                    <div className="min-w-[320px] max-w-[560px] sm:min-w-[420px]">
-                      <ConnectMessageInput
-                        mode="edit"
-                        conversationLabel={conversation.name}
-                        value={editingMessageValue}
-                        users={connectUsers.map((user) => ({
-                          id: user.id,
-                          displayName: user.displayName,
-                          avatar: user.avatar,
-                          subtitle: user.jobTitle,
-                        }))}
-                        currentUserId={currentUserId}
-                        onChange={onChangeEditMessage}
-                        onSend={onSaveEditMessage}
-                        onCancelEdit={onCancelEditMessage}
-                        onClearQuotedMessage={onCancelEditMessage}
-                        onAttachFiles={() => undefined}
-                      />
-                    </div>
-                  ) : (
-                    <div
-                      className={`w-fit max-w-full ${singleEmojiOnly ? "" : `rounded-md p-1.5 ${isOwn ? "bg-emerald-50" : "bg-slate-50"}`}`}
-                      onMouseEnter={() => handleHoverStart(message.id)}
-                      onMouseLeave={() => handleHoverEnd(message.id)}
-                    >
-                      {quoted ? (
-                        <div className="mb-1 rounded-md border-l-[3px] border-emerald-600 bg-white px-3 py-3">
-                          <p className="mb-0.5 text-xs font-bold text-emerald-700">
-                            {usersById[quoted.senderId]?.displayName ?? "Unknown"}
-                          </p>
-                          <p className="truncate text-xs text-slate-500">{quoted.content}</p>
-                        </div>
+                <div className={`relative flex max-w-[75%] flex-col ${isOwn ? "items-end" : "items-start"}`}>
+                  {!isOwn && !isContinuation ? (
+                    <div className="mb-0.5 flex items-baseline gap-2">
+                      <button type="button" onClick={onOpenDetails} className="text-[13px] font-bold text-slate-900">
+                        {sender?.displayName ?? "Unknown User"}
+                      </button>
+                      {showTimeByGap ? (
+                        <span className="text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
                       ) : null}
+                    </div>
+                  ) : null}
 
-                      <div className="break-words p-1.5 text-sm leading-[1.65] text-slate-600">
-                        <RenderMessageContent
-                          message={message}
-                          connectUsers={connectUsers}
-                          openMentionHover={onOpenUserHover}
+                  {isOwn && showTimeByGap ? (
+                    <span className="mb-0.5 text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
+                  ) : null}
+
+                  <div className="flex max-w-full items-start gap-1.5">
+                    {isOwn && priority ? <PriorityBadge priority={priority} /> : null}
+
+                    {isEditingMessage ? (
+                      <div className="min-w-[320px] max-w-[560px] sm:min-w-[420px]">
+                        <ConnectMessageInput
+                          mode="edit"
+                          conversationLabel={conversation.name}
+                          value={editingMessageValue}
+                          users={connectUsers.map((user) => ({
+                            id: user.id,
+                            displayName: user.displayName,
+                            avatar: user.avatar,
+                            subtitle: user.jobTitle,
+                          }))}
+                          currentUserId={currentUserId}
+                          onChange={onChangeEditMessage}
+                          onSend={onSaveEditMessage}
+                          onCancelEdit={onCancelEditMessage}
+                          onClearQuotedMessage={onCancelEditMessage}
+                          onAttachFiles={() => undefined}
                         />
                       </div>
-
-                      {message.attachments?.length ? (
-                        <AttachmentsMessage message={message} openAttachmentMenu={openAttachmentMenu} />
-                      ) : null}
-                    </div>
-                  )}
-
-                  {!isOwn && priority ? <PriorityBadge priority={priority} /> : null}
-                  {conversation.type === "direct" && message.id === lastOutgoingMessage?.id && (message.status === "sent" || message.status === "delivered" || message.status === "read") ? (
-                    <span role="img" aria-label={message.status === "read" ? "Seen" : "Sent"} title={message.status === "read" ? "Seen" : "Sent"} className={`shrink-0 self-end ${message.status === "read" ? "text-brand" : "text-text-secondary"}`}>
-                      {message.status === "read" ? <DoneAllRounded fontSize="small" /> : <CheckCircleOutlineRounded fontSize="small" />}
-                    </span>
-                  ) : null}
-                </div>
-
-                {message.reactions?.length ? (
-                  <div className={`mt-1 flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
-                    {message.reactions.map((reaction) => (
-                      <button
-                        type="button"
-                        key={`${message.id}-${reaction.emoji}`}
-                        onMouseEnter={(event: MouseEvent<HTMLElement>) =>
-                          onOpenReactionHover(event, reaction.emoji, reaction.userIds)
-                        }
-                        onMouseLeave={onCloseReactionHover}
-                        onClick={() => onAddReaction(message.id, reaction.emoji)}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-600"
+                    ) : (
+                      <div
+                        className={`w-fit max-w-full ${singleEmojiOnly ? "" : `rounded-md p-1.5 ${isOwn ? "bg-emerald-50" : "bg-slate-50"}`}`}
+                        onMouseEnter={() => handleHoverStart(message.id)}
+                        onMouseLeave={() => handleHoverEnd(message.id)}
                       >
-                        {reaction.emoji} {reaction.count}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
+                        {quoted ? (
+                          <div className="mb-1 rounded-md border-l-[3px] border-emerald-600 bg-white px-3 py-3">
+                            <p className="mb-0.5 text-xs font-bold text-emerald-700">
+                              {usersById[quoted.senderId]?.displayName ?? "Unknown"}
+                            </p>
+                            <p className="truncate text-xs text-slate-500">{quoted.content}</p>
+                          </div>
+                        ) : null}
 
-                <ConnectMessageHoverActions
-                  open={showActions && !isEditingMessage}
-                  align={isOwn ? "right" : "left"}
-                  placement={index < 2 ? "below" : "above"}
-                  isOwn={isOwn}
-                  onQuickReaction={(emoji) => onAddReaction(message.id, emoji)}
-                  onOpenEmoji={(event) => {
-                    clearHoverActionCloseTimer();
-                    setHoveredMessageId(message.id);
-                    onOpenMessageEmoji(event, message.id);
-                  }}
-                  onEdit={() => onStartEditMessage(message)}
-                  onQuote={() => onQuoteMessage(message)}
-                  onOpenMenu={(event) => {
-                    clearHoverActionCloseTimer();
-                    setHoveredMessageId(message.id);
-                    onOpenMessageMenu(event, message.id);
-                  }}
-                  onHoverStart={() => handleHoverStart(message.id)}
-                  onHoverEnd={() => handleHoverEnd(message.id)}
-                />
+                        <div className="break-words p-1.5 text-sm leading-[1.65] text-slate-600">
+                          <RenderMessageContent
+                            message={message}
+                            connectUsers={connectUsers}
+                            openMentionHover={onOpenUserHover}
+                          />
+                        </div>
+
+                        {message.attachments?.length ? (
+                          <AttachmentsMessage message={message} openAttachmentMenu={openAttachmentMenu} />
+                        ) : null}
+                      </div>
+                    )}
+
+                    {!isOwn && priority ? <PriorityBadge priority={priority} /> : null}
+                    {conversation.type === "direct" && message.id === lastOutgoingMessage?.id && (message.status === "sent" || message.status === "delivered" || message.status === "read") ? (
+                      <span role="img" aria-label={message.status === "read" ? "Seen" : "Sent"} title={message.status === "read" ? "Seen" : "Sent"} className={`shrink-0 self-end ${message.status === "read" ? "text-brand" : "text-text-secondary"}`}>
+                        {message.status === "read" ? <DoneAllRounded fontSize="small" /> : <CheckCircleOutlineRounded fontSize="small" />}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {message.reactions?.length ? (
+                    <div className={`mt-1 flex gap-2 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+                      {message.reactions.map((reaction) => (
+                        <button
+                          type="button"
+                          key={`${message.id}-${reaction.emoji}`}
+                          onMouseEnter={(event: MouseEvent<HTMLElement>) =>
+                            onOpenReactionHover(event, reaction.emoji, reaction.userIds)
+                          }
+                          onMouseLeave={onCloseReactionHover}
+                          onClick={() => onAddReaction(message.id, reaction.emoji)}
+                          className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-600"
+                        >
+                          {reaction.emoji} {reaction.count}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <ConnectMessageHoverActions
+                    open={showActions && !isEditingMessage}
+                    align={isOwn ? "right" : "left"}
+                    placement={index < 2 ? "below" : "above"}
+                    isOwn={isOwn}
+                    onQuickReaction={(emoji) => onAddReaction(message.id, emoji)}
+                    onOpenEmoji={(event) => {
+                      clearHoverActionCloseTimer();
+                      setHoveredMessageId(message.id);
+                      onOpenMessageEmoji(event, message.id);
+                    }}
+                    onEdit={() => onStartEditMessage(message)}
+                    onQuote={() => onQuoteMessage(message)}
+                    onOpenMenu={(event) => {
+                      clearHoverActionCloseTimer();
+                      setHoveredMessageId(message.id);
+                      onOpenMessageMenu(event, message.id);
+                    }}
+                    onHoverStart={() => handleHoverStart(message.id)}
+                    onHoverEnd={() => handleHoverEnd(message.id)}
+                  />
+                </div>
               </div>
-            </div>
-          );
-        })}
-        {loadingMoreMessages ? <div className="flex justify-center py-2 text-brand"><CircularProgress size="1.25rem" color="inherit" aria-label="Loading more messages" /></div> : hasNewerMessages ? <button type="button" onClick={() => loadMore("newer")} className="self-center text-xs font-semibold text-brand">Load newer messages</button> : null}
-      </div>
+            );
+          })}
+          {loadingMoreMessages ? <div className="flex justify-center py-2 text-brand"><CircularProgress size="1.25rem" color="inherit" aria-label="Loading more messages" /></div> : hasNewerMessages ? <button type="button" onClick={() => loadMore("newer")} className="self-center text-xs font-semibold text-brand">Load newer messages</button> : null}
+        </div>
       </div>
 
       <ConnectCascadingMenu
@@ -481,6 +485,18 @@ export function ConnectConversations({
         minWidth={200}
       />
 
+      <div role="status" aria-live="polite" className="flex h-8 shrink-0 items-center gap-2 px-4 text-brand">
+        {typingNames.length > 0 ? (
+          <span className="flex min-w-0 items-center gap-2 text-xs">
+            <span className="truncate">{typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing</span>
+            <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-bounce" />
+              <span className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-bounce" style={{ animationDelay: "-333ms" }} />
+              <span className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-bounce" style={{ animationDelay: "-666ms" }} />
+            </span>
+          </span>
+        ) : null}
+      </div>
       {children}
     </div>
   );
