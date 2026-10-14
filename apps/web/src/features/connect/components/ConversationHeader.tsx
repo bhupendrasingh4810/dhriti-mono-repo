@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { connectUsers } from "@/mocks/connect/users";
 import { connectUsersById } from "@/mocks/connect";
-import type { CallKind } from "@/components/connect/WorkspaceCallProvider";
+import type { CallKind } from "@/features/connect/components/WorkspaceCallProvider";
 
 interface ConversationHeaderProps {
   conversation: {

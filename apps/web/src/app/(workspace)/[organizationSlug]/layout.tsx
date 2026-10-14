@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { decodeJWT, isTokenExpired, type JWTPayload } from "@/lib/auth/tokens";
-import { WorkspaceCallProvider } from "@/components/connect/WorkspaceCallProvider";
+import { WorkspaceCallProvider } from "@/features/connect/components/WorkspaceCallProvider";
 
 interface OrgLayoutProps {
   children: ReactNode;

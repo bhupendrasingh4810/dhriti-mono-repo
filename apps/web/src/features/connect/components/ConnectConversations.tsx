@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useConversationHistory } from "@/features/connect/hooks/use-conversation-history";
 import { CircularProgress } from "@mui/material";
-import { CheckCircleOutlineRounded, DoneAllRounded } from "@mui/icons-material";
+import { ConversationTypingIndicator, MessageDeliveryStatus } from "@/features/connect/components/MessageStatus";
 import type { MouseEvent, ReactNode } from "react";
 import type { ConversationUser, ConnectConversationMessage, ConversationAttachment } from "@/types/connect.types";
 import { ConnectMessageHoverActions } from "./ConnectMessageHoverActions";
@@ -13,7 +14,7 @@ import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
 import { AttachmentsMessage } from "./AttachmentsMessage";
-import type { CallKind } from "@/components/connect/WorkspaceCallProvider";
+import type { CallKind } from "@/features/connect/components/WorkspaceCallProvider";
 
 function getFileExtension(name: string) {
   const parts = name.split(".");
@@ -115,12 +116,6 @@ export function ConnectConversations({
     anchorEl: HTMLElement;
     attachment: ConversationAttachment;
   } | null>(null);
-  const messageListRef = useRef<HTMLDivElement | null>(null);
-  const initializedConversation = useRef<string | null>(null);
-  const [positioned, setPositioned] = useState(false);
-  const previousLastMessage = useRef<string | null>(null);
-  const nearBottom = useRef(true);
-  const scrollAnchor = useRef<{ id: string; offset: number } | null>(null);
   const hoverActionCloseTimerRef = useRef<number | null>(null);
 
   function openAttachmentMenu(event: MouseEvent<HTMLElement>, attachment: ConversationAttachment) {
@@ -217,72 +212,20 @@ export function ConnectConversations({
     [messages],
   );
   const connectUsers = Object.values(usersById);
-  const typingNames = typingUserIds
-    .filter((userId) => userId !== currentUserId && usersById[userId])
-    .map((userId) => usersById[userId].displayName);
   const lastOutgoingMessage = sortedMessages.findLast((message) => message.senderId === currentUserId && message.contentType !== "system");
-  const notifyRead = useEffectEvent((messageId: string) => onReadMessage?.(messageId));
-
-  useLayoutEffect(() => {
-    const list = messageListRef.current;
-    if (!list || messagesLoading || historyError) return;
-    const lastMessage = sortedMessages[sortedMessages.length - 1];
-    if (initializedConversation.current !== conversation.id) {
-      const unreadElement = firstUnreadId ? list.querySelector<HTMLElement>(`[data-message-id="${firstUnreadId}"]`) : null;
-      list.scrollTop = unreadElement
-        ? unreadElement.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop
-        : list.scrollHeight;
-      initializedConversation.current = conversation.id;
-      setPositioned(true);
-    } else if (scrollAnchor.current) {
-      const anchor = scrollAnchor.current;
-      const element = list.querySelector<HTMLElement>(`[data-message-id="${anchor.id}"]`);
-      if (element) list.scrollTop += element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
-      if (!loadingMoreMessages) scrollAnchor.current = null;
-    } else if (lastMessage?.id !== previousLastMessage.current && !hasNewerMessages
-      && (nearBottom.current || lastMessage?.senderId === currentUserId)) {
-      list.scrollTop = list.scrollHeight;
-    }
-    previousLastMessage.current = lastMessage?.id ?? null;
-    nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
-  }, [conversation.id, currentUserId, firstUnreadId, hasNewerMessages, historyError, loadingMoreMessages, messagesLoading, sortedMessages]);
-
-  useEffect(() => {
-    const list = messageListRef.current;
-    if (!list || messagesLoading || !positioned || historyError) return;
-    const visibleIncoming = new Map<string, ConnectConversationMessage>();
-    const reportVisible = () => {
-      if (document.visibilityState !== "visible") return;
-      const latest = [...visibleIncoming.values()].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))[0];
-      if (latest) notifyRead(latest.id);
-    };
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const messageId = (entry.target as HTMLElement).dataset.messageId;
-        const message = sortedMessages.find((item) => item.id === messageId);
-        if (!message || message.senderId === currentUserId) continue;
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) visibleIncoming.set(message.id, message);
-        else visibleIncoming.delete(message.id);
-      }
-      reportVisible();
-    }, { root: list, threshold: [0, 0.5] });
-    list.querySelectorAll("[data-message-id]").forEach((element) => observer.observe(element));
-    document.addEventListener("visibilitychange", reportVisible);
-    return () => {
-      observer.disconnect();
-      document.removeEventListener("visibilitychange", reportVisible);
-    };
-  }, [currentUserId, historyError, messagesLoading, positioned, sortedMessages]);
-
-  function loadMore(direction: "older" | "newer") {
-    if (loadingMoreMessages || messagesLoading) return;
-    const list = messageListRef.current;
-    if (direction === "older" && list) {
-      const first = list.querySelector<HTMLElement>("[data-message-id]");
-      if (first) scrollAnchor.current = { id: first.dataset.messageId!, offset: first.getBoundingClientRect().top - list.getBoundingClientRect().top };
-    }
-    onLoadMoreMessages?.(direction);
-  }
+  const { messageListRef, positioned, loadMore, onScroll } = useConversationHistory({
+    conversationId: conversation.id,
+    currentUserId,
+    messages: sortedMessages,
+    loading: messagesLoading,
+    error: historyError,
+    firstUnreadId,
+    hasOlderMessages,
+    hasNewerMessages,
+    loadingMore: loadingMoreMessages,
+    onLoadMore: onLoadMoreMessages,
+    onReadMessage,
+  });
 
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
@@ -291,13 +234,7 @@ export function ConnectConversations({
         {messagesLoading || (!positioned && !historyError) ? <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface text-brand"><CircularProgress color="inherit" aria-label="Loading messages" /></div> : null}
         {historyError ? <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-error"><p>{historyError}</p><button type="button" onClick={onRetryMessages} className="rounded border border-border px-3 py-2 text-sm text-text-primary">Retry</button></div> : null}
         <div ref={messageListRef} className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
-          onScroll={(event) => {
-            const list = event.currentTarget;
-            nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 64;
-            if (!positioned || loadingMoreMessages || messagesLoading) return;
-            if (list.scrollTop < 48 && hasOlderMessages) loadMore("older");
-            else if (nearBottom.current && hasNewerMessages) loadMore("newer");
-          }}>
+          onScroll={onScroll}>
           {!messagesLoading && !historyError && sortedMessages.length === 0 ? <p className="m-auto text-sm text-text-secondary">No messages yet.</p> : null}
           {!messagesLoading && sortedMessages.map((message, index) => {
             const sender = usersById[message.senderId];
@@ -359,14 +296,12 @@ export function ConnectConversations({
                       <button type="button" onClick={onOpenDetails} className="text-[13px] font-bold text-slate-900">
                         {sender?.displayName ?? "Unknown User"}
                       </button>
-                      {showTimeByGap ? (
-                        <span className="text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
-                      ) : null}
+                      <time dateTime={message.createdAt} className="text-xs font-medium text-text-secondary">{formatTime(message.createdAt)}</time>
                     </div>
                   ) : null}
 
-                  {isOwn && showTimeByGap ? (
-                    <span className="mb-0.5 text-[10px] font-medium uppercase text-slate-400">{formatTime(message.createdAt)}</span>
+                  {isOwn && !isContinuation ? (
+                    <time dateTime={message.createdAt} className="mb-0.5 text-xs font-medium text-text-secondary">{formatTime(message.createdAt)}</time>
                   ) : null}
 
                   <div className="flex max-w-full items-start gap-1.5">
@@ -422,10 +357,8 @@ export function ConnectConversations({
                     )}
 
                     {!isOwn && priority ? <PriorityBadge priority={priority} /> : null}
-                    {conversation.type === "direct" && message.id === lastOutgoingMessage?.id && (message.status === "sent" || message.status === "delivered" || message.status === "read") ? (
-                      <span role="img" aria-label={message.status === "read" ? "Seen" : "Sent"} title={message.status === "read" ? "Seen" : "Sent"} className={`shrink-0 self-end ${message.status === "read" ? "text-brand" : "text-text-secondary"}`}>
-                        {message.status === "read" ? <DoneAllRounded fontSize="small" /> : <CheckCircleOutlineRounded fontSize="small" />}
-                      </span>
+                    {conversation.type === "direct" && message.id === lastOutgoingMessage?.id ? (
+                      <MessageDeliveryStatus status={message.status} />
                     ) : null}
                   </div>
 
@@ -485,18 +418,7 @@ export function ConnectConversations({
         minWidth={200}
       />
 
-      <div role="status" aria-live="polite" className="flex h-8 shrink-0 items-center gap-2 px-4 text-brand">
-        {typingNames.length > 0 ? (
-          <span className="flex min-w-0 items-center gap-2 text-xs">
-            <span className="truncate">{typingNames.join(", ")} {typingNames.length === 1 ? "is" : "are"} typing</span>
-            <span aria-hidden="true" className="flex shrink-0 items-center gap-1">
-              <span className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-bounce" />
-              <span className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-bounce" style={{ animationDelay: "-333ms" }} />
-              <span className="h-1.5 w-1.5 rounded-full bg-current motion-safe:animate-bounce" style={{ animationDelay: "-666ms" }} />
-            </span>
-          </span>
-        ) : null}
-      </div>
+      <ConversationTypingIndicator userIds={typingUserIds} currentUserId={currentUserId} usersById={usersById} />
       {children}
     </div>
   );
