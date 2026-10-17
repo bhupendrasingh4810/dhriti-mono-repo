@@ -1,9 +1,202 @@
+"use client";
 
+import { ReactNode, useState } from "react";
 
-export default function EntitlementsPage () {
-    return (
-        <div>
-            Entitlements Page
-        </div>
-    );
+type Product = "Connect" | "Flow" | "Atlas" | "Cadence" | "HRMS" | "Control";
+type EntitlementType = "Feature flag" | "Numeric limit";
+type EntitlementStatus = "Active" | "Archived";
+type PlanStatus = "Draft" | "Published" | "Archived";
+
+interface Entitlement {
+  name: string;
+  key: string;
+  product: Product;
+  type: EntitlementType;
+  description: string;
+  unit: string;
+  status: EntitlementStatus;
+  plans: number;
+  organizations: number;
+  overrides: number;
+  notes: string;
+}
+
+interface Plan {
+  name: string;
+  code: string;
+  status: PlanStatus;
+  monthly: string;
+  yearly: string;
+  entitlements: number;
+  subscribers: number;
+}
+
+const initialEntitlements: Entitlement[] = [
+  { name: "Flow access", key: "flow.enabled", product: "Flow", type: "Feature flag", description: "Gates every /organization/flow operation.", unit: "Boolean", status: "Active", plans: 3, organizations: 842, overrides: 4, notes: "Users still require the relevant Flow permission." },
+  { name: "Maximum Flow projects", key: "flow.max_projects", product: "Flow", type: "Numeric limit", description: "Checked before a project can be created.", unit: "Projects · integer ≥ 0", status: "Active", plans: 3, organizations: 842, overrides: 12, notes: "Unlimited is represented by a null plan value." },
+  { name: "Maximum Flow members", key: "flow.max_members", product: "Flow", type: "Numeric limit", description: "Maximum active members with Flow access.", unit: "Members · integer ≥ 1", status: "Active", plans: 3, organizations: 842, overrides: 7, notes: "" },
+  { name: "WIP limits", key: "flow.wip_limits", product: "Flow", type: "Feature flag", description: "Enables configurable work-in-progress limits.", unit: "Boolean", status: "Active", plans: 2, organizations: 531, overrides: 2, notes: "" },
+  { name: "Employee records", key: "hrms.max_employees", product: "HRMS", type: "Numeric limit", description: "Maximum number of active employee records.", unit: "Employees · integer ≥ 1", status: "Active", plans: 3, organizations: 416, overrides: 9, notes: "" },
+  { name: "Atlas guest access", key: "atlas.guests_enabled", product: "Atlas", type: "Feature flag", description: "Allows external guests to access shared spaces.", unit: "Boolean", status: "Active", plans: 2, organizations: 298, overrides: 3, notes: "" },
+  { name: "Connect meeting recording", key: "connect.recording", product: "Connect", type: "Feature flag", description: "Enables compliant meeting recording.", unit: "Boolean", status: "Active", plans: 1, organizations: 164, overrides: 1, notes: "" },
+  { name: "Legacy retrospective exports", key: "cadence.legacy_exports", product: "Cadence", type: "Feature flag", description: "Legacy export workflow retained for historical plans.", unit: "Boolean", status: "Archived", plans: 1, organizations: 19, overrides: 0, notes: "Cannot delete because historical subscriptions reference this definition." },
+];
+
+const initialPlans: Plan[] = [
+  { name: "Dhriti Starter", code: "STARTER_V2", status: "Published", monthly: "$12 / seat", yearly: "$120 / seat", entitlements: 14, subscribers: 386 },
+  { name: "Dhriti Business", code: "BUSINESS_V3", status: "Published", monthly: "$24 / seat", yearly: "$240 / seat", entitlements: 27, subscribers: 421 },
+  { name: "Dhriti Enterprise", code: "ENTERPRISE_V2", status: "Published", monthly: "Custom", yearly: "Custom", entitlements: 38, subscribers: 89 },
+  { name: "Business 2027", code: "BUSINESS_V4", status: "Draft", monthly: "$28 / seat", yearly: "$280 / seat", entitlements: 31, subscribers: 0 },
+  { name: "Legacy Pro", code: "PRO_V1", status: "Archived", monthly: "$18 / seat", yearly: "$180 / seat", entitlements: 20, subscribers: 17 },
+];
+
+const cn = (...classes: Array<string | false | undefined>) => classes.filter(Boolean).join(" ");
+
+function Button({ children, onClick, variant = "secondary", disabled, type = "button" }: { children: ReactNode; onClick?: () => void; variant?: "primary" | "secondary" | "danger" | "quiet"; disabled?: boolean; type?: "button" | "submit" }) {
+  return <button type={type} disabled={disabled} onClick={onClick} className={cn("inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:cursor-not-allowed disabled:opacity-50", variant === "primary" && "bg-brand text-white hover:bg-brand-dark", variant === "secondary" && "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50", variant === "danger" && "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100", variant === "quiet" && "text-slate-600 hover:bg-slate-100")}>{children}</button>;
+}
+
+function Field({ label, error, children }: { label: string; error?: string; children: ReactNode }) {
+  return <label className="block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">{label}</span>{children}{error && <span className="mt-1 block text-xs text-error">{error}</span>}</label>;
+}
+
+const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-brand/10";
+
+function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "success" | "warning" | "danger" | "info" | "neutral" }) {
+  return <span className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold", tone === "success" && "bg-emerald-50 text-emerald-700", tone === "warning" && "bg-amber-50 text-amber-700", tone === "danger" && "bg-red-50 text-red-700", tone === "info" && "bg-blue-50 text-blue-700", tone === "neutral" && "bg-slate-100 text-slate-600")}><span className="h-1.5 w-1.5 rounded-full bg-current" />{children}</span>;
+}
+
+function PageHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) {
+  return <div className="mb-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-start"><div><div className="text-[11px] font-bold uppercase tracking-widest text-brand">{eyebrow}</div><div className="mt-1 font-display text-2xl font-bold text-slate-950">{title}</div><div className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">{description}</div></div>{action}</div>;
+}
+
+function Drawer({ title, description, onClose, children, footer }: { title: string; description: string; onClose: () => void; children: ReactNode; footer: ReactNode }) {
+  return <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/35" onMouseDown={onClose}><section aria-modal="true" role="dialog" className="flex h-full w-full max-w-xl flex-col bg-white shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-start justify-between border-b border-slate-200 p-6"><div><div className="font-display text-lg font-bold text-slate-950">{title}</div><div className="mt-1 text-xs leading-5 text-slate-500">{description}</div></div><Button variant="quiet" onClick={onClose}>Close</Button></div><div className="flex-1 overflow-y-auto p-6">{children}</div><div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4">{footer}</div></section></div>;
+}
+
+function EmptyState({ onClear }: { onClear: () => void }) {
+  return <div className="p-12 text-center"><div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-muted text-lg font-bold text-brand">0</div><div className="mt-4 font-semibold text-slate-900">No matching records</div><div className="mt-1 text-sm text-slate-500">Try changing your search or filters.</div><div className="mt-4"><Button onClick={onClear}>Clear filters</Button></div></div>;
+}
+
+export default function EntitlementsCatalog() {
+  const [items, setItems] = useState(initialEntitlements);
+  const [search, setSearch] = useState("");
+  const [product, setProduct] = useState("All");
+  const [status, setStatus] = useState("All");
+  const [selected, setSelected] = useState<Entitlement | null>(null);
+  const [mode, setMode] = useState<"view" | "edit" | "create">("view");
+  const [error, setError] = useState("");
+  const filtered = items.filter((item) => (item.name + item.key).toLowerCase().includes(search.toLowerCase()) && (product === "All" || item.product === product) && (status === "All" || item.status === status));
+  const open = (item: Entitlement, nextMode: "view" | "edit") => { setSelected(item); setMode(nextMode); setError(""); };
+  const create = () => { setSelected({ name: "", key: "", product: "Flow", type: "Feature flag", description: "", unit: "Boolean", status: "Active", plans: 0, organizations: 0, overrides: 0, notes: "" }); setMode("create"); setError(""); };
+  const save = () => {
+    if (!selected?.name.trim() || !selected.key.trim()) { setError("Display name and immutable key are required."); return; }
+    if (!/^[a-z]+[a-z0-9_]*\.[a-z0-9_]+$/.test(selected.key)) { setError("Use a namespaced key such as flow.max_projects."); return; }
+    if (mode === "create") setItems((current) => [selected, ...current]);
+    else setItems((current) => current.map((item) => item.key === selected.key ? selected : item));
+    setSelected(null);
+  };
+  return <div>
+    <PageHeader eyebrow="Platform Console · Catalog" title="Entitlements" description="Reusable access definitions shared across plans and organization overrides. Definitions remain available for audit history after archival." action={<Button variant="primary" onClick={create}>+ Create entitlement</Button>} />
+    <div className="mb-4 grid gap-3 md:grid-cols-[1fr_180px_160px]"><input aria-label="Search entitlements" className={inputClass} placeholder="Search name or key..." value={search} onChange={(e) => setSearch(e.target.value)} /><select aria-label="Filter product" className={inputClass} value={product} onChange={(e) => setProduct(e.target.value)}><option>All</option>{(["Connect", "Flow", "Atlas", "Cadence", "HRMS", "Control"] as Product[]).map((value) => <option key={value}>{value}</option>)}</select><select aria-label="Filter status" className={inputClass} value={status} onChange={(e) => setStatus(e.target.value)}><option>All</option><option>Active</option><option>Archived</option></select></div>
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[960px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr>{["Entitlement", "Product", "Type", "Status", "Plans", "Active orgs", "Overrides", "Actions"].map((head) => <th key={head} className="px-4 py-3 font-bold">{head}</th>)}</tr></thead><tbody>{filtered.map((item) => <tr key={item.key} className="border-t border-slate-100 hover:bg-slate-50/70"><td className="px-4 py-3.5"><button className="text-left" onClick={() => open(item, "view")}><span className="block font-semibold text-slate-900 hover:text-brand">{item.name}</span><code className="mt-1 block font-mono text-[11px] text-slate-500">{item.key}</code></button></td><td className="px-4 py-3.5 font-medium text-slate-700">{item.product}</td><td className="px-4 py-3.5"><Badge tone={item.type === "Feature flag" ? "info" : "neutral"}>{item.type}</Badge></td><td className="px-4 py-3.5"><Badge tone={item.status === "Active" ? "success" : "neutral"}>{item.status}</Badge></td><td className="px-4 py-3.5 text-slate-600">{item.plans}</td><td className="px-4 py-3.5 text-slate-600">{item.organizations}</td><td className="px-4 py-3.5 text-slate-600">{item.overrides}</td><td className="px-4 py-3.5"><div className="flex gap-1"><Button variant="quiet" onClick={() => open(item, "view")}>View</Button><Button variant="quiet" onClick={() => open(item, "edit")}>Edit</Button><Button variant={item.status === "Active" ? "danger" : "secondary"} onClick={() => setItems((current) => current.map((entry) => entry.key === item.key ? { ...entry, status: entry.status === "Active" ? "Archived" : "Active" } : entry))}>{item.status === "Active" ? "Archive" : "Restore"}</Button></div></td></tr>)}</tbody></table>{filtered.length === 0 && <EmptyState onClear={() => { setSearch(""); setProduct("All"); setStatus("All"); }} />}</div><div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500"><span>Showing {filtered.length} of {items.length} definitions</span><div className="flex gap-2"><Button disabled>Previous</Button><Button disabled={filtered.length < 8}>Next</Button></div></div></div>
+    {selected && <Drawer title={mode === "create" ? "Create entitlement" : selected.name || "Entitlement"} description={mode === "view" ? "Definition, usage, and governance details" : "Keys become immutable after creation to preserve historical resolution."} onClose={() => setSelected(null)} footer={mode === "view" ? <><Button onClick={() => setSelected(null)}>Close</Button><Button variant="primary" onClick={() => setMode("edit")}>Edit entitlement</Button></> : <><Button onClick={() => setSelected(null)}>Cancel</Button><Button variant="primary" onClick={save}>Save entitlement</Button></>}>
+      {mode === "view" ? <div className="space-y-6"><div className="rounded-xl border border-slate-200 p-4"><div className="flex items-center justify-between"><code className="font-mono text-sm font-semibold text-brand">{selected.key}</code><Badge tone={selected.status === "Active" ? "success" : "neutral"}>{selected.status}</Badge></div><p className="mt-3 text-sm leading-6 text-slate-600">{selected.description}</p><div className="mt-4 grid grid-cols-2 gap-3 text-xs"><div className="rounded-lg bg-slate-50 p-3"><span className="block text-slate-400">Product</span><strong className="mt-1 block">{selected.product}</strong></div><div className="rounded-lg bg-slate-50 p-3"><span className="block text-slate-400">Validation</span><strong className="mt-1 block">{selected.unit}</strong></div></div></div><div><div className="text-sm font-bold text-slate-900">Where it is used</div><div className="mt-3 grid grid-cols-3 gap-3">{[["Plans", selected.plans], ["Active organizations", selected.organizations], ["Overrides", selected.overrides]].map(([label, value]) => <div key={label} className="rounded-xl border border-slate-200 p-3"><div className="text-xl font-bold text-slate-900">{value}</div><div className="mt-1 text-[11px] text-slate-500">{label}</div></div>)}</div></div><div className="rounded-xl bg-amber-50 p-4 text-xs leading-5 text-amber-900"><strong>Deletion protected.</strong> This definition cannot be hard deleted while used by a plan or retained in historical entitlement resolution records.</div>{selected.notes && <div><div className="text-sm font-bold">Internal notes</div><p className="mt-2 text-sm text-slate-600">{selected.notes}</p></div>}</div> :
+      <div className="space-y-4">{error && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-xs font-medium text-red-700">{error}</div>}<Field label="Display name"><input className={inputClass} value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} /></Field><Field label="Immutable key"><input disabled={mode === "edit"} className={inputClass} value={selected.key} placeholder="product.capability_name" onChange={(e) => setSelected({ ...selected, key: e.target.value })} /></Field><div className="grid grid-cols-2 gap-4"><Field label="Product"><select className={inputClass} value={selected.product} onChange={(e) => setSelected({ ...selected, product: e.target.value as Product })}>{(["Connect", "Flow", "Atlas", "Cadence", "HRMS", "Control"] as Product[]).map((value) => <option key={value}>{value}</option>)}</select></Field><Field label="Type"><select className={inputClass} value={selected.type} onChange={(e) => setSelected({ ...selected, type: e.target.value as EntitlementType, unit: e.target.value === "Feature flag" ? "Boolean" : "" })}><option>Feature flag</option><option>Numeric limit</option></select></Field></div><Field label="Description"><textarea className={inputClass} rows={3} value={selected.description} onChange={(e) => setSelected({ ...selected, description: e.target.value })} /></Field><Field label="Unit and validation rules"><input disabled={selected.type === "Feature flag"} className={inputClass} value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} /></Field><Field label="Status"><select className={inputClass} value={selected.status} onChange={(e) => setSelected({ ...selected, status: e.target.value as EntitlementStatus })}><option>Active</option><option>Archived</option></select></Field><Field label="Internal notes"><textarea className={inputClass} rows={3} value={selected.notes} onChange={(e) => setSelected({ ...selected, notes: e.target.value })} /></Field></div>}</Drawer>}
+  </div>;
+}
+
+export function PlansCatalog({ pricesOnly = false }: { pricesOnly?: boolean }) {
+  const [plans, setPlans] = useState(initialPlans);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("All");
+  const [selected, setSelected] = useState<Plan | null>(null);
+  const [tab, setTab] = useState("Details");
+  const [confirmArchive, setConfirmArchive] = useState(false);
+  const filtered = plans.filter((plan) => (plan.name + plan.code).toLowerCase().includes(search.toLowerCase()) && (status === "All" || plan.status === status));
+  const openPlan = (plan: Plan, initialTab = "Details") => { setSelected(plan); setTab(initialTab); setConfirmArchive(false); };
+  if (pricesOnly) return <PricesCatalog plans={plans} onOpen={openPlan} selected={selected} setSelected={setSelected} />;
+  return <div>
+    <PageHeader eyebrow="Platform Console · Catalog" title="Plans" description="Versioned commercial packages assembled from reusable entitlements. Published plans with active subscribers are protected from destructive changes." action={<Button variant="primary" onClick={() => openPlan({ name: "Untitled plan", code: "NEW_PLAN_V1", status: "Draft", monthly: "$0 / seat", yearly: "$0 / seat", entitlements: 0, subscribers: 0 })}>+ Create plan</Button>} />
+    <div className="mb-5 grid gap-3 md:grid-cols-[1fr_180px]"><input className={inputClass} aria-label="Search plans" placeholder="Search plan name or code..." value={search} onChange={(e) => setSearch(e.target.value)} /><select className={inputClass} aria-label="Filter plan status" value={status} onChange={(e) => setStatus(e.target.value)}><option>All</option><option>Draft</option><option>Published</option><option>Archived</option></select></div>
+    <div className="grid gap-4 xl:grid-cols-2">{filtered.map((plan) => <article key={plan.code} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300 hover:shadow-md"><div className="flex items-start justify-between gap-4"><div><div className="flex items-center gap-2"><button onClick={() => openPlan(plan)} className="font-display text-base font-bold text-slate-950 hover:text-brand">{plan.name}</button><Badge tone={plan.status === "Published" ? "success" : plan.status === "Draft" ? "warning" : "neutral"}>{plan.status}</Badge></div><code className="mt-1 block font-mono text-[11px] text-slate-400">{plan.code}</code></div><Button variant="quiet" onClick={() => openPlan(plan)}>Manage</Button></div><div className="mt-5 grid grid-cols-2 gap-3 rounded-lg bg-slate-50 p-3"><div><div className="text-[10px] font-bold uppercase text-slate-400">Monthly</div><div className="mt-1 text-sm font-semibold">{plan.monthly}</div></div><div><div className="text-[10px] font-bold uppercase text-slate-400">Yearly</div><div className="mt-1 text-sm font-semibold">{plan.yearly}</div></div></div><div className="mt-4 flex items-center justify-between text-xs text-slate-500"><span><strong className="text-slate-800">{plan.entitlements}</strong> included entitlements</span><span><strong className="text-slate-800">{plan.subscribers}</strong> subscribed organizations</span></div></article>)}</div>
+    {selected && <Drawer title={selected.name} description={`${selected.code} · ${selected.status}`} onClose={() => setSelected(null)} footer={<><Button onClick={() => setSelected(null)}>Close</Button>{selected.status === "Draft" ? <Button variant="primary" onClick={() => { setPlans((current) => current.some((plan) => plan.code === selected.code) ? current.map((plan) => plan.code === selected.code ? selected : plan) : [selected, ...current]); setSelected(null); }}>Save draft</Button> : <Button variant="danger" onClick={() => setConfirmArchive(true)}>Archive plan</Button>}</>}>
+      <div className="mb-5 flex overflow-x-auto border-b border-slate-200">{["Details", "Prices", "Entitlements", "Organizations", "Audit"].map((item) => <button key={item} onClick={() => setTab(item)} className={cn("whitespace-nowrap border-b-2 px-3 py-2.5 text-xs font-semibold", tab === item ? "border-brand text-brand" : "border-transparent text-slate-500")}>{item}</button>)}</div>
+      {selected.status === "Published" && selected.subscribers > 0 && <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs leading-5 text-amber-900"><strong>Protected published version.</strong> Create a new plan version or schedule a future change. Existing subscribers continue on {selected.code} until migrated.</div>}
+      {tab === "Details" && <div className="space-y-4"><Field label="Plan name"><input disabled={selected.status !== "Draft"} className={inputClass} value={selected.name} onChange={(e) => setSelected({ ...selected, name: e.target.value })} /></Field><Field label="Immutable code"><input disabled className={inputClass} value={selected.code} /></Field><Field label="Status"><select disabled={selected.status !== "Draft"} className={inputClass} value={selected.status} onChange={(e) => setSelected({ ...selected, status: e.target.value as PlanStatus })}><option>Draft</option><option>Published</option><option>Archived</option></select></Field><Field label="Internal description"><textarea rows={4} className={inputClass} defaultValue="A multi-product Dhriti plan for growing organizations." /></Field></div>}
+      {tab === "Prices" && <PriceRows />}
+      {tab === "Entitlements" && <PlanEntitlements />}
+      {tab === "Organizations" && <div className="space-y-3">{["Acme Corporation", "TechFlow Inc", "Pied Piper", "Globex Corp"].slice(0, Math.min(4, selected.subscribers)).map((org, index) => <div key={org} className="flex items-center justify-between rounded-lg border border-slate-200 p-3"><div><div className="text-sm font-semibold">{org}</div><div className="mt-1 text-xs text-slate-500">{[420, 85, 45, 32][index]} seats · Active</div></div><Button>View subscription</Button></div>)}</div>}
+      {tab === "Audit" && <AuditRows />}
+      {confirmArchive && <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4"><div className="text-sm font-bold text-red-900">Archive this plan version?</div><p className="mt-1 text-xs leading-5 text-red-700">It will be hidden from new purchases. Current subscriptions and historical entitlement results are preserved.</p><div className="mt-3 flex gap-2"><Button onClick={() => setConfirmArchive(false)}>Keep plan</Button><Button variant="danger" onClick={() => { setPlans((current) => current.map((plan) => plan.code === selected.code ? { ...plan, status: "Archived" } : plan)); setSelected(null); }}>Confirm archive</Button></div></div>}
+    </Drawer>}
+  </div>;
+}
+
+function PriceRows() {
+  return <div><div className="mb-4 flex justify-end"><Button variant="primary">+ Add price</Button></div><div className="space-y-3">{[["Monthly", "USD", "$24.00 / seat", "price_1Q2BIZmo", "Active"], ["Yearly", "USD", "$240.00 / seat", "price_1Q2BIZyr", "Active"], ["Yearly", "EUR", "€228.00 / seat", "price_1Q2BIZeu", "Inactive"]].map((row) => <div key={row[3]} className="rounded-xl border border-slate-200 p-4"><div className="flex items-start justify-between"><div><div className="text-sm font-bold">{row[2]}</div><div className="mt-1 text-xs text-slate-500">{row[0]} · {row[1]}</div></div><Badge tone={row[4] === "Active" ? "success" : "neutral"}>{row[4]}</Badge></div><code className="mt-3 block rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-500">{row[3]}</code></div>)}</div></div>;
+}
+
+function PlanEntitlements() {
+  const examples = [["flow.enabled", "Feature flag", "true"], ["flow.max_projects", "Numeric limit", "25"], ["flow.max_members", "Numeric limit", "100"], ["flow.wip_limits", "Feature flag", "true"]];
+  return <div><div className="mb-4 flex items-center justify-between"><div className="text-xs text-slate-500">Values are joined through <code className="font-mono text-brand">PlanEntitlement</code>.</div><Button variant="primary">+ Add entitlement</Button></div><div className="overflow-hidden rounded-xl border border-slate-200">{examples.map(([key, type, value]) => <div key={key} className="grid grid-cols-[1fr_120px_80px] items-center gap-3 border-b border-slate-100 p-3 last:border-0"><div><code className="font-mono text-xs font-semibold text-slate-800">{key}</code><div className="mt-1 text-[10px] text-slate-400">{type}</div></div><input aria-label={`${key} value`} className={inputClass} defaultValue={value} /><Button variant="quiet">Remove</Button></div>)}</div></div>;
+}
+
+function AuditRows() {
+  return <div className="space-y-1">{[["Plan price activated", "Jordan Smith", "Today, 09:42"], ["Entitlement flow.max_projects changed from 20 to 25", "Priya Patel", "Yesterday, 16:18"], ["Plan version published", "Jordan Smith", "May 20, 11:06"]].map(([event, actor, time]) => <div key={event} className="border-b border-slate-100 py-3"><div className="text-xs font-semibold text-slate-800">{event}</div><div className="mt-1 text-[11px] text-slate-400">{actor} · {time}</div></div>)}</div>;
+}
+
+function PricesCatalog({ plans, onOpen, selected, setSelected }: { plans: Plan[]; onOpen: (plan: Plan, tab?: string) => void; selected: Plan | null; setSelected: (plan: Plan | null) => void }) {
+  const rows = plans.flatMap((plan) => plan.status === "Archived" ? [] : [
+    { plan, interval: "Monthly", currency: "USD", amount: plan.monthly, provider: `price_${plan.code.toLowerCase()}_mo`, active: true },
+    { plan, interval: "Yearly", currency: "USD", amount: plan.yearly, provider: `price_${plan.code.toLowerCase()}_yr`, active: plan.status === "Published" },
+  ]);
+  return <div><PageHeader eyebrow="Platform Console · Catalog" title="Prices" description="Provider-linked billing prices are immutable after use. Deactivate an old price and add a replacement instead." action={<Button variant="primary" onClick={() => onOpen(plans[0], "Prices")}>+ Add price</Button>} /><div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[820px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr>{["Plan", "Interval", "Currency", "Amount", "Provider price ID", "Status", ""].map((head) => <th key={head} className="px-4 py-3">{head}</th>)}</tr></thead><tbody>{rows.map((row) => <tr key={row.provider} className="border-t border-slate-100"><td className="px-4 py-4 font-semibold">{row.plan.name}</td><td className="px-4 py-4">{row.interval}</td><td className="px-4 py-4">{row.currency}</td><td className="px-4 py-4 font-semibold">{row.amount}</td><td className="px-4 py-4"><code className="font-mono text-[11px] text-slate-500">{row.provider}</code></td><td className="px-4 py-4"><Badge tone={row.active ? "success" : "warning"}>{row.active ? "Active" : "Draft"}</Badge></td><td className="px-4 py-4"><Button variant="quiet" onClick={() => onOpen(row.plan, "Prices")}>Manage</Button></td></tr>)}</tbody></table></div></div>{selected && <Drawer title={`${selected.name} prices`} description="Billing intervals, currencies, and provider mappings" onClose={() => setSelected(null)} footer={<Button onClick={() => setSelected(null)}>Close</Button>}><PriceRows /></Drawer>}</div>;
+}
+
+export function OrganizationSubscription() {
+  const [tab, setTab] = useState("Subscription");
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [mutation, setMutation] = useState<"seats" | "cancel" | "reactivate" | null>(null);
+  const [idempotency, setIdempotency] = useState("");
+  const [message, setMessage] = useState("");
+  const effective = [
+    ["flow.enabled", "Flow", "Feature flag", "true", "Business plan", "—", "2 min ago"],
+    ["flow.max_projects", "Flow", "Numeric limit", "25", "Business plan", "—", "2 min ago"],
+    ["flow.max_members", "Flow", "Numeric limit", "100", "Business plan", "—", "2 min ago"],
+    ["flow.wip_limits", "Flow", "Feature flag", "true", "Org override", "Jun 30, 2026", "2 min ago"],
+    ["hrms.max_employees", "HRMS", "Numeric limit", "500", "Org override", "Dec 31, 2026", "2 min ago"],
+  ];
+  const performMutation = () => {
+    if (!idempotency.trim()) { setMessage("An idempotency key is required for billing mutations."); return; }
+    setMessage(`${mutation === "seats" ? "Seat change" : mutation} request accepted. Redis entitlement cache invalidation queued.`);
+    setMutation(null); setIdempotency("");
+  };
+  return <div>
+    <PageHeader eyebrow="Platform Console · Organizations · Acme Corporation" title="Subscription & effective access" description="Platform-only subscription operations, entitlement resolution, organization overrides, and billing audit history." action={<Badge tone="success">Active subscription</Badge>} />
+    <div className="mb-6 rounded-xl border border-brand/20 bg-brand-muted p-4 text-xs leading-5 text-brand-dark"><strong>Runtime resolution:</strong> Subscription plan entitlements + active non-expired organization overrides = effective entitlements. Access also requires an active, trialing, or grace-period subscription. Results are cached in Redis and invalidated after subscription, plan, or override changes.</div>
+    <div className="mb-5 flex overflow-x-auto border-b border-slate-200">{["Subscription", "Effective Access", "Overrides", "Billing History", "Audit"].map((item) => <button key={item} onClick={() => setTab(item)} className={cn("whitespace-nowrap border-b-2 px-4 py-3 text-xs font-semibold", tab === item ? "border-brand text-brand" : "border-transparent text-slate-500")}>{item}</button>)}</div>
+    {tab === "Subscription" && <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]"><section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex justify-between"><div><div className="text-[10px] font-bold uppercase text-slate-400">Current plan</div><div className="mt-1 font-display text-xl font-bold">Dhriti Business</div><div className="mt-1 text-xs text-slate-500">Yearly · $240 / seat · USD</div></div><Badge tone="success">Active</Badge></div><div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-4">{[["Seats", "84 / 100"], ["Renewal", "May 28, 2027"], ["Started", "May 28, 2025"], ["Cancellation", "Not scheduled"]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-3"><div className="text-[10px] uppercase text-slate-400">{label}</div><div className="mt-1 text-xs font-semibold">{value}</div></div>)}</div><div className="mt-5 flex flex-wrap gap-2"><Button variant="primary" onClick={() => setMutation("seats")}>Change seats</Button><Button>Change plan or price</Button><Button variant="danger" onClick={() => setMutation("cancel")}>Schedule cancellation</Button></div></section><section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-sm font-bold">Subscription health</div><div className="mt-4 space-y-3 text-xs">{[["Payment method", "Visa •••• 4242"], ["Last payment", "$24,000 · Paid"], ["Grace policy", "7 calendar days"], ["Provider", "Stripe · cus_acme84"]].map(([label, value]) => <div key={label} className="flex justify-between border-b border-slate-100 pb-3"><span className="text-slate-500">{label}</span><strong>{value}</strong></div>)}</div></section></div>}
+    {tab === "Effective Access" && <div><div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs leading-5 text-blue-900"><strong>Flow enforcement:</strong> <code className="font-mono">flow.enabled</code> gates all <code className="font-mono">/organization/flow</code> operations. <code className="font-mono">flow.max_projects</code> is checked before project creation. Entitlements do not replace permissions: users still need the relevant Flow permission, optionally scoped to a project.</div><div className="overflow-hidden rounded-xl border border-slate-200 bg-white"><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr>{["Key", "Product", "Type", "Resolved value", "Source", "Override expiry", "Last resolved"].map((head) => <th key={head} className="px-4 py-3">{head}</th>)}</tr></thead><tbody>{effective.map((row) => <tr key={row[0]} className="border-t border-slate-100">{row.map((cell, index) => <td key={index} className={cn("px-4 py-3.5", index === 0 && "font-mono font-semibold", index === 3 && "font-bold text-brand")}>{index === 4 ? <Badge tone={cell === "Org override" ? "warning" : "info"}>{cell}</Badge> : cell}</td>)}</tr>)}</tbody></table></div></div></div>}
+    {tab === "Overrides" && <div><div className="mb-4 flex justify-end"><Button variant="primary" onClick={() => setOverrideOpen(true)}>+ Create override</Button></div><div className="space-y-3">{effective.filter((row) => row[4] === "Org override").map((row) => <div key={row[0]} className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 md:flex-row md:items-center"><div><code className="font-mono text-xs font-bold">{row[0]}</code><div className="mt-1 text-xs text-slate-500">Value <strong>{row[3]}</strong> · Expires {row[5]}</div></div><div className="flex items-center gap-2"><Badge tone="warning">Time-bound override</Badge><Button>View audit</Button></div></div>)}</div></div>}
+    {tab === "Billing History" && <div className="overflow-hidden rounded-xl border border-slate-200 bg-white"><table className="w-full text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr>{["Invoice", "Date", "Description", "Amount", "Status"].map((head) => <th key={head} className="px-4 py-3">{head}</th>)}</tr></thead><tbody>{[["INV-20491", "May 28, 2026", "Business yearly · 100 seats", "$24,000", "Paid"], ["INV-18332", "May 28, 2025", "Business yearly · 85 seats", "$20,400", "Paid"], ["CR-00418", "Feb 12, 2026", "Seat adjustment credit", "−$640", "Applied"]].map((row) => <tr key={row[0]} className="border-t border-slate-100">{row.map((cell, index) => <td key={cell} className="px-4 py-4">{index === 4 ? <Badge tone="success">{cell}</Badge> : cell}</td>)}</tr>)}</tbody></table></div>}
+    {tab === "Audit" && <AuditRows />}
+    {overrideOpen && <Drawer title="Create organization override" description="Overrides are time-bound, fully audited, and take precedence over the plan value while active." onClose={() => setOverrideOpen(false)} footer={<><Button onClick={() => setOverrideOpen(false)}>Cancel</Button><Button variant="primary" onClick={() => { setOverrideOpen(false); setMessage("Override created. Redis entitlement cache invalidation queued."); }}>Create override</Button></>}><div className="space-y-4"><Field label="Entitlement"><select className={inputClass}><option>flow.wip_limits</option><option>flow.max_projects</option><option>flow.max_members</option></select></Field><Field label="Override value"><input className={inputClass} defaultValue="true" /></Field><Field label="Reason"><textarea className={inputClass} rows={3} defaultValue="Temporary access for enterprise pilot." /></Field><div className="grid grid-cols-2 gap-4"><Field label="Starts"><input type="date" className={inputClass} defaultValue="2026-05-28" /></Field><Field label="Ends"><input type="date" className={inputClass} defaultValue="2026-06-30" /></Field></div><div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">Creator: Jordan Smith · Super Admin. Creation, edits, expiry, and revocation are written to the audit trail.</div></div></Drawer>}
+    {mutation && <Drawer title={mutation === "seats" ? "Change purchased seats" : mutation === "cancel" ? "Schedule cancellation" : "Reactivate subscription"} description="Billing mutations require a unique idempotency key to prevent duplicate provider operations." onClose={() => setMutation(null)} footer={<><Button onClick={() => setMutation(null)}>Cancel</Button><Button variant={mutation === "cancel" ? "danger" : "primary"} onClick={performMutation}>Confirm mutation</Button></>}><div className="space-y-4">{mutation === "seats" && <Field label="Purchased seats"><input type="number" className={inputClass} defaultValue="110" /></Field>}<Field label="Idempotency key"><input className={inputClass} placeholder="billing_acme_seats_2026_05_28" value={idempotency} onChange={(e) => setIdempotency(e.target.value)} /></Field>{message && <div role="alert" className="rounded-lg bg-red-50 p-3 text-xs text-red-700">{message}</div>}</div></Drawer>}
+    {message && !mutation && <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl bg-slate-900 px-4 py-3 text-xs text-white shadow-xl">{message}<button className="ml-3 font-bold" onClick={() => setMessage("")}>Dismiss</button></div>}
+  </div>;
+}
+
+export function WebhookEvents() {
+  const [status, setStatus] = useState("All");
+  const [selected, setSelected] = useState<string[] | null>(null);
+  const events = [
+    ["evt_1QZ84a7", "invoice.payment_succeeded", "Delivered", "0", "May 28, 10:42:18", "invoice · in_20491 · 1.8 KB"],
+    ["evt_1QZ82mn", "customer.subscription.updated", "Delivered", "1", "May 28, 10:38:04", "subscription · sub_acme · 3.1 KB"],
+    ["evt_1QYzz91", "invoice.payment_failed", "Retrying", "2 / 5", "May 28, 09:16:33", "invoice · in_20512 · 2.2 KB"],
+    ["evt_1QYxp44", "customer.subscription.deleted", "Failed", "5 / 5", "May 27, 23:51:10", "subscription · sub_globex · 2.9 KB"],
+    ["evt_1QYv2c8", "checkout.session.completed", "Delivered", "0", "May 27, 18:24:52", "checkout_session · cs_892 · 4.7 KB"],
+  ];
+  const visible = events.filter((event) => status === "All" || event[2] === status);
+  return <div><PageHeader eyebrow="Platform Console · Billing" title="Webhook events" description="Monitor billing-provider delivery, processing retries, event identity, timestamps, and payload metadata." action={<Button>Refresh events</Button>} /><div className="mb-4 flex max-w-xs"><select className={inputClass} aria-label="Filter webhook status" value={status} onChange={(e) => setStatus(e.target.value)}><option>All</option><option>Delivered</option><option>Retrying</option><option>Failed</option></select></div><div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr>{["Event ID", "Event type", "Delivery", "Retry state", "Received at", "Payload metadata", ""].map((head) => <th key={head} className="px-4 py-3">{head}</th>)}</tr></thead><tbody>{visible.map((event) => <tr key={event[0]} className="border-t border-slate-100"><td className="px-4 py-4 font-mono text-[11px]">{event[0]}</td><td className="px-4 py-4 font-medium">{event[1]}</td><td className="px-4 py-4"><Badge tone={event[2] === "Delivered" ? "success" : event[2] === "Retrying" ? "warning" : "danger"}>{event[2]}</Badge></td><td className="px-4 py-4">{event[3]}</td><td className="px-4 py-4 text-slate-500">{event[4]}</td><td className="px-4 py-4 text-slate-500">{event[5]}</td><td className="px-4 py-4"><Button variant="quiet" onClick={() => setSelected(event)}>Inspect</Button></td></tr>)}</tbody></table></div></div>{selected && <Drawer title={selected[1]} description={selected[0]} onClose={() => setSelected(null)} footer={<><Button onClick={() => setSelected(null)}>Close</Button>{selected[2] !== "Delivered" && <Button variant="primary">Retry delivery</Button>}</>}><div className="space-y-4"><div className="grid grid-cols-2 gap-3">{[["Delivery status", selected[2]], ["Retry state", selected[3]], ["Received", selected[4]], ["Processed", selected[2] === "Delivered" ? "May 28, 10:42:19" : "Pending"]].map(([label, value]) => <div key={label} className="rounded-lg bg-slate-50 p-3"><div className="text-[10px] uppercase text-slate-400">{label}</div><div className="mt-1 text-xs font-semibold">{value}</div></div>)}</div><div><div className="mb-2 text-xs font-bold">Payload metadata</div><pre className="overflow-x-auto rounded-xl bg-slate-950 p-4 font-mono text-[11px] leading-5 text-slate-300">{JSON.stringify({ id: selected[0], api_version: "2026-04-15", livemode: true, object: selected[5].split(" · ")[0], organization_id: "org_acme84", idempotency_key: "billing_acme_20260528" }, null, 2)}</pre></div><div className="rounded-lg border border-slate-200 p-3 text-xs text-slate-500">Payload bodies are access-controlled and retained for 30 days. Sensitive fields are redacted before display.</div></div></Drawer>}</div>;
 }
