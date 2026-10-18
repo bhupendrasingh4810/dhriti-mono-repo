@@ -13,6 +13,8 @@ type ConnectCascadingMenuProps = {
   minWidth?: number;
   heading?: string;
   maxDepth?: number;
+  columns?: 1 | 2 | 3;
+  openToLeft?: boolean;
 };
 
 const MENU_GAP = 4;
@@ -26,6 +28,8 @@ export function ConnectCascadingMenu({
   minWidth = 220,
   heading,
   maxDepth = 4,
+  columns = 1,
+  openToLeft = false,
 }: ConnectCascadingMenuProps) {
   const [submenuStates, setSubmenuStates] = useState<SubmenuState[]>([]);
   const safeMaxDepth = Math.min(Math.max(maxDepth, 1), 4);
@@ -129,8 +133,10 @@ export function ConnectCascadingMenu({
     const rect = anchorEl?.getBoundingClientRect();
     if (!rect) return { visibility: "hidden" };
 
+    const left = openToLeft ? rect.left - minWidth - MENU_GAP : rect.right - minWidth;
+
     return {
-      left: Math.max(VIEWPORT_GUTTER, Math.min(rect.right - minWidth, window.innerWidth - minWidth - VIEWPORT_GUTTER)),
+      left: Math.max(VIEWPORT_GUTTER, Math.min(left, window.innerWidth - minWidth - VIEWPORT_GUTTER)),
       minWidth,
       top: rect.bottom + MENU_GAP,
     };
@@ -153,7 +159,7 @@ export function ConnectCascadingMenu({
     <>
       <MenuSurface level={0} style={rootMenuStyle()} onEscape={() => closeFromLevel(0)}>
         {heading ? <p className="px-3.5 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{heading}</p> : null}
-        <MenuItems items={itemsByLevel[0] ?? []} level={0} />
+        <MenuItems items={itemsByLevel[0] ?? []} level={0} columns={columns} />
       </MenuSurface>
 
       {Array.from({ length: safeMaxDepth - 1 }).map((_, index) => {
@@ -173,42 +179,82 @@ export function ConnectCascadingMenu({
     document.body,
   );
 
-  function MenuItems({ items: levelItems, level }: { items: ConnectCascadingMenuItem[]; level: number }) {
+  function MenuItems({ items: levelItems, level, columns = 1 }: { items: ConnectCascadingMenuItem[]; level: number; columns?: 1 | 2 | 3 }) {
+    const useSectionGrid = columns > 1 && level === 0;
+    const sections = useSectionGrid ? groupMenuItems(levelItems) : [];
+    const sectionRows = sections.reduce<Array<typeof sections>>((rows, section, index) => {
+      const rowIndex = Math.floor(index / columns);
+      (rows[rowIndex] ??= []).push(section);
+      return rows;
+    }, []);
+
+    if (useSectionGrid) {
+      return (
+        <div className="py-1" role="menu">
+          {sectionRows.map((row, rowIndex) => (
+            <div key={row[0]?.id ?? rowIndex} className={rowIndex > 0 ? "mt-2 border-t border-slate-100 pt-2" : undefined}>
+              <div className={columns === 3 ? "grid grid-cols-3 gap-x-1" : "grid grid-cols-2 gap-x-1"}>
+                {row.map((section) => (
+                  <div key={section.id} className="min-w-0">
+                    {section.title ? <p className="px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{section.title}</p> : null}
+                    {section.items.map(renderMenuItem)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
     return (
-      <div className="py-1" role="menu">
-        {levelItems.map((item) => {
+      <div className={columns === 3 ? "grid grid-cols-3 gap-x-1 py-1" : columns === 2 ? "grid grid-cols-2 gap-x-1 py-1" : "py-1"} role="menu">
+        {levelItems.map(renderMenuItem)}
+      </div>
+    );
+
+    function renderMenuItem(item: ConnectCascadingMenuItem) {
           const hasChildren = Boolean(item.children?.length) && level < safeMaxDepth - 1;
           const selectedSubmenu = submenuStates[level];
 
           return (
-            <div key={item.id}>
-              {item.dividerAbove ? <div className="my-1 border-t border-slate-100" role="separator" /> : null}
-              {item.sectionTitle ? <p className="px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{item.sectionTitle}</p> : null}
+            <div key={item.id} className={columns === 2 ? "contents" : undefined}>
+              {!useSectionGrid && item.dividerAbove ? <div className={columns === 2 ? "col-span-2 my-1 border-t border-slate-100" : "my-1 border-t border-slate-100"} role="separator" /> : null}
+              {!useSectionGrid && item.sectionTitle ? <p className={columns === 2 ? "col-span-2 px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400" : "px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400"}>{item.sectionTitle}</p> : null}
               <button
                 type="button"
                 role="menuitem"
                 aria-haspopup={hasChildren ? "menu" : undefined}
                 aria-expanded={hasChildren ? selectedSubmenu?.itemId === item.id : undefined}
                 onClick={(event) => handleItemClick(level, item, event)}
-                className="flex w-full items-center gap-2 px-3.5 py-3 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+                className="flex w-full min-w-0 items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
               >
-                <span className={`flex w-5 shrink-0 items-center justify-center ${item.selected ? "text-emerald-600" : "text-slate-500"}`}>
+                <span className={`flex shrink-0 items-center justify-center ${item.descriptionLayout === "stacked" ? "h-8 w-8" : "w-5"} ${item.selected ? "text-emerald-600" : "text-slate-500"}`}>
                   {item.selected ? <CheckIcon /> : item.icon}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className={`block text-sm ${item.danger ? "text-red-600" : "text-slate-900"} ${item.selected ? "font-bold" : "font-medium"}`}>
+                <span className={`flex min-w-0 flex-1 ${item.descriptionLayout === "stacked" ? "flex-col items-start gap-0.5" : "items-center gap-2"}`}>
+                  <span className={`min-w-0 truncate text-sm ${item.danger ? "text-red-600" : "text-slate-900"} ${item.selected ? "font-bold" : "font-medium"}`}>
                     {item.label}
                   </span>
-                  {item.description ? <span className="mt-0.5 block text-xs leading-[1.35] text-slate-500">{item.description}</span> : null}
+                  {item.description ? <span className="min-w-0 truncate text-xs text-slate-500">{item.description}</span> : null}
                 </span>
                 {item.endAdornment ?? (hasChildren ? selectedSubmenu?.openLeft ? <ChevronLeftIcon /> : <ChevronRightIcon /> : null)}
               </button>
             </div>
           );
-        })}
-      </div>
-    );
+    }
   }
+}
+
+function groupMenuItems(items: ConnectCascadingMenuItem[]) {
+  return items.reduce<Array<{ id: string; title?: string; items: ConnectCascadingMenuItem[] }>>((sections, item) => {
+    if (item.sectionTitle || sections.length === 0) {
+      sections.push({ id: item.sectionTitle ?? item.id, title: item.sectionTitle, items: [] });
+    }
+
+    sections.at(-1)?.items.push(item);
+    return sections;
+  }, []);
 }
 
 function MenuSurface({ children, level, style, onEscape }: { children: ReactNode; level: number; style: CSSProperties; onEscape: () => void }) {

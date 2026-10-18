@@ -4,6 +4,7 @@ export type ConnectCascadingMenuItem = {
   id: string;
   label: string;
   description?: string;
+  descriptionLayout?: "inline" | "stacked";
   icon?: ReactNode;
   danger?: boolean;
   selected?: boolean;
