@@ -3,7 +3,6 @@
 import { type ReactNode } from "react";
 import { useParams, usePathname } from "next/navigation";
 import { Box } from "@dhriti/ui";
-import { ConnectHeader } from "@/features/connect/components/ConnectHeader";
 import Sidebar from "@/components/layout/workspace/sidebar";
 import Header from "@/components/layout/workspace/header";
 import { connectSearchResults, connectUsers } from "@/mocks/connect";
@@ -58,11 +57,11 @@ export default function WorkspaceLayout({ children, params }: WorkspaceLayoutPro
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
       <Box sx={{ width: "100%", flexShrink: 0 }}>
-        {activeApp === "connect" ? (
-          <ConnectHeader users={headerSearchUsers} messages={headerSearchMessages} files={headerSearchFiles} />
-        ) : (
-          <Header activeView={activeApp} onViewChange={() => {}} />
-        )}
+        <Header
+          activeView={activeApp}
+          onViewChange={() => {}}
+          connectSearch={activeApp === "connect" ? { users: headerSearchUsers, messages: headerSearchMessages, files: headerSearchFiles } : undefined}
+        />
       </Box>
 
       <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
