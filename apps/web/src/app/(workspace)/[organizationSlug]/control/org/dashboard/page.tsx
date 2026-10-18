@@ -1,13 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { controlOrganizationService } from "@/services/control.service";
 
-const stats = [
-  { label: "Total Members", value: "142", change: "+8", positive: true },
-  { label: "Active Teams", value: "18", change: "+2", positive: true },
-  { label: "Apps Connected", value: "7", change: "0", positive: true },
-  { label: "Storage Used", value: "68%", change: "+4%", positive: false },
-];
+interface OrgDashboardData {
+  members: { total: number; active: number };
+  teams: number;
+  products: { enabled: number; total: number };
+  storage: { files: number; bytes: number };
+}
 
 const recentActivity = [
   { actor: "Alice Johnson", action: "invited 3 new members", time: "10m ago" },
@@ -18,7 +20,34 @@ const recentActivity = [
 ];
 
 export default function OrgDashboard() {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
+  const [dashboard, setDashboard] = useState<OrgDashboardData | null>(null);
+
+  const loadDashboard = useEffectEvent(async () => {
+    try {
+      const result = await controlOrganizationService.dashboard(organizationSlug);
+      setDashboard(result as OrgDashboardData);
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load organization dashboard", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadDashboard);
+  }, [organizationSlug]);
+
+  const stats = [
+    { label: "Total Members", value: String(dashboard?.members.total ?? 0), change: "Active members", positive: true },
+    { label: "Active Teams", value: String(dashboard?.teams ?? 0), change: "Current teams", positive: true },
+    {
+      label: "Apps Enabled",
+      value: `${dashboard?.products.enabled ?? 0} / ${dashboard?.products.total ?? 0}`,
+      change: "Available products",
+      positive: true,
+    },
+    { label: "Stored Files", value: String(dashboard?.storage.files ?? 0), change: "Organization files", positive: true },
+  ];
 
   return (
     <div>

@@ -4,6 +4,27 @@ interface Counter {
   [labels: string]: number;
 }
 
+export interface MetricsSnapshot {
+  http: {
+    requestCount: number;
+    errorCount: number;
+    errorRate: number;
+    averageLatencyMs: number | null;
+    p95LatencyMs: number | null;
+  };
+  redis: {
+    cacheHits: number;
+    cacheMisses: number;
+    cacheHitRate: number | null;
+    errors: number;
+    averageCommandLatencyMs: number | null;
+    usedMemoryBytes: number;
+    evictedKeys: number;
+  };
+  websocket: { connections: number; messages: number };
+  process: { uptimeSeconds: number; startedAt: string };
+}
+
 /**
  * Minimal in-process metrics registry that renders Prometheus text format.
  * Swap for prom-client / OpenTelemetry when you need push-based metrics or
@@ -73,6 +94,49 @@ export class MetricsService {
 
   wsMessage(): void {
     this.wsMessages += 1;
+  }
+
+  snapshot(): MetricsSnapshot {
+    const requests = Object.entries(this.httpRequests).reduce(
+      (summary, [key, count]) => {
+        const status = Number(key.split("|")[2]);
+        summary.requestCount += count;
+        if (status >= 500) {summary.errorCount += count;}
+        return summary;
+      },
+      { requestCount: 0, errorCount: 0 },
+    );
+    const durations = Object.values(this.httpDurationBuckets).flat();
+    const sortedDurations = [...durations].sort((left, right) => left - right);
+    const p95Index = Math.max(0, Math.ceil(sortedDurations.length * 0.95) - 1);
+    const cacheRequests = this.redisCacheHits + this.redisCacheMisses;
+    const processUptimeSeconds = Math.floor(process.uptime());
+
+    return {
+      http: {
+        requestCount: requests.requestCount,
+        errorCount: requests.errorCount,
+        errorRate: requests.requestCount === 0 ? 0 : requests.errorCount / requests.requestCount,
+        averageLatencyMs:
+          durations.length === 0 ? null : durations.reduce((total, duration) => total + duration, 0) / durations.length,
+        p95LatencyMs: sortedDurations.length === 0 ? null : sortedDurations[p95Index],
+      },
+      redis: {
+        cacheHits: this.redisCacheHits,
+        cacheMisses: this.redisCacheMisses,
+        cacheHitRate: cacheRequests === 0 ? null : this.redisCacheHits / cacheRequests,
+        errors: this.redisErrors,
+        averageCommandLatencyMs:
+          this.redisCommandCount === 0 ? null : this.redisCommandDurationMsTotal / this.redisCommandCount,
+        usedMemoryBytes: this.redisUsedMemoryBytes,
+        evictedKeys: this.redisEvictedKeys,
+      },
+      websocket: { connections: this.wsConnections, messages: this.wsMessages },
+      process: {
+        uptimeSeconds: processUptimeSeconds,
+        startedAt: new Date(Date.now() - processUptimeSeconds * 1000).toISOString(),
+      },
+    };
   }
 
   render(): string {

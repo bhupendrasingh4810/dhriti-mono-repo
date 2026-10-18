@@ -12,7 +12,7 @@ export async function assignDefaultUserPermissionGroups(
       isSystem: true,
       isActive: true,
       deletedAt: null,
-      name: { endsWith: "-users" },
+      name: { endsWith: "_users" },
     },
     select: { id: true },
   });

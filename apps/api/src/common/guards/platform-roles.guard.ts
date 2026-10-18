@@ -34,6 +34,22 @@ export class PlatformRolesGuard implements CanActivate {
       throw new ForbiddenException({ code: "UNAUTHORIZED", message: "Authentication required" });
     }
 
+    const record = await this.prisma.userAuth.findUnique({
+      where: { userId: user.userId },
+      select: { platformRole: true, user: { select: { role: true, isPlatformUser: true } } },
+    });
+    const userRole: UserRole | undefined = record?.user.role;
+    const hasPlatformUserFlag = record?.user.isPlatformUser === true;
+    if (!hasPlatformUserFlag) {
+      throw new ForbiddenException({
+        code: "FORBIDDEN",
+        message: "Platform staff access required",
+      });
+    }
+    if (hasPlatformUserFlag && (userRole === "PLATFORM_ADMIN" || userRole === "EMPLOYEE")) {
+      return true;
+    }
+
     const explicitAssignment = await this.prisma.platformUserRoleAssignment.findFirst({
       where: {
         userId: user.userId,
@@ -46,13 +62,8 @@ export class PlatformRolesGuard implements CanActivate {
       return true;
     }
 
-    const record = await this.prisma.userAuth.findUnique({
-      where: { userId: user.userId },
-      select: { platformRole: true, user: { select: { role: true } } },
-    });
-
-    const userRole: UserRole | undefined = record?.user.role;
-    const hasCurrentPlatformAdminRole = userRole === "PLATFORM_ADMIN" && required.includes("PLATFORM_ADMIN");
+    const hasCurrentPlatformAdminRole =
+      hasPlatformUserFlag && userRole === "PLATFORM_ADMIN" && required.includes("PLATFORM_ADMIN");
     const hasLegacyPlatformRole =
       record?.platformRole !== undefined && required.includes(record.platformRole as LegacyPlatformRole);
 

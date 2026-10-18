@@ -4,6 +4,7 @@ function makePrisma() {
   return {
     user: { findFirst: jest.fn().mockResolvedValue(null) },
     permission: { findMany: jest.fn() },
+    organization: { findFirst: jest.fn() },
     organizationMember: { findFirst: jest.fn() },
     platformUserRoleAssignment: { findFirst: jest.fn(), findMany: jest.fn() },
     organizationPermissionGroupAssignment: { findMany: jest.fn() },
@@ -14,7 +15,7 @@ describe("PermissionService", () => {
   it("returns the full permission catalog for an active platform administrator", async () => {
     const prisma = makePrisma();
     prisma.organizationMember.findFirst.mockResolvedValue({ id: "member-a" });
-    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN" });
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN", isPlatformUser: true });
     prisma.permission.findMany.mockResolvedValue([{ key: "connect.channel.read" }, { key: "flow.project.read" }]);
     const service = new PermissionService(prisma as never);
     await expect(service.getUserPermissions("user-a", "org-a")).resolves.toEqual(["connect.channel.read", "flow.project.read"]);
@@ -27,42 +28,61 @@ describe("PermissionService", () => {
     expect(prisma.platformUserRoleAssignment.findFirst).not.toHaveBeenCalled();
   });
 
-  it("does not grant administrator access without an active platform_admin assignment", async () => {
+  it("does not grant administrator access when the platform-user flag is absent", async () => {
     const prisma = makePrisma();
-    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE" });
-    prisma.platformUserRoleAssignment.findFirst.mockResolvedValue(null);
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN", isPlatformUser: false });
     const service = new PermissionService(prisma as never);
     await expect(service.isPlatformAdministrator("user-a")).resolves.toBe(false);
+    expect(prisma.platformUserRoleAssignment.findFirst).not.toHaveBeenCalled();
   });
 
-  it("does not bypass tenant membership for platform administrators", async () => {
+  it("bypasses tenant membership for an active platform administrator", async () => {
     const prisma = makePrisma();
-    prisma.organizationMember.findFirst.mockResolvedValue(null);
-    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN" });
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN", isPlatformUser: true });
     const service = new PermissionService(prisma as never);
-    await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(false);
-    expect(prisma.user.findFirst).not.toHaveBeenCalled();
+    await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(true);
+    expect(prisma.organizationMember.findFirst).not.toHaveBeenCalled();
   });
 
   it("allows an active platform administrator after confirming tenant membership", async () => {
     const prisma = makePrisma();
     prisma.organizationMember.findFirst.mockResolvedValue({ id: "member-a" });
-    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN" });
+    prisma.user.findFirst.mockResolvedValue({ role: "PLATFORM_ADMIN", isPlatformUser: true });
     const service = new PermissionService(prisma as never);
     await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(true);
     expect(prisma.organizationPermissionGroupAssignment.findMany).not.toHaveBeenCalled();
   });
 
-  it("recognizes a non-revoked platform_admin role assignment", async () => {
+  it("does not treat a platform role assignment as unrestricted administrator access", async () => {
     const prisma = makePrisma();
-    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE" });
+    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE", isPlatformUser: false });
     prisma.platformUserRoleAssignment.findFirst.mockResolvedValue({ userId: "user-a" });
     const service = new PermissionService(prisma as never);
-    await expect(service.isPlatformAdministrator("user-a")).resolves.toBe(true);
-    expect(prisma.platformUserRoleAssignment.findFirst).toHaveBeenCalledWith({
-      where: { userId: "user-a", revokedAt: null, platformRole: { key: "platform_admin" } },
-      select: { userId: true },
-    });
+    await expect(service.isPlatformAdministrator("user-a")).resolves.toBe(false);
+    expect(prisma.platformUserRoleAssignment.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("allows an active platform employee in the platform organization", async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE", isPlatformUser: true });
+    prisma.organization.findFirst.mockResolvedValue({ id: "org-a" });
+    const service = new PermissionService(prisma as never);
+
+    await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(true);
+    expect(prisma.organizationMember.findFirst).not.toHaveBeenCalled();
+    expect(prisma.organizationPermissionGroupAssignment.findMany).not.toHaveBeenCalled();
+  });
+
+  it("does not bypass organization permissions for a platform employee outside the platform organization", async () => {
+    const prisma = makePrisma();
+    prisma.user.findFirst.mockResolvedValue({ role: "EMPLOYEE", isPlatformUser: true });
+    prisma.organization.findFirst.mockResolvedValue(null);
+    prisma.organizationMember.findFirst.mockResolvedValue({ id: "member-a" });
+    prisma.organizationPermissionGroupAssignment.findMany.mockResolvedValue([]);
+    const service = new PermissionService(prisma as never);
+
+    await expect(service.hasPermission({ userId: "user-a", organizationId: "org-a", permissionKey: "connect.channel.read" })).resolves.toBe(false);
+    expect(prisma.organizationPermissionGroupAssignment.findMany).toHaveBeenCalled();
   });
 
   it("denies a user without an active organization membership", async () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { controlPlatformService, type PlatformDashboard as PlatformDashboardData } from "@/services/control.service";
 
 interface StatCard {
   label: string;
@@ -13,6 +14,7 @@ interface StatCard {
 }
 
 interface OrgRow {
+  id: string;
   name: string;
   plan: "Free" | "Pro" | "Business" | "Enterprise";
   seats: number;
@@ -49,34 +51,7 @@ const alertColors: Record<Alert["severity"], { bg: string; color: string; label:
   info: { bg: "#dbeafe", color: "#2563eb", label: "Info" },
 };
 
-const orgs: OrgRow[] = [
-  { name: "Acme Corp", plan: "Enterprise", seats: 420, status: "Active" },
-  { name: "TechFlow", plan: "Business", seats: 85, status: "Active" },
-  { name: "Globex", plan: "Pro", seats: 32, status: "Active" },
-  { name: "Initech", plan: "Free", seats: 8, status: "Trial" },
-  { name: "Umbrella Corp", plan: "Enterprise", seats: 650, status: "Active" },
-  { name: "Stark Industries", plan: "Business", seats: 120, status: "Suspended" },
-  { name: "Wonka Co", plan: "Pro", seats: 28, status: "Active" },
-  { name: "Dunder Mifflin", plan: "Free", seats: 15, status: "Trial" },
-];
-
-const alerts: Alert[] = [
-  { severity: "critical", message: "API Gateway latency spike (95th percentile: 847ms)", time: "2m ago" },
-  { severity: "warning", message: "Redis cache hit rate below 80%", time: "15m ago" },
-  { severity: "info", message: "Scheduled maintenance window in 48h", time: "1h ago" },
-  { severity: "warning", message: "3 orgs approaching seat limit", time: "3h ago" },
-  { severity: "info", message: "New version deployed successfully", time: "6h ago" },
-];
-
-const usageBars: UsageBar[] = [
-  { name: "Hooli", pct: 80 },
-  { name: "Cyberdyne", pct: 59 },
-  { name: "Acme Corp", pct: 56 },
-  { name: "Umbrella Corp", pct: 52 },
-  { name: "Stark Industries", pct: 50 },
-];
-
-const stats: StatCard[] = [
+const statVisuals: Array<Pick<StatCard, "label" | "icon" | "sparkline">> = [
   {
     label: "Total Orgs",
     value: "847",
@@ -132,10 +107,57 @@ const stats: StatCard[] = [
 
 export default function PlatformDashboard() {
   const { toasts, addToast, removeToast } = useToast();
-  const [resolvedAlerts, setResolvedAlerts] = useState<Set<number>>(new Set());
+  const [dashboard, setDashboard] = useState<PlatformDashboardData | null>(null);
+  const [resolvedAlerts, setResolvedAlerts] = useState<Set<string>>(new Set());
 
-  const handleResolve = (i: number) => {
-    setResolvedAlerts((prev) => new Set([...prev, i]));
+  const loadDashboard = useEffectEvent(async () => {
+    try {
+      setDashboard(await controlPlatformService.dashboard());
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load platform dashboard", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadDashboard);
+  }, []);
+
+  const stats: StatCard[] = [
+    { ...statVisuals[0], value: dashboard?.metrics.totalOrganizations.toLocaleString() ?? "--", change: "Live total", positive: true },
+    { ...statVisuals[1], value: dashboard?.metrics.activeUsers.toLocaleString() ?? "--", change: "Currently active", positive: true },
+    {
+      ...statVisuals[2],
+      value: dashboard ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(dashboard.metrics.monthlyRecurringRevenueMinor / 100) : "--",
+      change: "Current monthly run rate",
+      positive: true,
+    },
+    {
+      ...statVisuals[3],
+      value: dashboard?.metrics.uptimePercent === null || !dashboard ? "--" : `${dashboard.metrics.uptimePercent.toFixed(2)}%`,
+      change: dashboard ? `Observed since ${new Date(dashboard.metrics.observedSince).toLocaleDateString()}` : "Loading",
+      positive: true,
+    },
+  ];
+  const orgs: OrgRow[] = (dashboard?.recentOrganizations ?? []).map((organization) => ({
+    id: organization.id,
+    name: organization.name,
+    plan: { FREE: "Free", STANDARD: "Pro", PREMIUM: "Business", ENTERPRISE: "Enterprise" }[organization.plan] as OrgRow["plan"] ?? "Free",
+    seats: organization.seats,
+    status: organization.status === "SUSPENDED" ? "Suspended" : organization.status === "TRIALING" ? "Trial" : "Active",
+  }));
+  const alerts: Alert[] = (dashboard?.alerts ?? []).map((alert) => ({
+    severity: alert.severity,
+    message: alert.message,
+    time: new Date(alert.observedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  }));
+  const usageBars: UsageBar[] = (dashboard?.topOrganizationsByUsage ?? []).map((organization) => ({
+    name: organization.name,
+    pct: organization.percentage,
+  }));
+  const criticalAlertCount = alerts.filter((alert) => alert.severity === "critical").length;
+
+  const handleResolve = (message: string) => {
+    setResolvedAlerts((prev) => new Set([...prev, message]));
     addToast("Alert resolved successfully", "success");
   };
 
@@ -373,16 +395,16 @@ export default function PlatformDashboard() {
                 fontWeight: 600,
               }}
             >
-              2 Critical
+              {criticalAlertCount} Critical
             </span>
           </div>
           <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
-            {alerts.map((a, i) => {
-              if (resolvedAlerts.has(i)) return null;
+            {alerts.map((a) => {
+              if (resolvedAlerts.has(a.message)) return null;
               const ac = alertColors[a.severity];
               return (
                 <div
-                  key={i}
+                  key={a.message}
                   style={{
                     padding: 12,
                     borderRadius: 8,
@@ -411,7 +433,7 @@ export default function PlatformDashboard() {
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
                     <span style={{ fontSize: 11, color: "#64748b" }}>{a.time}</span>
                     <button
-                      onClick={() => handleResolve(i)}
+                      onClick={() => handleResolve(a.message)}
                       style={{
                         padding: "3px 10px",
                         borderRadius: 5,

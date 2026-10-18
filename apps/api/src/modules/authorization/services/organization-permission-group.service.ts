@@ -28,6 +28,7 @@ export class OrganizationPermissionGroupService {
   }
 
   async create(organizationId: string, actorUserId: string, input: { name: string; description?: string }) {
+    this.assertValidName(input.name);
     const group = await this.prisma.organizationPermissionGroup
       .create({
         data: { organizationId, name: input.name.trim(), description: input.description?.trim() ?? null },
@@ -56,6 +57,9 @@ export class OrganizationPermissionGroupService {
     input: { name?: string; description?: string; isActive?: boolean },
   ) {
     await this.requireGroup(organizationId, groupId);
+    if (input.name !== undefined) {
+      this.assertValidName(input.name);
+    }
     const group = await this.prisma.organizationPermissionGroup.update({
       where: { id: groupId },
       data: {
@@ -213,6 +217,16 @@ export class OrganizationPermissionGroupService {
       throw new AppError(
         ErrorCode.MEMBER_NOT_FOUND,
         "User is not an active organization member",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+  }
+
+  private assertValidName(name: string): void {
+    if (!/^[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$/.test(name)) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Permission group names may contain only letters, numbers, and underscores between words",
         HttpStatus.BAD_REQUEST,
       );
     }

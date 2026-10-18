@@ -7,6 +7,9 @@ export class CreatePermissionGroupDto {
   @IsString()
   @MinLength(1)
   @MaxLength(120)
+  @Matches(/^[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$/, {
+    message: "name must contain only letters, numbers, and single underscores between words",
+  })
   name!: string;
 
   @ApiPropertyOptional()
@@ -22,6 +25,9 @@ export class UpdatePermissionGroupDto {
   @IsString()
   @MinLength(1)
   @MaxLength(120)
+  @Matches(/^[A-Za-z0-9]+(?:_[A-Za-z0-9]+)*$/, {
+    message: "name must contain only letters, numbers, and single underscores between words",
+  })
   name?: string;
 
   @ApiPropertyOptional()

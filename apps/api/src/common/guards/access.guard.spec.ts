@@ -21,7 +21,7 @@ describe("AccessGuard", () => {
   function makeGuard() {
     const reflector = { getAllAndOverride: jest.fn().mockReturnValue(requirements) };
     const entitlement = { assertFeatureEnabled: jest.fn() };
-    const permissions = { assertPermission: jest.fn(), isPlatformAdministrator: jest.fn().mockResolvedValue(false) };
+    const permissions = { assertPermission: jest.fn(), hasUnrestrictedPlatformAccess: jest.fn().mockResolvedValue(false) };
     const prisma = { issue: { findFirst: jest.fn() }, board: { findFirst: jest.fn() } };
     return {
       guard: new AccessGuard(reflector as never, entitlement as never, permissions as never, prisma as never),
@@ -31,11 +31,11 @@ describe("AccessGuard", () => {
     };
   }
 
-  it("allows a platform administrator without requiring organization entitlements or explicit permissions", async () => {
+  it("allows an unrestricted platform user without requiring organization entitlements or explicit permissions", async () => {
     const { guard, entitlement, permissions } = makeGuard();
-    permissions.isPlatformAdministrator.mockResolvedValue(true);
+    permissions.hasUnrestrictedPlatformAccess.mockResolvedValue(true);
     await expect(guard.canActivate(makeContext() as never)).resolves.toBe(true);
-    expect(permissions.isPlatformAdministrator).toHaveBeenCalledWith("user-a");
+    expect(permissions.hasUnrestrictedPlatformAccess).toHaveBeenCalledWith("user-a", "org-a");
     expect(entitlement.assertFeatureEnabled).not.toHaveBeenCalled();
     expect(permissions.assertPermission).not.toHaveBeenCalled();
   });

@@ -63,11 +63,11 @@ describe("OrganizationService membership lifecycle", () => {
     const organization = { id: "org-new", name: "Northwind" };
     const apps = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"];
     const expectedGroupNames = apps.flatMap((app) => [
-      `Northwind-${app}-admins`,
-      `Northwind-${app}-users`,
-      `Northwind-${app}-guest`,
+      `Northwind_${app}_admins`,
+      `Northwind_${app}_users`,
+      `Northwind_${app}_guest`,
     ]);
-    const adminGroups = apps.map((app, index) => ({ id: `admin-group-${index}`, name: `Northwind-${app}-admins` }));
+    const adminGroups = apps.map((app, index) => ({ id: `admin-group-${index}`, name: `Northwind_${app}_admins` }));
     const transaction = {
       organization: { create: jest.fn().mockResolvedValue(organization) },
       onBoardingProfile: { upsert: jest.fn().mockResolvedValue({}) },

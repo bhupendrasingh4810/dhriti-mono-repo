@@ -12,22 +12,27 @@ async function main(): Promise<void> {
   if (reset && process.env.NODE_ENV === "production") {
     throw new Error("Database seed reset is disabled in production.");
   }
-  await client.$transaction(async (transaction) => {
-    prisma = transaction;
-    if (reset) {
-      const tables = await transaction.$queryRaw<Array<{ schemaname: string; tablename: string }>>`
+  await client.$transaction(
+    async (transaction) => {
+      prisma = transaction;
+      if (reset) {
+        const tables = await transaction.$queryRaw<Array<{ schemaname: string; tablename: string }>>`
         SELECT schemaname, tablename FROM pg_tables
         WHERE schemaname = current_schema() AND tablename <> '_prisma_migrations'
       `;
-      if (tables.length > 0) {
-        const identifiers = tables.map(({ schemaname, tablename }) =>
-          Prisma.raw(`"${schemaname.replace(/"/g, '""')}"."${tablename.replace(/"/g, '""')}"`),
-        );
-        await transaction.$executeRaw(Prisma.sql`TRUNCATE TABLE ${Prisma.join(identifiers)} RESTART IDENTITY CASCADE`);
+        if (tables.length > 0) {
+          const identifiers = tables.map(({ schemaname, tablename }) =>
+            Prisma.raw(`"${schemaname.replace(/"/g, '""')}"."${tablename.replace(/"/g, '""')}"`),
+          );
+          await transaction.$executeRaw(
+            Prisma.sql`TRUNCATE TABLE ${Prisma.join(identifiers)} RESTART IDENTITY CASCADE`,
+          );
+        }
       }
-    }
-    await seedData();
-  }, { timeout: 300000, maxWait: 10000 });
+      await seedData();
+    },
+    { timeout: 300000, maxWait: 10000 },
+  );
   console.log("Seed committed successfully.");
 }
 
@@ -68,8 +73,8 @@ async function seedData(): Promise<void> {
   });
   const platformOrg = await prisma.organization.upsert({
     where: { slug: "platform" },
-    update: { deletedAt: null },
-    create: { name: "Dhriti Platform", slug: "platform" },
+    update: { deletedAt: null, isPlatformOrganization: true },
+    create: { name: "Dhriti Platform", slug: "platform", isPlatformOrganization: true },
   });
 
   await prisma.organizationSettings.upsert({
@@ -85,7 +90,13 @@ async function seedData(): Promise<void> {
     for (const user of tenant.users) {
       await prisma.organizationMember.upsert({
         where: { organizationId_userId: { organizationId: tenant.organization.id, userId: user.id } },
-        update: { status: "ACTIVE", isOwner: user.id === tenant.owner.id, deletedAt: null, removedAt: null, suspendedAt: null },
+        update: {
+          status: "ACTIVE",
+          isOwner: user.id === tenant.owner.id,
+          deletedAt: null,
+          removedAt: null,
+          suspendedAt: null,
+        },
         create: {
           organizationId: tenant.organization.id,
           userId: user.id,
@@ -382,7 +393,7 @@ async function seedData(): Promise<void> {
       );
       {
         const transaction = prisma;
-        const groupName = `Seed access: ${fullEntitlementEmail}`;
+        const groupName = `Seed_access_${fullEntitlementEmail.replace(/[^A-Za-z0-9]+/g, "_")}`;
         const group = await transaction.organizationPermissionGroup.upsert({
           where: {
             organizationId_name: { organizationId: membership.organizationId, name: groupName },
@@ -428,7 +439,9 @@ async function seedData(): Promise<void> {
         }
       }
     }
-    console.log(`Granted all entitlements and seeded permissions to ${memberships.length} organizations for ${fullEntitlementEmail}.`);
+    console.log(
+      `Granted all entitlements and seeded permissions to ${memberships.length} organizations for ${fullEntitlementEmail}.`,
+    );
   } else {
     console.warn(`Skipped full entitlement grants: active user ${fullEntitlementEmail} was not found.`);
   }
@@ -469,11 +482,11 @@ async function seedData(): Promise<void> {
     if (administrators.length === 0) continue;
 
     const group = await prisma.organizationPermissionGroup.upsert({
-      where: { organizationId_name: { organizationId: organization.id, name: "Legacy administrators" } },
+      where: { organizationId_name: { organizationId: organization.id, name: "Legacy_administrators" } },
       update: { isActive: true, deletedAt: null, isSystem: true },
       create: {
         organizationId: organization.id,
-        name: "Legacy administrators",
+        name: "Legacy_administrators",
         description: "Compatibility permissions for legacy organization administrators",
         isSystem: true,
       },
@@ -513,7 +526,11 @@ async function seedData(): Promise<void> {
     const organizationId = tenant.organization.id;
     await prisma.organization.update({
       where: { id: organizationId },
-      data: { seats: 100, activatedAt: new Date(), enabledProducts: ["CONNECT", "FLOW", "PULSE", "ATLAS", "CADENCE", "NEXUS"] },
+      data: {
+        seats: 100,
+        activatedAt: new Date(),
+        enabledProducts: ["CONNECT", "FLOW", "PULSE", "ATLAS", "CADENCE", "NEXUS"],
+      },
     });
     await prisma.organizationSettings.upsert({
       where: { organizationId },
@@ -523,12 +540,20 @@ async function seedData(): Promise<void> {
     await prisma.subscription.upsert({
       where: { organizationId },
       update: { plan: "PREMIUM", planId: premiumPlan.id, status: "ACTIVE", seats: 100, currentPeriodEnd: null },
-      create: { organizationId, plan: "PREMIUM", planId: premiumPlan.id, status: "ACTIVE", seats: 100, currentPeriodEnd: null },
+      create: {
+        organizationId,
+        plan: "PREMIUM",
+        planId: premiumPlan.id,
+        status: "ACTIVE",
+        seats: 100,
+        currentPeriodEnd: null,
+      },
     });
     for (const entitlement of await prisma.entitlement.findMany()) {
-      const value = entitlement.kind === "LIMIT"
-        ? planEntitlements.find((item) => item.key === entitlement.key)?.value ?? 100
-        : null;
+      const value =
+        entitlement.kind === "LIMIT"
+          ? (planEntitlements.find((item) => item.key === entitlement.key)?.value ?? 100)
+          : null;
       await prisma.organizationEntitlement.upsert({
         where: { organizationId_entitlementId: { organizationId, entitlementId: entitlement.id } },
         update: { enabled: true, value, expiresAt: null },
@@ -537,7 +562,8 @@ async function seedData(): Promise<void> {
     }
     for (const app of apps) {
       for (const groupType of ["admins", "users", "guest"] as const) {
-        const name = `${tenant.organization.name}-${app}-${groupType}`;
+        const organizationName = tenant.organization.name.trim().replace(/\s+/g, "_");
+        const name = `${organizationName}_${app}_${groupType}`;
         const group = await prisma.organizationPermissionGroup.upsert({
           where: { organizationId_name: { organizationId, name } },
           update: { isActive: true, isSystem: true, deletedAt: null },
@@ -548,9 +574,13 @@ async function seedData(): Promise<void> {
           if (groupType === "users" && key === "organization.members.read") return true;
           if (!key.startsWith(`${app}.`)) return false;
           if (groupType === "guest") return key.endsWith(".read");
-          return key.endsWith(".read") || (["connect", "flow", "atlas", "pulse", "cadence", "nexus"].includes(app)
-            && /\.(create|update|transition|delete)$/.test(key) && !key.startsWith("connect.channel.")
-            && !key.startsWith("flow.project."));
+          return (
+            key.endsWith(".read") ||
+            (["connect", "flow", "atlas", "pulse", "cadence", "nexus"].includes(app) &&
+              /\.(create|update|transition|delete)$/.test(key) &&
+              !key.startsWith("connect.channel.") &&
+              !key.startsWith("flow.project."))
+          );
         });
         await prisma.organizationPermissionGroupPermission.createMany({
           data: groupPermissions.map(({ id }) => ({ permissionGroupId: group.id, permissionId: id })),
@@ -561,10 +591,19 @@ async function seedData(): Promise<void> {
             where: { organizationId, permissionGroupId: group.id, userId: tenant.owner.id, scopeType: "ORGANIZATION" },
           });
           if (existing) {
-            await prisma.organizationPermissionGroupAssignment.update({ where: { id: existing.id }, data: { revokedAt: null } });
+            await prisma.organizationPermissionGroupAssignment.update({
+              where: { id: existing.id },
+              data: { revokedAt: null },
+            });
           } else {
             await prisma.organizationPermissionGroupAssignment.create({
-              data: { organizationId, permissionGroupId: group.id, userId: tenant.owner.id, scopeType: "ORGANIZATION", assignedByUserId: tenant.owner.id },
+              data: {
+                organizationId,
+                permissionGroupId: group.id,
+                userId: tenant.owner.id,
+                scopeType: "ORGANIZATION",
+                assignedByUserId: tenant.owner.id,
+              },
             });
           }
         }
@@ -578,8 +617,13 @@ async function seedData(): Promise<void> {
         where: { userId: user.id },
         update: { timezone: "Asia/Kolkata" },
         create: {
-          userId: user.id, firstName: user.name.split(" ")[0], lastName: user.name.split(" ").slice(1).join(" "),
-          jobTitle: index === 0 ? "Administrator" : "Employee", department: "Engineering", timezone: "Asia/Kolkata", locale: "en-IN",
+          userId: user.id,
+          firstName: user.name.split(" ")[0],
+          lastName: user.name.split(" ").slice(1).join(" "),
+          jobTitle: index === 0 ? "Administrator" : "Employee",
+          department: "Engineering",
+          timezone: "Asia/Kolkata",
+          locale: "en-IN",
         },
       });
       await prisma.onBoardingProfile.upsert({
@@ -590,11 +634,26 @@ async function seedData(): Promise<void> {
       await prisma.hrmsEmployee.upsert({
         where: { organizationId_userId: { organizationId, userId: user.id } },
         update: { status: "ACTIVE", deletedAt: null },
-        create: { organizationId, userId: user.id, employeeNumber, status: "ACTIVE", employmentType: "FULL_TIME", startDate: new Date("2024-01-01") },
+        create: {
+          organizationId,
+          userId: user.id,
+          employeeNumber,
+          status: "ACTIVE",
+          employmentType: "FULL_TIME",
+          startDate: new Date("2024-01-01"),
+        },
       });
       await prisma.userWorkOSProfile.upsert({
-        where: { userId: user.id }, update: {},
-        create: { userId: user.id, workingHoursStart: "09:30", workingHoursEnd: "18:30", workingHoursPerWeek: 40, vacationBalance: 12, sickLeaveBalance: 8 },
+        where: { userId: user.id },
+        update: {},
+        create: {
+          userId: user.id,
+          workingHoursStart: "09:30",
+          workingHoursEnd: "18:30",
+          workingHoursPerWeek: 40,
+          vacationBalance: 12,
+          sickLeaveBalance: 8,
+        },
       });
     }
   }
@@ -1200,95 +1259,95 @@ async function seedData(): Promise<void> {
   `;
   if (legacyHrFixtures[0]?.exists) {
     const [bobHr, priyaHr] = await Promise.all([
-    prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: bob.id } }),
-    prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: priya.id } }),
-  ]);
+      prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: bob.id } }),
+      prisma.userHRMSProfile.findUniqueOrThrow({ where: { userId: priya.id } }),
+    ]);
     const attendanceDate = new Date("2026-09-18T00:00:00.000Z");
-  const attendance = await prisma.attendanceRecord.findFirst({ where: { userId: bobHr.id, date: attendanceDate } });
-  if (!attendance) {
-    await prisma.attendanceRecord.create({
-      data: {
-        userId: bobHr.id,
-        date: attendanceDate,
-        checkIn: new Date("2026-09-18T04:05:00.000Z"),
-        checkOut: new Date("2026-09-18T12:35:00.000Z"),
-        status: "PRESENT",
-        workHours: 8,
-        breakTime: 30,
+    const attendance = await prisma.attendanceRecord.findFirst({ where: { userId: bobHr.id, date: attendanceDate } });
+    if (!attendance) {
+      await prisma.attendanceRecord.create({
+        data: {
+          userId: bobHr.id,
+          date: attendanceDate,
+          checkIn: new Date("2026-09-18T04:05:00.000Z"),
+          checkOut: new Date("2026-09-18T12:35:00.000Z"),
+          status: "PRESENT",
+          workHours: 8,
+          breakTime: 30,
+          location: "Bengaluru",
+        },
+      });
+    }
+    const leave = await prisma.leaveRequest.findFirst({
+      where: { userId: priyaHr.id, startDate: new Date("2026-10-12T00:00:00.000Z") },
+    });
+    if (!leave) {
+      await prisma.leaveRequest.create({
+        data: {
+          userId: priyaHr.id,
+          leaveType: "VACATION",
+          startDate: new Date("2026-10-12T00:00:00.000Z"),
+          endDate: new Date("2026-10-14T00:00:00.000Z"),
+          totalDays: 3,
+          reason: "Planned family travel",
+          status: "APPROVED",
+          approvedBy: elena.id,
+          approvedAt: new Date("2026-09-15T00:00:00.000Z"),
+        },
+      });
+    }
+    let training = await prisma.training.findFirst({ where: { title: "Secure Payments Engineering" } });
+    if (!training) {
+      training = await prisma.training.create({
+        data: {
+          title: "Secure Payments Engineering",
+          description: "PCI basics, secure integration patterns, and incident response.",
+          type: "TECHNICAL",
+          provider: "Acme Academy",
+          duration: 180,
+          status: "SCHEDULED",
+          maxParticipants: 25,
+          certificationOffered: true,
+        },
+      });
+    }
+    await prisma.trainingEnrollment.upsert({
+      where: { trainingId_userId: { trainingId: training.id, userId: bobHr.id } },
+      update: { status: "ENROLLED" },
+      create: { trainingId: training.id, userId: bobHr.id, status: "ENROLLED" },
+    });
+    await prisma.asset.upsert({
+      where: { serialNumber: "ACME-MBP-1002" },
+      update: { status: "ASSIGNED", assignedTo: bobHr.id },
+      create: {
+        name: "MacBook Pro 14",
+        type: "LAPTOP",
+        serialNumber: "ACME-MBP-1002",
+        manufacturer: "Apple",
+        model: "MacBook Pro M3",
+        status: "ASSIGNED",
+        assignedTo: bobHr.id,
+        assignedAt: new Date("2026-01-08T00:00:00.000Z"),
+        condition: "Excellent",
         location: "Bengaluru",
       },
     });
-  }
-  const leave = await prisma.leaveRequest.findFirst({
-    where: { userId: priyaHr.id, startDate: new Date("2026-10-12T00:00:00.000Z") },
-  });
-  if (!leave) {
-    await prisma.leaveRequest.create({
-      data: {
-        userId: priyaHr.id,
-        leaveType: "VACATION",
-        startDate: new Date("2026-10-12T00:00:00.000Z"),
-        endDate: new Date("2026-10-14T00:00:00.000Z"),
-        totalDays: 3,
-        reason: "Planned family travel",
-        status: "APPROVED",
-        approvedBy: elena.id,
-        approvedAt: new Date("2026-09-15T00:00:00.000Z"),
-      },
-    });
-  }
-  let training = await prisma.training.findFirst({ where: { title: "Secure Payments Engineering" } });
-  if (!training) {
-    training = await prisma.training.create({
-      data: {
-        title: "Secure Payments Engineering",
-        description: "PCI basics, secure integration patterns, and incident response.",
-        type: "TECHNICAL",
-        provider: "Acme Academy",
-        duration: 180,
-        status: "SCHEDULED",
-        maxParticipants: 25,
-        certificationOffered: true,
-      },
-    });
-  }
-  await prisma.trainingEnrollment.upsert({
-    where: { trainingId_userId: { trainingId: training.id, userId: bobHr.id } },
-    update: { status: "ENROLLED" },
-    create: { trainingId: training.id, userId: bobHr.id, status: "ENROLLED" },
-  });
-  await prisma.asset.upsert({
-    where: { serialNumber: "ACME-MBP-1002" },
-    update: { status: "ASSIGNED", assignedTo: bobHr.id },
-    create: {
-      name: "MacBook Pro 14",
-      type: "LAPTOP",
-      serialNumber: "ACME-MBP-1002",
-      manufacturer: "Apple",
-      model: "MacBook Pro M3",
-      status: "ASSIGNED",
-      assignedTo: bobHr.id,
-      assignedAt: new Date("2026-01-08T00:00:00.000Z"),
-      condition: "Excellent",
-      location: "Bengaluru",
-    },
-  });
     const insurance = await prisma.healthInsurance.findFirst({
-    where: { organizationId: org.id, userId: bobHr.id, provider: "Acme Health" },
-  });
-    if (!insurance) {
-    await prisma.healthInsurance.create({
-      data: {
-        organizationId: org.id,
-        userId: bobHr.id,
-        provider: "Acme Health",
-        planName: "Gold",
-        policyNumber: "ACME-2026-GOLD",
-        memberNumber: "1002",
-        coverageStarts: new Date("2026-01-01T00:00:00.000Z"),
-        isActive: true,
-      },
+      where: { organizationId: org.id, userId: bobHr.id, provider: "Acme Health" },
     });
+    if (!insurance) {
+      await prisma.healthInsurance.create({
+        data: {
+          organizationId: org.id,
+          userId: bobHr.id,
+          provider: "Acme Health",
+          planName: "Gold",
+          policyNumber: "ACME-2026-GOLD",
+          memberNumber: "1002",
+          coverageStarts: new Date("2026-01-01T00:00:00.000Z"),
+          isActive: true,
+        },
+      });
     }
   }
 
@@ -1401,130 +1460,384 @@ async function seedTenantData(organization: Organization, users: User[], owner: 
   const organizationId = organization.id;
   const team = await prisma.team.upsert({
     where: { organizationId_slug: { organizationId, slug: "engineering" } },
-    update: { deletedAt: null }, create: { organizationId, name: "Engineering", slug: "engineering" },
+    update: { deletedAt: null },
+    create: { organizationId, name: "Engineering", slug: "engineering" },
   });
   const accessTeam = await prisma.organizationTeam.upsert({
     where: { organizationId_slug: { organizationId, slug: "engineering" } },
-    update: { deletedAt: null }, create: { organizationId, name: "Engineering", slug: "engineering" },
+    update: { deletedAt: null },
+    create: { organizationId, name: "Engineering", slug: "engineering" },
   });
   for (const user of users) {
-    await prisma.teamMember.upsert({ where: { teamId_userId: { teamId: team.id, userId: user.id } }, update: {}, create: { teamId: team.id, userId: user.id } });
-    await prisma.organizationTeamMember.upsert({ where: { teamId_userId: { teamId: accessTeam.id, userId: user.id } }, update: {}, create: { teamId: accessTeam.id, userId: user.id } });
+    await prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId: team.id, userId: user.id } },
+      update: {},
+      create: { teamId: team.id, userId: user.id },
+    });
+    await prisma.organizationTeamMember.upsert({
+      where: { teamId_userId: { teamId: accessTeam.id, userId: user.id } },
+      update: {},
+      create: { teamId: accessTeam.id, userId: user.id },
+    });
   }
   const general = await prisma.channel.upsert({
     where: { organizationId_slug: { organizationId, slug: "general" } },
     update: { teamId: team.id, isArchived: false, deletedAt: null },
-    create: { organizationId, teamId: team.id, name: "General", slug: "general", type: "CHANNEL", visibility: "PUBLIC", createdById: owner.id },
+    create: {
+      organizationId,
+      teamId: team.id,
+      name: "General",
+      slug: "general",
+      type: "CHANNEL",
+      visibility: "PUBLIC",
+      createdById: owner.id,
+    },
   });
-  await prisma.channelMember.createMany({ data: users.map((user) => ({ channelId: general.id, userId: user.id })), skipDuplicates: true });
-  await ensureMessage(organizationId, general.id, owner.id, `Welcome to ${organization.name}. All 15 members can collaborate here.`);
+  await prisma.channelMember.createMany({
+    data: users.map((user) => ({ channelId: general.id, userId: user.id })),
+    skipDuplicates: true,
+  });
+  await ensureMessage(
+    organizationId,
+    general.id,
+    owner.id,
+    `Welcome to ${organization.name}. All 15 members can collaborate here.`,
+  );
   const directIds = new Map<string, string>();
   for (const user of users.filter((person) => person.id !== owner.id)) {
     const direct = await prisma.channel.upsert({
       where: { organizationId_slug: { organizationId, slug: `direct-${user.id}` } },
       update: {},
-      create: { organizationId, name: `Chat with ${user.name}`, slug: `direct-${user.id}`, type: "DIRECT", visibility: "PRIVATE", createdById: owner.id },
+      create: {
+        organizationId,
+        name: `Chat with ${user.name}`,
+        slug: `direct-${user.id}`,
+        type: "DIRECT",
+        visibility: "PRIVATE",
+        createdById: owner.id,
+      },
     });
-    await prisma.channelMember.createMany({ data: [owner, user].map((person) => ({ channelId: direct.id, userId: person.id })), skipDuplicates: true });
-    const welcome = await ensureMessage(organizationId, direct.id, owner.id, `Hello @[${user.name}], welcome to ${organization.name}.`);
-    await prisma.messageMention.upsert({ where: { messageId_userId: { messageId: welcome.id, userId: user.id } }, update: {}, create: { messageId: welcome.id, userId: user.id } });
+    await prisma.channelMember.createMany({
+      data: [owner, user].map((person) => ({ channelId: direct.id, userId: person.id })),
+      skipDuplicates: true,
+    });
+    const welcome = await ensureMessage(
+      organizationId,
+      direct.id,
+      owner.id,
+      `Hello @[${user.name}], welcome to ${organization.name}.`,
+    );
+    await prisma.messageMention.upsert({
+      where: { messageId_userId: { messageId: welcome.id, userId: user.id } },
+      update: {},
+      create: { messageId: welcome.id, userId: user.id },
+    });
     await ensureMessage(organizationId, direct.id, user.id, "Thanks! I am ready to collaborate.");
-    await prisma.messageReaction.upsert({ where: { messageId_userId_emoji: { messageId: welcome.id, userId: user.id, emoji: "👍" } }, update: {}, create: { messageId: welcome.id, userId: user.id, emoji: "👍" } });
+    await prisma.messageReaction.upsert({
+      where: { messageId_userId_emoji: { messageId: welcome.id, userId: user.id, emoji: "👍" } },
+      update: {},
+      create: { messageId: welcome.id, userId: user.id, emoji: "👍" },
+    });
     directIds.set(user.id, direct.id);
   }
   for (const user of users) {
     const recentChats = user.id === owner.id ? [...directIds.values()] : [directIds.get(user.id)!];
     await prisma.connectSidebarPreference.upsert({
-      where: { organizationId_userId: { organizationId, userId: user.id } }, update: {},
-      create: { organizationId, userId: user.id, preferences: {
-        favorites: { chats: recentChats.slice(0, 1), teams: [team.id], channels: [general.id] },
-        recentChats, settings: { mentions: "always", threads: "always", drafts: "visible", favoritesFilter: "all", chatsFilter: "all", expandedTeamIds: [team.id] },
-      } },
+      where: { organizationId_userId: { organizationId, userId: user.id } },
+      update: {},
+      create: {
+        organizationId,
+        userId: user.id,
+        preferences: {
+          favorites: { chats: recentChats.slice(0, 1), teams: [team.id], channels: [general.id] },
+          recentChats,
+          settings: {
+            mentions: "always",
+            threads: "always",
+            drafts: "visible",
+            favoritesFilter: "all",
+            chatsFilter: "all",
+            expandedTeamIds: [team.id],
+          },
+        },
+      },
     });
     await prisma.notificationPreference.upsert({
-      where: { userId_organizationId_type: { userId: user.id, organizationId, type: "SYSTEM" } }, update: {},
+      where: { userId_organizationId_type: { userId: user.id, organizationId, type: "SYSTEM" } },
+      update: {},
       create: { userId: user.id, organizationId, type: "SYSTEM", inApp: true, email: false, push: false },
     });
-    if (!await prisma.notification.findFirst({ where: { organizationId, userId: user.id, title: "Workspace ready" } })) {
-      await prisma.notification.create({ data: { organizationId, userId: user.id, type: "SYSTEM", title: "Workspace ready", body: `Welcome to ${organization.name}`, linkUrl: `/${organization.slug}/connect` } });
+    if (
+      !(await prisma.notification.findFirst({ where: { organizationId, userId: user.id, title: "Workspace ready" } }))
+    ) {
+      await prisma.notification.create({
+        data: {
+          organizationId,
+          userId: user.id,
+          type: "SYSTEM",
+          title: "Workspace ready",
+          body: `Welcome to ${organization.name}`,
+          linkUrl: `/${organization.slug}/connect`,
+        },
+      });
     }
   }
   const project = await prisma.project.upsert({
-    where: { organizationId_key: { organizationId, key: "DEMO" } }, update: {},
+    where: { organizationId_key: { organizationId, key: "DEMO" } },
+    update: {},
     create: { organizationId, teamId: team.id, key: "DEMO", name: "Workspace Launch", leadId: owner.id },
   });
   const issue = await prisma.issue.upsert({
-    where: { projectId_number: { projectId: project.id, number: 1 } }, update: {},
-    create: { organizationId, projectId: project.id, number: 1, title: "Review workspace setup", status: "TODO", priority: "MEDIUM", assigneeId: users[1]!.id, reporterId: owner.id, position: 0 },
+    where: { projectId_number: { projectId: project.id, number: 1 } },
+    update: {},
+    create: {
+      organizationId,
+      projectId: project.id,
+      number: 1,
+      title: "Review workspace setup",
+      status: "TODO",
+      priority: "MEDIUM",
+      assigneeId: users[1]!.id,
+      reporterId: owner.id,
+      position: 0,
+    },
   });
   let board = await prisma.board.findFirst({ where: { projectId: project.id, deletedAt: null } });
   if (!board) {
     board = await prisma.board.create({ data: { projectId: project.id, name: "Launch Board" } });
-    await prisma.boardColumn.createMany({ data: (["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"] as const).map((status, position) => ({ boardId: board!.id, name: status.replace(/_/g, " "), status, position })) });
+    await prisma.boardColumn.createMany({
+      data: (["BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE"] as const).map((status, position) => ({
+        boardId: board!.id,
+        name: status.replace(/_/g, " "),
+        status,
+        position,
+      })),
+    });
   }
   const space = await prisma.atlasSpace.upsert({
-    where: { organizationId_key: { organizationId, key: "WELCOME" } }, update: {},
+    where: { organizationId_key: { organizationId, key: "WELCOME" } },
+    update: {},
     create: { organizationId, key: "WELCOME", name: "Getting Started", createdById: owner.id },
   });
-  if (!await prisma.atlasPage.findFirst({ where: { spaceId: space.id, title: "Workspace Guide" } })) {
-    await prisma.atlasPage.create({ data: { organizationId, spaceId: space.id, title: "Workspace Guide", content: `# ${organization.name}\n\nConnect with teammates, track projects, and maintain shared knowledge.`, createdById: owner.id, isPublished: true } });
+  if (!(await prisma.atlasPage.findFirst({ where: { spaceId: space.id, title: "Workspace Guide" } }))) {
+    await prisma.atlasPage.create({
+      data: {
+        organizationId,
+        spaceId: space.id,
+        title: "Workspace Guide",
+        content: `# ${organization.name}\n\nConnect with teammates, track projects, and maintain shared knowledge.`,
+        createdById: owner.id,
+        isPublished: true,
+      },
+    });
   }
   let calendar = await prisma.calendar.findFirst({ where: { organizationId, ownerId: owner.id, isDefault: true } });
-  if (!calendar) calendar = await prisma.calendar.create({ data: { organizationId, ownerId: owner.id, name: "Team Calendar", color: "teal", isDefault: true } });
+  if (!calendar)
+    calendar = await prisma.calendar.create({
+      data: { organizationId, ownerId: owner.id, name: "Team Calendar", color: "teal", isDefault: true },
+    });
   let event = await prisma.calendarEvent.findFirst({ where: { calendarId: calendar.id, title: "Workspace Kickoff" } });
   if (!event) {
     const startsAt = new Date(Date.now() + 86400000);
-    event = await prisma.calendarEvent.create({ data: { organizationId, calendarId: calendar.id, title: "Workspace Kickoff", startsAt, endsAt: new Date(startsAt.getTime() + 3600000), createdById: owner.id } });
+    event = await prisma.calendarEvent.create({
+      data: {
+        organizationId,
+        calendarId: calendar.id,
+        title: "Workspace Kickoff",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 3600000),
+        createdById: owner.id,
+      },
+    });
   }
   for (const user of users) {
-    await prisma.eventAttendee.upsert({ where: { eventId_userId: { eventId: event.id, userId: user.id } }, update: {}, create: { eventId: event.id, userId: user.id, status: "ACCEPTED", isOrganizer: user.id === owner.id } });
+    await prisma.eventAttendee.upsert({
+      where: { eventId_userId: { eventId: event.id, userId: user.id } },
+      update: {},
+      create: { eventId: event.id, userId: user.id, status: "ACCEPTED", isOrganizer: user.id === owner.id },
+    });
   }
-  if (!await prisma.cadenceSession.findFirst({ where: { organizationId, title: "Workspace retrospective" } })) {
-    const session = await prisma.cadenceSession.create({ data: { organizationId, teamId: team.id, type: "RETROSPECTIVE", title: "Workspace retrospective", phase: "COLLECT", facilitatorId: owner.id } });
-    const card = await prisma.cadenceCard.create({ data: { sessionId: session.id, authorId: users[1]!.id, column: "Went well", content: "All members have access to the workspace." } });
+  if (!(await prisma.cadenceSession.findFirst({ where: { organizationId, title: "Workspace retrospective" } }))) {
+    const session = await prisma.cadenceSession.create({
+      data: {
+        organizationId,
+        teamId: team.id,
+        type: "RETROSPECTIVE",
+        title: "Workspace retrospective",
+        phase: "COLLECT",
+        facilitatorId: owner.id,
+      },
+    });
+    const card = await prisma.cadenceCard.create({
+      data: {
+        sessionId: session.id,
+        authorId: users[1]!.id,
+        column: "Went well",
+        content: "All members have access to the workspace.",
+      },
+    });
     await prisma.cadenceVote.create({ data: { cardId: card.id, userId: owner.id } });
   }
-  if (!await prisma.nexusConversation.findFirst({ where: { organizationId, userId: owner.id, title: "Workspace planning" } })) {
-    const conversation = await prisma.nexusConversation.create({ data: { organizationId, userId: owner.id, title: "Workspace planning" } });
-    await prisma.nexusMessage.createMany({ data: [{ conversationId: conversation.id, role: "user", content: "What should we review first?" }, { conversationId: conversation.id, role: "assistant", content: `Start with DEMO-${issue.number}: ${issue.title}.` }] });
+  if (
+    !(await prisma.nexusConversation.findFirst({
+      where: { organizationId, userId: owner.id, title: "Workspace planning" },
+    }))
+  ) {
+    const conversation = await prisma.nexusConversation.create({
+      data: { organizationId, userId: owner.id, title: "Workspace planning" },
+    });
+    await prisma.nexusMessage.createMany({
+      data: [
+        { conversationId: conversation.id, role: "user", content: "What should we review first?" },
+        {
+          conversationId: conversation.id,
+          role: "assistant",
+          content: `Start with DEMO-${issue.number}: ${issue.title}.`,
+        },
+      ],
+    });
   }
-  const employee = await prisma.hrmsEmployee.findUniqueOrThrow({ where: { organizationId_userId: { organizationId, userId: users[1]!.id } } });
-  const reviewer = await prisma.hrmsEmployee.findUniqueOrThrow({ where: { organizationId_userId: { organizationId, userId: owner.id } } });
+  const employee = await prisma.hrmsEmployee.findUniqueOrThrow({
+    where: { organizationId_userId: { organizationId, userId: users[1]!.id } },
+  });
+  const reviewer = await prisma.hrmsEmployee.findUniqueOrThrow({
+    where: { organizationId_userId: { organizationId, userId: owner.id } },
+  });
   const date = new Date(new Date().toISOString().slice(0, 10));
-  await prisma.hrmsAttendanceRecord.upsert({ where: { employeeId_date: { employeeId: employee.id, date } }, update: {}, create: { organizationId, employeeId: employee.id, date, status: "PRESENT", workHours: 8 } });
-  if (!await prisma.hrmsLeaveRequest.findFirst({ where: { organizationId, employeeId: employee.id } })) {
-    await prisma.hrmsLeaveRequest.create({ data: { organizationId, employeeId: employee.id, leaveType: "VACATION", startDate: new Date(date.getTime() + 7 * 86400000), endDate: new Date(date.getTime() + 8 * 86400000), totalDays: 2, reason: "Planned leave", status: "PENDING" } });
+  await prisma.hrmsAttendanceRecord.upsert({
+    where: { employeeId_date: { employeeId: employee.id, date } },
+    update: {},
+    create: { organizationId, employeeId: employee.id, date, status: "PRESENT", workHours: 8 },
+  });
+  if (!(await prisma.hrmsLeaveRequest.findFirst({ where: { organizationId, employeeId: employee.id } }))) {
+    await prisma.hrmsLeaveRequest.create({
+      data: {
+        organizationId,
+        employeeId: employee.id,
+        leaveType: "VACATION",
+        startDate: new Date(date.getTime() + 7 * 86400000),
+        endDate: new Date(date.getTime() + 8 * 86400000),
+        totalDays: 2,
+        reason: "Planned leave",
+        status: "PENDING",
+      },
+    });
   }
   const period = date.toISOString().slice(0, 7);
-  await prisma.hrmsPayrollRecord.upsert({ where: { employeeId_period: { employeeId: employee.id, period } }, update: {}, create: { organizationId, employeeId: employee.id, period, periodStart: date, periodEnd: new Date(date.getTime() + 30 * 86400000), payDate: new Date(date.getTime() + 30 * 86400000), grossSalary: 100000, totalDeductions: 10000, netPay: 90000, currency: "INR", status: "DRAFT" } });
-  if (!await prisma.hrmsPerformanceReview.findFirst({ where: { organizationId, employeeId: employee.id, cycle: "Seed review" } })) {
-    await prisma.hrmsPerformanceReview.create({ data: { organizationId, employeeId: employee.id, reviewerEmployeeId: reviewer.id, reviewType: "QUARTERLY_REVIEW", cycle: "Seed review", startDate: date, dueDate: new Date(date.getTime() + 7 * 86400000) } });
+  await prisma.hrmsPayrollRecord.upsert({
+    where: { employeeId_period: { employeeId: employee.id, period } },
+    update: {},
+    create: {
+      organizationId,
+      employeeId: employee.id,
+      period,
+      periodStart: date,
+      periodEnd: new Date(date.getTime() + 30 * 86400000),
+      payDate: new Date(date.getTime() + 30 * 86400000),
+      grossSalary: 100000,
+      totalDeductions: 10000,
+      netPay: 90000,
+      currency: "INR",
+      status: "DRAFT",
+    },
+  });
+  if (
+    !(await prisma.hrmsPerformanceReview.findFirst({
+      where: { organizationId, employeeId: employee.id, cycle: "Seed review" },
+    }))
+  ) {
+    await prisma.hrmsPerformanceReview.create({
+      data: {
+        organizationId,
+        employeeId: employee.id,
+        reviewerEmployeeId: reviewer.id,
+        reviewType: "QUARTERLY_REVIEW",
+        cycle: "Seed review",
+        startDate: date,
+        dueDate: new Date(date.getTime() + 7 * 86400000),
+      },
+    });
   }
   let training = await prisma.hrmsTraining.findFirst({ where: { organizationId, title: "Workspace Security" } });
-  if (!training) training = await prisma.hrmsTraining.create({ data: { organizationId, title: "Workspace Security", type: "TECHNICAL", status: "SCHEDULED" } });
-  await prisma.hrmsTrainingEnrollment.upsert({ where: { trainingId_employeeId: { trainingId: training.id, employeeId: employee.id } }, update: {}, create: { organizationId, trainingId: training.id, employeeId: employee.id } });
-  await prisma.hrmsAsset.upsert({ where: { organizationId_serialNumber: { organizationId, serialNumber: `${organization.slug}-laptop-01` } }, update: {}, create: { organizationId, name: "Development Laptop", type: "LAPTOP", serialNumber: `${organization.slug}-laptop-01`, status: "ASSIGNED", assignedEmployeeId: employee.id, assignedAt: date } });
-  if (!await prisma.hrmsBenefitEnrollment.findFirst({ where: { organizationId, employeeId: employee.id } })) {
-    await prisma.hrmsBenefitEnrollment.create({ data: { organizationId, employeeId: employee.id, provider: "Development Health", planName: "Standard", coverageStarts: date } });
+  if (!training)
+    training = await prisma.hrmsTraining.create({
+      data: { organizationId, title: "Workspace Security", type: "TECHNICAL", status: "SCHEDULED" },
+    });
+  await prisma.hrmsTrainingEnrollment.upsert({
+    where: { trainingId_employeeId: { trainingId: training.id, employeeId: employee.id } },
+    update: {},
+    create: { organizationId, trainingId: training.id, employeeId: employee.id },
+  });
+  await prisma.hrmsAsset.upsert({
+    where: { organizationId_serialNumber: { organizationId, serialNumber: `${organization.slug}-laptop-01` } },
+    update: {},
+    create: {
+      organizationId,
+      name: "Development Laptop",
+      type: "LAPTOP",
+      serialNumber: `${organization.slug}-laptop-01`,
+      status: "ASSIGNED",
+      assignedEmployeeId: employee.id,
+      assignedAt: date,
+    },
+  });
+  if (!(await prisma.hrmsBenefitEnrollment.findFirst({ where: { organizationId, employeeId: employee.id } }))) {
+    await prisma.hrmsBenefitEnrollment.create({
+      data: {
+        organizationId,
+        employeeId: employee.id,
+        provider: "Development Health",
+        planName: "Standard",
+        coverageStarts: date,
+      },
+    });
   }
-  await prisma.holidayCalendar.upsert({ where: { organizationId_name: { organizationId, name: "India Holidays" } }, update: {}, create: { organizationId, name: "India Holidays", countryCode: "IN", holidays: [{ date: "2026-10-02", name: "Gandhi Jayanti" }] } });
+  await prisma.holidayCalendar.upsert({
+    where: { organizationId_name: { organizationId, name: "India Holidays" } },
+    update: {},
+    create: {
+      organizationId,
+      name: "India Holidays",
+      countryCode: "IN",
+      holidays: [{ date: "2026-10-02", name: "Gandhi Jayanti" }],
+    },
+  });
 }
 
 async function validateSeed(organizations: Organization[], appCount: number): Promise<void> {
   if (process.env.SEED_RESET_DATABASE === "true") {
-    if (await prisma.user.count() !== 30 || await prisma.organization.count() !== 2) throw new Error("Expected exactly 30 users and 2 organizations.");
-    if (await prisma.user.count({ where: { role: "PLATFORM_ADMIN" } }) !== 1 || await prisma.user.count({ where: { role: "ORG_ADMIN" } }) !== 1 || await prisma.user.count({ where: { role: "EMPLOYEE" } }) !== 28) throw new Error("Seeded roles do not match the requested account counts.");
+    if ((await prisma.user.count()) !== 30 || (await prisma.organization.count()) !== 2)
+      throw new Error("Expected exactly 30 users and 2 organizations.");
+    if (
+      (await prisma.user.count({ where: { role: "PLATFORM_ADMIN" } })) !== 1 ||
+      (await prisma.user.count({ where: { role: "ORG_ADMIN" } })) !== 1 ||
+      (await prisma.user.count({ where: { role: "EMPLOYEE" } })) !== 28
+    )
+      throw new Error("Seeded roles do not match the requested account counts.");
   }
   for (const organization of organizations) {
-    const members = await prisma.organizationMember.findMany({ where: { organizationId: organization.id, status: "ACTIVE", deletedAt: null } });
-    if (members.length !== 15 || members.filter((member) => member.isOwner).length !== 1) throw new Error(`Invalid membership counts for ${organization.slug}`);
+    const members = await prisma.organizationMember.findMany({
+      where: { organizationId: organization.id, status: "ACTIVE", deletedAt: null },
+    });
+    if (members.length !== 15 || members.filter((member) => member.isOwner).length !== 1)
+      throw new Error(`Invalid membership counts for ${organization.slug}`);
     for (const member of members) {
-      const userGroups = await prisma.organizationPermissionGroupAssignment.count({ where: { organizationId: organization.id, userId: member.userId, revokedAt: null, permissionGroup: { isSystem: true, isActive: true, deletedAt: null, name: { endsWith: "-users" } } } });
+      const userGroups = await prisma.organizationPermissionGroupAssignment.count({
+        where: {
+          organizationId: organization.id,
+          userId: member.userId,
+          revokedAt: null,
+          permissionGroup: { isSystem: true, isActive: true, deletedAt: null, name: { endsWith: "_users" } },
+        },
+      });
       if (userGroups !== appCount) throw new Error(`Default group assignments missing for ${member.userId}`);
     }
-    if (await prisma.hrmsEmployee.count({ where: { organizationId: organization.id } }) !== 15) throw new Error(`HR profiles missing for ${organization.slug}`);
-    if (await prisma.connectSidebarPreference.count({ where: { organizationId: organization.id } }) !== 15) throw new Error(`Sidebar state missing for ${organization.slug}`);
-    if (await prisma.channel.count({ where: { organizationId: organization.id, type: "DIRECT" } }) !== 14) throw new Error(`Direct chats missing for ${organization.slug}`);
+    if ((await prisma.hrmsEmployee.count({ where: { organizationId: organization.id } })) !== 15)
+      throw new Error(`HR profiles missing for ${organization.slug}`);
+    if ((await prisma.connectSidebarPreference.count({ where: { organizationId: organization.id } })) !== 15)
+      throw new Error(`Sidebar state missing for ${organization.slug}`);
+    if ((await prisma.channel.count({ where: { organizationId: organization.id, type: "DIRECT" } })) !== 14)
+      throw new Error(`Direct chats missing for ${organization.slug}`);
   }
   const invalidMembers = await prisma.$queryRaw<Array<{ channelId: string }>>`
     SELECT cm."channelId" FROM channel_members cm

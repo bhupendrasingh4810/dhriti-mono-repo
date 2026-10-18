@@ -1,33 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { webhooksService } from "@/services/admin.service";
 
 interface Webhook {
   id: string;
   url: string;
   events: string[];
   active: boolean;
-  lastDelivery: string;
+  lastDelivery?: string;
 }
-
-const initialWebhooks: Webhook[] = [
-  {
-    id: "1",
-    url: "https://hooks.company.com/dhriti",
-    events: ["user.created", "user.deleted"],
-    active: true,
-    lastDelivery: "5m ago",
-  },
-  { id: "2", url: "https://api.crm.internal/webhook", events: ["org.updated"], active: true, lastDelivery: "1h ago" },
-  {
-    id: "3",
-    url: "https://legacy.system.io/notify",
-    events: ["member.invited"],
-    active: false,
-    lastDelivery: "3 days ago",
-  },
-];
 
 const apiKeys = [
   { name: "Production API Key", key: "dhrt_live_••••••••••••••••abcd", created: "Jan 15, 2024", lastUsed: "2m ago" },
@@ -35,25 +19,60 @@ const apiKeys = [
 ];
 
 export default function OrgIntegrations() {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
-  const [webhooks, setWebhooks] = useState<Webhook[]>(initialWebhooks);
+  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [showNewWebhook, setShowNewWebhook] = useState(false);
   const [newUrl, setNewUrl] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const toggleWebhook = (id: string) => {
-    setWebhooks((prev) =>
-      prev.map((w) => {
-        if (w.id !== id) return w;
-        const next = { ...w, active: !w.active };
-        addToast(`Webhook ${next.active ? "enabled" : "disabled"}`, next.active ? "success" : "warning");
-        return next;
-      }),
-    );
+  const loadWebhooks = useEffectEvent(async () => {
+    try {
+      const items = await webhooksService.list(organizationSlug);
+      setWebhooks(
+        items.map((item) => ({
+          id: String(item.id),
+          url: String(item.url),
+          events: Array.isArray(item.events) ? item.events.map(String) : [],
+          active: Boolean(item.isActive),
+          lastDelivery: item.updatedAt ? new Date(String(item.updatedAt)).toLocaleString() : undefined,
+        })),
+      );
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load webhooks", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadWebhooks);
+  }, [organizationSlug]);
+
+  const toggleWebhook = async (webhook: Webhook) => {
+    setIsSaving(true);
+    try {
+      const updated = await webhooksService.update(organizationSlug, webhook.id, { isActive: !webhook.active });
+      setWebhooks((previous) =>
+        previous.map((item) => (item.id === webhook.id ? { ...item, active: Boolean(updated.isActive) } : item)),
+      );
+      addToast(`Webhook ${updated.isActive ? "enabled" : "disabled"}`, updated.isActive ? "success" : "warning");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to update webhook", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const deleteWebhook = (id: string) => {
-    setWebhooks((prev) => prev.filter((w) => w.id !== id));
-    addToast("Webhook deleted", "error");
+  const deleteWebhook = async (id: string) => {
+    setIsSaving(true);
+    try {
+      await webhooksService.remove(organizationSlug, id);
+      setWebhooks((previous) => previous.filter((item) => item.id !== id));
+      addToast("Webhook deleted", "error");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to delete webhook", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -223,11 +242,13 @@ export default function OrgIntegrations() {
                     </span>
                   ))}
                 </div>
-                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>Last delivery: {wh.lastDelivery}</div>
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+                  Last updated: {wh.lastDelivery ?? "Never"}
+                </div>
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <div
-                  onClick={() => toggleWebhook(wh.id)}
+                  onClick={() => void toggleWebhook(wh)}
                   style={{
                     width: 36,
                     height: 20,
@@ -254,7 +275,8 @@ export default function OrgIntegrations() {
                   />
                 </div>
                 <button
-                  onClick={() => deleteWebhook(wh.id)}
+                  disabled={isSaving}
+                  onClick={() => void deleteWebhook(wh.id)}
                   style={{
                     padding: "4px 8px",
                     borderRadius: 5,
@@ -333,22 +355,33 @@ export default function OrgIntegrations() {
                 Cancel
               </button>
               <button
+                disabled={isSaving || !newUrl}
                 onClick={() => {
-                  if (newUrl) {
-                    setWebhooks((prev) => [
-                      ...prev,
-                      {
-                        id: Date.now().toString(),
+                  void (async () => {
+                    setIsSaving(true);
+                    try {
+                      const created = await webhooksService.create(organizationSlug, {
                         url: newUrl,
                         events: ["user.created"],
-                        active: true,
-                        lastDelivery: "Never",
-                      },
-                    ]);
-                    addToast("Webhook added", "success");
-                    setShowNewWebhook(false);
-                    setNewUrl("");
-                  }
+                      });
+                      setWebhooks((previous) => [
+                        ...previous,
+                        {
+                          id: String(created.id),
+                          url: String(created.url),
+                          events: Array.isArray(created.events) ? created.events.map(String) : [],
+                          active: Boolean(created.isActive),
+                        },
+                      ]);
+                      addToast("Webhook added", "success");
+                      setShowNewWebhook(false);
+                      setNewUrl("");
+                    } catch (error) {
+                      addToast(error instanceof Error ? error.message : "Unable to create webhook", "error");
+                    } finally {
+                      setIsSaving(false);
+                    }
+                  })();
                 }}
                 style={{
                   padding: "9px 18px",

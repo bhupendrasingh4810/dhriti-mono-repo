@@ -72,19 +72,44 @@ export class TenantGuard implements CanActivate {
       select: { id: true, user: { select: { role: true } }, organization: { select: { deletedAt: true } } },
     });
 
-    if (!membership || membership.organization.deletedAt !== null) {
+    if (membership && membership.organization.deletedAt === null) {
+      request.organization = {
+        organizationId,
+        memberId: membership.id,
+        role: membership.user.role,
+      };
+    } else {
+      const [platformAdmin, organization] = await Promise.all([
+        this.prisma.user.findFirst({
+          where: {
+            id: user.userId,
+            role: "PLATFORM_ADMIN",
+            isPlatformUser: true,
+            status: "ACTIVE",
+            deletedAt: null,
+          },
+          select: { role: true },
+        }),
+        this.prisma.organization.findFirst({
+          where: { id: organizationId, deletedAt: null },
+          select: { id: true },
+        }),
+      ]);
+      if (!platformAdmin || !organization) {
+        throw new ForbiddenException({
+          code: "ORGANIZATION_FORBIDDEN",
+          message: "You are not a member of this organization",
+        });
+      }
+      request.organization = { organizationId, memberId: null, role: platformAdmin.role };
+    }
+
+    if (!request.organization) {
       throw new ForbiddenException({
         code: "ORGANIZATION_FORBIDDEN",
         message: "You are not a member of this organization",
       });
     }
-
-    const contextValue: OrganizationContext = {
-      organizationId,
-      memberId: membership.id,
-      role: membership.user.role,
-    };
-    request.organization = contextValue;
 
     if (headerOrganizationId && session.organizationId !== organizationId) {
       await this.prisma.userSession.update({ where: { id: user.sessionId }, data: { organizationId } });

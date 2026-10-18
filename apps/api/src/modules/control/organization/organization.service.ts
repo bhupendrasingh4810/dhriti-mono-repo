@@ -18,6 +18,17 @@ export interface OrgDashboard {
   pages: number;
 }
 
+export interface OrganizationControlMember {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  isOwner: boolean;
+  joinedAt: Date;
+  teams: string[];
+}
+
 @Injectable()
 export class OrganizationAdminService {
   constructor(
@@ -57,6 +68,68 @@ export class OrganizationAdminService {
       issues,
       pages,
     };
+  }
+
+  // ---------------- Members ----------------
+
+  async listMembers(organizationId: string): Promise<OrganizationControlMember[]> {
+    const members = await this.prisma.organizationMember.findMany({
+      where: { organizationId, deletedAt: null },
+      orderBy: { joinedAt: "desc" },
+      select: {
+        id: true,
+        userId: true,
+        status: true,
+        isOwner: true,
+        joinedAt: true,
+        user: { select: { name: true, email: true, role: true } },
+      },
+    });
+    const teamAssignments = await this.prisma.organizationTeamMember.findMany({
+      where: { userId: { in: members.map((member) => member.userId) }, team: { organizationId, deletedAt: null } },
+      select: { userId: true, team: { select: { name: true } } },
+    });
+    const teamsByUserId = new Map<string, string[]>();
+    for (const assignment of teamAssignments) {
+      teamsByUserId.set(assignment.userId, [...(teamsByUserId.get(assignment.userId) ?? []), assignment.team.name]);
+    }
+
+    return members.map((member) => ({
+      id: member.id,
+      name: member.user.name,
+      email: member.user.email,
+      role: member.isOwner ? "OWNER" : member.user.role,
+      status: member.status,
+      isOwner: member.isOwner,
+      joinedAt: member.joinedAt,
+      teams: teamsByUserId.get(member.userId) ?? [],
+    }));
+  }
+
+  async removeMember(organizationId: string, memberId: string, actorUserId: string): Promise<void> {
+    const member = await this.prisma.organizationMember.findFirst({
+      where: { id: memberId, organizationId, deletedAt: null },
+      select: { id: true, userId: true, isOwner: true },
+    });
+    if (!member) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Member not found", HttpStatus.NOT_FOUND);
+    }
+    if (member.isOwner) {
+      throw new AppError(ErrorCode.LAST_OWNER, "Organization owners cannot be removed", HttpStatus.CONFLICT);
+    }
+
+    await this.prisma.organizationMember.update({
+      where: { id: member.id },
+      data: { deletedAt: new Date(), status: "REMOVED", removedAt: new Date() },
+    });
+    await this.audit.record({
+      action: "control.org.member-removed",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: member.id,
+      metadata: { userId: member.userId },
+    });
   }
 
   // ---------------- Settings ----------------

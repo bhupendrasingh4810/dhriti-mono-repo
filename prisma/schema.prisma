@@ -1131,6 +1131,7 @@ model Organization {
   description String? @db.Text
   notes       String? @db.Text
   seats       Int     @default(10)
+  isPlatformOrganization Boolean @default(false)
 
   countryCode String? // ISO 3166-1 alpha-2: IN, US, GB
   timezone    String  @default("Asia/Kolkata") // IANA timezone

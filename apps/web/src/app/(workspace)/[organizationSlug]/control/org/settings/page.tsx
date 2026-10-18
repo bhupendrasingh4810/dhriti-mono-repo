@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { controlOrganizationService } from "@/services/control.service";
 
 export default function OrgSettings() {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
   const [orgName, setOrgName] = useState("Acme Corporation");
   const [orgSlug, setOrgSlug] = useState("acme-corp");
@@ -12,6 +15,33 @@ export default function OrgSettings() {
   const [timezone, setTimezone] = useState("America/New_York");
   const [showDelete, setShowDelete] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const loadSettings = useEffectEvent(async () => {
+    try {
+      const settings = await controlOrganizationService.getSettings(organizationSlug);
+      if (typeof settings.domain === "string") setOrgWebsite(settings.domain);
+      if (typeof settings.timezone === "string") setTimezone(settings.timezone);
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load organization settings", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadSettings);
+  }, [organizationSlug]);
+
+  const saveSettings = async () => {
+    setIsSaving(true);
+    try {
+      await controlOrganizationService.updateSettings(organizationSlug, { domain: orgWebsite, timezone });
+      addToast("Organization settings saved", "success");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to save organization settings", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div>
@@ -126,7 +156,8 @@ export default function OrgSettings() {
 
           <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
             <button
-              onClick={() => addToast("Organization settings saved", "success")}
+              disabled={isSaving}
+              onClick={() => void saveSettings()}
               style={{
                 padding: "9px 24px",
                 borderRadius: 8,

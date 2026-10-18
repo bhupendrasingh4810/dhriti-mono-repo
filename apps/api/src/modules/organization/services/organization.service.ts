@@ -121,8 +121,9 @@ export class OrganizationService {
         );
       }
 
+      const groupNamePrefix = organizationName.trim().replace(/\s+/g, "_");
       const groupNames = ORGANIZATION_APPS.flatMap((appName) =>
-        DEFAULT_PERMISSION_GROUP_TYPES.map((groupType) => `${organizationName}-${appName}-${groupType}`),
+        DEFAULT_PERMISSION_GROUP_TYPES.map((groupType) => `${groupNamePrefix}_${appName}_${groupType}`),
       );
       await transaction.organizationPermissionGroup.createMany({
         data: groupNames.map((name) => ({
@@ -133,7 +134,7 @@ export class OrganizationService {
         })),
       });
 
-      const adminGroupNames = ORGANIZATION_APPS.map((appName) => `${organizationName}-${appName}-admins`);
+      const adminGroupNames = ORGANIZATION_APPS.map((appName) => `${groupNamePrefix}_${appName}_admins`);
       const adminGroups = await transaction.organizationPermissionGroup.findMany({
         where: { organizationId: organization.id, name: { in: adminGroupNames } },
         select: { id: true },

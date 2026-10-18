@@ -26,18 +26,34 @@ export class PermissionService {
   async isPlatformAdministrator(userId: string): Promise<boolean> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null, status: "ACTIVE" },
-      select: { role: true },
+      select: { role: true, isPlatformUser: true },
     });
-    if (!user) return false;
-    if (user.role === "PLATFORM_ADMIN") return true;
-    const assignment = await this.prisma.platformUserRoleAssignment.findFirst({
-      where: { userId, revokedAt: null, platformRole: { key: "platform_admin" } },
-      select: { userId: true },
+    return user?.role === "PLATFORM_ADMIN" && user.isPlatformUser;
+  }
+
+  async hasUnrestrictedPlatformAccess(userId: string, organizationId?: string): Promise<boolean> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null, status: "ACTIVE" },
+      select: { role: true, isPlatformUser: true },
     });
-    return Boolean(assignment);
+    if (user?.isPlatformUser !== true) {
+      return false;
+    }
+    if (user.role === "PLATFORM_ADMIN") {
+      return true;
+    }
+    if (user.role !== "EMPLOYEE" || !organizationId) {
+      return false;
+    }
+    return (await this.prisma.organization.findFirst({
+      where: { id: organizationId, isPlatformOrganization: true, deletedAt: null },
+      select: { id: true },
+    })) !== null;
   }
 
   async hasPermission(params: PermissionCheck): Promise<boolean> {
+    if (await this.hasUnrestrictedPlatformAccess(params.userId, params.organizationId)) return true;
+
     const membership = await this.prisma.organizationMember.findFirst({
       where: { organizationId: params.organizationId, userId: params.userId, status: "ACTIVE", deletedAt: null },
       select: { id: true },
@@ -45,7 +61,6 @@ export class PermissionService {
     if (!membership) {
       return false;
     }
-    if (await this.isPlatformAdministrator(params.userId)) return true;
 
     const platformPermission = await this.prisma.platformUserRoleAssignment.findFirst({
       where: {
@@ -87,16 +102,17 @@ export class PermissionService {
   }
 
   async getUserPermissions(userId: string, organizationId: string): Promise<string[]> {
+    if (await this.hasUnrestrictedPlatformAccess(userId, organizationId)) {
+      const permissions = await this.prisma.permission.findMany({ select: { key: true }, orderBy: { key: "asc" } });
+      return permissions.map(({ key }) => key);
+    }
+
     const membership = await this.prisma.organizationMember.findFirst({
       where: { organizationId, userId, status: "ACTIVE", deletedAt: null },
       select: { id: true },
     });
     if (!membership) {
       return [];
-    }
-    if (await this.isPlatformAdministrator(userId)) {
-      const permissions = await this.prisma.permission.findMany({ select: { key: true }, orderBy: { key: "asc" } });
-      return permissions.map(({ key }) => key);
     }
     const [platformPermissions, organizationPermissions] = await Promise.all([
       this.prisma.platformUserRoleAssignment.findMany({

@@ -8,10 +8,17 @@ import { PlatformRolesGuard } from "../../../common/guards/platform-roles.guard"
 import { PlatformService, type PlatformDashboard } from "./platform.service";
 import {
   CreatePlatformOrganizationDto,
+  ListPlatformOrganizationsQueryDto,
   CreateProductDto,
   CreateTicketDto,
   UpdateProductDto,
   CreatePlatformRoleDto,
+  CreateEntitlementDto,
+  ListEntitlementsQueryDto,
+  CreatePlanDto,
+  UpdateEntitlementDefinitionDto,
+  UpdatePlanEntitlementsDto,
+  UpdatePlanStatusDto,
   UpdateSubscriptionDto,
   UpdateTicketDto,
 } from "./dto/platform.dto";
@@ -92,8 +99,8 @@ export class PlatformController {
 
   @Get("organizations")
   @ApiOperation({ summary: "List all organizations with member/subscription counts" })
-  async listOrganizations() {
-    return this.platform.listOrganizations();
+  async listOrganizations(@Query() query: ListPlatformOrganizationsQueryDto) {
+    return this.platform.listOrganizations(query);
   }
 
   @Post("organizations")
@@ -171,6 +178,79 @@ export class PlatformController {
     @Body() dto: UpdateProductDto,
   ) {
     return this.platform.updateProduct(productId, user.userId, dto);
+  }
+
+  @Get("entitlements")
+  @ApiOperation({ summary: "List entitlement definitions available to plans" })
+  async listEntitlements(@Query() query: ListEntitlementsQueryDto) {
+    return this.platform.listEntitlementDefinitions(query);
+  }
+
+  @Post("entitlements")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Create an entitlement definition" })
+  async createEntitlement(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateEntitlementDto) {
+    return this.platform.createEntitlement(user.userId, dto);
+  }
+
+  @Patch("entitlements/:entitlementId")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Update an entitlement definition" })
+  async updateEntitlement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("entitlementId") entitlementId: string,
+    @Body() dto: UpdateEntitlementDefinitionDto,
+  ) {
+    return this.platform.updateEntitlement(entitlementId, user.userId, dto);
+  }
+
+  @Delete("entitlements/:entitlementId")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Delete an unused entitlement definition" })
+  async deleteEntitlement(@CurrentUser() user: AuthenticatedUser, @Param("entitlementId") entitlementId: string): Promise<void> {
+    return this.platform.deleteEntitlement(entitlementId, user.userId);
+  }
+
+  @Get("plans")
+  @ApiOperation({ summary: "List plans with their feature and numeric-limit entitlements" })
+  async listPlans() {
+    return this.platform.listPlans();
+  }
+
+  @Post("plans")
+  @PlatformRoles("PLATFORM_ADMIN", "BILLING")
+  @ApiOperation({ summary: "Create a plan with entitlement assignments" })
+  async createPlan(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePlanDto) {
+    return this.platform.createPlan(user.userId, dto);
+  }
+
+  @Put("plans/:planId/entitlements")
+  @PlatformRoles("PLATFORM_ADMIN", "BILLING")
+  @ApiOperation({ summary: "Replace the feature and numeric-limit assignments for a plan" })
+  async replacePlanEntitlements(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("planId") planId: string,
+    @Body() dto: UpdatePlanEntitlementsDto,
+  ) {
+    return this.platform.replacePlanEntitlements(planId, user.userId, dto.entitlements);
+  }
+
+  @Patch("plans/:planId/status")
+  @PlatformRoles("PLATFORM_ADMIN", "BILLING")
+  @ApiOperation({ summary: "Enable or disable a plan" })
+  async updatePlanStatus(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("planId") planId: string,
+    @Body() dto: UpdatePlanStatusDto,
+  ) {
+    return this.platform.updatePlanStatus(planId, user.userId, dto.isActive);
+  }
+
+  @Delete("plans/:planId")
+  @PlatformRoles("PLATFORM_ADMIN", "BILLING")
+  @ApiOperation({ summary: "Delete a plan that is not assigned to an organization" })
+  async deletePlan(@CurrentUser() user: AuthenticatedUser, @Param("planId") planId: string): Promise<void> {
+    return this.platform.deletePlan(planId, user.userId);
   }
 
   @Put("organizations/:organizationId/subscription")

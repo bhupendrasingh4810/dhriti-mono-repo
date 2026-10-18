@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useAuth } from "@/hooks/use-auth";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
@@ -40,14 +39,13 @@ const NAVIGATION: Record<ControlMode, Array<{ href: string; label: string; enabl
 
 export function ControlLayout({ children, mode }: ControlLayoutProps) {
   const pathname = usePathname();
-  const { user } = useAuth(); // Assuming you have a useAuth hook to get the current user
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const mainRef = useRef<HTMLElement>(null);
   const [hasVerticalScrollbar, setHasVerticalScrollbar] = useState(false);
   const navigation = NAVIGATION[mode];
   const basePath = `/${organizationSlug}/control`;
   const activeItem = navigation.find((item) => pathname.endsWith(`/${item.href}`));
-  const modeLabel = user?.role === "" && mode === "platform" ? "Platform" : "Organization";
+  const modeLabel = mode === "platform" ? "Platform" : "Organization";
 
   useEffect(() => {
     const main = mainRef.current;

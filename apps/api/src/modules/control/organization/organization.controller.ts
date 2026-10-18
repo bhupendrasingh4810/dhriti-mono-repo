@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 
@@ -23,6 +23,26 @@ export class OrganizationAdminController {
   @ApiOperation({ summary: "Org dashboard: members, teams, products, storage, activity counts" })
   async dashboard(@CurrentOrganization() organization: OrganizationContext): Promise<OrgDashboard> {
     return this.admin.dashboard(organization.organizationId);
+  }
+
+  // ---------------- Members ----------------
+
+  @Get("members")
+  @RequirePermission("organization.members.read")
+  @ApiOperation({ summary: "List organization members with user and team details" })
+  async listMembers(@CurrentOrganization() organization: OrganizationContext) {
+    return this.admin.listMembers(organization.organizationId);
+  }
+
+  @Delete("members/:memberId")
+  @RequirePermission("organization.members.manage")
+  @ApiOperation({ summary: "Remove a non-owner member from the organization" })
+  async removeMember(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("memberId") memberId: string,
+  ): Promise<void> {
+    return this.admin.removeMember(organization.organizationId, memberId, user.userId);
   }
 
   // ---------------- Settings ----------------

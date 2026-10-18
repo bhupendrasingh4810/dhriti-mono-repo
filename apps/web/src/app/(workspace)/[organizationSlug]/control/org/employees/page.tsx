@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { invitationsService } from "@/services/organization-management.service";
+import { controlOrganizationService, type ControlOrganizationMember } from "@/services/control.service";
 
 interface Employee {
+  id: string;
   name: string;
   email: string;
   role: string;
@@ -12,73 +16,6 @@ interface Employee {
   status: "Active" | "Inactive" | "Pending";
 }
 
-const members: Employee[] = [
-  {
-    name: "Alice Johnson",
-    email: "alice@acme.com",
-    role: "Owner",
-    team: "Leadership",
-    joined: "Jan 15, 2024",
-    status: "Active",
-  },
-  {
-    name: "Bob Smith",
-    email: "bob@acme.com",
-    role: "Admin",
-    team: "Engineering",
-    joined: "Jan 20, 2024",
-    status: "Active",
-  },
-  {
-    name: "Carol White",
-    email: "carol@acme.com",
-    role: "Member",
-    team: "Design",
-    joined: "Feb 1, 2024",
-    status: "Active",
-  },
-  {
-    name: "David Brown",
-    email: "david@acme.com",
-    role: "Member",
-    team: "Marketing",
-    joined: "Mar 5, 2024",
-    status: "Active",
-  },
-  {
-    name: "Eve Davis",
-    email: "eve@acme.com",
-    role: "Admin",
-    team: "Engineering",
-    joined: "Apr 10, 2024",
-    status: "Active",
-  },
-  {
-    name: "Frank Wilson",
-    email: "frank@acme.com",
-    role: "Member",
-    team: "Sales",
-    joined: "May 2, 2024",
-    status: "Inactive",
-  },
-  {
-    name: "Grace Lee",
-    email: "grace@acme.com",
-    role: "Member",
-    team: "Support",
-    joined: "Jun 15, 2024",
-    status: "Active",
-  },
-  {
-    name: "Henry Moore",
-    email: "henry@acme.com",
-    role: "Member",
-    team: "Engineering",
-    joined: "Jul 22, 2024",
-    status: "Pending",
-  },
-];
-
 const statusColors: Record<Employee["status"], { bg: string; color: string }> = {
   Active: { bg: "#dcfce7", color: "#166534" },
   Inactive: { bg: "#f1f5f9", color: "#475569" },
@@ -86,8 +23,52 @@ const statusColors: Record<Employee["status"], { bg: string; color: string }> = 
 };
 
 export default function EmployeePage() {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
   const [search, setSearch] = useState("");
+  const [members, setMembers] = useState<Employee[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const loadMembers = useEffectEvent(async () => {
+    try {
+      const result = await controlOrganizationService.listMembers(organizationSlug);
+      setMembers(result.map(toEmployee));
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load members", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadMembers);
+  }, [organizationSlug]);
+
+  const handleInvite = async () => {
+    const email = window.prompt("Enter the member email address");
+    if (!email?.trim()) return;
+    setIsSaving(true);
+    try {
+      await invitationsService.create(organizationSlug, { email: email.trim() });
+      addToast(`Invitation sent to ${email.trim()}`, "success");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to invite member", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRemove = async (member: Employee) => {
+    if (!window.confirm(`Remove ${member.name} from this organization?`)) return;
+    setIsSaving(true);
+    try {
+      await controlOrganizationService.removeMember(organizationSlug, member.id);
+      setMembers((current) => current.filter((item) => item.id !== member.id));
+      addToast(`${member.name} removed`, "warning");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to remove member", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const filtered = members.filter(
     (m) => m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()),
@@ -105,7 +86,8 @@ export default function EmployeePage() {
           </p>
         </div>
         <button
-          onClick={() => addToast("Invite sent", "success")}
+          disabled={isSaving}
+          onClick={() => void handleInvite()}
           style={{
             padding: "9px 18px",
             borderRadius: 8,
@@ -177,10 +159,10 @@ export default function EmployeePage() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((m, i) => {
+            {filtered.map((m) => {
               const sc = statusColors[m.status];
               return (
-                <tr key={i} style={{ borderTop: "1px solid #f1f5f9" }}>
+                <tr key={m.id} style={{ borderTop: "1px solid #f1f5f9" }}>
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div
@@ -227,7 +209,8 @@ export default function EmployeePage() {
                   </td>
                   <td style={{ padding: "12px 16px" }}>
                     <button
-                      onClick={() => addToast(`${m.name} removed`, "warning")}
+                      disabled={isSaving || m.role === "Owner"}
+                      onClick={() => void handleRemove(m)}
                       style={{
                         padding: "4px 10px",
                         borderRadius: 5,
@@ -249,4 +232,21 @@ export default function EmployeePage() {
       </div>
     </div>
   );
+}
+
+function toEmployee(member: ControlOrganizationMember): Employee {
+  const statusByApiValue: Record<string, Employee["status"]> = {
+    ACTIVE: "Active",
+    INVITED: "Pending",
+    PENDING: "Pending",
+  };
+  return {
+    id: member.id,
+    name: member.name,
+    email: member.email,
+    role: member.isOwner ? "Owner" : member.role,
+    team: member.teams.join(", ") || "-",
+    joined: new Date(member.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    status: statusByApiValue[member.status] ?? "Inactive",
+  };
 }

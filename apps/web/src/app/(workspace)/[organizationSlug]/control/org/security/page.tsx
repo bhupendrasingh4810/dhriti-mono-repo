@@ -1,14 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { controlOrganizationService } from "@/services/control.service";
 
 export default function OrgSecurity() {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
   const [ssoEnabled, setSsoEnabled] = useState(true);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [sessionTimeout, setSessionTimeout] = useState("8");
   const [passwordMinLength, setPasswordMinLength] = useState("12");
+  const [isSaving, setIsSaving] = useState(false);
+
+  const loadSettings = useEffectEvent(async () => {
+    try {
+      const settings = await controlOrganizationService.getSettings(organizationSlug);
+      if (typeof settings.mfaEnforced === "boolean") setMfaRequired(settings.mfaEnforced);
+      if (typeof settings.sessionTimeoutMinutes === "number") setSessionTimeout(String(settings.sessionTimeoutMinutes / 60));
+      if (typeof settings.passwordMinLength === "number") setPasswordMinLength(String(settings.passwordMinLength));
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load security settings", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadSettings);
+  }, [organizationSlug]);
+
+  const saveSettings = async () => {
+    const sessionTimeoutHours = Number(sessionTimeout);
+    const passwordLength = Number(passwordMinLength);
+    if (!Number.isFinite(sessionTimeoutHours) || !Number.isFinite(passwordLength)) {
+      addToast("Enter valid security policy values", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await controlOrganizationService.updateSettings(organizationSlug, {
+        mfaEnforced: mfaRequired,
+        passwordMinLength: passwordLength,
+        sessionTimeoutMinutes: Math.round(sessionTimeoutHours * 60),
+      });
+      addToast("Security settings saved", "success");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to save security settings", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div>
@@ -184,7 +226,8 @@ export default function OrgSecurity() {
 
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <button
-            onClick={() => addToast("Security settings saved", "success")}
+            disabled={isSaving}
+            onClick={() => void saveSettings()}
             style={{
               padding: "9px 24px",
               borderRadius: 8,

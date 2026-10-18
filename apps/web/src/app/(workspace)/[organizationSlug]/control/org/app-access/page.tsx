@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { controlOrganizationService, type ControlProductEntitlement } from "@/services/control.service";
 
 interface App {
+  id: string;
+  key: string;
   name: string;
   description: string;
   icon: string;
@@ -13,99 +17,39 @@ interface App {
   category: string;
 }
 
-const initialApps: App[] = [
-  {
-    name: "Slack",
-    description: "Team messaging and notifications",
-    icon: "S",
-    connected: true,
-    users: 142,
-    lastSync: "2m ago",
-    category: "Communication",
-  },
-  {
-    name: "GitHub",
-    description: "Code repository and CI/CD",
-    icon: "G",
-    connected: true,
-    users: 45,
-    lastSync: "5m ago",
-    category: "Development",
-  },
-  {
-    name: "Jira",
-    description: "Project and issue tracking",
-    icon: "J",
-    connected: true,
-    users: 98,
-    lastSync: "1h ago",
-    category: "Productivity",
-  },
-  {
-    name: "Salesforce",
-    description: "CRM and sales pipeline",
-    icon: "SF",
-    connected: false,
-    users: 0,
-    lastSync: "Never",
-    category: "Sales",
-  },
-  {
-    name: "Zoom",
-    description: "Video conferencing",
-    icon: "Z",
-    connected: true,
-    users: 140,
-    lastSync: "10m ago",
-    category: "Communication",
-  },
-  {
-    name: "Figma",
-    description: "Design collaboration",
-    icon: "F",
-    connected: true,
-    users: 28,
-    lastSync: "30m ago",
-    category: "Design",
-  },
-  {
-    name: "HubSpot",
-    description: "Marketing automation",
-    icon: "H",
-    connected: false,
-    users: 0,
-    lastSync: "Never",
-    category: "Marketing",
-  },
-  {
-    name: "Notion",
-    description: "Docs and knowledge base",
-    icon: "N",
-    connected: false,
-    users: 0,
-    lastSync: "Never",
-    category: "Productivity",
-  },
-];
-
 export default function AppAccess() {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
-  const [apps, setApps] = useState<App[]>(initialApps);
+  const [apps, setApps] = useState<App[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const toggleApp = (name: string) => {
-    setApps((prev) =>
-      prev.map((a) => {
-        if (a.name !== name) return a;
-        const next = {
-          ...a,
-          connected: !a.connected,
-          users: a.connected ? 0 : 10,
-          lastSync: a.connected ? "Never" : "Just now",
-        };
-        addToast(`${a.name} ${next.connected ? "connected" : "disconnected"}`, next.connected ? "success" : "warning");
-        return next;
-      }),
-    );
+  const loadApps = useEffectEvent(async () => {
+    try {
+      const entitlements = await controlOrganizationService.listEntitlements(organizationSlug);
+      setApps(entitlements.map(toApp));
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to load app access", "error");
+    }
+  });
+
+  useEffect(() => {
+    void Promise.resolve().then(loadApps);
+  }, [organizationSlug]);
+
+  const toggleApp = async (app: App) => {
+    setIsSaving(true);
+    try {
+      const updated = await controlOrganizationService.setEntitlement(organizationSlug, {
+        productKey: app.key,
+        isEnabled: !app.connected,
+      });
+      setApps((current) => current.map((item) => (item.id === app.id ? toApp(updated) : item)));
+      addToast(`${app.name} ${updated.isEnabled ? "enabled" : "disabled"}`, updated.isEnabled ? "success" : "warning");
+    } catch (error) {
+      addToast(error instanceof Error ? error.message : "Unable to update app access", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const connected = apps.filter((a) => a.connected).length;
@@ -124,7 +68,7 @@ export default function AppAccess() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
         {apps.map((app) => (
           <div
-            key={app.name}
+            key={app.id}
             style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}
           >
             <div
@@ -188,7 +132,8 @@ export default function AppAccess() {
               </div>
             )}
             <button
-              onClick={() => toggleApp(app.name)}
+              disabled={isSaving}
+              onClick={() => void toggleApp(app)}
               style={{
                 width: "100%",
                 padding: "8px",
@@ -208,4 +153,18 @@ export default function AppAccess() {
       </div>
     </div>
   );
+}
+
+function toApp(entitlement: ControlProductEntitlement): App {
+  return {
+    id: entitlement.id,
+    key: entitlement.product.key,
+    name: entitlement.product.name,
+    description: entitlement.product.isActive ? "Managed product access for this organization" : "This product is currently unavailable",
+    icon: entitlement.product.name.slice(0, 2).toUpperCase(),
+    connected: entitlement.isEnabled,
+    users: 0,
+    lastSync: entitlement.updatedAt ? new Date(entitlement.updatedAt).toLocaleString() : "Never",
+    category: "Dhriti product",
+  };
 }
