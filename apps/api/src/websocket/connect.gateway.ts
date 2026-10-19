@@ -21,6 +21,8 @@ import { ConnectPresenceService } from "./connect/connect-presence.service";
 import { ConnectPublisherService } from "./connect/connect-publisher.service";
 import { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
 import {
+  CallInviteEventDto,
+  CallResponseEventDto,
   ChannelRoomEventDto,
   MarkChannelReadEventDto,
   PresenceSetEventDto,
@@ -171,6 +173,44 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   ): Promise<SocketAck> {
     return this.execute(socket, "channel:mark-read", async (principal, organizationId) => {
       await this.connect.markChannelRead(organizationId, payload.channelId, principal.userId, payload.messageId);
+      return { ok: true };
+    });
+  }
+
+  // ---------------- Calls ----------------
+
+  @SubscribeMessage("call:invite")
+  async inviteCall(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: CallInviteEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "call:invite", async (principal, organizationId) => {
+      const memberIds = await this.connect.getChannelMemberIds(organizationId, payload.channelId, principal.userId);
+      const callerName = await this.connect.getUserDisplayName(principal.userId);
+      this.publisher.callInvitation(
+        organizationId,
+        memberIds.filter((userId) => userId !== principal.userId),
+        { ...payload, conversationName: callerName, callerId: principal.userId, callerName },
+      );
+      return { ok: true };
+    });
+  }
+
+  @SubscribeMessage("call:respond")
+  async respondToCall(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: CallResponseEventDto,
+  ): Promise<SocketAck> {
+    return this.execute(socket, "call:respond", async (principal, organizationId) => {
+      const memberIds = await this.connect.getChannelMemberIds(organizationId, payload.channelId, principal.userId);
+      const event = payload.action === "accept"
+        ? "call:accepted"
+        : payload.action === "reject"
+          ? "call:rejected"
+          : payload.action === "cancel"
+            ? "call:cancelled"
+            : "call:ended";
+      this.publisher.callStatus(organizationId, memberIds, event, { ...payload, userId: principal.userId });
       return { ok: true };
     });
   }

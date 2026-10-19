@@ -36,4 +36,34 @@ export class MarkChannelReadEventDto extends ChannelRoomEventDto {
   messageId?: string;
 }
 
+export class CallInviteEventDto extends ChannelRoomEventDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  callId!: string;
+
+  @IsIn(["audio", "video"])
+  kind!: "audio" | "video";
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(200)
+  conversationName!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  callerName?: string;
+}
+
+export class CallResponseEventDto extends ChannelRoomEventDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  callId!: string;
+
+  @IsIn(["accept", "reject", "cancel", "end"])
+  action!: "accept" | "reject" | "cancel" | "end";
+}
+
 export type PresenceStatus = "online" | "away" | "dnd" | "in-meeting" | "offline";

@@ -1,9 +1,10 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useEffectEvent, useRef, useState } from "react";
+import type { MutableRefObject, ReactNode } from "react";
 import {
   AddReactionRounded,
+  CallRounded,
   CallEndRounded,
   ChatBubbleOutlineRounded,
   CloseRounded,
@@ -20,7 +21,12 @@ import {
   VideocamOffRounded,
   VideocamRounded,
 } from "@mui/icons-material";
+import { DhritiWebSdk } from "@dhriti/web-sdk";
+import { io, type Socket } from "socket.io-client";
 import { connectSidebarState, connectUsers, connectUsersById } from "@/mocks/connect";
+import { useAuth } from "@/hooks/use-auth";
+import { IncomingCallCard, useRingtone } from "./IncomingCallCard";
+import { OutgoingCallSurface } from "./OutgoingCallSurface";
 
 export type CallKind = "audio" | "video";
 
@@ -31,8 +37,12 @@ export type CallContext = {
   kind: CallKind;
 };
 
-type ActiveCall = CallContext & {
+export type ActiveCall = CallContext & {
   id: string;
+  peerName?: string;
+  direction: "incoming" | "outgoing";
+  status: "ringing" | "accepted" | "unanswered" | "unavailable" | "declined";
+  autoJoin?: boolean;
   minimized: boolean;
   onHold: boolean;
   joined: boolean;
@@ -57,9 +67,26 @@ const CALL_BACKGROUNDS = [
   { name: "Meeting room", url: "https://images.unsplash.com/photo-1706074740295-d7a79c079562?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
   { name: "Window office", url: "https://images.unsplash.com/photo-1698653223247-09aaf01166fc?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
 ];
+const RING_TIMEOUT_MS = 25_000;
 
 type CallControls = {
   startCall: (context: CallContext) => void;
+  registerSocket: (socket: Socket | null) => void;
+};
+
+type CallInvitation = {
+  callId: string;
+  channelId: string;
+  conversationName: string;
+  callerId: string;
+  callerName?: string;
+  kind: CallKind;
+};
+
+type CallStatusEvent = {
+  callId: string;
+  channelId: string;
+  userId: string;
 };
 
 const WorkspaceCallContext = createContext<CallControls | null>(null);
@@ -75,18 +102,55 @@ export function useWorkspaceCall() {
 }
 
 export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
   const [calls, setCalls] = useState<ActiveCall[]>([]);
   const [pendingCall, setPendingCall] = useState<CallContext | null>(null);
   const [switchingCallId, setSwitchingCallId] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const socketCleanupRef = useRef<(() => void) | null>(null);
+  const ringTimeoutsRef = useRef(new Map<string, number>());
 
-  function createCall(context: CallContext): ActiveCall {
+  function createCall(context: CallContext, direction: ActiveCall["direction"]): ActiveCall {
     return {
       ...context,
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: crypto.randomUUID(),
+      peerName: direction === "outgoing" ? context.conversationName : undefined,
+      direction,
+      status: "ringing",
       minimized: false,
       onHold: false,
       joined: false,
     };
+  }
+
+  function isDirectRecipientOffline(context: CallContext) {
+    const recipientId = context.participantIds.find((participantId) => participantId !== user?.id);
+    return Boolean(recipientId && connectUsersById[recipientId]?.presence === "offline");
+  }
+
+  function clearRingTimeout(callId: string) {
+    const timeout = ringTimeoutsRef.current.get(callId);
+    if (timeout !== undefined) window.clearTimeout(timeout as unknown as ReturnType<typeof setTimeout>);
+    ringTimeoutsRef.current.delete(callId);
+  }
+
+  function scheduleRingTimeout(call: ActiveCall) {
+    if (ringTimeoutsRef.current.has(call.id)) return;
+
+    const timeout = window.setTimeout(() => {
+      ringTimeoutsRef.current.delete(call.id);
+      socketRef.current?.emit("call:respond", {
+        channelId: call.conversationId,
+        callId: call.id,
+        action: call.direction === "incoming" ? "reject" : "cancel",
+      });
+      setCalls((current) => current.flatMap((item) => {
+        if (item.id !== call.id || item.status !== "ringing") return [item];
+        return call.direction === "outgoing" ? [{ ...item, status: "unanswered" as const }] : [];
+      }));
+    }, RING_TIMEOUT_MS);
+
+    ringTimeoutsRef.current.set(call.id, timeout);
   }
 
   function startCall(context: CallContext) {
@@ -98,10 +162,23 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    const call = {
+      ...createCall(context, "outgoing"),
+      status: isDirectRecipientOffline(context) ? "unavailable" as const : "ringing" as const,
+    };
     setCalls((current) => [
       ...current.filter((item) => item.id !== currentCall?.id),
-      createCall(context),
+      call,
     ]);
+    if (call.status === "unavailable") return;
+    scheduleRingTimeout(call);
+    socketRef.current?.emit("call:invite", {
+      channelId: context.conversationId,
+      callId: call.id,
+      conversationName: context.conversationName,
+      callerName: user?.name,
+      kind: context.kind,
+    });
   }
 
   function minimizeCall(callId: string) {
@@ -115,6 +192,15 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
   }
 
   function endCall(callId: string) {
+    const call = calls.find((item) => item.id === callId);
+    clearRingTimeout(callId);
+    if (call && (call.status === "ringing" || call.status === "accepted")) {
+      socketRef.current?.emit("call:respond", {
+        channelId: call.conversationId,
+        callId,
+        action: call.direction === "incoming" && call.status === "ringing" ? "reject" : call.joined ? "end" : "cancel",
+      });
+    }
     setCalls((current) => {
       const remaining = current.filter((item) => item.id !== callId);
       if (remaining.some((item) => !item.minimized) || remaining.length === 0) return remaining;
@@ -129,7 +215,10 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
 
   function launchPendingCall(keepCurrentOnHold: boolean) {
     if (!pendingCall) return;
-    const nextCall = createCall(pendingCall);
+    const nextCall = {
+      ...createCall(pendingCall, "outgoing"),
+      status: isDirectRecipientOffline(pendingCall) ? "unavailable" as const : "ringing" as const,
+    };
     setCalls((current) => {
       const withoutCurrent = current.filter((item) => keepCurrentOnHold || item.id !== switchingCallId);
       const callsWithCurrentOnHold = keepCurrentOnHold
@@ -137,21 +226,129 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
         : withoutCurrent;
       return [...callsWithCurrentOnHold, nextCall];
     });
+    if (nextCall.status === "unavailable") {
+      setPendingCall(null);
+      setSwitchingCallId(null);
+      return;
+    }
+    scheduleRingTimeout(nextCall);
+    socketRef.current?.emit("call:invite", {
+      channelId: pendingCall.conversationId,
+      callId: nextCall.id,
+      conversationName: pendingCall.conversationName,
+      callerName: user?.name,
+      kind: pendingCall.kind,
+    });
     setPendingCall(null);
     setSwitchingCallId(null);
   }
 
+  function acceptCall(callId: string) {
+    const call = calls.find((item) => item.id === callId);
+    if (!call) return;
+
+    clearRingTimeout(callId);
+    socketRef.current?.emit("call:respond", { channelId: call.conversationId, callId, action: "accept" });
+    setCalls((current) => current.map((item) => item.id === callId ? { ...item, status: "accepted", autoJoin: true } : item));
+  }
+
+  function acceptVideoCall(callId: string) {
+    setCalls((current) => current.map((item) => item.id === callId ? { ...item, kind: "video" } : item));
+    acceptCall(callId);
+  }
+
+  const registerSocket = useCallback((socket: Socket | null) => {
+    if (socketRef.current === socket) return;
+
+    socketCleanupRef.current?.();
+    socketCleanupRef.current = null;
+    socketRef.current = socket;
+    if (!socket) return;
+
+    const receiveInvitation = (invitation: CallInvitation) => {
+      const call: ActiveCall = {
+        id: invitation.callId,
+        peerName: invitation.callerName ?? invitation.conversationName,
+        conversationId: invitation.channelId,
+        conversationName: invitation.conversationName,
+        participantIds: [invitation.callerId],
+        kind: invitation.kind,
+        direction: "incoming",
+        status: "ringing",
+        minimized: false,
+        onHold: false,
+        joined: false,
+      };
+      setCalls((current) => current.some((item) => item.id === call.id) ? current : [...current, call]);
+      scheduleRingTimeout(call);
+    };
+    const acceptInvitation = (event: CallStatusEvent) => {
+      clearRingTimeout(event.callId);
+      setCalls((current) => current.map((call) => call.id === event.callId
+        ? { ...call, status: "accepted", autoJoin: call.direction === "outgoing" ? true : call.autoJoin }
+        : call));
+    };
+    const rejectCall = (event: CallStatusEvent) => {
+      clearRingTimeout(event.callId);
+      setCalls((current) => current.flatMap((call) => {
+        if (call.id !== event.callId) return [call];
+        return call.direction === "outgoing" && call.status === "ringing"
+          ? [{ ...call, status: "declined" as const }]
+          : [];
+      }));
+    };
+    const cancelCall = (event: CallStatusEvent) => {
+      clearRingTimeout(event.callId);
+      setCalls((current) => current.filter((call) => call.id !== event.callId || call.status === "unanswered"));
+    };
+    const removeCall = (event: CallStatusEvent) => {
+      clearRingTimeout(event.callId);
+      setCalls((current) => current.filter((call) => call.id !== event.callId));
+    };
+
+    socket.on("call:incoming", receiveInvitation);
+    socket.on("call:accepted", acceptInvitation);
+    socket.on("call:rejected", rejectCall);
+    socket.on("call:cancelled", cancelCall);
+    socket.on("call:ended", removeCall);
+    socketCleanupRef.current = () => {
+      socket.off("call:incoming", receiveInvitation);
+      socket.off("call:accepted", acceptInvitation);
+      socket.off("call:rejected", rejectCall);
+      socket.off("call:cancelled", cancelCall);
+      socket.off("call:ended", removeCall);
+    };
+  }, []);
+
+  useEffect(() => () => {
+    socketCleanupRef.current?.();
+    ringTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout as unknown as ReturnType<typeof setTimeout>));
+    ringTimeoutsRef.current.clear();
+  }, []);
+
   return (
-    <WorkspaceCallContext.Provider value={{ startCall }}>
+    <WorkspaceCallContext.Provider value={{ startCall, registerSocket }}>
       {children}
-      {calls.map((call) => (
-          <CallSurface
+      <WorkspaceCallSocketBridge />
+      {calls.map((call) => call.direction === "incoming" && call.status === "ringing" ? (
+        <IncomingCallCard
+          key={call.id}
+          call={call}
+          onAccept={() => acceptCall(call.id)}
+          onDecline={() => endCall(call.id)}
+          onAcceptVideo={() => acceptVideoCall(call.id)}
+        />
+      ) : (
+        <CallSurface
             key={call.id}
             call={call}
+            viewerId={user?.id ?? connectSidebarState.currentUser}
+            autoJoin={call.autoJoin}
             onMinimize={() => minimizeCall(call.id)}
             onRestore={() => restoreCall(call.id)}
             onEnd={() => endCall(call.id)}
             onJoin={() => setCalls((current) => current.map((item) => item.id === call.id ? { ...item, joined: true } : item))}
+            onAccept={() => acceptCall(call.id)}
             onHoldChange={(onHold) => setCallOnHold(call.id, onHold)}
         />
       ))}
@@ -172,19 +369,59 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
   );
 }
 
+function WorkspaceCallSocketBridge() {
+  const { registerSocket } = useWorkspaceCall();
+
+  useEffect(() => {
+    let socket: Socket | null = null;
+    let cancelled = false;
+
+    async function connect() {
+      try {
+        const response = await fetch("/api/connect/socket", { method: "POST", cache: "no-store" });
+        if (!response.ok) return;
+
+        const credentials = await response.json() as { token: string; url: string };
+        if (cancelled) return;
+
+        socket = io(credentials.url, { auth: { token: credentials.token }, autoConnect: false });
+        registerSocket(socket);
+        socket.connect();
+      } catch {
+        // Call invitations remain unavailable until the next workspace mount.
+      }
+    }
+
+    void connect();
+    return () => {
+      cancelled = true;
+      registerSocket(null);
+      socket?.disconnect();
+    };
+  }, [registerSocket]);
+
+  return null;
+}
+
 function CallSurface({
   call,
+  viewerId,
+  autoJoin = false,
   onMinimize,
   onRestore,
   onEnd,
   onJoin,
+  onAccept,
   onHoldChange,
 }: {
   call: ActiveCall;
+  viewerId: string;
+  autoJoin?: boolean;
   onMinimize: () => void;
   onRestore: () => void;
   onEnd: () => void;
   onJoin: () => void;
+  onAccept: () => void;
   onHoldChange: (onHold: boolean) => void;
 }) {
   const [phase, setPhase] = useState<"lobby" | "call">("lobby");
@@ -225,10 +462,16 @@ function CallSurface({
   const [minimizedPosition, setMinimizedPosition] = useState<{ x: number; y: number } | null>(null);
   const minimizedWindowRef = useRef<HTMLDivElement>(null);
   const minimizedDragOffset = useRef<{ x: number; y: number } | null>(null);
+  const rtcRef = useRef<DhritiWebSdk | null>(null);
+  const [remoteParticipantIds, setRemoteParticipantIds] = useState<string[]>([]);
+  const remoteVideoTargetsRef = useRef(new Map<string, HTMLDivElement>());
   const streamRef = useRef<MediaStream | null>(null);
   const screenRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const localCallVideoRef = useRef<HTMLDivElement>(null);
   const screenVideoRef = useRef<HTMLVideoElement>(null);
+  const autoJoinStartedRef = useRef(false);
+  useRingtone(call.direction === "outgoing" && call.status === "ringing" && phase === "lobby");
 
   useEffect(() => {
     let cancelled = false;
@@ -264,7 +507,7 @@ function CallSurface({
     return () => {
       cancelled = true;
     };
-  }, [call.conversationId, call.kind]);
+  }, [call.conversationId, call.kind, cameraId, microphoneId, permissions.camera]);
 
   useEffect(() => {
     let active = true;
@@ -301,9 +544,43 @@ function CallSurface({
   }, [cameraOn, muted, onHold, stream]);
 
   useEffect(() => {
+    if (phase !== "call" || !rtcRef.current) return;
+
+    void Promise.all([
+      rtcRef.current.setMicrophoneEnabled(!onHold && !muted, microphoneId ? { microphoneId } : undefined),
+      rtcRef.current.setCameraEnabled(!onHold && cameraOn, cameraId ? { cameraId } : undefined),
+    ]).catch(() => setError("Your microphone or camera could not be updated."));
+  }, [cameraId, cameraOn, microphoneId, muted, onHold, phase]);
+
+  useEffect(() => {
     if (videoRef.current) videoRef.current.srcObject = stream;
     if (screenVideoRef.current) screenVideoRef.current.srcObject = screen;
   }, [call.minimized, phase, screen, stream]);
+
+  useEffect(() => {
+    if (phase !== "call" || !cameraOn || !localCallVideoRef.current) return;
+
+    try {
+      rtcRef.current?.playLocalCamera(localCallVideoRef.current);
+    } catch {
+      // The camera can be toggled off before the render target is mounted.
+    }
+  }, [cameraOn, phase]);
+
+  useEffect(() => {
+    if (phase !== "call") return;
+
+    for (const uid of remoteParticipantIds) {
+      const target = remoteVideoTargetsRef.current.get(uid);
+      if (!target) continue;
+
+      try {
+        rtcRef.current?.playRemoteVideo(uid, target);
+      } catch {
+        // A remote user may unpublish before its tile commits.
+      }
+    }
+  }, [phase, remoteParticipantIds]);
 
   useEffect(() => {
     if (joinedAt === null) return;
@@ -315,6 +592,7 @@ function CallSurface({
   useEffect(() => () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     screenRef.current?.getTracks().forEach((track) => track.stop());
+    void rtcRef.current?.leave();
   }, []);
 
   useEffect(() => {
@@ -366,6 +644,23 @@ function CallSurface({
   async function changeInputDevice(kind: "audio" | "video", deviceId: string) {
     if (kind === "audio") setMicrophoneId(deviceId);
     else setCameraId(deviceId);
+
+    if (rtcRef.current) {
+      try {
+        if (kind === "audio") {
+          await rtcRef.current.stopMicrophone();
+          if (!muted && !onHold) await rtcRef.current.startMicrophone(deviceId ? { microphoneId: deviceId } : undefined);
+        } else {
+          await rtcRef.current.stopCamera();
+          if (cameraOn && !onHold) await rtcRef.current.startCamera(deviceId ? { cameraId: deviceId } : undefined);
+        }
+        setError("");
+      } catch {
+        setError(`The selected ${kind === "audio" ? "microphone" : "camera"} could not be started.`);
+      }
+      return;
+    }
+
     if (!streamRef.current || (kind === "video" && !cameraOn)) return;
 
     try {
@@ -391,6 +686,22 @@ function CallSurface({
   }
 
   async function toggleCamera() {
+    if (rtcRef.current) {
+      const nextCameraOn = !cameraOn;
+
+      try {
+        await rtcRef.current.setCameraEnabled(
+          nextCameraOn,
+          cameraId ? { cameraId } : undefined,
+        );
+        setCameraOn(nextCameraOn);
+        setError("");
+      } catch {
+        setError("The selected camera could not be started.");
+      }
+      return;
+    }
+
     if (!cameraOn) {
       if (!streamRef.current?.getVideoTracks().length) {
         await requestVideo();
@@ -402,10 +713,99 @@ function CallSurface({
     setCameraOn(false);
   }
 
-  function endCall() {
+  async function toggleMicrophone() {
+    const nextMuted = !muted;
+
+    if (rtcRef.current) {
+      try {
+        await rtcRef.current.setMicrophoneEnabled(
+          !nextMuted,
+          microphoneId ? { microphoneId } : undefined,
+        );
+        setError("");
+      } catch {
+        setError("The selected microphone could not be started.");
+        return;
+      }
+    }
+
+    setMuted(nextMuted);
+  }
+
+  async function joinCall() {
+    try {
+      const channel = `connect-${call.conversationId}`;
+      const response = await fetch("/api/connect/calls/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel }),
+      });
+      const payload = (await response.json().catch(() => null)) as { appId?: string; token?: string; uid?: string; message?: string } | null;
+
+      if (!response.ok || !payload?.appId || !payload.token || !payload.uid) {
+        throw new Error(payload?.message ?? "Unable to join the call.");
+      }
+
+      const rtc = new DhritiWebSdk({ appId: payload.appId });
+      rtcRef.current = rtc;
+      rtc.on("remote-track", ({ participant }) => {
+        setRemoteParticipantIds((current) => Array.from(new Set([...current, String(participant.uid)])));
+      });
+      rtc.on("remote-user-left", ({ uid }) => {
+        setRemoteParticipantIds((current) => current.filter((participantId) => participantId !== String(uid)));
+        remoteVideoTargetsRef.current.delete(String(uid));
+      });
+      rtc.on("error", (nextError) => setError(nextError.message));
+
+      await rtc.join({ channel, token: payload.token, uid: payload.uid });
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      setStream(null);
+
+      await rtc.startMicrophone(microphoneId ? { microphoneId } : undefined);
+      if (call.kind === "video" && cameraOn) {
+        await rtc.startCamera(cameraId ? { cameraId } : undefined);
+      }
+
+      onJoin();
+      if (call.direction === "incoming") onAccept();
+      setPhase("call");
+      setJoinedAt(Date.now());
+      setError("");
+    } catch (nextError) {
+      await rtcRef.current?.leave();
+      rtcRef.current = null;
+      setError(nextError instanceof Error ? nextError.message : "Unable to join the call.");
+    }
+  }
+
+  const joinAcceptedCall = useEffectEvent(() => {
+    void joinCall();
+  });
+
+  useEffect(() => {
+    if (!autoJoin || autoJoinStartedRef.current || phase === "call") return;
+
+    autoJoinStartedRef.current = true;
+    joinAcceptedCall();
+  }, [autoJoin, phase]);
+
+  async function endCall() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    setStream(null);
     screenRef.current?.getTracks().forEach((track) => track.stop());
-    onEnd();
+    screenRef.current = null;
+    setScreen(null);
+    if (videoRef.current) videoRef.current.srcObject = null;
+    if (screenVideoRef.current) screenVideoRef.current.srcObject = null;
+
+    try {
+      await rtcRef.current?.leave();
+    } finally {
+      rtcRef.current = null;
+      onEnd();
+    }
   }
 
   async function requestNotificationPermission() {
@@ -451,6 +851,9 @@ function CallSurface({
   }
 
   const currentUser = connectUsersById[connectSidebarState.currentUser];
+  const directParticipantId = call.participantIds.find((participantId) => participantId !== viewerId);
+  const directParticipant = directParticipantId ? connectUsersById[directParticipantId] : undefined;
+  const callTitle = call.peerName ?? directParticipant?.displayName ?? call.conversationName;
   const availableUsers = connectUsers.filter((user) => !participants.includes(user.id)
     && `${user.displayName} ${user.email}`.toLowerCase().includes(inviteSearch.toLowerCase()));
   const backgroundUrl = background === "Custom"
@@ -459,9 +862,27 @@ function CallSurface({
 
   const time = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`;
   const participantLabel = participants.length === 1 ? "1 participant" : `${participants.length} participants`;
+  const mediaParticipantIds = Array.from(new Set([connectSidebarState.currentUser, ...remoteParticipantIds]));
   const visibleParticipants = layout === "Spotlight"
-    ? participants.filter((userId) => userId !== connectSidebarState.currentUser).slice(0, 1)
-    : participants.slice(0, layout === "Gallery" ? 4 : 6);
+    ? mediaParticipantIds.filter((userId) => userId !== connectSidebarState.currentUser).slice(0, 1)
+    : mediaParticipantIds.slice(0, layout === "Gallery" ? 4 : 6);
+
+  if (call.direction === "outgoing" && call.status !== "accepted" && phase === "lobby") {
+    return (
+      <OutgoingCallSurface
+        call={call}
+        viewerId={viewerId}
+        muted={muted}
+        cameraOn={cameraOn}
+        hasVideoPreview={Boolean(stream?.getVideoTracks().length)}
+        videoRef={videoRef}
+        onToggleMicrophone={() => void toggleMicrophone()}
+        onToggleCamera={() => void toggleCamera()}
+        onShare={() => void toggleScreenShare()}
+        onLeave={() => void endCall()}
+      />
+    );
+  }
 
   if (call.minimized) {
     return (
@@ -518,18 +939,18 @@ function CallSurface({
           </button>
         ) : null}
         <button type="button" onClick={onRestore} className="grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/15" aria-label="Expand call" title="Expand call"><ExpandMoreRounded fontSize="small" /></button>
-        <button type="button" onClick={onEnd} className="grid h-9 w-9 place-items-center rounded-md bg-error text-white hover:bg-error/90" aria-label="End call" title="End call"><CallEndRounded fontSize="small" /></button>
+          <button type="button" onClick={() => void endCall()} className="grid h-9 w-9 place-items-center rounded-md bg-error text-white hover:bg-error/90" aria-label="End call" title="End call"><CallEndRounded fontSize="small" /></button>
       </div>
     );
   }
 
   return (
     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-text-primary/35 p-2 sm:p-3" role="presentation">
-      <section role="dialog" aria-modal="true" aria-label={`${call.kind} call with ${call.conversationName}`} className="flex h-[97dvh] w-[97vw] max-w-[1720px] flex-col overflow-hidden rounded-xl border border-border bg-background text-text-primary shadow-2xl">
+      <section role="dialog" aria-modal="true" aria-label={`${call.kind} call with ${callTitle}`} className="flex h-[97dvh] w-[97vw] max-w-[1720px] flex-col overflow-hidden rounded-xl border border-border bg-background text-text-primary shadow-2xl">
         <header className="flex shrink-0 items-center justify-between border-b border-border bg-surface px-4 py-3 sm:px-6">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="truncate text-base font-semibold">{call.conversationName}</h2>
+              <h2 className="truncate text-base font-semibold">{callTitle}</h2>
               {recordingStartedAt !== null ? (
                 <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-error" role="status" aria-label="Recording in progress">
                   <span className="relative flex h-3 w-3" aria-hidden="true">
@@ -541,13 +962,13 @@ function CallSurface({
               ) : null}
             </div>
             <p className="mt-0.5 text-xs text-text-secondary">
-              {phase === "call" ? `${time} · ${participantLabel}` : `${call.kind === "video" ? "Video" : "Audio"} call · ${participantLabel}`}
+              {phase === "call" ? `${time} · ${participantLabel}` : call.direction === "incoming" ? `Incoming ${call.kind} call` : call.status === "accepted" ? "Call accepted" : `Calling · ${call.kind === "video" ? "Video" : "Audio"}`}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" onClick={onMinimize} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Minimize call" title="Minimize call"><MinimizeRounded fontSize="small" /></button>
             {phase === "lobby" && (
-              <button type="button" onClick={onEnd} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Cancel call" title="Cancel call"><CloseRounded fontSize="small" /></button>
+                <button type="button" onClick={() => void endCall()} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Cancel call" title="Cancel call"><CloseRounded fontSize="small" /></button>
             ) 
             // : (
             //   <button type="button" onClick={onEnd} className="rounded-md px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-raised" aria-label="End call">End</button>
@@ -569,7 +990,7 @@ function CallSurface({
                 </div>
               )}
               <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-lg bg-slate-950/90 p-2">
-                <button type="button" onClick={() => setMuted((value) => !value)} title={muted ? "Unmute microphone" : "Mute microphone"} aria-label={muted ? "Unmute microphone" : "Mute microphone"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${muted ? "bg-error" : "bg-slate-800 hover:bg-slate-700"}`}>{muted ? <MicOffRounded fontSize="small" /> : <MicRounded fontSize="small" />}</button>
+                <button type="button" onClick={() => void toggleMicrophone()} title={muted ? "Unmute microphone" : "Mute microphone"} aria-label={muted ? "Unmute microphone" : "Mute microphone"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${muted ? "bg-error" : "bg-slate-800 hover:bg-slate-700"}`}>{muted ? <MicOffRounded fontSize="small" /> : <MicRounded fontSize="small" />}</button>
                 {call.kind === "video" ? <button type="button" onClick={toggleCamera} title={cameraOn ? "Turn camera off" : "Turn camera on"} aria-label={cameraOn ? "Turn camera off" : "Turn camera on"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${cameraOn ? "bg-slate-800 hover:bg-slate-700" : "bg-error"}`}>{cameraOn ? <VideocamRounded fontSize="small" /> : <VideocamOffRounded fontSize="small" />}</button> : null}
                 <button type="button" onClick={() => setDevicesOpen((value) => !value)} className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700">{devicesOpen ? "Hide devices" : "Device settings"}</button>
               </div>
@@ -602,6 +1023,7 @@ function CallSurface({
                 {(["call", "meeting"] as SessionType[]).map((item) => <button key={item} type="button" onClick={() => setSessionType(item)} className={`rounded px-3 py-2 text-xs font-semibold ${sessionType === item ? "bg-surface text-brand shadow-sm" : "text-text-secondary hover:text-text-primary"}`}>{item === "call" ? "Direct call" : "Meet now"}</button>)}
               </div>
               <p className="mt-3 rounded-md bg-surface-raised p-3 text-xs leading-5 text-text-secondary">{sessionType === "call" ? "A chat call with this conversation." : "A meeting session with chat, participants, notes, and organizer tools."}</p>
+              {call.direction === "outgoing" && call.status === "ringing" ? <p className="mt-3 text-xs font-medium text-brand">Calling participants...</p> : null}
               <div className="mt-6 flex flex-wrap gap-2">
                 <p className="w-full text-xs text-text-secondary">{participantLabel} · {currentUser?.displayName ?? "You"}</p>
               </div>
@@ -613,7 +1035,10 @@ function CallSurface({
                 <div className="grid grid-cols-2 gap-2 text-[11px]"><p className="rounded bg-surface-raised px-2 py-2">Microphone: {permissions.mic}</p><p className="rounded bg-surface-raised px-2 py-2">Camera: {permissions.camera}</p><p className="col-span-2 rounded bg-surface-raised px-2 py-2">Notifications: {notificationPermission === "default" ? "Not requested" : notificationPermission === "granted" ? "Allowed" : notificationPermission === "denied" ? "Blocked" : "Unavailable"}</p></div>
               </div> : null}
               {error ? <button type="button" onClick={() => void requestVideo()} className="mt-3 text-left text-xs font-semibold text-error underline">Retry device access</button> : null}
-              <button type="button" onClick={() => { void requestNotificationPermission(); onJoin(); setPhase("call"); setJoinedAt(Date.now()); }} className="mt-6 rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark">Join {sessionType === "meeting" ? "meeting" : "call"}</button>
+              <div className="mt-6 flex gap-2">
+                {call.direction === "incoming" ? <button type="button" onClick={() => void endCall()} className="rounded-md border border-border px-4 py-3 text-sm font-semibold text-text-secondary hover:bg-surface-raised">Reject</button> : null}
+                <button type="button" onClick={() => { void requestNotificationPermission(); void joinCall(); }} className="rounded-md bg-brand px-4 py-3 text-sm font-semibold text-white hover:bg-brand-dark">{call.direction === "incoming" ? "Accept call" : `Join ${sessionType === "meeting" ? "meeting" : "call"}`}</button>
+              </div>
             </div>
           </div>
         ) : (
@@ -628,7 +1053,7 @@ function CallSurface({
                   <div className="relative col-span-2 row-span-2 flex min-h-64 items-end justify-center gap-3 overflow-hidden rounded-lg bg-gradient-to-b from-sky-900 to-slate-800 p-5 sm:gap-6">{participants.slice(0, 6).map((userId) => <div key={userId} className="flex flex-col items-center"><ParticipantAvatar userId={userId} /><span className="mt-2 max-w-24 truncate rounded bg-slate-950/70 px-2 py-1 text-[10px] text-white">{connectUsersById[userId]?.displayName ?? "Guest"}</span></div>)}<span className="absolute left-3 top-3 rounded bg-slate-950/70 px-2 py-1 text-xs text-white">Together mode</span></div>
                 ) : visibleParticipants.map((userId, index) => (
                   <div key={userId} className={`relative min-h-32 overflow-hidden rounded-lg bg-slate-900 ${layout === "Spotlight" ? "col-span-1 row-span-1" : ""}`}>
-                    {userId === connectSidebarState.currentUser && call.kind === "video" && cameraOn && stream?.getVideoTracks().length ? <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} style={backgroundUrl && background !== "Blur" ? { backgroundImage: `url(${backgroundUrl})`, backgroundSize: "cover" } : undefined} /> : <div className="flex h-full min-h-32 items-center justify-center">{userId === connectSidebarState.currentUser && backgroundUrl && background !== "Blur" ? <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: `url(${backgroundUrl})` }} /> : null}<ParticipantAvatar userId={userId} className="relative h-20 w-20 text-2xl" /></div>}
+                    {userId === connectSidebarState.currentUser && cameraOn ? <div ref={localCallVideoRef} className={`h-full w-full ${background === "Blur" ? "scale-105 blur-sm" : ""}`} /> : remoteParticipantIds.includes(userId) ? <RemoteVideoTarget participantId={userId} targets={remoteVideoTargetsRef} /> : <div className="flex h-full min-h-32 items-center justify-center">{userId === connectSidebarState.currentUser && backgroundUrl && background !== "Blur" ? <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: `url(${backgroundUrl})` }} /> : null}<ParticipantAvatar userId={userId} className="relative h-20 w-20 text-2xl" /></div>}
                     <span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-1 text-xs text-white">{userId === connectSidebarState.currentUser ? "You" : connectUsersById[userId]?.displayName ?? "Guest"}</span>
                     {index === 1 ? <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-1 text-[10px] text-white">Speaking</span> : null}
                   </div>
@@ -637,8 +1062,8 @@ function CallSurface({
               {captions ? <div className="mx-auto mt-3 max-w-2xl rounded bg-surface-raised px-4 py-2 text-center text-sm text-text-primary"><strong>{connectUsers[1]?.displayName ?? "Participant"}:</strong> Live captions are enabled for this call.</div> : null}
               {reaction ? <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2 rounded-full bg-white px-4 py-2 text-2xl text-slate-900 shadow-xl">{reaction}</div> : null}
               <footer className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-border bg-surface px-2 py-3">
-                <CallAction label={muted ? "Unmute microphone" : "Mute microphone"} active={muted} icon={muted ? <MicOffRounded /> : <MicRounded />} onClick={() => setMuted((value) => !value)} />
-                {call.kind === "video" ? <CallAction label={cameraOn ? "Turn camera off" : "Turn camera on"} active={!cameraOn} icon={cameraOn ? <VideocamRounded /> : <VideocamOffRounded />} onClick={() => void toggleCamera()} /> : null}
+                <CallAction label={muted ? "Unmute microphone" : "Mute microphone"} active={muted} icon={muted ? <MicOffRounded /> : <MicRounded />} onClick={() => void toggleMicrophone()} />
+                <CallAction label={cameraOn ? "Turn camera off" : "Turn camera on"} active={!cameraOn} icon={cameraOn ? <VideocamRounded /> : <VideocamOffRounded />} onClick={() => void toggleCamera()} />
                 <CallAction label={screen ? "Stop screen sharing" : "Share screen"} active={Boolean(screen)} icon={<ScreenShareRounded />} onClick={() => void toggleScreenShare()} />
                 <CallAction label={handRaised ? "Lower hand" : "Raise hand"} active={handRaised} icon={<FrontHandRounded />} onClick={() => { setHandRaised((value) => !value); setReaction(handRaised ? "" : "✋"); }} />
                 <CallAction label="React" active={false} icon={<AddReactionRounded />} onClick={() => setReaction((value) => value ? "" : "👍")} />
@@ -647,7 +1072,7 @@ function CallSurface({
                 <CallAction label={`Change layout, currently ${layout}`} active={false} icon={<GridViewRounded />} onClick={() => setLayout((value) => value === "Gallery" ? "Spotlight" : value === "Spotlight" ? "Together" : "Gallery")} />
                 <CallAction label="More call options" active={panel === "apps"} icon={<MoreHorizRounded />} onClick={() => setPanel(panel === "apps" ? null : "apps")} />
                 {/* <CallAction label="Minimize call" active={false} icon={<MinimizeRounded />} onClick={onMinimize} /> */}
-                <button type="button" onClick={endCall} className="flex h-10 items-center gap-2 rounded-md bg-error px-3 text-sm font-semibold text-white hover:bg-error/90"><CallEndRounded fontSize="small" /></button>
+                <button type="button" onClick={() => void endCall()} className="flex h-10 items-center gap-2 rounded-md bg-error px-3 text-sm font-semibold text-white hover:bg-error/90"><CallEndRounded fontSize="small" /></button>
               </footer>
               <div className="flex flex-wrap justify-center gap-2 border-t border-border bg-surface px-2 py-2 text-xs">
                 <button type="button" onClick={() => setPanel(panel === "settings" ? null : "settings")} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Settings</button>
@@ -706,6 +1131,29 @@ function ParticipantAvatar({ userId, className = "h-12 w-12 text-base" }: { user
 
 function CallAction({ label, active, icon, onClick }: { label: string; active: boolean; icon: ReactNode; onClick: () => void }) {
   return <button type="button" onClick={onClick} aria-label={label} aria-pressed={active} title={label} className={`grid h-10 w-10 place-items-center rounded-md border transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand ${active ? "border-brand bg-brand-muted text-brand" : "border-border bg-surface text-text-secondary hover:bg-surface-raised hover:text-text-primary"}`}>{icon}</button>;
+}
+
+function RemoteVideoTarget({
+  participantId,
+  targets,
+}: {
+  participantId: string;
+  targets: MutableRefObject<Map<string, HTMLDivElement>>;
+}) {
+  const targetRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const target = targetRef.current;
+    if (!target) return;
+
+    const targetMap = targets.current;
+    targetMap.set(participantId, target);
+    return () => {
+      targetMap.delete(participantId);
+    };
+  }, [participantId, targets]);
+
+  return <div ref={targetRef} className="h-full w-full" />;
 }
 
 function CallSidePanel({

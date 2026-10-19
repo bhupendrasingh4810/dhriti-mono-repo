@@ -50,6 +50,14 @@ export class ConnectPublisherService {
     this.serverOrThrow().to(channelRoom(organizationId, channelId)).emit("channel:marked-read", { channelId, userId });
   }
 
+  callInvitation(organizationId: string, userIds: string[], invitation: unknown): void {
+    this.publishToUsers(organizationId, userIds, "call:incoming", invitation);
+  }
+
+  callStatus(organizationId: string, userIds: string[], event: "call:accepted" | "call:rejected" | "call:cancelled" | "call:ended", status: unknown): void {
+    this.publishToUsers(organizationId, userIds, event, status);
+  }
+
   private serverOrThrow(): Server {
     if (!this.server) {
       throw new Error("Connect Socket.IO publisher is not initialized");

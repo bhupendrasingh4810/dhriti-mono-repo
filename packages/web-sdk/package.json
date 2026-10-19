@@ -1,0 +1,17 @@
+{
+  "name": "@dhriti/web-sdk",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "agora-rtc-sdk-ng": "4.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

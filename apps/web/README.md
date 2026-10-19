@@ -18,6 +18,17 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
+## Connect Calls
+
+Connect audio and video calls use Agora. Configure these values in the web app environment before joining a call:
+
+```bash
+AGORA_APP_ID=your-agora-app-id
+AGORA_APP_CERTIFICATE=your-agora-app-certificate
+```
+
+`AGORA_APP_CERTIFICATE` is used only by the server token endpoint and must never be exposed through a `NEXT_PUBLIC_` variable.
+
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
 ## Learn More

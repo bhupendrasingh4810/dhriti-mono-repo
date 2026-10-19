@@ -59,6 +59,15 @@ export class ConnectService {
     private readonly publisher: ConnectPublisherService,
   ) {}
 
+  async getUserDisplayName(userId: string): Promise<string> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+      select: { name: true },
+    });
+
+    return user?.name ?? "Someone";
+  }
+
   async getSidebar(organizationId: string, userId: string) {
     await this.assertOrganizationMember(organizationId, userId);
     const record = await this.prisma.connectSidebarPreference.findUnique({
@@ -352,6 +361,17 @@ export class ConnectService {
       }
     }
     return channel;
+  }
+
+  async getChannelMemberIds(organizationId: string, channelId: string, userId: string): Promise<string[]> {
+    await this.getChannelForMember(organizationId, channelId, userId, true);
+
+    const members = await this.prisma.channelMember.findMany({
+      where: { channelId },
+      select: { userId: true },
+    });
+
+    return members.map((member) => member.userId);
   }
 
   async joinPublicChannel(organizationId: string, channelId: string, userId: string): Promise<void> {

@@ -384,5 +384,5 @@ export function useConnect(selectedConversationId: string) {
     }, 2500);
   }
 
-  return { user, organizationId, users, conversations, teams, sidebar, messages, historyState, readReceipts, unread, typingUsers, loading, connected, error, setError, send, favorite, startDirect, typing, loadMessages, loadMoreMessages, markVisibleMessageRead, reportError, refresh: () => reloadRef.current?.() };
+  return { user, organizationId, users, conversations, teams, sidebar, messages, historyState, readReceipts, unread, typingUsers, loading, connected, error, setError, socket: socketRef.current, send, favorite, startDirect, typing, loadMessages, loadMoreMessages, markVisibleMessageRead, reportError, refresh: () => reloadRef.current?.() };
 }
