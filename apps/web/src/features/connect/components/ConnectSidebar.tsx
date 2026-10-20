@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Archive, ChevronDown, Ellipsis } from "lucide-react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
     ConnectSidebarConversation,
     ConnectSidebarMenuContext,
@@ -9,7 +11,7 @@ import {
     ConnectSidebarTeamGroup,
 } from "@/types/connect.types";
 
-type ConnectSidebarProps = {
+interface ConnectSidebarProps {
     quickViews: ConnectSidebarQuickView[];
     favoriteConversations: ConnectSidebarConversation[];
     chatConversations: ConnectSidebarConversation[];
@@ -21,9 +23,9 @@ type ConnectSidebarProps = {
     onSelectUser?: (userId: string) => void;
     onSelectQuickView: (quickViewId: ConnectSidebarQuickView["id"]) => void;
     onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
-};
+}
 
-type SidebarSectionProps = {
+interface SidebarSectionProps {
     sectionId: ConnectSidebarSectionId;
     title: string;
     open: boolean;
@@ -33,7 +35,7 @@ type SidebarSectionProps = {
     onHoverSection: (sectionId: ConnectSidebarSectionId | null) => void;
     menuTooltip: string;
     children: ReactNode;
-};
+}
 
 function SidebarSection({
     sectionId,
@@ -138,6 +140,8 @@ export default function ConnectSidebar({
     onSelectQuickView,
     onOpenSidebarMenu,
 }: ConnectSidebarProps) {
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [quickViewsOpen, setQuickViewsOpen] = useState(true);
     const [favouritesOpen, setFavouritesOpen] = useState(true);
     const [chatsOpen, setChatsOpen] = useState(true);
@@ -154,6 +158,11 @@ export default function ConnectSidebar({
         menuTooltip,
         onOpenMenu: (event: MouseEvent<HTMLElement>) => onOpenSidebarMenu(event, { kind: "section", id: sectionId, label: title, sectionId }),
     });
+    const conversationHref = (conversationId: string) => {
+        const nextSearchParams = new URLSearchParams(searchParams.toString());
+        nextSearchParams.set("conversation", conversationId);
+        return `${pathname}?${nextSearchParams.toString()}`;
+    };
 
     return (
         <aside
@@ -200,6 +209,7 @@ export default function ConnectSidebar({
                             hoveredRowId={hoveredRowId}
                             setHoveredRowId={setHoveredRowId}
                             onSelectConversation={onSelectConversation}
+                            conversationHref={conversationHref}
                             onOpenSidebarMenu={onOpenSidebarMenu}
                         />
                     </SidebarSection>
@@ -216,6 +226,7 @@ export default function ConnectSidebar({
                             hoveredRowId={hoveredRowId}
                             setHoveredRowId={setHoveredRowId}
                             onSelectConversation={onSelectConversation}
+                            conversationHref={conversationHref}
                             onSelectUser={onSelectUser}
                             onOpenSidebarMenu={onOpenSidebarMenu}
                         />
@@ -245,6 +256,7 @@ export default function ConnectSidebar({
                                     setHoveredRowId={setHoveredRowId}
                                     onToggleTeam={onToggleTeam}
                                     onSelectConversation={onSelectConversation}
+                                    conversationHref={conversationHref}
                                     onOpenSidebarMenu={onOpenSidebarMenu}
                                 />
                             ))}
@@ -256,13 +268,14 @@ export default function ConnectSidebar({
     );
 }
 
-function ConversationList({ conversations, sectionId, selectedConversationId, hoveredRowId, setHoveredRowId, onSelectConversation, onSelectUser, onOpenSidebarMenu }: {
+function ConversationList({ conversations, sectionId, selectedConversationId, hoveredRowId, setHoveredRowId, onSelectConversation, conversationHref, onSelectUser, onOpenSidebarMenu }: {
     conversations: ConnectSidebarConversation[];
     sectionId: "favorites" | "chats";
     selectedConversationId: string;
     hoveredRowId: string | null;
     setHoveredRowId: (value: string | null | ((previous: string | null) => string | null)) => void;
     onSelectConversation: (conversationId: string) => void;
+    conversationHref: (conversationId: string) => string;
     onSelectUser?: (userId: string) => void;
     onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
 }) {
@@ -276,17 +289,23 @@ function ConversationList({ conversations, sectionId, selectedConversationId, ho
             else onSelectConversation(conversation.id);
         };
         const context: ConnectSidebarMenuContext = { kind: conversation.isSelfSpace ? "personal" : conversation.type === "channel" ? "channel" : "user", id: conversation.id, label: conversation.name, sectionId };
-        return <div key={conversation.id} role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (typeof value === "function" ? value : value === rowId ? null : value))} className={`flex cursor-pointer items-center justify-between rounded-md px-3 py-1 transition-colors hover:bg-white/10 ${selected ? "bg-white/20" : ""}`}><div className="flex min-w-0 items-center gap-2.5">{conversation.type === "channel" ? <span className={`text-sm font-bold ${selected ? "text-white" : "text-white/70"}`}>#</span> : <ConversationAvatar conversation={conversation} />}<span className={`truncate text-sm text-white/90 ${sectionId === "chats" && unread > 0 || selected ? "font-bold" : "font-medium"}`}>{conversation.name}</span></div>{!conversation.userId ? <SidebarTrailingSlot hovered={hovered} count={unread} tooltip={conversation.isSelfSpace ? "More personal options" : conversation.type === "channel" ? "More channel options" : "More chat options"} onOpenMenu={(event) => onOpenSidebarMenu(event, context)} /> : null}</div>;
+        const conversationLabel = <div className="flex min-w-0 items-center gap-2.5">{conversation.type === "channel" ? <span className={`text-sm font-bold ${selected ? "text-white" : "text-white/70"}`}>#</span> : <ConversationAvatar conversation={conversation} />}<span className={`truncate text-sm text-white/90 ${sectionId === "chats" && unread > 0 || selected ? "font-bold" : "font-medium"}`}>{conversation.name}</span></div>;
+        const trailingSlot = !conversation.userId ? <SidebarTrailingSlot hovered={hovered} count={unread} tooltip={conversation.isSelfSpace ? "More personal options" : conversation.type === "channel" ? "More channel options" : "More chat options"} onOpenMenu={(event) => onOpenSidebarMenu(event, context)} /> : null;
+        const className = `flex cursor-pointer items-center justify-between rounded-md px-3 py-1 transition-colors hover:bg-white/10 ${selected ? "bg-white/20" : ""}`;
+        return conversation.userId
+            ? <div key={conversation.id} role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (typeof value === "function" ? value : value === rowId ? null : value))} className={className}>{conversationLabel}</div>
+            : <div key={conversation.id} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (typeof value === "function" ? value : value === rowId ? null : value))} className={className}><Link href={conversationHref(conversation.id)} onClick={select} className="flex min-w-0 flex-1 items-center">{conversationLabel}</Link>{trailingSlot}</div>;
     })}</div>;
 }
 
-function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId, onToggleTeam, onSelectConversation, onOpenSidebarMenu }: {
+function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId, onToggleTeam, onSelectConversation, conversationHref, onOpenSidebarMenu }: {
     team: ConnectSidebarTeamGroup;
     selectedConversationId: string;
     hoveredRowId: string | null;
     setHoveredRowId: (value: string | null | ((previous: string | null) => string | null)) => void;
     onToggleTeam: (teamId: string) => void;
     onSelectConversation: (conversationId: string) => void;
+    conversationHref: (conversationId: string) => string;
     onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
 }) {
     const TeamIcon = team.icon ?? Archive;
@@ -326,9 +345,9 @@ function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId
                                 onMouseLeave={() => setHoveredRowId((value) => (value === rowId ? null : value))}
                                 className="flex items-center justify-between"
                             >
-                                <div role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} className={`min-w-0 cursor-pointer rounded px-1.5 py-1 text-sm hover:bg-white/10 ${selected ? "bg-white/20 font-bold text-white" : "font-medium text-white/80"}`}>
+                                <Link href={conversationHref(channel.id)} onClick={select} className={`min-w-0 cursor-pointer rounded px-1.5 py-1 text-sm hover:bg-white/10 ${selected ? "bg-white/20 font-bold text-white" : "font-medium text-white/80"}`}>
                                     {channel.isPrivate ? "lock " : "# "}{channel.slug}
-                                </div>
+                                </Link>
                                 <SidebarTrailingSlot
                                     hovered={hovered}
                                     tooltip="More channel options"

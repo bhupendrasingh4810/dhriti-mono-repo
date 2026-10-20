@@ -50,6 +50,7 @@ type ConnectConversationProps = {
   onChangeEditMessage: (value: string) => void;
   onSaveEditMessage: (payload: { content: string; mentionUserIds: string[] }) => void;
   onCancelEditMessage: () => void;
+  onSendGreeting: () => Promise<void>;
   disableHoverActions?: boolean;
   children?: ReactNode;
 };
@@ -101,6 +102,7 @@ export function ConnectConversations({
   onChangeEditMessage,
   onSaveEditMessage,
   onCancelEditMessage,
+  onSendGreeting,
   disableHoverActions = false,
   children,
 }: ConnectConversationProps) {
@@ -205,6 +207,9 @@ export function ConnectConversations({
     [messages],
   );
   const connectUsers = Object.values(usersById);
+  const greetingRecipient = conversation.type === "direct"
+    ? conversation.participants.map((userId) => usersById[userId]).find((user) => user?.id !== currentUserId)?.displayName ?? conversation.name
+    : conversation.name;
   const lastOutgoingMessage = sortedMessages.findLast((message) => message.senderId === currentUserId && message.contentType !== "system");
   const { messageListRef, positioned, loadMore, onScroll } = useConversationHistory({
     conversationId: conversation.id,
@@ -228,7 +233,19 @@ export function ConnectConversations({
         {historyError ? <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-3 p-4 text-error"><p>{historyError}</p><button type="button" onClick={onRetryMessages} className="rounded border border-border px-3 py-2 text-sm text-text-primary">Retry</button></div> : null}
         <div ref={messageListRef} className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
           onScroll={onScroll}>
-          {!messagesLoading && !historyError && sortedMessages.length === 0 ? <p className="m-auto text-sm text-text-secondary">No messages yet.</p> : null}
+          {!messagesLoading && !historyError && sortedMessages.length === 0 ? (
+            <div className="m-auto flex max-w-sm flex-col items-center px-6 text-center">
+              <img
+                src="/media/empty_conversation.png"
+                alt="People having a conversation"
+                className="h-70 w-90 rounded-md object-cover"
+              />
+              <p className="text-sm text-text-secondary">You have not yet started a conversation with {greetingRecipient}.</p>
+              <button type="button" onClick={() => void onSendGreeting()} className="mt-4 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:bg-brand/90">
+                Say Hi
+              </button>
+            </div>
+          ) : null}
           {!messagesLoading && sortedMessages.map((message, index) => {
             const sender = usersById[message.senderId];
             const isOwn = message.senderId === currentUserId;

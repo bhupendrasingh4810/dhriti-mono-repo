@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { CircularProgress } from "@mui/material";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ConnectConversation, ConnectMessage, ConnectFile, ConnectMeeting, ConnectMentionFeedItem } from "@/mocks/connect/types";
 import { useConnect } from "@/hooks/use-connect";
 import { useMessageDeletion } from "@/features/connect/hooks/use-message-deletion";
@@ -68,8 +69,19 @@ function getConversationTypeLabel(conversation: ConnectConversation) {
 
 export default function ConnectWorkspace() {
   const { startCall } = useWorkspaceCall();
-  const [selectedConversationId, setSelectedConversationId] = useState("");
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const conversationIdFromUrl = searchParams.get("conversation");
+  const [selectedConversationId, setSelectedConversationId] = useState(() => conversationIdFromUrl ?? "");
   const live = useConnect(selectedConversationId);
+  const [previousConversations, setPreviousConversations] = useState(live.conversations);
+  if (live.conversations !== previousConversations) {
+    setPreviousConversations(live.conversations);
+    if (!conversationIdFromUrl && (!selectedConversationId || !live.conversations[selectedConversationId])) {
+      setSelectedConversationId(Object.keys(live.conversations)[0] ?? "");
+    }
+  }
   const connectUsersById = live.users;
   const connectUsers = Object.values(live.users);
   const connectTeams = live.teams;
@@ -88,11 +100,6 @@ export default function ConnectWorkspace() {
   const connectPinnedItems: { conversationId: string }[] = [];
   const connectReportsToByUserId: Record<string, string> = {};
   const connectMentionFeed: ConnectMentionFeedItem[] = [];
-  useEffect(() => {
-    if (!selectedConversationId || !conversationsById[selectedConversationId]) {
-      setSelectedConversationId(Object.keys(conversationsById)[0] ?? "");
-    }
-  }, [conversationsById, selectedConversationId]);
   const [showDetails, setShowDetails] = useState(false);
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
   const [composerMessage, setComposerMessage] = useState("");
@@ -410,6 +417,9 @@ export default function ConnectWorkspace() {
 
   function handleSelectConversation(conversationId: string) {
     setSelectedConversationId(conversationId);
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.set("conversation", conversationId);
+    router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
     setActiveQuickViewId(null);
     setShowDetails(false);
   }
@@ -503,6 +513,19 @@ export default function ConnectWorkspace() {
     setQuotedMessage(null);
     live.typing(false);
     } catch (reason) { live.reportError(reason); }
+  }
+
+  async function handleSendGreeting() {
+    if (!selectedConversation) return;
+    try {
+      await live.send(selectedConversation.id, {
+        content: "Hi",
+        mentionUserIds: [],
+        clientMessageId: crypto.randomUUID(),
+      });
+    } catch (reason) {
+      live.reportError(reason);
+    }
   }
 
   function openSidebarMenu(event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) {
@@ -682,7 +705,7 @@ export default function ConnectWorkspace() {
                 {!live.error && connectUsers.filter((person) => person.id !== live.user?.id).length === 0 ? <p className="text-sm text-text-secondary">No other active members in this organization.</p> : null}
                 <div className="flex flex-wrap justify-center gap-2">{connectUsers.filter((person) => person.id !== live.user?.id).map((person) => (
                   <button key={person.id} type="button" className="rounded-md border border-border bg-surface px-3 py-2 text-sm" onClick={() => {
-                    void live.startDirect(person.id).then(setSelectedConversationId).catch(live.reportError);
+                    void live.startDirect(person.id).then(handleSelectConversation).catch(live.reportError);
                   }}>{person.displayName}</button>
                 ))}</div>
               </div>
@@ -713,9 +736,7 @@ export default function ConnectWorkspace() {
               }}
               onGoToChannel={(conversationId) => {
                 if (!conversationId) return;
-                setSelectedConversationId(conversationId);
-                setActiveQuickViewId(null);
-                setShowDetails(false);
+                handleSelectConversation(conversationId);
               }}
               composer={
                 selectedMention ? (
@@ -804,6 +825,7 @@ export default function ConnectWorkspace() {
               onChangeEditMessage={setEditingMessageDraft}
               onSaveEditMessage={saveEditMessage}
               onCancelEditMessage={requestCancelEditMessage}
+              onSendGreeting={handleSendGreeting}
               disableHoverActions={Boolean(mentionHover)}
             >
               <ConnectMessageInput
