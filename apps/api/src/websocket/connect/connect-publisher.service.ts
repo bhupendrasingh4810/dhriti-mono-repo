@@ -54,6 +54,10 @@ export class ConnectPublisherService {
     this.publishToUsers(organizationId, userIds, "call:incoming", invitation);
   }
 
+  callAvailable(organizationId: string, userIds: string[], invitation: unknown): void {
+    this.publishToUsers(organizationId, userIds, "call:available", invitation);
+  }
+
   callStatus(organizationId: string, userIds: string[], event: "call:accepted" | "call:rejected" | "call:cancelled" | "call:ended", status: unknown): void {
     this.publishToUsers(organizationId, userIds, event, status);
   }

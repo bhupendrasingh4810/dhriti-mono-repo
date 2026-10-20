@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { connectUsers } from "@/mocks/connect/users";
 import { connectUsersById } from "@/mocks/connect";
-import type { CallKind } from "@/features/connect/components/WorkspaceCallProvider";
+import type { CallType } from "@/features/connect/components/WorkspaceCallProvider";
 
 interface ConversationHeaderProps {
   conversation: {
@@ -13,7 +13,7 @@ interface ConversationHeaderProps {
   };
   teamLabel: string;
   onOpenDetails: () => void;
-  onStartCall: (kind: CallKind) => void;
+  onStartCall: (type: CallType) => void;
 }
 
 export function ConversationHeader({ conversation, teamLabel, onOpenDetails, onStartCall }: ConversationHeaderProps) {

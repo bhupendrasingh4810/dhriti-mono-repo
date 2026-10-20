@@ -21,12 +21,24 @@ describe("ConnectGateway", () => {
   };
   const channelId = "79365cb2-b0b1-48f9-aa54-e5c5685d80ec";
 
-  let connect: { getChannelForMember: jest.Mock };
+  let connect: {
+    getChannelForMember: jest.Mock;
+    getChannelMemberIds: jest.Mock;
+    getUserDisplayName: jest.Mock;
+    recordCallActivity: jest.Mock;
+  };
+  let publisher: { callStatus: jest.Mock; callInvitation: jest.Mock; callAvailable: jest.Mock };
   let socket: Socket;
   let gateway: ConnectGateway;
 
   beforeEach(() => {
-    connect = { getChannelForMember: jest.fn().mockResolvedValue({ id: channelId }) };
+    connect = {
+      getChannelForMember: jest.fn().mockResolvedValue({ id: channelId, type: "DIRECT" }),
+      getChannelMemberIds: jest.fn().mockResolvedValue([principal.userId, "recipient-id"]),
+      getUserDisplayName: jest.fn().mockResolvedValue("Database caller name"),
+      recordCallActivity: jest.fn().mockResolvedValue(undefined),
+    };
+    publisher = { callStatus: jest.fn(), callInvitation: jest.fn(), callAvailable: jest.fn() };
     socket = {
       id: "socket-id",
       join: jest.fn().mockResolvedValue(undefined),
@@ -38,7 +50,7 @@ describe("ConnectGateway", () => {
       connect as unknown as ConnectService,
       {} as ConnectAdapterLifecycleService,
       {} as ConnectPresenceService,
-      {} as ConnectPublisherService,
+      publisher as unknown as ConnectPublisherService,
       { assertAllowed: jest.fn().mockResolvedValue(undefined) } as unknown as ConnectRateLimitService,
       { wsConnected: jest.fn(), wsDisconnected: jest.fn(), wsMessage: jest.fn() } as unknown as MetricsService,
     );
@@ -47,7 +59,7 @@ describe("ConnectGateway", () => {
   it("authorizes before joining an organization-scoped channel room", async () => {
     const result = await gateway.joinChannel(socket, { channelId });
 
-    expect(connect.getChannelForMember).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId);
+    expect(connect.getChannelForMember).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, true);
     expect(socket.join).toHaveBeenCalledWith(`connect:org:${principal.organizationId}:channel:${channelId}`);
     expect(result).toEqual({ ok: true });
   });
@@ -69,5 +81,50 @@ describe("ConnectGateway", () => {
       ok: false,
       error: { code: ErrorCode.FORBIDDEN, message: "Not a channel member", status: HttpStatus.FORBIDDEN },
     });
+  });
+
+  it("records a timed-out call as missed instead of declined", async () => {
+    const result = await gateway.respondToCall(socket, {
+      channelId,
+      callId: "missed-call-id",
+      action: "miss",
+    });
+
+    expect(publisher.callStatus).toHaveBeenCalledWith(
+      principal.organizationId,
+      [principal.userId, "recipient-id"],
+      "call:cancelled",
+      { channelId, callId: "missed-call-id", action: "miss", userId: principal.userId },
+    );
+    expect(connect.recordCallActivity).toHaveBeenCalledWith(
+      principal.organizationId,
+      channelId,
+      principal.userId,
+      { callId: "missed-call-id", action: "missed", durationSeconds: undefined },
+    );
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("publishes the initiating caller name for a direct call with a blank conversation name", async () => {
+    const result = await gateway.inviteCall(socket, {
+      channelId,
+      callId: "call-id",
+      type: "audio",
+      conversationName: "",
+      receiverName: "Recipient name",
+      callerName: "Initiating caller",
+    });
+
+    expect(publisher.callInvitation).toHaveBeenCalledWith(
+      principal.organizationId,
+      ["recipient-id"],
+      expect.objectContaining({
+        callerId: principal.userId,
+        callerName: "Initiating caller",
+        conversationName: "",
+        participantIds: [principal.userId, "recipient-id"],
+      }),
+    );
+    expect(result).toEqual({ ok: true });
   });
 });

@@ -69,6 +69,27 @@ enum ChannelVisibility {
   PRIVATE
 }
 
+enum ConnectCallScope {
+  ONE_TO_ONE
+  GROUP
+  CHANNEL
+  MEETING
+}
+
+enum ConnectCallType {
+  AUDIO
+  VIDEO
+}
+
+enum ConnectCallStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  DECLINED
+  MISSED
+  CANCELLED
+}
+
 enum IssueStatus {
   BACKLOG
   TODO

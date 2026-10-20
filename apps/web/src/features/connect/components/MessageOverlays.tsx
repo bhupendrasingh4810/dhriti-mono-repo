@@ -49,10 +49,9 @@ export function MessageOverlays({
         }} />
       </Popover>
       <Popover open={Boolean(reactionHover)} anchorEl={reactionHover?.anchorEl ?? null} onClose={onCloseReaction}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }} transformOrigin={{ vertical: "bottom", horizontal: "center" }} disableScrollLock>
-        <div onMouseEnter={onKeepReactionOpen} onMouseLeave={onCloseReaction}>
-          <ConnectReactionUsersList emoji={reactionHover?.emoji ?? ""} users={reactionUsers} />
-        </div>
+        anchorOrigin={{ vertical: "top", horizontal: "center" }} transformOrigin={{ vertical: "bottom", horizontal: "center" }} disableScrollLock
+        slotProps={{ paper: { onMouseEnter: onKeepReactionOpen, onMouseLeave: onCloseReaction } }}>
+        <ConnectReactionUsersList emoji={reactionHover?.emoji ?? ""} users={reactionUsers} />
       </Popover>
       <Popover open={Boolean(mentionHover)} anchorEl={mentionHover?.anchorEl ?? null} onClose={onCloseMention}
         anchorOrigin={{ vertical: "center", horizontal: "right" }} transformOrigin={{ vertical: "center", horizontal: "left" }} disableScrollLock>

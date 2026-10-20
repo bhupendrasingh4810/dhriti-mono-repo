@@ -53,7 +53,7 @@ export function OutgoingCallSurface({
   const outcomeMessage = call.status === "unavailable"
     ? `${recipientName} is not available to receive your call. Try again later.`
     : call.status === "unanswered"
-      ? "Person you called is not available."
+      ? `${recipientName} is not available to receive your call. Try again later.`
       : call.status === "declined"
         ? `${recipientName} declined your call.`
         : null;
@@ -125,7 +125,7 @@ export function OutgoingCallSurface({
       </header>
 
       <main className="flex min-h-0 flex-1 items-center justify-center bg-surface-raised p-6">
-        {call.kind === "video" && cameraOn && hasVideoPreview ? (
+        {call.type === "video" && cameraOn && hasVideoPreview ? (
           <div className="relative h-full w-full overflow-hidden rounded-lg bg-text-primary">
             <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
             <span className="absolute bottom-4 left-4 rounded-md bg-text-primary/75 px-3 py-1 text-sm font-medium text-white">You{muted ? " · Muted" : ""}</span>

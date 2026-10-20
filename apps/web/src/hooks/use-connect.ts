@@ -20,6 +20,7 @@ type HistoryState = {
 };
 
 export function adaptConnectMessage(message: ConnectApiMessage): ConnectMessage {
+  const isCallActivity = message.content.startsWith("[CALL] ");
   const grouped = new Map<string, Set<string>>();
   for (const reaction of message.reactions ?? []) {
     const users = grouped.get(reaction.emoji) ?? new Set<string>();
@@ -28,7 +29,7 @@ export function adaptConnectMessage(message: ConnectApiMessage): ConnectMessage 
   }
   return {
     id: message.id, conversationId: message.channelId, conversationType: "channel",
-    senderId: message.authorId, content: message.content, contentType: "text",
+    senderId: message.authorId, content: isCallActivity ? message.content.slice(7) : message.content, contentType: isCallActivity ? "system" : "text",
     createdAt: message.createdAt, editedAt: message.editedAt, status: "sent",
     deletedAt: message.deletedAt, isDeleted: message.isDeleted,
     replyCount: message._count?.replies ?? 0,

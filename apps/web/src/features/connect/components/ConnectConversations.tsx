@@ -14,7 +14,7 @@ import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
 import { AttachmentsMessage } from "./AttachmentsMessage";
-import type { CallKind } from "@/features/connect/components/WorkspaceCallProvider";
+import type { CallType } from "@/features/connect/components/WorkspaceCallProvider";
 
 function getFileExtension(name: string) {
   const parts = name.split(".");
@@ -47,7 +47,7 @@ interface ConnectConversationProps {
   activeMessageEmojiId?: string | null;
   getQuotedMessageById: (id: string) => ConnectConversationMessage | undefined;
   onOpenDetails: () => void;
-  onStartCall: (kind: CallKind) => void;
+  onStartCall: (type: CallType) => void;
   onAddReaction: (messageId: string, emoji: string) => void;
   onOpenMessageEmoji: (event: React.MouseEvent<HTMLElement>, messageId: string) => void;
   onOpenMessageMenu: (event: React.MouseEvent<HTMLElement>, messageId: string) => void;

@@ -260,9 +260,11 @@ export default function ConnectWorkspace() {
   );
 
   const visibleChatConversations = useMemo(() => {
+    const favoriteChatIds = new Set(connectSidebarState.favorites.chats);
     const merged = recentConversations
       .concat(chatConversations)
       .filter((conversation) => conversation.type === "direct" || conversation.type === "group")
+      .filter((conversation) => !favoriteChatIds.has(conversation.id))
       .filter((conversation, index, all) => all.findIndex((item) => item.id === conversation.id) === index);
 
     return sectionViewMode.chats === "unread"
@@ -448,7 +450,7 @@ export default function ConnectWorkspace() {
     reactionHoverCloseTimerRef.current = window.setTimeout(() => {
       setReactionHover(null);
       reactionHoverCloseTimerRef.current = null;
-    }, 260);
+    }, 1000);
   }
 
   function cancelReactionHoverClose() {
@@ -786,11 +788,13 @@ export default function ConnectWorkspace() {
                 ConnectConversationMessage | undefined
               }
               onOpenDetails={() => setShowDetails(true)}
-              onStartCall={(kind) => startCall({
+              onStartCall={(type) => startCall({
                 conversationId: selectedConversation.id,
                 conversationName: selectedConversation.name,
                 participantIds: selectedConversation.participants,
-                kind,
+                callerName: currentUser.displayName,
+                type,
+                scope: selectedConversation.type === "direct" ? "one-to-one" : selectedConversation.type,
               })}
               onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
               onOpenMessageEmoji={openMessageEmojiMenu}

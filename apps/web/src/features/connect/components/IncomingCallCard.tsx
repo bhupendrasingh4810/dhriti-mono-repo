@@ -10,7 +10,7 @@ import {
     X,
 } from "lucide-react";
 import type { ActiveCall } from "./WorkspaceCallProvider";
-import { connectUsersById } from "@/mocks/connect";
+import { connectSidebarState, connectUsersById } from "@/mocks/connect";
 
 type IncomingCallCardProps = {
     call: ActiveCall;
@@ -45,8 +45,11 @@ export function IncomingCallCard({
     onAcceptVideo,
     onMoreOptions,
 }: IncomingCallCardProps) {
-    const caller = connectUsersById[call.participantIds[0]];
-    const callerName = call.peerName ?? caller?.displayName ?? call.conversationName;
+    const callerId = call.callerId
+        ?? call.participantIds?.find((participantId) => participantId !== connectSidebarState.currentUser)
+        ?? call.participantIds?.[0];
+    const caller = connectUsersById[callerId ?? ""];
+    const callerName = call.callerName ?? caller?.displayName ?? call.peerName ?? call.conversationName;
     const titleId = `incoming-call-${call.id}`;
     const descriptionId = `incoming-call-description-${call.id}`;
 

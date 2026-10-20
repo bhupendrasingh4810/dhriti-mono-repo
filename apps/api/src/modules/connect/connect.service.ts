@@ -65,7 +65,7 @@ export class ConnectService {
       select: { name: true },
     });
 
-    return user?.name ?? "Someone";
+    return user?.name?.trim() || "Someone";
   }
 
   async getSidebar(organizationId: string, userId: string) {
@@ -110,19 +110,22 @@ export class ConnectService {
     }
 
     const updated = await this.mutatePreferences(organizationId, userId, (current) => {
-    const currentFavorites = toSidebarPreferences(current.favorites);
-    const key = input.itemType === "chat" ? "chats" : input.itemType === "team" ? "teams" : "channels";
-    const items = new Set(toStringList(currentFavorites[key]));
-    if (input.isFavorite) items.add(input.itemId);
-    else items.delete(input.itemId);
+      const currentFavorites = toSidebarPreferences(current.favorites);
+      const key = input.itemType === "chat" ? "chats" : input.itemType === "team" ? "teams" : "channels";
+      const items = new Set(toStringList(currentFavorites[key]));
+      if (input.isFavorite) items.add(input.itemId);
+      else items.delete(input.itemId);
 
-    const favorites: SidebarFavorites = {
-      chats: toStringList(currentFavorites.chats),
-      teams: toStringList(currentFavorites.teams),
-      channels: toStringList(currentFavorites.channels),
-    };
-    favorites[key] = [...items];
-    return { ...current, favorites };
+      const favorites: SidebarFavorites = {
+        chats: toStringList(currentFavorites.chats),
+        teams: toStringList(currentFavorites.teams),
+        channels: toStringList(currentFavorites.channels),
+      };
+      favorites[key] = [...items];
+      const recentChats = input.itemType === "chat" && input.isFavorite
+        ? toStringList(current.recentChats).filter((id) => id !== input.itemId)
+        : toStringList(current.recentChats);
+      return { ...current, favorites, recentChats };
     });
 
     this.publisher.sidebarFavoritesChanged(organizationId, userId, updated.favorites);
@@ -565,6 +568,68 @@ export class ConnectService {
     return message;
   }
 
+  async recordCallActivity(
+    organizationId: string,
+    channelId: string,
+    actorUserId: string,
+    details: {
+      callId: string;
+      action: "initiated" | "accepted" | "declined" | "missed" | "ended";
+      type?: "audio" | "video";
+      durationSeconds?: number;
+    },
+  ): Promise<MessageWithMeta> {
+    const channel = await this.getChannelForMember(organizationId, channelId, actorUserId, true);
+    const actor = await this.prisma.user.findFirst({
+      where: { id: actorUserId, deletedAt: null },
+      select: { name: true },
+    });
+    const type = details.type ?? "audio";
+    const duration = details.durationSeconds === undefined
+      ? ""
+      : ` · ${Math.floor(details.durationSeconds / 60)}:${String(details.durationSeconds % 60).padStart(2, "0")}`;
+    const description = details.action === "initiated"
+      ? `${actor?.name ?? "Someone"} started a ${type} call`
+      : details.action === "accepted"
+        ? `${actor?.name ?? "Someone"} accepted the call`
+        : details.action === "declined"
+          ? `${actor?.name ?? "Someone"} declined the call`
+          : details.action === "missed"
+            ? `Missed ${type} call`
+            : `${actor?.name ?? "Someone"} ended the call${duration}`;
+    const message = await this.prisma.message.create({
+      data: {
+        organizationId,
+        channelId,
+        authorId: actorUserId,
+        content: `[CALL] ${description}`,
+      },
+      include: this.messageInclude,
+    });
+
+    await this.audit.record({
+      action: `connect.call.${details.action}`,
+      organizationId,
+      actorUserId,
+      resourceType: "Call",
+      resourceId: details.callId,
+      metadata: { channelId, type: details.type, durationSeconds: details.durationSeconds },
+    });
+
+    const recipientUserIds = await this.getRecipientUserIds(organizationId, channel);
+    this.publisher.messageCreated(organizationId, channelId, recipientUserIds, message);
+    if (channel.type === "DIRECT" || channel.type === "GROUP") {
+      await Promise.all(recipientUserIds.map((userId) => this.recordRecentChat(organizationId, userId, channelId)));
+      this.publisher.chatActivityChanged(organizationId, recipientUserIds, {
+        channelId,
+        messageId: message.id,
+        senderId: actorUserId,
+        createdAt: message.createdAt,
+      });
+    }
+    return message;
+  }
+
   private async getRecipientUserIds(organizationId: string, channel: Channel): Promise<string[]> {
     const channelMembers = await this.prisma.channelMember.findMany({ where: { channelId: channel.id }, select: { userId: true } });
     const organizationMembers = channelMembers.length > 0
@@ -676,10 +741,17 @@ export class ConnectService {
     const message = await this.getMessage(organizationId, messageId);
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
-    await this.prisma.messageReaction.upsert({
-      where: { messageId_userId_emoji: { messageId, userId, emoji } },
-      create: { messageId, userId, emoji },
-      update: {},
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.messageReaction.deleteMany({ where: { messageId, userId } });
+      await transaction.messageReaction.create({ data: { messageId, userId, emoji } });
+    });
+    await this.audit.record({
+      action: "connect.message.reaction.added",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Message",
+      resourceId: messageId,
+      metadata: { emoji },
     });
     this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:reaction-changed", { channelId: channel.id, messageId, userId, emoji, added: true });
   }
@@ -688,6 +760,14 @@ export class ConnectService {
     const message = await this.getMessage(organizationId, messageId);
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
     await this.prisma.messageReaction.deleteMany({ where: { messageId, userId, emoji } });
+    await this.audit.record({
+      action: "connect.message.reaction.removed",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Message",
+      resourceId: messageId,
+      metadata: { emoji },
+    });
     this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:reaction-changed", { channelId: channel.id, messageId, userId, emoji, added: false });
   }
 
@@ -726,7 +806,9 @@ export class ConnectService {
   private async recordRecentChat(organizationId: string, userId: string, channelId: string): Promise<void> {
     await this.mutatePreferences(organizationId, userId, (current) => ({
       ...current,
-      recentChats: [channelId, ...toStringList(current.recentChats).filter((id) => id !== channelId)].slice(0, 100),
+      recentChats: toStringList(toSidebarPreferences(current.favorites).chats).includes(channelId)
+        ? toStringList(current.recentChats).filter((id) => id !== channelId)
+        : [channelId, ...toStringList(current.recentChats).filter((id) => id !== channelId)].slice(0, 100),
     }));
   }
 

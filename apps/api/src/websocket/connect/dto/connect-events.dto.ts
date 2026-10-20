@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn, IsOptional, IsString, IsUUID, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class ChannelRoomEventDto {
   @IsUUID()
@@ -42,13 +42,26 @@ export class CallInviteEventDto extends ChannelRoomEventDto {
   @MaxLength(128)
   callId!: string;
 
+  @IsOptional()
   @IsIn(["audio", "video"])
-  kind!: "audio" | "video";
+  type?: "audio" | "video";
+
+  @IsOptional()
+  @IsIn(["audio", "video"])
+  kind?: "audio" | "video";
+
+  @IsOptional()
+  @IsIn(["meeting"])
+  scope?: "meeting";
 
   @IsString()
-  @MinLength(1)
   @MaxLength(200)
   conversationName!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  receiverName?: string;
 
   @IsOptional()
   @IsString()
@@ -62,8 +75,14 @@ export class CallResponseEventDto extends ChannelRoomEventDto {
   @MaxLength(128)
   callId!: string;
 
-  @IsIn(["accept", "reject", "cancel", "end"])
-  action!: "accept" | "reject" | "cancel" | "end";
+  @IsIn(["accept", "reject", "miss", "cancel", "end"])
+  action!: "accept" | "reject" | "miss" | "cancel" | "end";
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(86_400)
+  durationSeconds?: number;
 }
 
 export type PresenceStatus = "online" | "away" | "dnd" | "in-meeting" | "offline";

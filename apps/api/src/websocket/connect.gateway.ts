@@ -185,13 +185,37 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     @MessageBody() payload: CallInviteEventDto,
   ): Promise<SocketAck> {
     return this.execute(socket, "call:invite", async (principal, organizationId) => {
+      const channel = await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId, true);
       const memberIds = await this.connect.getChannelMemberIds(organizationId, payload.channelId, principal.userId);
-      const callerName = await this.connect.getUserDisplayName(principal.userId);
-      this.publisher.callInvitation(
-        organizationId,
-        memberIds.filter((userId) => userId !== principal.userId),
-        { ...payload, conversationName: callerName, callerId: principal.userId, callerName },
-      );
+      const callerName = payload.callerName?.trim()
+        || (await this.connect.getUserDisplayName(principal.userId)).trim()
+        || principal.email
+        || "Someone";
+      const type = payload.type ?? payload.kind;
+      if (!type) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "A call type is required", HttpStatus.BAD_REQUEST);
+      }
+      const scope = payload.scope === "meeting" ? "meeting" : channel.type === "DIRECT" ? "one-to-one" : channel.type.toLowerCase();
+      const invitation = {
+        ...payload,
+        type,
+        scope,
+        participantIds: memberIds,
+        conversationName: channel.type === "DIRECT" ? "" : payload.conversationName,
+        callerId: principal.userId,
+        callerName,
+      };
+      const recipients = memberIds.filter((userId) => userId !== principal.userId);
+      if (scope === "group" || scope === "channel") {
+        this.publisher.callAvailable(organizationId, recipients, invitation);
+      } else {
+        this.publisher.callInvitation(organizationId, recipients, invitation);
+      }
+      await this.connect.recordCallActivity(organizationId, payload.channelId, principal.userId, {
+        callId: payload.callId,
+        action: "initiated",
+        type,
+      });
       return { ok: true };
     });
   }
@@ -207,10 +231,15 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         ? "call:accepted"
         : payload.action === "reject"
           ? "call:rejected"
-          : payload.action === "cancel"
+          : payload.action === "miss" || payload.action === "cancel"
             ? "call:cancelled"
             : "call:ended";
       this.publisher.callStatus(organizationId, memberIds, event, { ...payload, userId: principal.userId });
+      await this.connect.recordCallActivity(organizationId, payload.channelId, principal.userId, {
+        callId: payload.callId,
+        action: payload.action === "accept" ? "accepted" : payload.action === "reject" ? "declined" : payload.action === "miss" || payload.action === "cancel" ? "missed" : "ended",
+        durationSeconds: payload.action === "end" ? payload.durationSeconds : undefined,
+      });
       return { ok: true };
     });
   }
