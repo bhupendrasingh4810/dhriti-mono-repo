@@ -16,7 +16,6 @@ import {
   List,
   ListOrdered,
   Mail,
-  MoreHorizontal,
   PencilLine,
   Plus,
   Quote,
@@ -62,6 +61,7 @@ function parseSlashQuery(text: string) {
 function markdownToEditorHtml(markdown: string) {
   const escaped = markdown.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return escaped
+    .replace(/```(?:[^\n]*)\n?([\s\S]*?)```/g, "<pre>$1</pre>")
     .replace(/`([^`]+)`/g, "<code>$1</code>")
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>")
@@ -90,6 +90,9 @@ function editorHtmlToMarkdown(element: HTMLElement) {
       case "CODE": return `\`${content}\``;
       case "PRE": return `\`\`\`\n${content}\n\`\`\``;
       case "A": return node.href.startsWith("http") ? `[${content}](${node.href})` : content;
+      case "UL": return `${Array.from(node.children).map((child) => `- ${serialize(child).trimEnd()}`).join("\n")}\n`;
+      case "OL": return `${Array.from(node.children).map((child, index) => `${index + 1}. ${serialize(child).trimEnd()}`).join("\n")}\n`;
+      case "LI": return content;
       case "DIV":
       case "P": return `${content}\n`;
       default: return content;
@@ -218,6 +221,10 @@ export default function ConnectMessageInput({
     [slashCommands, slashQuery],
   );
   const draftLinks = useMemo(() => extractDraftLinks(draftValue), [draftValue]);
+  const codeBlockLineCount = useMemo(() => {
+    const codeBlock = draftValue.match(/```(?:[^\n]*)\n?([\s\S]*?)```/);
+    return codeBlock ? Math.max(1, codeBlock[1].replace(/\n$/, "").split("\n").length) : 0;
+  }, [draftValue]);
 
   const priorityItems = useMemo<ConnectCascadingMenuItem[]>(
     () => [
@@ -276,11 +283,40 @@ export default function ConnectMessageInput({
     });
   }
 
+  function applyListFormat(ordered: boolean) {
+    const input = composerInputRef.current;
+    if (!input) return;
+
+    input.focus();
+    if (!input.textContent?.trim()) {
+      const list = document.createElement(ordered ? "ol" : "ul");
+      const item = document.createElement("li");
+      item.appendChild(document.createElement("br"));
+      list.appendChild(item);
+      input.replaceChildren(list);
+
+      const range = document.createRange();
+      range.selectNodeContents(item);
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    } else {
+      document.execCommand(ordered ? "insertOrderedList" : "insertUnorderedList");
+    }
+
+    syncEditor();
+    window.requestAnimationFrame(syncActiveFormats);
+  }
+
   function applyFormat(format: "bold" | "italic" | "underline" | "strikethrough" | "highlight" | "code" | "link" | "text-size" | "list" | "numbered-list" | "quote") {
+    if (format === "list" || format === "numbered-list") {
+      applyListFormat(format === "numbered-list");
+      return;
+    }
+
     composerInputRef.current?.focus();
-    const command = format === "list" ? "insertUnorderedList"
-      : format === "numbered-list" ? "insertOrderedList"
-      : format === "quote" ? "formatBlock"
+    const command = format === "quote" ? "formatBlock"
       : format === "strikethrough" ? "strikeThrough"
       : format === "highlight" ? "hiliteColor"
         : format === "code" ? "formatBlock"
@@ -298,6 +334,53 @@ export default function ConnectMessageInput({
     window.requestAnimationFrame(syncActiveFormats);
   }
 
+  function insertBacktickOrCodeBlock() {
+    const input = composerInputRef.current;
+    if (!input) return;
+
+    document.execCommand("insertText", false, "`");
+    if (!editorHtmlToMarkdown(input).endsWith("```")) {
+      syncEditor();
+      return;
+    }
+
+    document.execCommand("delete", false);
+    document.execCommand("delete", false);
+    document.execCommand("delete", false);
+    applyFormat("code");
+  }
+
+  function moveCaretAfterCodeBlock() {
+    const selection = window.getSelection();
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (!range?.collapsed) return false;
+
+    const anchor = range.startContainer.nodeType === Node.ELEMENT_NODE
+      ? range.startContainer as HTMLElement
+      : range.startContainer.parentElement;
+    const codeBlock = anchor?.closest("pre");
+    if (!codeBlock || !composerInputRef.current?.contains(codeBlock)) return false;
+
+    const contentBeforeCaret = document.createRange();
+    contentBeforeCaret.selectNodeContents(codeBlock);
+    contentBeforeCaret.setEnd(range.startContainer, range.startOffset);
+    const caretLine = contentBeforeCaret.toString().split("\n").length;
+    const lineCount = (codeBlock.textContent ?? "").split("\n").length;
+    if (caretLine < lineCount) return false;
+
+    const paragraph = document.createElement("div");
+    paragraph.appendChild(document.createElement("br"));
+    codeBlock.after(paragraph);
+
+    const nextRange = document.createRange();
+    nextRange.selectNodeContents(paragraph);
+    nextRange.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(nextRange);
+    syncEditor();
+    return true;
+  }
+
   function handleSend() {
     const content = draftValue.trim();
     if (!content && pendingAttachments.length === 0) return;
@@ -313,6 +396,20 @@ export default function ConnectMessageInput({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "ArrowDown" && moveCaretAfterCodeBlock()) {
+      event.preventDefault();
+      return;
+    }
+    if (event.ctrlKey && event.altKey && event.shiftKey && event.code === "KeyB") {
+      event.preventDefault();
+      applyFormat("code");
+      return;
+    }
+    if (event.key === "`") {
+      event.preventDefault();
+      insertBacktickOrCodeBlock();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
       event.preventDefault();
       applyFormat("bold");
@@ -361,8 +458,10 @@ export default function ConnectMessageInput({
 
         {!isEditing && draftLinks.length > 0 && <div className="flex flex-wrap gap-2 px-2 pt-2">{draftLinks.map((link) => <div key={link.url} className="flex w-[220px] items-center gap-2 rounded border border-slate-200 bg-slate-50 p-2"><img src={link.thumbnail} alt="" className="h-8 w-8 rounded border border-slate-200 bg-white" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-800">{link.domain}</p><p className="truncate text-xs text-slate-500">{link.url}</p></div><a href={link.url} target="_blank" rel="noreferrer" aria-label={`Open ${link.domain}`} className="rounded p-1 text-slate-500 hover:bg-slate-200"><ComposerIcon name="open" size={16} /></a></div>)}</div>}
 
-        <div className="relative">
-          {draftValue.trim().length === 0 ? <span aria-hidden="true" className="pointer-events-none absolute left-3 top-2 text-sm text-slate-400">{isEditing ? "Edit message" : `Message ${conversationLabel}`}</span> : null}
+        <div className={`relative ${codeBlockLineCount > 0 ? "overflow-hidden rounded border border-slate-300" : ""}`}>
+          {codeBlockLineCount > 0 ? <div className="flex h-8 items-center border-b border-slate-200 px-3 text-xs font-medium text-slate-500">Plain Text</div> : null}
+          {codeBlockLineCount > 0 ? <div aria-hidden="true" className="pointer-events-none absolute left-0 top-8 z-10 flex w-9 flex-col border-r border-slate-100 py-2 text-right font-mono text-xs leading-5 text-slate-400">{Array.from({ length: codeBlockLineCount }, (_, index) => <span key={index} className="pr-2">{index + 1}</span>)}</div> : null}
+          {codeBlockLineCount === 0 && draftValue.trim().length === 0 ? <span aria-hidden="true" className="pointer-events-none absolute left-3 top-2 text-sm text-slate-400">{isEditing ? "Edit message" : `Message ${conversationLabel}`}</span> : null}
           <div
             ref={composerInputRef}
             contentEditable
@@ -376,12 +475,12 @@ export default function ConnectMessageInput({
             onKeyUp={syncActiveFormats}
             onMouseUp={syncActiveFormats}
             onFocus={syncActiveFormats}
-            className="block max-h-40 min-h-20 w-full overflow-y-auto whitespace-pre-wrap bg-transparent px-3 py-2 text-sm text-slate-800 outline-none"
+            className={`block w-full bg-transparent px-3 py-2 text-sm text-slate-800 outline-none ${codeBlockLineCount > 0 ? "max-h-[13rem] min-h-20 overflow-auto leading-5 whitespace-pre-wrap [&_pre]:m-0 [&_pre]:min-h-16 [&_pre]:pl-7 [&_pre]:font-mono [&_pre]:whitespace-pre" : "max-h-40 min-h-20 overflow-y-auto whitespace-pre-wrap"}`}
           />
         </div>
 
         {!isEditing && formattingOpen && <div className="flex flex-wrap gap-1 border-y border-slate-200 px-2 py-1.5">{[
-          ["bold", () => applyFormat("bold"), "Bold"], ["italic", () => applyFormat("italic"), "Italic"], ["underline", () => applyFormat("underline"), "Underline"], ["strikethrough", () => applyFormat("strikethrough"), "Strikethrough"], ["highlight", () => applyFormat("highlight"), "Highlight"], ["code", () => applyFormat("code"), "Inline code"], ["list", () => applyFormat("list"), "Bulleted list"], ["numbered-list", () => applyFormat("numbered-list"), "Numbered list"], ["quote", () => applyFormat("quote"), "Quote"], ["link", () => applyFormat("link"), "Link"], ["table", () => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n"), "Table"], ["text-size", () => applyFormat("text-size"), "Text size"],
+          ["bold", () => applyFormat("bold"), "Bold"], ["italic", () => applyFormat("italic"), "Italic"], ["underline", () => applyFormat("underline"), "Underline"], ["strikethrough", () => applyFormat("strikethrough"), "Strikethrough"], ["highlight", () => applyFormat("highlight"), "Highlight"], ["code", () => applyFormat("code"), "Code block"], ["list", () => applyFormat("list"), "Bulleted list"], ["numbered-list", () => applyFormat("numbered-list"), "Numbered list"], ["quote", () => applyFormat("quote"), "Quote"], ["link", () => applyFormat("link"), "Link"], ["table", () => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n"), "Table"], ["text-size", () => applyFormat("text-size"), "Text size"],
         ].map(([icon, action, label]) => <IconButton key={label as string} label={label as string} active={Boolean(activeFormats[icon as IconName])} onClick={action as () => void}><ComposerIcon name={icon as IconName} /></IconButton>)}</div>}
 
         <div className="flex items-center justify-between border-t border-slate-200 px-2 py-1.5">
@@ -417,7 +516,6 @@ function ComposerIcon({ name, size = 20, className = "" }: { name: IconName; siz
     link: Link,
     list: List,
     mail: Mail,
-    more: MoreHorizontal,
     "numbered-list": ListOrdered,
     open: ExternalLink,
     priority: Star,

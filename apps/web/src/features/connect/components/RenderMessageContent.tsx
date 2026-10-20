@@ -1,7 +1,5 @@
-import { Fragment, useState } from "react";
+import { Fragment } from "react";
 import type { MouseEvent } from "react";
-import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
-import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import type { ConnectMessage, ConnectUser } from "@/types/connect.types";
 
 type RenderMessageContentProps = {
@@ -237,9 +235,6 @@ function LinkPreviewCard({ url, label }: { url: string; label: string }) {
 }
 
 function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-
   function downloadCode() {
     const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
@@ -250,33 +245,22 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
     URL.revokeObjectURL(url);
   }
 
-  const menuItems: ConnectCascadingMenuItem[] = [
-    { id: "download-code", label: "Download", icon: <DownloadIcon />, onClick: downloadCode },
-  ];
+  function copyCode() {
+    void navigator.clipboard.writeText(code);
+  }
 
   return (
-    <div key={blockKey} className="overflow-hidden rounded border border-slate-800 bg-slate-900">
-      <div className="flex items-center justify-between border-b border-slate-800 px-2 py-1.5">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Code</span>
-        <button type="button" aria-label="Code options" onClick={(event) => setMenuAnchor(event.currentTarget)} className="rounded p-1 text-slate-300 hover:bg-slate-800">
-          <MoreIcon />
-        </button>
+    <div key={blockKey} className="overflow-hidden rounded border border-slate-300 bg-white">
+      <div className="flex items-center justify-between border-b border-slate-200 px-3 py-1.5">
+        <span className="text-xs font-medium text-slate-500">Plain Text</span>
+        <span className="flex items-center gap-1">
+          <button type="button" title="Copy code" aria-label="Copy code" onClick={copyCode} className="rounded p-1 text-slate-500 hover:bg-slate-100"><CopyIcon /></button>
+          <button type="button" title="Download code" aria-label="Download code" onClick={downloadCode} className="rounded p-1 text-slate-500 hover:bg-slate-100"><DownloadIcon /></button>
+        </span>
       </div>
-      <pre className={`m-0 whitespace-pre-wrap p-3 font-mono text-xs text-slate-200 ${expanded ? "overflow-auto" : "max-h-[250px] overflow-hidden"}`}>
+      <pre className="m-0 max-h-[13rem] overflow-auto whitespace-pre p-3 font-mono text-xs leading-5 text-slate-800">
         {code}
       </pre>
-      {!expanded ? (
-        <button type="button" onClick={() => setExpanded(true)} className="w-full bg-slate-800 px-3 py-2 text-xs font-extrabold text-sky-300 hover:bg-slate-700">
-          Show more
-        </button>
-      ) : null}
-      <ConnectCascadingMenu
-        anchorEl={menuAnchor}
-        open={Boolean(menuAnchor)}
-        onClose={() => setMenuAnchor(null)}
-        items={menuItems}
-        minWidth={210}
-      />
     </div>
   );
 }
@@ -385,10 +369,11 @@ function DownloadIcon() {
   return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" /></svg>;
 }
 
+function CopyIcon() {
+  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" /></svg>;
+}
+
 function OpenInNewIcon() {
   return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 3h7v7M10 14 21 3M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" /></svg>;
 }
 
-function MoreIcon() {
-  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></svg>;
-}
