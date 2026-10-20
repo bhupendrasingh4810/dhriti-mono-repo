@@ -10,6 +10,21 @@ export interface CreateChannelInput {
   topic?: string;
   description?: string;
 }
+export interface CreateConnectTeamInput {
+  name: string;
+  slug: string;
+  description?: string;
+  visibility?: "PUBLIC" | "PRIVATE";
+}
+export interface ConnectTeam {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  visibility: string;
+  admins: string[];
+  users: string[];
+}
 export interface UpdateChannelInput {
   name?: string;
   topic?: string;
@@ -105,6 +120,9 @@ export const connectService = {
       { userId },
     ),
   listChannels: (organizationId: string) => tenantRequest<ConnectApiConversation[]>(organizationId, `${base}/channels`),
+  listTeams: (organizationId: string) => tenantRequest<ConnectTeam[]>(organizationId, `${base}/teams`),
+  createTeam: (organizationId: string, input: CreateConnectTeamInput) =>
+    tenantJsonRequest<ConnectTeam, CreateConnectTeamInput>(organizationId, `${base}/teams`, "POST", input),
   joinPublicChannel: (organizationId: string, channelId: string) =>
     tenantRequest<void>(organizationId, `${base}/channels/${pathSegment(channelId)}/join`, { method: "POST" }),
   createChannel: (organizationId: string, input: CreateChannelInput) =>

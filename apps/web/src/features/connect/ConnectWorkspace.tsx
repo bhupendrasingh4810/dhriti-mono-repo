@@ -1019,6 +1019,9 @@ export default function ConnectWorkspace() {
         onClose={() => setCreateChannelOpen(false)}
         pushSystemMessage={pushSystemMessage}
         closeSidebarMenus={closeSidebarMenus}
+        organizationId={live.organizationId}
+        teams={live.teams}
+        onCreated={() => live.refresh()}
       />
 
       <CreateTeamDialog
@@ -1026,6 +1029,8 @@ export default function ConnectWorkspace() {
         setCreateTeamOpen={setCreateTeamOpen}
         pushSystemMessage={pushSystemMessage}
         closeSidebarMenus={closeSidebarMenus}
+        organizationId={live.organizationId}
+        onCreated={() => live.refresh()}
       />
     </div>
   );

@@ -23,6 +23,7 @@ import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
+import { CreateConnectTeamDto, UpdateConnectTeamDto, UpsertConnectMemberDto } from "./dto/team.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
 import { CreateDirectConversationDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto } from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
@@ -180,6 +181,53 @@ export class ConnectController {
     return this.connect.createChannel(organization.organizationId, user.userId, dto);
   }
 
+  // ---------------- Teams ----------------
+
+  @Get("teams")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "List Connect teams visible to the current user" })
+  async listTeams(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
+    return this.connect.listTeams(organization.organizationId, user.userId);
+  }
+
+  @Post("teams")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.create" })
+  @ApiOperation({ summary: "Create a Connect team" })
+  async createTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Body() dto: CreateConnectTeamDto) {
+    return this.connect.createTeam(organization.organizationId, user.userId, dto);
+  }
+
+  @Patch("teams/:teamId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
+  @ApiOperation({ summary: "Update a Connect team" })
+  async updateTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Body() dto: UpdateConnectTeamDto) {
+    return this.connect.updateTeam(organization.organizationId, teamId, user.userId, dto);
+  }
+
+  @Delete("teams/:teamId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Delete a Connect team" })
+  async deleteTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string): Promise<void> {
+    return this.connect.deleteTeam(organization.organizationId, teamId, user.userId);
+  }
+
+  @Post("teams/:teamId/members")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Add a user or admin to a Connect team" })
+  async upsertTeamMember(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Body() dto: UpsertConnectMemberDto): Promise<void> {
+    return this.connect.upsertTeamMember(organization.organizationId, teamId, user.userId, dto.userId, dto.role ?? "MEMBER");
+  }
+
+  @Delete("teams/:teamId/members/:userId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Remove a user from a Connect team" })
+  async removeTeamMember(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Param("userId") userId: string): Promise<void> {
+    return this.connect.removeTeamMember(organization.organizationId, teamId, user.userId, userId);
+  }
+
   @Patch("channels/:channelId")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @ApiOperation({ summary: "Update a channel (name, topic, description, archive)" })
@@ -202,7 +250,7 @@ export class ConnectController {
     @Param("channelId") channelId: string,
     @Body() dto: AddChannelMemberDto,
   ): Promise<void> {
-    return this.connect.addMember(organization.organizationId, channelId, user.userId, dto.userId);
+    return this.connect.upsertChannelMember(organization.organizationId, channelId, user.userId, dto.userId, dto.role ?? "MEMBER");
   }
 
   @Delete("channels/:channelId/members/:userId")

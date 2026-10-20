@@ -1,12 +1,14 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Channel, ConnectCallScope, ConnectCallStatus, ConnectCallType, Message, MessageReaction, User, Prisma } from "@prisma/client";
+import type { Channel, ConnectCallScope, ConnectCallStatus, ConnectCallType, Message, MessageReaction, Team, User, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
+import { EntitlementService } from "../authorization/services/entitlement.service";
 import { ConnectPublisherService } from "../../websocket/connect/connect-publisher.service";
 import type { CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
+import type { CreateConnectTeamDto, UpdateConnectTeamDto } from "./dto/team.dto";
 import type { CreateMessageDto, UpdateMessageDto } from "./dto/message.dto";
 import type { UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 
@@ -26,6 +28,10 @@ export type MessageWithMeta = Message & {
   mentions: Array<{ userId: string }>;
   reactions: Array<Pick<MessageReaction, "userId" | "emoji">>;
   _count: { replies: number };
+};
+
+type ChannelWithMembers = Channel & {
+  members: Array<{ userId: string; role: "ADMIN" | "MEMBER" }>;
 };
 
 interface IdempotentMessageDelegate {
@@ -57,6 +63,7 @@ export class ConnectService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly publisher: ConnectPublisherService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   async getUserDisplayName(userId: string): Promise<string> {
@@ -324,26 +331,113 @@ export class ConnectService {
 
   // ---------------- Channels ----------------
 
-  async listChannels(organizationId: string, userId: string): Promise<Channel[]> {
+  async listTeams(organizationId: string, userId: string) {
+    await this.assertOrganizationMember(organizationId, userId);
+    const teams = await this.prisma.team.findMany({
+      where: {
+        organizationId,
+        deletedAt: null,
+        OR: [{ visibility: "PUBLIC" }, { members: { some: { userId } } }],
+      },
+      include: { members: { select: { userId: true, role: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return teams.map((team) => this.serializeTeam(team));
+  }
+
+  async createTeam(organizationId: string, creatorUserId: string, dto: CreateConnectTeamDto) {
+    await this.assertOrganizationMember(organizationId, creatorUserId);
+    const slugTaken = await this.prisma.team.findUnique({
+      where: { organizationId_slug: { organizationId, slug: dto.slug } },
+      select: { id: true },
+    });
+    if (slugTaken) throw new AppError(ErrorCode.TEAM_SLUG_TAKEN, "A team with this slug already exists", HttpStatus.CONFLICT);
+
+    const teamCount = await this.prisma.team.count({ where: { organizationId, deletedAt: null } });
+    await this.entitlements.assertWithinLimit(organizationId, "max_teams", teamCount + 1);
+
+    const team = await this.prisma.team.create({
+      data: {
+        organizationId,
+        name: dto.name.trim(),
+        slug: dto.slug,
+        description: dto.description?.trim() || null,
+        visibility: dto.visibility ?? "PUBLIC",
+        members: { create: { userId: creatorUserId, role: "ADMIN" } },
+      },
+      include: { members: { select: { userId: true, role: true } } },
+    });
+    await this.audit.record({ action: "connect.team.created", organizationId, actorUserId: creatorUserId, resourceType: "Team", resourceId: team.id });
+    return this.serializeTeam(team);
+  }
+
+  async updateTeam(organizationId: string, teamId: string, actorUserId: string, dto: UpdateConnectTeamDto) {
+    await this.requireTeamAdmin(organizationId, teamId, actorUserId);
+    const team = await this.prisma.team.update({
+      where: { id: teamId },
+      data: {
+        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+        ...(dto.description !== undefined ? { description: dto.description.trim() || null } : {}),
+        ...(dto.visibility !== undefined ? { visibility: dto.visibility } : {}),
+      },
+      include: { members: { select: { userId: true, role: true } } },
+    });
+    return this.serializeTeam(team);
+  }
+
+  async deleteTeam(organizationId: string, teamId: string, actorUserId: string): Promise<void> {
+    await this.requireTeamAdmin(organizationId, teamId, actorUserId);
+    await this.prisma.team.update({ where: { id: teamId }, data: { deletedAt: new Date() } });
+  }
+
+  async upsertTeamMember(organizationId: string, teamId: string, actorUserId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<void> {
+    await this.requireTeamAdmin(organizationId, teamId, actorUserId);
+    await this.assertOrganizationMember(organizationId, userId);
+    await this.prisma.teamMember.upsert({
+      where: { teamId_userId: { teamId, userId } },
+      create: { teamId, userId, role },
+      update: { role },
+    });
+  }
+
+  async removeTeamMember(organizationId: string, teamId: string, actorUserId: string, userId: string): Promise<void> {
+    await this.requireTeamAdmin(organizationId, teamId, actorUserId);
+    const membership = await this.prisma.teamMember.findUnique({ where: { teamId_userId: { teamId, userId } }, select: { role: true } });
+    if (membership?.role === "ADMIN") {
+      const adminCount = await this.prisma.teamMember.count({ where: { teamId, role: "ADMIN" } });
+      if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "A team must have at least one admin", HttpStatus.BAD_REQUEST);
+    }
+    await this.prisma.teamMember.deleteMany({ where: { teamId, userId } });
+  }
+
+  async listChannels(organizationId: string, userId: string) {
     await this.assertOrganizationMember(organizationId, userId);
     const teamMemberships = await this.prisma.teamMember.findMany({
       where: { userId, team: { organizationId, deletedAt: null } },
       select: { teamId: true },
     });
-    return this.prisma.channel.findMany({
+    const channels = await this.prisma.channel.findMany({
       where: {
         organizationId,
         type: "CHANNEL",
         deletedAt: null,
         isArchived: false,
         OR: [{ visibility: "PUBLIC" }, { members: { some: { userId } } }],
-        AND: [{ OR: [{ teamId: null }, { teamId: { in: teamMemberships.map(({ teamId }) => teamId) } }] }],
+        AND: [{
+          OR: [
+            { teamId: null },
+            { teamId: { in: teamMemberships.map(({ teamId }) => teamId) } },
+            { team: { is: { visibility: "PUBLIC", deletedAt: null } } },
+          ],
+        }],
       },
       orderBy: { createdAt: "asc" },
+      include: { members: { select: { userId: true, role: true } } },
     });
+    return channels.map((channel) => this.serializeChannel(channel));
   }
 
-  async createChannel(organizationId: string, creatorUserId: string, dto: CreateChannelDto): Promise<Channel> {
+  async createChannel(organizationId: string, creatorUserId: string, dto: CreateChannelDto) {
     if (dto.teamId) {
       const team = await this.prisma.team.findFirst({
         where: { id: dto.teamId, organizationId, deletedAt: null },
@@ -379,8 +473,9 @@ export class ConnectService {
         topic: dto.topic ?? null,
         description: dto.description ?? null,
         createdById: creatorUserId,
-        members: { create: { userId: creatorUserId } },
+        members: { create: { userId: creatorUserId, role: "ADMIN" } },
       },
+      include: { members: { select: { userId: true, role: true } } },
     });
 
     await this.audit.record({
@@ -390,7 +485,7 @@ export class ConnectService {
       resourceType: "Channel",
       resourceId: channel.id,
     });
-    return channel;
+    return this.serializeChannel(channel);
   }
 
   async getChannelForMember(
@@ -400,12 +495,14 @@ export class ConnectService {
     requireChannelMembership = false,
   ): Promise<Channel> {
     await this.assertOrganizationMember(organizationId, userId);
-    const channel = await this.prisma.channel.findFirst({
+    const channelRecord = await this.prisma.channel.findFirst({
       where: { id: channelId, organizationId, deletedAt: null },
+      include: { team: { select: { visibility: true, deletedAt: true } } },
     });
-    if (!channel) {
+    if (!channelRecord) {
       throw new AppError(ErrorCode.CHANNEL_NOT_FOUND, "Channel not found", HttpStatus.NOT_FOUND);
     }
+    const { team, ...channel } = channelRecord;
 
     const member = await this.prisma.channelMember.findUnique({
       where: { channelId_userId: { channelId, userId } },
@@ -420,7 +517,7 @@ export class ConnectService {
         where: { teamId_userId: { teamId: channel.teamId, userId } },
         select: { id: true },
       });
-      if (!teamMember) {
+      if ((!team || team.deletedAt || team.visibility === "PRIVATE") && !teamMember) {
         throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this channel's team", HttpStatus.FORBIDDEN);
       }
     }
@@ -455,9 +552,9 @@ export class ConnectService {
     channelId: string,
     userId: string,
     dto: UpdateChannelDto,
-  ): Promise<Channel> {
+  ) {
     await this.getChannelForMember(organizationId, channelId, userId);
-    return this.prisma.channel.update({
+    const channel = await this.prisma.channel.update({
       where: { id: channelId },
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
@@ -465,11 +562,13 @@ export class ConnectService {
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.isArchived !== undefined ? { isArchived: dto.isArchived } : {}),
       },
+      include: { members: { select: { userId: true, role: true } } },
     });
+    return this.serializeChannel(channel);
   }
 
-  async addMember(organizationId: string, channelId: string, actorUserId: string, userId: string): Promise<void> {
-    const channel = await this.getChannelForMember(organizationId, channelId, actorUserId);
+  async upsertChannelMember(organizationId: string, channelId: string, actorUserId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<void> {
+    const channel = await this.requireChannelAdmin(organizationId, channelId, actorUserId);
     const membership = await this.prisma.organizationMember.findFirst({
       where: { organizationId, userId, status: "ACTIVE", deletedAt: null },
       select: { id: true },
@@ -492,13 +591,18 @@ export class ConnectService {
     }
     await this.prisma.channelMember.upsert({
       where: { channelId_userId: { channelId, userId } },
-      create: { channelId, userId },
-      update: {},
+      create: { channelId, userId, role },
+      update: { role },
     });
   }
 
   async removeMember(organizationId: string, channelId: string, actorUserId: string, userId: string): Promise<void> {
-    await this.getChannelForMember(organizationId, channelId, actorUserId);
+    await this.requireChannelAdmin(organizationId, channelId, actorUserId);
+    const membership = await this.prisma.channelMember.findUnique({ where: { channelId_userId: { channelId, userId } }, select: { role: true } });
+    if (membership?.role === "ADMIN") {
+      const adminCount = await this.prisma.channelMember.count({ where: { channelId, role: "ADMIN" } });
+      if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "A channel must have at least one admin", HttpStatus.BAD_REQUEST);
+    }
     await this.prisma.channelMember.deleteMany({ where: { channelId, userId } });
   }
 
@@ -1160,5 +1264,42 @@ export class ConnectService {
     if (!membership) {
       throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.FORBIDDEN);
     }
+  }
+
+  private serializeTeam(team: Team & { members: Array<{ userId: string; role: "ADMIN" | "MEMBER" }> }) {
+    const { members, ...details } = team;
+    return {
+      ...details,
+      admins: members.filter((member) => member.role === "ADMIN").map((member) => member.userId),
+      users: members.map((member) => member.userId),
+    };
+  }
+
+  private serializeChannel(channel: ChannelWithMembers) {
+    const { members, ...details } = channel;
+    return {
+      ...details,
+      admins: members.filter((member) => member.role === "ADMIN").map((member) => member.userId),
+      users: members.map((member) => member.userId),
+    };
+  }
+
+  private async requireTeamAdmin(organizationId: string, teamId: string, userId: string) {
+    const membership = await this.prisma.teamMember.findFirst({
+      where: { teamId, userId, role: "ADMIN", team: { organizationId, deletedAt: null } },
+      select: { team: true },
+    });
+    if (!membership) throw new AppError(ErrorCode.FORBIDDEN, "Only team admins can perform this action", HttpStatus.FORBIDDEN);
+    return membership.team;
+  }
+
+  private async requireChannelAdmin(organizationId: string, channelId: string, userId: string) {
+    const channel = await this.getChannelForMember(organizationId, channelId, userId);
+    const membership = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+      select: { role: true },
+    });
+    if (membership?.role !== "ADMIN") throw new AppError(ErrorCode.FORBIDDEN, "Only channel admins can perform this action", HttpStatus.FORBIDDEN);
+    return channel;
   }
 }

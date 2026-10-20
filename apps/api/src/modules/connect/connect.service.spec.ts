@@ -6,6 +6,7 @@ import { ErrorCode } from "../../common/errors/error-codes";
 import { PrismaService } from "../../database/prisma.service";
 import { ConnectPublisherService } from "../../websocket/connect/connect-publisher.service";
 import { AuditService } from "../audit/audit.service";
+import { EntitlementService } from "../authorization/services/entitlement.service";
 import { ConnectService } from "./connect.service";
 
 describe("ConnectService message restore", () => {
@@ -22,6 +23,7 @@ describe("ConnectService message restore", () => {
   };
   let publisher: { publishToUsers: jest.Mock };
   let audit: { record: jest.Mock };
+  let entitlements: { assertWithinLimit: jest.Mock };
 
   beforeEach(() => {
     prisma = {
@@ -34,10 +36,12 @@ describe("ConnectService message restore", () => {
     };
     publisher = { publishToUsers: jest.fn() };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
+    entitlements = { assertWithinLimit: jest.fn().mockResolvedValue(undefined) };
     service = new ConnectService(
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,
       publisher as unknown as ConnectPublisherService,
+      entitlements as unknown as EntitlementService,
     );
     jest.spyOn(service, "getChannelForMember").mockResolvedValue({ id: channelId, teamId: null } as Channel);
   });

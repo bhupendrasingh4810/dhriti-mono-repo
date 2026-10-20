@@ -39,12 +39,7 @@ A `Group` may be **manual** or **dynamic** (a `rule` evaluated against members).
 
 ## Teams
 
-- `GET /v1/organization/teams`
-- `POST /v1/organization/teams` — create (OWNER/ADMIN; slug unique per org).
-- `PATCH /v1/organization/teams/:teamId`
-- `DELETE /v1/organization/teams/:teamId` — soft delete.
-- `POST /v1/organization/teams/:teamId/members/:userId` — add member.
-- `DELETE /v1/organization/teams/:teamId/members/:userId` — remove member.
+Connect owns team management. See the Connect API documentation for `/v1/organization/connect/teams`.
 
 ## Invitations
 

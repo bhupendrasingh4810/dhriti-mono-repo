@@ -69,6 +69,11 @@ enum ChannelVisibility {
   PRIVATE
 }
 
+enum ConnectMemberRole {
+  ADMIN
+  MEMBER
+}
+
 enum ConnectCallScope {
   ONE_TO_ONE
   GROUP

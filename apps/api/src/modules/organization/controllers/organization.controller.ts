@@ -17,7 +17,6 @@ import {
   UpdateMemberLifecycleDto,
   UpdateMemberRoleDto,
 } from "../dto/member.dto";
-import { CreateTeamDto, UpdateTeamDto } from "../dto/team.dto";
 import { CreateGroupDto, UpdateGroupDto } from "../dto/invitation.dto";
 
 @ApiTags("organizations")
@@ -197,74 +196,6 @@ export class OrganizationController {
     @Param("memberId") memberId: string,
   ): Promise<void> {
     return this.organizations.removeMember(organization.organizationId, memberId, user.userId);
-  }
-
-  // ---------------- Teams ----------------
-
-  @Get("organization/teams")
-  @UseGuards(TenantGuard, AccessGuard)
-  @RequirePermission("organization.members.read")
-  @ApiOperation({ summary: "List teams in the active organization" })
-  async listTeams(@CurrentOrganization() organization: OrganizationContext) {
-    return this.organizations.listTeams(organization.organizationId);
-  }
-
-  @Post("organization/teams")
-  @UseGuards(TenantGuard, AccessGuard)
-  @RequirePermission("organization.permissions.manage")
-  @ApiOperation({ summary: "Create a team (OWNER/ADMIN)" })
-  async createTeam(@CurrentOrganization() organization: OrganizationContext, @Body() dto: CreateTeamDto) {
-    return this.organizations.createTeam(organization.organizationId, dto);
-  }
-
-  @Patch("organization/teams/:teamId")
-  @UseGuards(TenantGuard, AccessGuard)
-  @RequirePermission("organization.permissions.manage")
-  @ApiOperation({ summary: "Update a team (OWNER/ADMIN)" })
-  async updateTeam(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("teamId") teamId: string,
-    @Body() dto: UpdateTeamDto,
-  ) {
-    return this.organizations.updateTeam(organization.organizationId, teamId, dto);
-  }
-
-  @Delete("organization/teams/:teamId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(TenantGuard, AccessGuard)
-  @RequirePermission("organization.permissions.manage")
-  @ApiOperation({ summary: "Soft-delete a team (OWNER/ADMIN)" })
-  async deleteTeam(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("teamId") teamId: string,
-  ): Promise<void> {
-    return this.organizations.deleteTeam(organization.organizationId, teamId);
-  }
-
-  @Post("organization/teams/:teamId/members/:userId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(TenantGuard, AccessGuard)
-  @RequirePermission("organization.permissions.manage")
-  @ApiOperation({ summary: "Add an organization member to a team (OWNER/ADMIN)" })
-  async addTeamMember(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("teamId") teamId: string,
-    @Param("userId") userId: string,
-  ): Promise<void> {
-    return this.organizations.addTeamMember(organization.organizationId, teamId, userId);
-  }
-
-  @Delete("organization/teams/:teamId/members/:userId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @UseGuards(TenantGuard, AccessGuard)
-  @RequirePermission("organization.permissions.manage")
-  @ApiOperation({ summary: "Remove a member from a team (OWNER/ADMIN)" })
-  async removeTeamMember(
-    @CurrentOrganization() organization: OrganizationContext,
-    @Param("teamId") teamId: string,
-    @Param("userId") userId: string,
-  ): Promise<void> {
-    return this.organizations.removeTeamMember(organization.organizationId, teamId, userId);
   }
 
   // ---------------- Groups ----------------

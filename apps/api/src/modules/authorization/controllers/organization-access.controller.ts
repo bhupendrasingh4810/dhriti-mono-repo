@@ -23,15 +23,12 @@ import {
   AddPermissionDto,
   AssignPermissionGroupDto,
   CreateDepartmentDto,
-  CreateOrganizationTeamDto,
   CreatePermissionGroupDto,
   UpdateDepartmentDto,
-  UpdateOrganizationTeamDto,
   UpdatePermissionGroupDto,
 } from "../dto/organization-access.dto";
 import { OrganizationDepartmentService } from "../services/organization-department.service";
 import { OrganizationPermissionGroupService } from "../services/organization-permission-group.service";
-import { OrganizationTeamService } from "../services/organization-team.service";
 import { EntitlementService } from "../services/entitlement.service";
 import { SubscriptionService } from "../services/subscription.service";
 import { CreateSubscriptionDto, UpdateSubscriptionDto } from "../dto/subscription.dto";
@@ -44,7 +41,6 @@ export class OrganizationAccessController {
   constructor(
     private readonly groups: OrganizationPermissionGroupService,
     private readonly departments: OrganizationDepartmentService,
-    private readonly teams: OrganizationTeamService,
     private readonly subscriptions: SubscriptionService,
     private readonly entitlements: EntitlementService,
   ) {}
@@ -198,63 +194,6 @@ export class OrganizationAccessController {
     @Param("userId") userId: string,
   ) {
     return this.departments.removeUser(organization.organizationId, departmentId, userId, user.userId);
-  }
-
-  @Get("teams")
-  @RequirePermission("organization.members.read")
-  listTeams(@CurrentOrganization() organization: OrganizationContext) {
-    return this.teams.list(organization.organizationId);
-  }
-  @Post("teams")
-  @RequirePermission("organization.permissions.manage")
-  createTeam(
-    @CurrentOrganization() organization: OrganizationContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateOrganizationTeamDto,
-  ) {
-    return this.teams.create(organization.organizationId, user.userId, dto);
-  }
-  @Patch("teams/:teamId")
-  @RequirePermission("organization.permissions.manage")
-  updateTeam(
-    @CurrentOrganization() organization: OrganizationContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Param("teamId") teamId: string,
-    @Body() dto: UpdateOrganizationTeamDto,
-  ) {
-    return this.teams.update(organization.organizationId, teamId, user.userId, dto);
-  }
-  @Delete("teams/:teamId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission("organization.permissions.manage")
-  deleteTeam(
-    @CurrentOrganization() organization: OrganizationContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Param("teamId") teamId: string,
-  ) {
-    return this.teams.delete(organization.organizationId, teamId, user.userId);
-  }
-  @Post("teams/:teamId/users/:userId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission("organization.permissions.manage")
-  addTeamMember(
-    @CurrentOrganization() organization: OrganizationContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Param("teamId") teamId: string,
-    @Param("userId") userId: string,
-  ) {
-    return this.teams.addMember(organization.organizationId, teamId, userId, user.userId);
-  }
-  @Delete("teams/:teamId/users/:userId")
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @RequirePermission("organization.permissions.manage")
-  removeTeamMember(
-    @CurrentOrganization() organization: OrganizationContext,
-    @CurrentUser() user: AuthenticatedUser,
-    @Param("teamId") teamId: string,
-    @Param("userId") userId: string,
-  ) {
-    return this.teams.removeMember(organization.organizationId, teamId, userId, user.userId);
   }
 
   @Get("subscription")

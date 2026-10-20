@@ -76,4 +76,9 @@ export class AddChannelMemberDto {
   @ApiProperty({ format: "uuid" })
   @IsUUID()
   userId!: string;
+
+  @ApiPropertyOptional({ enum: ["ADMIN", "MEMBER"], default: "MEMBER" })
+  @IsOptional()
+  @IsEnum(["ADMIN", "MEMBER"])
+  role?: "ADMIN" | "MEMBER";
 }

@@ -114,38 +114,3 @@ export class UpdateDepartmentDto {
   isActive?: boolean;
 }
 
-export class CreateOrganizationTeamDto {
-  @ApiProperty()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  name!: string;
-
-  @ApiProperty()
-  @IsString()
-  @MinLength(2)
-  @MaxLength(64)
-  @Matches(/^[a-z0-9][a-z0-9-]*$/)
-  slug!: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  description?: string;
-}
-
-export class UpdateOrganizationTeamDto {
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  name?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  description?: string;
-}

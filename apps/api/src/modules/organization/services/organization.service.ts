@@ -5,7 +5,6 @@ import type {
   Group,
   Organization,
   OrganizationMember,
-  Team,
   User,
   UserRole,
 } from "@prisma/client";
@@ -485,95 +484,6 @@ export class OrganizationService {
     });
   }
 
-  // ---------------- Teams ----------------
-
-  async listTeams(organizationId: string): Promise<Array<Team & { memberCount: number }>> {
-    const teams = await this.prisma.team.findMany({
-      where: { organizationId, deletedAt: null },
-      include: { _count: { select: { members: true } } },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return teams.map(({ _count, ...team }) => ({ ...team, memberCount: _count.members }));
-  }
-
-  async createTeam(organizationId: string, input: { name: string; slug: string; description?: string }): Promise<Team> {
-    const slugTaken = await this.prisma.team.findUnique({
-      where: { organizationId_slug: { organizationId, slug: input.slug } },
-      select: { id: true },
-    });
-    if (slugTaken) {
-      throw new AppError(
-        ErrorCode.TEAM_SLUG_TAKEN,
-        "A team with this slug already exists in the organization",
-        HttpStatus.CONFLICT,
-      );
-    }
-
-    const [legacyTeamCount, organizationTeamCount] = await Promise.all([
-      this.prisma.team.count({ where: { organizationId, deletedAt: null } }),
-      this.prisma.organizationTeam.count({ where: { organizationId, deletedAt: null } }),
-    ]);
-    await this.entitlements.assertWithinLimit(organizationId, "max_teams", legacyTeamCount + organizationTeamCount + 1);
-
-    return this.prisma.team.create({
-      data: {
-        organizationId,
-        name: input.name.trim(),
-        slug: input.slug,
-        description: input.description?.trim() ?? null,
-      },
-    });
-  }
-
-  async updateTeam(
-    organizationId: string,
-    teamId: string,
-    input: { name?: string; description?: string },
-  ): Promise<Team> {
-    await this.getTeam(organizationId, teamId);
-    return this.prisma.team.update({
-      where: { id: teamId },
-      data: {
-        ...(input.name !== undefined ? { name: input.name.trim() } : {}),
-        ...(input.description !== undefined ? { description: input.description.trim() } : {}),
-      },
-    });
-  }
-
-  async deleteTeam(organizationId: string, teamId: string): Promise<void> {
-    await this.getTeam(organizationId, teamId);
-    await this.prisma.team.update({
-      where: { id: teamId },
-      data: { deletedAt: new Date() },
-    });
-  }
-
-  async addTeamMember(organizationId: string, teamId: string, userId: string): Promise<void> {
-    await this.getTeam(organizationId, teamId);
-    const membership = await this.prisma.organizationMember.findUnique({
-      where: { organizationId_userId: { organizationId, userId } },
-    });
-    if (!membership || membership.deletedAt) {
-      throw new AppError(
-        ErrorCode.MEMBER_NOT_FOUND,
-        "User must be an organization member before joining a team",
-        HttpStatus.BAD_REQUEST,
-      );
-    }
-
-    await this.prisma.teamMember.upsert({
-      where: { teamId_userId: { teamId, userId } },
-      create: { teamId, userId },
-      update: {},
-    });
-  }
-
-  async removeTeamMember(organizationId: string, teamId: string, userId: string): Promise<void> {
-    await this.getTeam(organizationId, teamId);
-    await this.prisma.teamMember.deleteMany({ where: { teamId, userId } });
-  }
-
   // ---------------- Groups ----------------
 
   async listGroups(organizationId: string): Promise<Array<Group & { memberCount: number }>> {
@@ -745,16 +655,6 @@ export class OrganizationService {
       throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Member not found", HttpStatus.NOT_FOUND);
     }
     return member;
-  }
-
-  private async getTeam(organizationId: string, teamId: string): Promise<Team> {
-    const team = await this.prisma.team.findFirst({
-      where: { id: teamId, organizationId, deletedAt: null },
-    });
-    if (!team) {
-      throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
-    }
-    return team;
   }
 
   private async getGroup(organizationId: string, groupId: string): Promise<Group> {

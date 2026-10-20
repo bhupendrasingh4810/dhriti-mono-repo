@@ -192,7 +192,7 @@ export function useConnect(selectedConversationId: string) {
       const [peopleResult, chatsResult, channelsResult, preferencesResult, teamsResult] = await Promise.allSettled([
         connectService.listUsers(organizationId), connectService.listConversations(organizationId),
         connectService.listChannels(organizationId), connectService.getSidebar(organizationId),
-        tenantRequest<Team[]>(organizationId, "/api/organization/teams"),
+          tenantRequest<Team[]>(organizationId, "/api/organization/connect/teams"),
       ]);
       if (cancelled || generation.current !== current) return;
       const people = peopleResult.status === "fulfilled" ? peopleResult.value : [];

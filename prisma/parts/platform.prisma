@@ -378,13 +378,14 @@ model MfaRecoveryCode {
 }
 
 model Team {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @db.Uuid
   name           String
   slug           String
   description    String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  visibility     ChannelVisibility @default(PUBLIC)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
   deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -399,16 +400,18 @@ model Team {
 }
 
 model TeamMember {
-  id        String   @id @default(uuid()) @db.Uuid
-  teamId    String   @db.Uuid
-  userId    String   @db.Uuid
-  createdAt DateTime @default(now())
+  id        String            @id @default(uuid()) @db.Uuid
+  teamId    String            @db.Uuid
+  userId    String            @db.Uuid
+  role      ConnectMemberRole @default(MEMBER)
+  createdAt DateTime          @default(now())
 
   team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId])
   @@index([userId])
+  @@index([teamId, role])
   @@map("team_members")
 }
 
@@ -454,16 +457,18 @@ model StoredFile {
 }
 
 model ChannelMember {
-  id        String    @id @default(uuid()) @db.Uuid
-  channelId String    @db.Uuid
-  userId    String    @db.Uuid
+  id         String            @id @default(uuid()) @db.Uuid
+  channelId  String            @db.Uuid
+  userId     String            @db.Uuid
+  role       ConnectMemberRole @default(MEMBER)
   lastReadAt DateTime?
-  createdAt DateTime  @default(now())
+  createdAt  DateTime          @default(now())
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
 
   @@unique([channelId, userId])
   @@index([userId])
+  @@index([channelId, role])
   @@map("channel_members")
 }
 
@@ -489,7 +494,7 @@ model MessageReaction {
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
-  @@unique([messageId, userId, emoji])
+  @@unique([messageId, userId])
   @@index([messageId])
   @@map("message_reactions")
 }

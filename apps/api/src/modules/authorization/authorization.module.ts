@@ -4,7 +4,6 @@ import { EntitlementService } from "./services/entitlement.service";
 import { OrganizationAccessController } from "./controllers/organization-access.controller";
 import { OrganizationDepartmentService } from "./services/organization-department.service";
 import { OrganizationPermissionGroupService } from "./services/organization-permission-group.service";
-import { OrganizationTeamService } from "./services/organization-team.service";
 import { PermissionService } from "./services/permission.service";
 import { PlatformRoleService } from "./services/platform-role.service";
 import { SubscriptionService } from "./services/subscription.service";
@@ -23,7 +22,6 @@ import { BillingWebhookRateLimitGuard } from "./billing-webhook-rate-limit.guard
     BillingWebhookRateLimitGuard,
     OrganizationPermissionGroupService,
     OrganizationDepartmentService,
-    OrganizationTeamService,
     PlatformRoleService,
   ],
   exports: [
@@ -33,7 +31,6 @@ import { BillingWebhookRateLimitGuard } from "./billing-webhook-rate-limit.guard
     BillingWebhookService,
     OrganizationPermissionGroupService,
     OrganizationDepartmentService,
-    OrganizationTeamService,
     PlatformRoleService,
   ],
 })

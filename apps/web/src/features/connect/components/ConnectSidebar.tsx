@@ -246,7 +246,7 @@ export default function ConnectSidebar({
                         open={teamsOpen}
                         onToggle={() => setTeamsOpen((value) => !value)}
                     >
-                        <div className="space-y-1 px-1.5">
+                        <div className="space-y-1">
                             {teams.map((team) => (
                                 <TeamGroup
                                     key={team.id}
@@ -317,9 +317,9 @@ function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId
             <div
                 onMouseEnter={() => setHoveredRowId(teamRowId)}
                 onMouseLeave={() => setHoveredRowId((value) => (value === teamRowId ? null : value))}
-                className="flex items-center justify-between"
+                className="flex w-full items-center justify-between rounded px-1.5 transition-colors hover:bg-white/10"
             >
-                <button type="button" onClick={() => onToggleTeam(team.id)} aria-expanded={team.isExpanded} className="flex min-w-0 items-center gap-1.5 rounded py-1 text-left hover:bg-white/10">
+                <button type="button" onClick={() => onToggleTeam(team.id)} aria-expanded={team.isExpanded} className="flex min-w-0 flex-1 items-center gap-1.5 py-1 text-left">
                     <ChevronDown className={`h-[18px] w-[18px] shrink-0 text-white/80 transition-transform ${team.isExpanded ? "rotate-0" : "-rotate-90"}`} />
                     <TeamIcon className="h-[18px] w-[18px] shrink-0 text-white/70" />
                     <span className="truncate text-sm font-bold text-white">{team.label}</span>
@@ -331,7 +331,7 @@ function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId
                 />
             </div>
             {team.isExpanded ? (
-                <div className="space-y-1 pl-8">
+                <div className="space-y-1">
                     {team.channels.map((channel) => {
                         const selected = selectedConversationId === channel.id;
                         const rowId = `channel-${channel.id}`;
@@ -343,9 +343,9 @@ function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId
                                 key={channel.id}
                                 onMouseEnter={() => setHoveredRowId(rowId)}
                                 onMouseLeave={() => setHoveredRowId((value) => (value === rowId ? null : value))}
-                                className="flex items-center justify-between"
+                                className={`flex w-full items-center justify-between rounded px-1.5 transition-colors hover:bg-white/10 ${selected ? "bg-white/20" : ""}`}
                             >
-                                <Link href={conversationHref(channel.id)} onClick={select} className={`min-w-0 cursor-pointer rounded px-1.5 py-1 text-sm hover:bg-white/10 ${selected ? "bg-white/20 font-bold text-white" : "font-medium text-white/80"}`}>
+                                <Link href={conversationHref(channel.id)} onClick={select} className={`min-w-0 flex-1 cursor-pointer py-1 pl-8 text-sm ${selected ? "font-bold text-white" : "font-medium text-white/80"}`}>
                                     {channel.isPrivate ? "lock " : "# "}{channel.slug}
                                 </Link>
                                 <SidebarTrailingSlot
