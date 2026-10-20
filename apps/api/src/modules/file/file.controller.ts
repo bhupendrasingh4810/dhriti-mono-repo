@@ -84,10 +84,17 @@ export class FileController {
   @Get(":fileId/download")
   @ApiOperation({ summary: "Get a short-lived presigned download URL" })
   async download(
+    @CurrentUser() user: AuthenticatedUser,
     @CurrentOrganization() organization: OrganizationContext,
     @Param("fileId") fileId: string,
+    @Ip() ip: string,
+    @Req() request: Request,
   ): Promise<{ url: string; expiresIn: number }> {
-    return this.files.getDownloadUrl(organization.organizationId, fileId);
+    const userAgentHeader = request.headers["user-agent"];
+    return this.files.getDownloadUrl(organization.organizationId, fileId, user.userId, {
+      ipAddress: ip,
+      userAgent: Array.isArray(userAgentHeader) ? userAgentHeader[0] : userAgentHeader,
+    });
   }
 
   @Delete(":fileId")

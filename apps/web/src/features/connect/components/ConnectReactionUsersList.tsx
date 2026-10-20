@@ -1,13 +1,7 @@
 "use client";
 
 import { Avatar, Box, Stack, Typography } from "@mui/material";
-
-export type ConnectReactionUser = {
-  id: string;
-  avatar: string;
-  displayName: string;
-  jobTitle: string;
-};
+import type { ConnectReactionUser } from "@/types/connect.types";
 
 type ConnectReactionUsersListProps = {
   emoji: string;

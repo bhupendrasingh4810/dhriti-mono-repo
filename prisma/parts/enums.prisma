@@ -90,6 +90,15 @@ enum ConnectCallStatus {
   CANCELLED
 }
 
+enum ConnectRecordingStatus {
+  PENDING_CONSENT
+  READY
+  RECORDING
+  PROCESSING
+  COMPLETE
+  DELETED
+}
+
 enum IssueStatus {
   BACKLOG
   TODO

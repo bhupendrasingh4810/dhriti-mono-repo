@@ -1,5 +1,6 @@
 import { useState } from "react";
-import type { ElementType, KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import { Archive, ChevronDown, Ellipsis } from "lucide-react";
 import {
     ConnectSidebarConversation,
     ConnectSidebarMenuContext,
@@ -61,7 +62,7 @@ function SidebarSection({
                     className="flex w-full items-center justify-between px-1.5 text-left"
                 >
                     <span className="text-xs font-semibold uppercase tracking-wide text-white/70">{title}</span>
-                    <ChevronIcon className={`h-[18px] w-[18px] text-white/70 transition-transform duration-150 ${open ? "rotate-0" : "-rotate-90"}`} />
+                    <ChevronDown className={`h-[18px] w-[18px] text-white/70 transition-transform duration-150 ${open ? "rotate-0" : "-rotate-90"}`} />
                 </button>
                 <button
                     type="button"
@@ -70,7 +71,7 @@ function SidebarSection({
                     onClick={onOpenMenu}
                     className={`absolute right-7 grid h-7 w-7 place-items-center rounded text-white/70 transition-opacity duration-150 hover:bg-white/10 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
                 >
-                    <MoreIcon />
+                    <Ellipsis aria-hidden="true" />
                 </button>
             </div>
             {open ? children : null}
@@ -103,7 +104,7 @@ function SidebarTrailingSlot({
                 onClick={onOpenMenu}
                 className={`absolute inset-0 grid h-7 w-7 place-items-center rounded text-white/70 transition-opacity duration-150 hover:bg-white/10 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
             >
-                <MoreIcon />
+                <Ellipsis aria-hidden="true" />
             </button>
         </div>
     );
@@ -160,7 +161,7 @@ export default function ConnectSidebar({
             className="hidden h-full min-h-0 w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] lg:flex">
             <div className="flex items-center justify-between p-4">
                 <span className="text-sm font-bold text-white">Connect</span>
-                <MoreIcon className="text-white/70" />
+                <Ellipsis aria-hidden="true" className="text-white/70" />
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-scroll p-3">
@@ -235,43 +236,18 @@ export default function ConnectSidebar({
                         onToggle={() => setTeamsOpen((value) => !value)}
                     >
                         <div className="space-y-1 px-1.5">
-                            {teams.map((team) => {
-                                const TeamIcon = team.icon ?? ArchiveIcon;
-                                const teamRowId = `team-${team.id}`;
-                                const teamHovered = hoveredRowId === teamRowId;
-                                return (
-                                    <div key={team.id} className="space-y-1">
-                                        <div
-                                            onMouseEnter={() => setHoveredRowId(teamRowId)}
-                                            onMouseLeave={() => setHoveredRowId((value) => (value === teamRowId ? null : value))}
-                                            className="flex items-center justify-between"
-                                        >
-                                            <button
-                                                type="button"
-                                                onClick={() => onToggleTeam(team.id)}
-                                                aria-expanded={team.isExpanded}
-                                                className="flex min-w-0 items-center gap-1.5 rounded py-1 text-left hover:bg-white/10"
-                                            >
-                                                <ChevronIcon className={`h-[18px] w-[18px] shrink-0 text-white/80 transition-transform ${team.isExpanded ? "rotate-0" : "-rotate-90"}`} />
-                                                <TeamIcon className="h-[18px] w-[18px] shrink-0 text-white/70" />
-                                                <span className="truncate text-sm font-bold text-white">{team.label}</span>
-                                            </button>
-                                            <SidebarTrailingSlot
-                                                hovered={teamHovered}
-                                                tooltip="More team options"
-                                                onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "team", id: team.id, label: team.label, sectionId: "teams" })}
-                                            />
-                                        </div>
-                                        {team.isExpanded ? <div className="space-y-1 pl-8">{team.channels.map((channel) => {
-                                            const selected = selectedConversationId === channel.id;
-                                            const rowId = `channel-${channel.id}`;
-                                            const hovered = hoveredRowId === rowId;
-                                            const select = () => onSelectConversation(channel.id);
-                                            return <div key={channel.id} onMouseEnter={() => setHoveredRowId(rowId)} onMouseLeave={() => setHoveredRowId((value) => (value === rowId ? null : value))} className="flex items-center justify-between"><div role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} className={`min-w-0 cursor-pointer rounded px-1.5 py-1 text-sm hover:bg-white/10 ${selected ? "bg-white/20 font-bold text-white" : "font-medium text-white/80"}`}>{channel.isPrivate ? "lock " : "# "}{channel.slug}</div><SidebarTrailingSlot hovered={hovered} tooltip="More channel options" onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "channel", id: channel.id, label: channel.name, parentId: team.id, sectionId: "teams" })} /></div>;
-                                        })}</div> : null}
-                                    </div>
-                                );
-                            })}
+                            {teams.map((team) => (
+                                <TeamGroup
+                                    key={team.id}
+                                    team={team}
+                                    selectedConversationId={selectedConversationId}
+                                    hoveredRowId={hoveredRowId}
+                                    setHoveredRowId={setHoveredRowId}
+                                    onToggleTeam={onToggleTeam}
+                                    onSelectConversation={onSelectConversation}
+                                    onOpenSidebarMenu={onOpenSidebarMenu}
+                                />
+                            ))}
                         </div>
                     </SidebarSection>
                 </div>
@@ -304,6 +280,65 @@ function ConversationList({ conversations, sectionId, selectedConversationId, ho
     })}</div>;
 }
 
-function MoreIcon({ className = "" }: { className?: string }) { return <svg aria-hidden="true" className={className} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></svg>; }
-function ChevronIcon({ className = "" }: { className?: string }) { return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>; }
-function ArchiveIcon({ className = "" }: { className?: string }) { return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7h16v13H4zM3 4h18v3H3zM10 12h4" /></svg>; }
+function TeamGroup({ team, selectedConversationId, hoveredRowId, setHoveredRowId, onToggleTeam, onSelectConversation, onOpenSidebarMenu }: {
+    team: ConnectSidebarTeamGroup;
+    selectedConversationId: string;
+    hoveredRowId: string | null;
+    setHoveredRowId: (value: string | null | ((previous: string | null) => string | null)) => void;
+    onToggleTeam: (teamId: string) => void;
+    onSelectConversation: (conversationId: string) => void;
+    onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
+}) {
+    const TeamIcon = team.icon ?? Archive;
+    const teamRowId = `team-${team.id}`;
+    const teamHovered = hoveredRowId === teamRowId;
+
+    return (
+        <div className="space-y-1">
+            <div
+                onMouseEnter={() => setHoveredRowId(teamRowId)}
+                onMouseLeave={() => setHoveredRowId((value) => (value === teamRowId ? null : value))}
+                className="flex items-center justify-between"
+            >
+                <button type="button" onClick={() => onToggleTeam(team.id)} aria-expanded={team.isExpanded} className="flex min-w-0 items-center gap-1.5 rounded py-1 text-left hover:bg-white/10">
+                    <ChevronDown className={`h-[18px] w-[18px] shrink-0 text-white/80 transition-transform ${team.isExpanded ? "rotate-0" : "-rotate-90"}`} />
+                    <TeamIcon className="h-[18px] w-[18px] shrink-0 text-white/70" />
+                    <span className="truncate text-sm font-bold text-white">{team.label}</span>
+                </button>
+                <SidebarTrailingSlot
+                    hovered={teamHovered}
+                    tooltip="More team options"
+                    onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "team", id: team.id, label: team.label, sectionId: "teams" })}
+                />
+            </div>
+            {team.isExpanded ? (
+                <div className="space-y-1 pl-8">
+                    {team.channels.map((channel) => {
+                        const selected = selectedConversationId === channel.id;
+                        const rowId = `channel-${channel.id}`;
+                        const hovered = hoveredRowId === rowId;
+                        const select = () => onSelectConversation(channel.id);
+
+                        return (
+                            <div
+                                key={channel.id}
+                                onMouseEnter={() => setHoveredRowId(rowId)}
+                                onMouseLeave={() => setHoveredRowId((value) => (value === rowId ? null : value))}
+                                className="flex items-center justify-between"
+                            >
+                                <div role="button" tabIndex={0} onClick={select} onKeyDown={(event) => handleRowKeyDown(event, select)} className={`min-w-0 cursor-pointer rounded px-1.5 py-1 text-sm hover:bg-white/10 ${selected ? "bg-white/20 font-bold text-white" : "font-medium text-white/80"}`}>
+                                    {channel.isPrivate ? "lock " : "# "}{channel.slug}
+                                </div>
+                                <SidebarTrailingSlot
+                                    hovered={hovered}
+                                    tooltip="More channel options"
+                                    onOpenMenu={(event) => onOpenSidebarMenu(event, { kind: "channel", id: channel.id, label: channel.name, parentId: team.id, sectionId: "teams" })}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : null}
+        </div>
+    );
+}

@@ -23,6 +23,7 @@ model Channel {
   createdBy    User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
   members      ChannelMember[]
   messages     Message[]
+  calls        ConnectCall[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])

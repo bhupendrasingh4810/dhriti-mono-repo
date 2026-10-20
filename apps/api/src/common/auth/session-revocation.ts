@@ -1,0 +1,1 @@
+export const SESSION_REVOCATION_CHANNEL = "auth:session-revoked";

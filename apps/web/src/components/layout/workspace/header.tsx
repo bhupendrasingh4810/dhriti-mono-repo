@@ -20,7 +20,8 @@ import {
   Users,
 } from "lucide-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
-import { ConnectHeaderSearch, type ConnectHeaderSearchItem } from "@/features/connect/components/ConnectHeaderSearch";
+import { ConnectHeaderSearch } from "@/features/connect/components/ConnectHeaderSearch";
+import type { ConnectHeaderSearchItem } from "@/types/connect.types";
 import { useAuth } from "@/hooks/use-auth";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 

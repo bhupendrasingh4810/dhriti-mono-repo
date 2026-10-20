@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import type { ConnectReactionUser, DetailIconName } from "@/types/connect.types";
 
 type ConnectUserDetailsCardProps = {
   avatar: string;
@@ -12,13 +14,8 @@ type ConnectUserDetailsCardProps = {
   timezone?: string;
   viewerTimezone?: string;
   reportsTo?: { displayName: string; jobTitle: string };
-  reactionContext?: {
-    emoji: string;
-    users: Array<{ id: string; avatar: string; displayName: string; jobTitle: string }>;
-  };
+  reactionContext?: { emoji: string; users: ConnectReactionUser[] };
 };
-
-type DetailIconName = "chat" | "organization" | "video" | "phone" | "available" | "time" | "mail" | "location" | "chevronUp" | "chevronDown";
 
 function getTimezoneOffsetInMinutes(timezone: string, date: Date) {
   const localizedDate = new Date(date.toLocaleString("en-US", { timeZone: timezone }));

@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Put,
@@ -24,6 +25,7 @@ import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
 import { CreateDirectConversationDto, SetSidebarFavoriteDto } from "./dto/sidebar.dto";
+import { SetRecordingConsentDto } from "./dto/recording.dto";
 
 @ApiTags("connect")
 @ApiBearerAuth()
@@ -64,6 +66,51 @@ export class ConnectController {
   @ApiOperation({ summary: "List the current user's direct and group conversations" })
   async listConversations(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
     return this.connect.listConversations(organization.organizationId, user.userId);
+  }
+
+  @Get("calls/:callId/token-access")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Authorize an RTC token request for an active Connect call" })
+  async getCallTokenAccess(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("callId", new ParseUUIDPipe()) callId: string,
+  ) {
+    return this.connect.getCallTokenAccess(organization.organizationId, user.userId, callId);
+  }
+
+  @Post("calls/:callId/recording/request")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Request participant consent before recording an active Connect call" })
+  async requestCallRecording(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("callId", new ParseUUIDPipe()) callId: string,
+  ) {
+    return this.connect.requestCallRecording(organization.organizationId, user.userId, callId);
+  }
+
+  @Get("calls/:callId/recording")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Get recording consent state for an authorized Connect call participant" })
+  async getCallRecordingConsent(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("callId", new ParseUUIDPipe()) callId: string,
+  ) {
+    return this.connect.getCallRecordingConsent(organization.organizationId, user.userId, callId);
+  }
+
+  @Post("calls/:callId/recording/consent")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Record a participant's consent decision for an active Connect call" })
+  async setCallRecordingConsent(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("callId", new ParseUUIDPipe()) callId: string,
+    @Body() dto: SetRecordingConsentDto,
+  ) {
+    return this.connect.setCallRecordingConsent(organization.organizationId, user.userId, callId, dto.consent);
   }
 
   @Post("conversations/direct")

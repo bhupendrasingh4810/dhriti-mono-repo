@@ -1,20 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { connectUsers } from "@/mocks/connect/users";
 import { connectUsersById } from "@/mocks/connect";
-import type { CallType } from "@/features/connect/components/WorkspaceCallProvider";
+import type { CallType } from "@/types/connect.types";
 
-interface ConversationHeaderProps {
-  conversation: {
-    id: string;
-    name: string;
-    type: "channel" | "direct" | "group";
-    isFavorite?: boolean;
-    participants: string[];
-  };
+type ConversationHeaderProps = {
+  conversation: { id: string; name: string; type: "channel" | "direct" | "group"; isFavorite?: boolean; participants: string[] };
   teamLabel: string;
   onOpenDetails: () => void;
   onStartCall: (type: CallType) => void;
-}
+};
 
 export function ConversationHeader({ conversation, teamLabel, onOpenDetails, onStartCall }: ConversationHeaderProps) {
   const currentUser = connectUsers[0]; // Assuming the first user is the current user for this example

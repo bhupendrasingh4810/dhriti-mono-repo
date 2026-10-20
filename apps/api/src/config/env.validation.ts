@@ -122,6 +122,18 @@ export const envSchema = z
       });
     }
 
+    const configuredOrigins = (env.CONNECT_SOCKET_ALLOWED_ORIGINS ?? env.CORS_ORIGINS)
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+    const webOrigin = new URL(env.WEB_APP_URL).origin;
+    if (!configuredOrigins.includes(webOrigin)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "CORS_ORIGINS or CONNECT_SOCKET_ALLOWED_ORIGINS must include the WEB_APP_URL origin",
+      });
+    }
+
     if (env.BILLING_WEBHOOK_RETRY_LEASE_TTL_SECONDS >= env.BILLING_WEBHOOK_RETRY_INTERVAL_SECONDS) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

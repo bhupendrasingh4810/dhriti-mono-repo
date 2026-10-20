@@ -2,26 +2,30 @@ import { Fragment, useState } from "react";
 import type { MouseEvent } from "react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
+import type { ConnectMessage, ConnectUser } from "@/types/connect.types";
+
+type RenderMessageContentProps = {
+  message: ConnectMessage;
+  connectUsers: ConnectUser[];
+  openMentionHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
+};
+
+type MentionTokenProps = {
+  token: string;
+  connectUsers: ConnectUser[];
+  openMentionHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
+};
+
+type InlineMarkdownProps = {
+  text: string;
+  keyPrefix: string;
+  connectUsers: ConnectUser[];
+  openMentionHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
+};
 
 // ==========================================
 // 📋 STRICT ENTIRE APPLICATION DATA INTERFACES
 // ==========================================
-export interface ConnectMessage {
-  id: string;
-  content: string;
-}
-
-export interface ConnectUser {
-  id: string;
-  displayName: string;
-}
-
-interface RenderMessageContentProps {
-  message: ConnectMessage;
-  connectUsers: ConnectUser[];
-  openMentionHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
-}
-
 // ==========================================
 // 🛡️ IMMUTABLE REGEX COMPILED TOKENS SYSTEM
 // ==========================================
@@ -45,6 +49,15 @@ const MARKDOWN_TOKEN_SPLITTER =
 const LINK_PATTERN = /^\[([^\]]+)\]\(([^\)]+)\)$/;
 const URL_PATTERN = /https?:\/\/[^\s<>)]+/gi;
 
+function safeHttpUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
 // ==========================================
 // 🧩 ISOLATED UI SUB-COMPONENTS (MEMOIZED READY)
 // ==========================================
@@ -52,12 +65,6 @@ const URL_PATTERN = /https?:\/\/[^\s<>)]+/gi;
 /**
  * 🏷️ Component for managing hover states on dynamic @mentions
  */
-interface MentionTokenProps {
-  token: string;
-  connectUsers: ConnectUser[];
-  openMentionHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
-}
-
 const MentionToken = ({ token, connectUsers, openMentionHover }: MentionTokenProps) => {
   const displayName = (token.startsWith("@[") ? token.slice(2, -1) : token.slice(1)).trim();
   const matchedUser = connectUsers.find((user) => user.displayName.trim().toLowerCase() === displayName.toLowerCase());
@@ -77,13 +84,6 @@ const MentionToken = ({ token, connectUsers, openMentionHover }: MentionTokenPro
 /**
  * 🎨 Parses and returns styled text fragments based on regex token tags
  */
-interface InlineMarkdownProps {
-  text: string;
-  keyPrefix: string;
-  connectUsers: ConnectUser[];
-  openMentionHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
-}
-
 const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: InlineMarkdownProps) => {
   const tokens = text.split(MARKDOWN_TOKEN_SPLITTER);
 
@@ -146,10 +146,12 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
 
         const linkMatch = token.match(LINK_PATTERN);
         if (linkMatch) {
+          const href = safeHttpUrl(linkMatch[2]);
+          if (!href) return <Fragment key={`${currentKey}-txt`}>{linkMatch[1]}</Fragment>;
           return (
             <a
               key={`${currentKey}-link`}
-              href={linkMatch[2]}
+              href={href}
               target="_blank"
               rel="noreferrer"
               className="cursor-pointer text-emerald-600 underline"

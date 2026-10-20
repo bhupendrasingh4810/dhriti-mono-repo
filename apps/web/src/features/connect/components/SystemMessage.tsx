@@ -1,9 +1,6 @@
-interface SystemMessageProps {
-  message: {
-    id: string;
-    content: string;
-  };
-}
+import type { ConnectMessage } from "@/types/connect.types";
+
+type SystemMessageProps = { message: ConnectMessage };
 
 export const SystemMessage = ({ message }: SystemMessageProps) => (
   <div className="flex items-center justify-center py-0.5">

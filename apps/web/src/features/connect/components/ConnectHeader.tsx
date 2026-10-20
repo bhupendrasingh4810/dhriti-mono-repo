@@ -1,12 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-export type ConnectHeaderSearchItem = {
-  id: string;
-  title: string;
-  description?: string;
-};
+import type { ConnectHeaderSearchItem } from "@/types/connect.types";
 
 type ConnectHeaderProps = {
   users?: ConnectHeaderSearchItem[];

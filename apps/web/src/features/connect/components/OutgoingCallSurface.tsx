@@ -14,8 +14,8 @@ import {
   Video,
   VideoOff,
 } from "lucide-react";
-import type { ActiveCall } from "./WorkspaceCallProvider";
 import { connectUsersById, connectSidebarState } from "@/mocks/connect";
+import type { ActiveCall } from "@/types/connect.types";
 
 type OutgoingCallSurfaceProps = {
   call: ActiveCall;

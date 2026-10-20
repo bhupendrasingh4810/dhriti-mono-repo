@@ -37,9 +37,7 @@ export class MarkChannelReadEventDto extends ChannelRoomEventDto {
 }
 
 export class CallInviteEventDto extends ChannelRoomEventDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(128)
+  @IsUUID()
   callId!: string;
 
   @IsOptional()
@@ -70,13 +68,11 @@ export class CallInviteEventDto extends ChannelRoomEventDto {
 }
 
 export class CallResponseEventDto extends ChannelRoomEventDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(128)
+  @IsUUID()
   callId!: string;
 
-  @IsIn(["accept", "reject", "miss", "cancel", "end"])
-  action!: "accept" | "reject" | "miss" | "cancel" | "end";
+  @IsIn(["accept", "reject", "miss", "cancel", "end", "leave"])
+  action!: "accept" | "reject" | "miss" | "cancel" | "end" | "leave";
 
   @IsOptional()
   @IsInt()

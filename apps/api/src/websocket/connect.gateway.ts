@@ -9,7 +9,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from "@nestjs/websockets";
-import type { Server, Socket } from "socket.io";
+import type { Namespace, Server, Socket } from "socket.io";
 
 import { WsAuthService, type WsPrincipal } from "./ws-auth";
 import { AppError } from "../common/errors/app-error";
@@ -20,6 +20,7 @@ import { ConnectAdapterLifecycleService } from "./connect/connect-adapter-lifecy
 import { ConnectPresenceService } from "./connect/connect-presence.service";
 import { ConnectPublisherService } from "./connect/connect-publisher.service";
 import { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
+import { SessionRevocationSocketService } from "./session-revocation.service";
 import {
   CallInviteEventDto,
   CallResponseEventDto,
@@ -57,12 +58,14 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     private readonly publisher: ConnectPublisherService,
     private readonly rateLimit: ConnectRateLimitService,
     private readonly metrics: MetricsService,
+    private readonly sessionRevocations: SessionRevocationSocketService,
   ) {}
 
   async afterInit(): Promise<void> {
     this.logger.log("Connect WebSocket gateway initialised at namespace /connect");
     this.publisher.bind(this.server);
     await this.adapterLifecycle.attach(this.server);
+    this.sessionRevocations.bind(this.server as unknown as Namespace);
   }
 
   async handleConnection(socket: Socket): Promise<void> {
@@ -195,7 +198,13 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       if (!type) {
         throw new AppError(ErrorCode.VALIDATION_FAILED, "A call type is required", HttpStatus.BAD_REQUEST);
       }
-      const scope = payload.scope === "meeting" ? "meeting" : channel.type === "DIRECT" ? "one-to-one" : channel.type.toLowerCase();
+      const scope = payload.scope === "meeting"
+        ? "meeting"
+        : channel.type === "DIRECT"
+          ? "one-to-one"
+          : channel.type === "GROUP"
+            ? "group"
+            : "channel";
       const invitation = {
         ...payload,
         type,
@@ -205,6 +214,12 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         callerId: principal.userId,
         callerName,
       };
+      await this.connect.createCallRecord(organizationId, payload.channelId, principal.userId, {
+        callId: payload.callId,
+        scope,
+        type,
+        participantIds: memberIds,
+      });
       const recipients = memberIds.filter((userId) => userId !== principal.userId);
       if (scope === "group" || scope === "channel") {
         this.publisher.callAvailable(organizationId, recipients, invitation);
@@ -234,6 +249,16 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
           : payload.action === "miss" || payload.action === "cancel"
             ? "call:cancelled"
             : "call:ended";
+      if (payload.action === "leave") {
+        const result = await this.connect.leaveSharedCall(organizationId, payload.channelId, principal.userId, payload.callId);
+        this.publisher.callStatus(organizationId, memberIds, result.ended ? "call:ended" : "call:left", { ...payload, userId: principal.userId });
+        return { ok: true };
+      }
+      await this.connect.updateCallRecord(organizationId, payload.channelId, principal.userId, {
+            callId: payload.callId,
+            action: payload.action,
+            durationSeconds: payload.durationSeconds,
+          });
       this.publisher.callStatus(organizationId, memberIds, event, { ...payload, userId: principal.userId });
       await this.connect.recordCallActivity(organizationId, payload.channelId, principal.userId, {
         callId: payload.callId,

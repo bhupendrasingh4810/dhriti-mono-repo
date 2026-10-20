@@ -1,5 +1,5 @@
 import React from "react";
-import type { ConnectConversationMessage, ConversationAttachment } from "../../types/connect.types";
+import type { ConversationAttachment, ConnectConversationMessage } from "@/types/connect.types";
 
 interface AttachmentsMessageProps {
   message: ConnectConversationMessage;

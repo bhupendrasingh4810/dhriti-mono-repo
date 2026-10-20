@@ -1,17 +1,8 @@
 "use client";
 
-export type ConnectDetailFile = {
-  id: string;
-  originalName: string;
-  size: number;
-};
+import type { ConnectDetailFile, ConnectDetailMeeting, DetailIconKind } from "@/types/connect.types";
 
-export type ConnectDetailMeeting = {
-  id: string;
-  title: string;
-};
-
-type ConnectChannelDetailsPanelProps = {
+interface ConnectChannelDetailsPanelProps {
   open: boolean;
   title: string;
   type: "channel" | "direct" | "group";
@@ -23,7 +14,7 @@ type ConnectChannelDetailsPanelProps = {
   files: ConnectDetailFile[];
   meetings: ConnectDetailMeeting[];
   onClose: () => void;
-};
+}
 
 export function ConnectChannelDetailsPanel({
   open,
@@ -122,8 +113,6 @@ export function ConnectChannelDetailsPanel({
 function SectionHeading({ children }: { children: string }) {
   return <h3 className="mb-1.5 text-[10px] font-black uppercase tracking-[0.09em] text-slate-400">{children}</h3>;
 }
-
-type DetailIconKind = "chevron" | "close" | "file" | "link" | "meeting" | "members" | "pinned";
 
 function DetailIcon({ kind, className = "" }: { kind: DetailIconKind; className?: string }) {
   const content = {

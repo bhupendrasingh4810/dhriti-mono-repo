@@ -5,7 +5,7 @@ import { useConversationHistory } from "@/features/connect/hooks/use-conversatio
 import { CircularProgress } from "@mui/material";
 import { ConversationTypingIndicator, MessageDeliveryStatus } from "@/features/connect/components/MessageStatus";
 import type { MouseEvent, ReactNode } from "react";
-import type { ConversationUser, ConnectConversationMessage, ConversationAttachment } from "@/types/connect.types";
+import type { CallType, ConnectConversationMessage, ConversationUser, ConversationAttachment } from "@/types/connect.types";
 import { ConnectMessageHoverActions } from "./ConnectMessageHoverActions";
 import ConnectMessageInput from "./ConnectMessageInput";
 import { RenderMessageContent, getMessagePriority, isSingleEmojiMessage } from "./RenderMessageContent";
@@ -14,21 +14,9 @@ import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
 import { AttachmentsMessage } from "./AttachmentsMessage";
-import type { CallType } from "@/features/connect/components/WorkspaceCallProvider";
 
-function getFileExtension(name: string) {
-  const parts = name.split(".");
-  return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "FILE";
-}
-
-interface ConnectConversationProps {
-  conversation: {
-    id: string;
-    name: string;
-    type: "channel" | "direct" | "group";
-    isFavorite?: boolean;
-    participants: string[];
-  };
+type ConnectConversationProps = {
+  conversation: { id: string; name: string; type: "channel" | "direct" | "group"; isFavorite?: boolean; participants: string[] };
   teamLabel: string;
   currentUserId: string;
   usersById: Record<string, ConversationUser>;
@@ -49,12 +37,12 @@ interface ConnectConversationProps {
   onOpenDetails: () => void;
   onStartCall: (type: CallType) => void;
   onAddReaction: (messageId: string, emoji: string) => void;
-  onOpenMessageEmoji: (event: React.MouseEvent<HTMLElement>, messageId: string) => void;
-  onOpenMessageMenu: (event: React.MouseEvent<HTMLElement>, messageId: string) => void;
+  onOpenMessageEmoji: (event: MouseEvent<HTMLElement>, messageId: string) => void;
+  onOpenMessageMenu: (event: MouseEvent<HTMLElement>, messageId: string) => void;
   onQuoteMessage: (message: ConnectConversationMessage) => void;
-  onOpenReactionHover: (event: React.MouseEvent<HTMLElement>, emoji: string, userIds: string[]) => void;
+  onOpenReactionHover: (event: MouseEvent<HTMLElement>, emoji: string, userIds: string[]) => void;
   onCloseReactionHover: () => void;
-  onOpenUserHover: (event: React.MouseEvent<HTMLElement>, userId: string) => void;
+  onOpenUserHover: (event: MouseEvent<HTMLElement>, userId: string) => void;
   onCloseUserHover: () => void;
   editingMessageId?: string | null;
   editingMessageValue?: string;
@@ -64,6 +52,11 @@ interface ConnectConversationProps {
   onCancelEditMessage: () => void;
   disableHoverActions?: boolean;
   children?: ReactNode;
+};
+
+function getFileExtension(name: string) {
+  const parts = name.split(".");
+  return parts.length > 1 ? parts[parts.length - 1].toUpperCase() : "FILE";
 }
 
 function formatTime(isoDate: string) {

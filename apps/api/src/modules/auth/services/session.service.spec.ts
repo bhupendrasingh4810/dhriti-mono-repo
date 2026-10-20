@@ -10,6 +10,7 @@ function makeService() {
     raw: {
       smembers: jest.fn().mockResolvedValue(["session-1", "session-2"]),
       srem: jest.fn().mockResolvedValue(2),
+      publish: jest.fn().mockResolvedValue(1),
     },
     delete: jest.fn().mockResolvedValue(2),
     deleteByPattern: jest.fn(),
@@ -33,6 +34,8 @@ describe("SessionService.revokeAllUserSessions", () => {
     expect(redis.raw.smembers).toHaveBeenCalledWith("auth:user-sessions:user-1");
     expect(redis.delete).toHaveBeenCalledWith("auth:session:session-1", "auth:session:session-2");
     expect(redis.raw.srem).toHaveBeenCalledWith("auth:user-sessions:user-1", "session-1", "session-2");
+    expect(redis.raw.publish).toHaveBeenCalledWith("auth:session-revoked", "session-1");
+    expect(redis.raw.publish).toHaveBeenCalledWith("auth:session-revoked", "session-2");
     expect(redis.deleteByPattern).not.toHaveBeenCalled();
   });
 
@@ -43,5 +46,6 @@ describe("SessionService.revokeAllUserSessions", () => {
 
     expect(redis.delete).toHaveBeenCalledWith("auth:session:session-1");
     expect(redis.raw.srem).toHaveBeenCalledWith("auth:user-sessions:user-1", "session-1");
+    expect(redis.raw.publish).toHaveBeenCalledWith("auth:session-revoked", "session-1");
   });
 });

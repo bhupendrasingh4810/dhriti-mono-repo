@@ -1,13 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent, ReactNode } from "react";
+import type { MouseEvent } from "react";
 import { CircularProgress } from "@mui/material";
 import type { ConnectConversation, ConnectMessage, ConnectFile, ConnectMeeting, ConnectMentionFeedItem } from "@/mocks/connect/types";
 import { useConnect } from "@/hooks/use-connect";
 import { useMessageDeletion } from "@/features/connect/hooks/use-message-deletion";
 import { connectService } from "@/services/connect.service";
-import { PersonAddAlt1Rounded } from "@mui/icons-material";
+import {
+  Archive,
+  AtSign,
+  Eye,
+  Flag,
+  Forward,
+  Languages,
+  Link,
+  List,
+  Mail,
+  Palette,
+  Phone,
+  Pin,
+  Trash2,
+  Video,
+} from "lucide-react";
 import ConnectSidebar from "@/features/connect/components/ConnectSidebar";
 import { getMenuItems } from "@/utils/connect-menu-item.util";
 import { CreateChannelDialog } from "@/components/dialogs/create-channel.dialog";
@@ -25,38 +40,17 @@ import {
   ConnectSidebarTeamGroup,
 } from "@/types/connect.types";
 import ConnectMessageInput from "@/features/connect/components/ConnectMessageInput";
-import { ConnectMentionsFilter, ConnectMentionsView } from "@/features/connect/components/ConnectMentionsView";
+import { ConnectMentionsView } from "@/features/connect/components/ConnectMentionsView";
 import { ConnectChannelDetailsPanel } from "@/features/connect/components/ConnectChannelDetailsPanel";
-import { DeletedMessageToast, MessageOverlays, type MentionHoverState, type ReactionHoverState } from "@/features/connect/components/MessageOverlays";
+import { DeletedMessageToast, MessageOverlays } from "@/features/connect/components/MessageOverlays";
+import type { ConnectMentionsFilter, MentionHoverState, ReactionHoverState } from "@/types/connect.types";
 import { useWorkspaceCall } from "@/features/connect/components/WorkspaceCallProvider";
 
 const quickViewsConfig = [
-  { icon: MentionIcon, label: "Mentions" },
-  { icon: ListIcon, label: "Threads" },
-  { icon: MailIcon, label: "Drafts" },
+  { icon: AtSign, label: "Mentions" },
+  { icon: List, label: "Threads" },
+  { icon: Mail, label: "Drafts" },
 ];
-
-function PageIcon({ name, className = "" }: { name: string; className?: string }) {
-  const paths: Record<string, ReactNode> = {
-    mention: <path d="M16 8a4 4 0 1 0-8 0v5a4 4 0 0 0 8 0v-1h-3" />,
-    list: <><path d="M8 6h13M8 12h13M8 18h13" /><circle cx="3" cy="6" r="1" fill="currentColor" /><circle cx="3" cy="12" r="1" fill="currentColor" /><circle cx="3" cy="18" r="1" fill="currentColor" /></>,
-    mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>,
-    palette: <path d="M12 3a9 9 0 1 0 0 18h1a2 2 0 0 0 0-4h-1a2 2 0 0 1 0-4h2a7 7 0 0 0 0-10Z" />,
-    archive: <><path d="M4 7h16v13H4zM3 4h18v3H3zM10 12h4" /></>,
-    eye: <path d="M2 12s3-6 10-6 10 6 10 6-3 6-10 6-10-6-10-6Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />,
-    link: <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" />,
-    users: <><circle cx="9" cy="8" r="3" /><circle cx="17" cy="10" r="2" /><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M15 16c2.5 0 4 1.3 4 4" /></>,
-    pin: <path d="m14 4 6 6-3 1-4 4-1 5-2-2-5 1 1-5-2-2 5-1 4-4z" />,
-    trash: <><path d="M4 7h16M10 11v5M14 11v5M6 7l1 13h10l1-13M9 7V4h6v3" /></>,
-    flag: <path d="M5 21V4m0 1h12l-1 4 1 4H5" />,
-  };
-  return <svg aria-hidden="true" className={className} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">{paths[name] ?? paths.mail}</svg>;
-}
-function MentionIcon({ className }: { className?: string }) { return <PageIcon name="mention" className={className} />; }
-function ListIcon({ className }: { className?: string }) { return <PageIcon name="list" className={className} />; }
-function MailIcon({ className }: { className?: string }) { return <PageIcon name="mail" className={className} />; }
-function PaletteIcon({ className }: { className?: string }) { return <PageIcon name="palette" className={className} />; }
-function ArchiveIcon({ className }: { className?: string }) { return <PageIcon name="archive" className={className} />; }
 
 function getConversationLabel(conversation: ConnectConversation) {
   if (conversation.type === "channel") {
@@ -234,7 +228,7 @@ export default function ConnectWorkspace() {
       connectTeams.map((team) => ({
         id: team.id,
         label: team.name,
-        icon: team.name === "Design" ? PaletteIcon : ArchiveIcon,
+        icon: team.name === "Design" ? Palette : Archive,
         isExpanded: expandedTeamIds[team.id] ?? false,
         channels: connectChannels
           .filter((channel) => channel.teamId === team.id && !channel.isArchived)
@@ -365,15 +359,15 @@ export default function ConnectWorkspace() {
     }
 
     return [
-      { id: "unfollow-thread", label: "Unfollow thread", icon: <PageIcon name="eye" /> },
-      { id: "mark-unread", label: "Mark as unread", icon: <PageIcon name="mail" /> },
-      { id: "copy-link", label: "Copy link", icon: <PageIcon name="link" /> },
+      { id: "unfollow-thread", label: "Unfollow thread", icon: <Eye /> },
+      { id: "mark-unread", label: "Mark as unread", icon: <Mail /> },
+      { id: "copy-link", label: "Copy link", icon: <Link /> },
     ];
   }, [activeMentionMenuId, selectedMention]);
 
   const mentionCallMenuItems: ConnectCascadingMenuItem[] = [
-    { id: "video-call", label: "Video Call", icon: <PageIcon name="link" /> },
-    { id: "audio-call", label: "Audio Call", icon: <PageIcon name="users" /> },
+    { id: "video-call", label: "Video Call", icon: <Video /> },
+    { id: "audio-call", label: "Audio Call", icon: <Phone /> },
   ];
 
   const sidebarMenuItems: ConnectCascadingMenuItem[] = getMenuItems(
@@ -390,7 +384,7 @@ export default function ConnectWorkspace() {
     const itemType = sidebarMenuContext.kind === "team" ? "team" : sidebarMenuContext.kind === "channel" ? "channel" : "chat";
     const ids = itemType === "team" ? live.sidebar.favorites.teams : itemType === "channel" ? live.sidebar.favorites.channels : live.sidebar.favorites.chats;
     const isFavorite = ids.includes(itemId);
-    sidebarMenuItems.unshift({ id: "toggle-favorite", label: isFavorite ? "Remove from favorites" : "Add to favorites", icon: <PageIcon name="pin" />, onClick: () => {
+    sidebarMenuItems.unshift({ id: "toggle-favorite", label: isFavorite ? "Remove from favorites" : "Add to favorites", icon: <Pin />, onClick: () => {
       void live.favorite(itemType, itemId, !isFavorite).catch(live.reportError);
       closeSidebarMenus();
     }});
@@ -402,16 +396,16 @@ export default function ConnectWorkspace() {
   const canEditActiveMessage = Boolean(activeMenuMessage && activeMenuMessage.senderId === currentUser?.id);
 
   const messageMenuItems: ConnectCascadingMenuItem[] = [
-    ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <PageIcon name="link" /> }] : []),
-    { id: "forward", label: "Forward", icon: <PageIcon name="link" /> },
-    { id: "copy-link", label: "Copy Link", icon: <PageIcon name="link" /> },
-    { id: "pin", label: "Pin", icon: <PageIcon name="pin" /> },
-    { id: "save", label: "Save this Message", icon: <PageIcon name="archive" /> },
-    { id: "mark-unread", label: "Mark as unread", icon: <PageIcon name="mail" /> },
-    { id: "translate", label: "Translations", icon: <PageIcon name="mention" /> },
-    ...(canEditActiveMessage ? [{ id: "delete", label: "Delete Message", icon: <PageIcon name="trash" />, danger: true }] : []),
-    { id: "report", label: "Report this Message", icon: <PageIcon name="flag" />, danger: true },
-    { id: "more", label: "More actions", icon: <PageIcon name="list" /> },
+    ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <Link /> }] : []),
+    { id: "forward", label: "Forward", icon: <Forward /> },
+    { id: "copy-link", label: "Copy Link", icon: <Link /> },
+    { id: "pin", label: "Pin", icon: <Pin /> },
+    { id: "save", label: "Save this Message", icon: <Archive /> },
+    { id: "mark-unread", label: "Mark as unread", icon: <Mail /> },
+    { id: "translate", label: "Translations", icon: <Languages /> },
+    ...(canEditActiveMessage ? [{ id: "delete", label: "Delete Message", icon: <Trash2 />, danger: true }] : []),
+    { id: "report", label: "Report this Message", icon: <Flag />, danger: true },
+    { id: "more", label: "More actions", icon: <List /> },
   ];
 
   function handleSelectConversation(conversationId: string) {
@@ -644,7 +638,7 @@ export default function ConnectWorkspace() {
       {live.error ? <div role="alert" className="mb-2 flex items-center justify-between bg-error/10 p-2 text-sm text-error"><span>{live.error}</span><button type="button" onClick={() => live.setError("")}>Dismiss</button></div> : null}
       {/* <div role="status" className="mb-2 text-xs text-text-secondary">{live.connected ? "Connected" : "Reconnecting"}{(live.typingUsers[selectedConversationId] ?? []).length ? ` · ${(live.typingUsers[selectedConversationId] ?? []).map((id) => connectUsersById[id]?.displayName ?? "Member").join(", ")} typing` : ""}</div> */}
       {/* <div className="mb-2 flex items-center gap-2">
-        <button type="button" className="grid h-9 w-9 place-items-center rounded border border-border bg-surface" aria-label="New conversation" title="New conversation" onClick={() => setContactPickerOpen((open) => !open)}><PersonAddAlt1Rounded fontSize="small" /></button>
+        <button type="button" className="grid h-9 w-9 place-items-center rounded border border-border bg-surface" aria-label="New conversation" title="New conversation" onClick={() => setContactPickerOpen((open) => !open)}><UserPlus size={16} /></button>
         {contactPickerOpen ? <select aria-label="Select organization member" defaultValue="" className="rounded border border-border bg-surface p-2 text-sm" onChange={(event) => {
           if (!event.target.value) return;
           void live.startDirect(event.target.value).then((id) => { setSelectedConversationId(id); setContactPickerOpen(false); }).catch(live.reportError);

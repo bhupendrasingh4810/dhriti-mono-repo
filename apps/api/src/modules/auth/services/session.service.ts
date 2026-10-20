@@ -8,6 +8,7 @@ import { TokenService } from "./token.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { HttpStatus } from "@nestjs/common";
+import { SESSION_REVOCATION_CHANNEL } from "../../../common/auth/session-revocation";
 
 interface SessionCachePayload {
   userId: string;
@@ -153,6 +154,7 @@ export class SessionService {
       data: { revokedAt: new Date() },
     });
     await this.redis.delete(sessionKey(sessionId));
+    await this.redis.raw.publish(SESSION_REVOCATION_CHANNEL, sessionId);
   }
 
   /**
@@ -177,6 +179,7 @@ export class SessionService {
     if (revokedSessionIds.length > 0) {
       await this.redis.delete(...revokedSessionIds.map(sessionKey));
       await this.redis.raw.srem(sessionsKey, ...revokedSessionIds);
+      await Promise.all(revokedSessionIds.map((sessionId) => this.redis.raw.publish(SESSION_REVOCATION_CHANNEL, sessionId)));
     }
     return result.count;
   }

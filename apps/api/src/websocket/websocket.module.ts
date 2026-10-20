@@ -19,6 +19,7 @@ import { NexusGateway } from "./nexus.gateway";
 import { CadenceGateway } from "./cadence.gateway";
 import { WebRtcGateway } from "./webrtc.gateway";
 import { FlowGateway } from "./flow.gateway";
+import { SessionRevocationSocketService } from "./session-revocation.service";
 
 @Module({
   imports: [AuthModule, ConnectModule, PulseModule, AtlasModule, NexusModule, CadenceModule, FlowModule],
@@ -28,6 +29,7 @@ import { FlowGateway } from "./flow.gateway";
     ConnectAdapterLifecycleService,
     ConnectPresenceService,
     ConnectRateLimitService,
+    SessionRevocationSocketService,
     PulseGateway,
     AtlasGateway,
     NexusGateway,

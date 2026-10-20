@@ -10,56 +10,9 @@ import { CallAvailableCard } from "./CallAvailableCard";
 import { CallSwitchDialog } from "./CallSwitchDialog";
 import { IncomingCallCard } from "./IncomingCallCard";
 import { WorkspaceCallSocketBridge } from "./WorkspaceCallSocketBridge";
-
-export type CallType = "audio" | "video";
-export type CallScope = "one-to-one" | "group" | "channel" | "meeting";
-
-export type CallContext = {
-  conversationId: string;
-  conversationName: string;
-  participantIds: string[];
-  callerName?: string;
-  type: CallType;
-  scope: CallScope;
-};
-
-export type ActiveCall = CallContext & {
-  id: string;
-  callerId?: string;
-  callerName?: string;
-  peerName?: string;
-  direction: "incoming" | "outgoing";
-  status: "ringing" | "accepted" | "unanswered" | "unavailable" | "declined";
-  autoJoin?: boolean;
-  minimized: boolean;
-  onHold: boolean;
-  joined: boolean;
-};
+import type { ActiveCall, CallContext, CallControls, CallInvitation, CallStatusEvent, CallType } from "@/types/connect.types";
 
 const RING_TIMEOUT_MS = 30_000;
-
-export type CallControls = {
-  startCall: (context: CallContext) => void;
-  registerSocket: (socket: Socket | null) => void;
-};
-
-type CallInvitation = {
-  callId: string;
-  channelId: string;
-  conversationName: string;
-  callerId: string;
-  callerName?: string;
-  type?: CallType;
-  kind?: CallType;
-  scope: CallScope;
-  participantIds?: string[];
-};
-
-type CallStatusEvent = {
-  callId: string;
-  channelId: string;
-  userId: string;
-};
 
 const WorkspaceCallContext = createContext<CallControls | null>(null);
 
@@ -86,6 +39,7 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
     return {
       ...context,
       id: crypto.randomUUID(),
+      callerId: direction === "outgoing" ? user?.id : undefined,
       peerName: direction === "outgoing" ? context.conversationName : undefined,
       direction,
       status: "ringing",
@@ -170,12 +124,16 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
     const call = calls.find((item) => item.id === callId);
     clearRingTimeout(callId);
     if (call && (call.status === "ringing" || call.status === "accepted")) {
-      socketRef.current?.emit("call:respond", {
-        channelId: call.conversationId,
-        callId,
-        action: call.direction === "incoming" && call.status === "ringing" ? "reject" : call.joined ? "end" : "cancel",
-        ...(call.joined && durationSeconds !== undefined ? { durationSeconds } : {}),
-      });
+      const sharedCall = call.scope !== "one-to-one";
+      const dismissingSharedInvitation = sharedCall && call.direction === "incoming" && !call.joined;
+      if (!dismissingSharedInvitation) {
+        socketRef.current?.emit("call:respond", {
+          channelId: call.conversationId,
+          callId,
+          action: sharedCall ? "leave" : call.direction === "incoming" && call.status === "ringing" ? "reject" : call.joined ? "end" : "cancel",
+          ...(call.joined && durationSeconds !== undefined ? { durationSeconds } : {}),
+        });
+      }
     }
     setCalls((current) => {
       const remaining = current.filter((item) => item.id !== callId);
@@ -229,6 +187,16 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
     clearRingTimeout(callId);
     socketRef.current?.emit("call:respond", { channelId: call.conversationId, callId, action: "accept" });
     setCalls((current) => current.map((item) => item.id === callId ? { ...item, status: "accepted", autoJoin: true } : item));
+  }
+
+  function markCallJoined(callId: string) {
+    const call = calls.find((item) => item.id === callId);
+    if (!call) return;
+    clearRingTimeout(callId);
+    if (call.status === "ringing") {
+      socketRef.current?.emit("call:respond", { channelId: call.conversationId, callId, action: "accept" });
+    }
+    setCalls((current) => current.map((item) => item.id === callId ? { ...item, status: "accepted", joined: true } : item));
   }
 
   function acceptVideoCall(callId: string) {
@@ -340,7 +308,7 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
             onMinimize={() => minimizeCall(call.id)}
             onRestore={() => restoreCall(call.id)}
             onEnd={(durationSeconds) => endCall(call.id, durationSeconds)}
-            onJoin={() => setCalls((current) => current.map((item) => item.id === call.id ? { ...item, joined: true } : item))}
+            onJoin={() => markCallJoined(call.id)}
             onAccept={() => acceptCall(call.id)}
             onHoldChange={(onHold) => setCallOnHold(call.id, onHold)}
         />

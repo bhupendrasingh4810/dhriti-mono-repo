@@ -82,9 +82,23 @@ export class FileService {
     return stored;
   }
 
-  async getDownloadUrl(organizationId: string, fileId: string): Promise<{ url: string; expiresIn: number }> {
+  async getDownloadUrl(
+    organizationId: string,
+    fileId: string,
+    actorUserId: string,
+    context: { ipAddress?: string; userAgent?: string } = {},
+  ): Promise<{ url: string; expiresIn: number }> {
     const file = await this.getFile(organizationId, fileId);
     const url = await this.storage.presignDownload(file.objectKey, file.originalName);
+    await this.audit.record({
+      action: "file.downloaded",
+      organizationId,
+      actorUserId,
+      resourceType: "StoredFile",
+      resourceId: file.id,
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
     return { url, expiresIn: this.config.s3.presignTtlSeconds };
   }
 

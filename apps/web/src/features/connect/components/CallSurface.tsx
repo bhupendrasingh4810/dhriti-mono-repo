@@ -21,31 +21,34 @@ import {
 } from "@mui/icons-material";
 import { DhritiWebSdk } from "@dhriti/web-sdk";
 import { connectSidebarState, connectUsers, connectUsersById } from "@/mocks/connect";
-import { CallSidePanel, type CallPanel } from "./CallSidePanel";
+import type { ActiveCall, CallLayout, CallPanel, SessionType } from "@/types/connect.types";
+import { CallSidePanel } from "./CallSidePanel";
 import { CallAction, DeviceSelect, ParticipantAvatar, RemoteVideoTarget } from "./CallUi";
 import { IncomingCallCard, useRingtone } from "./IncomingCallCard";
 import { OutgoingCallSurface } from "./OutgoingCallSurface";
-import type { ActiveCall } from "./WorkspaceCallProvider";
-
-type SessionType = "call" | "meeting";
-type CallLayout = "Gallery" | "Spotlight" | "Together";
-type RecordingMetadata = {
-  callId: string;
-  initiator: string;
-  startedAt: string;
-  endedAt: string;
-  participants: string[];
-  storageUrl: string;
-  durationSeconds: number;
-  processingStatus: "processing";
-};
-
 const CALL_BACKGROUNDS = [
   { name: "Bright office", url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
   { name: "Meeting room", url: "https://images.unsplash.com/photo-1706074740295-d7a79c079562?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
   { name: "Window office", url: "https://images.unsplash.com/photo-1698653223247-09aaf01166fc?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200" },
 ];
 
+interface CallSurfaceProps {
+  call: ActiveCall;
+  viewerId: string;
+  autoJoin?: boolean;
+  onMinimize: () => void;
+  onRestore: () => void;
+  onEnd: (durationSeconds?: number) => void;
+  onJoin: () => void;
+  onAccept: () => void;
+  onHoldChange: (onHold: boolean) => void;
+}
+
+type RecordingConsentState = {
+  status: "PENDING_CONSENT" | "READY" | "RECORDING" | "PROCESSING" | "COMPLETE" | "DELETED";
+  participants: string[];
+  consents: Record<string, boolean>;
+};
 export function CallSurface({
   call,
   viewerId,
@@ -56,17 +59,7 @@ export function CallSurface({
   onJoin,
   onAccept,
   onHoldChange,
-}: {
-  call: ActiveCall;
-  viewerId: string;
-  autoJoin?: boolean;
-  onMinimize: () => void;
-  onRestore: () => void;
-  onEnd: (durationSeconds?: number) => void;
-  onJoin: () => void;
-  onAccept: () => void;
-  onHoldChange: (onHold: boolean) => void;
-}) {
+}: CallSurfaceProps) {
   const [phase, setPhase] = useState<"lobby" | "call">("lobby");
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(call.type === "video");
@@ -92,8 +85,8 @@ export function CallSurface({
   const [captions, setCaptions] = useState(false);
   const [transcription, setTranscription] = useState(false);
   const onHold = call.onHold;
-  const [recordingStartedAt, setRecordingStartedAt] = useState<number | null>(null);
-  const [recording, setRecording] = useState<RecordingMetadata | null>(null);
+  const [recordingConsentReady, setRecordingConsentReady] = useState(false);
+  const [recordingConsent, setRecordingConsent] = useState<RecordingConsentState | null>(null);
   const [recordConfirmOpen, setRecordConfirmOpen] = useState(false);
   const [participants, setParticipants] = useState(() => Array.from(new Set([connectSidebarState.currentUser, ...call.participantIds])));
   const [inviteSearch, setInviteSearch] = useState("");
@@ -134,9 +127,10 @@ export function CallSurface({
           media.getTracks().forEach((track) => track.stop());
           return;
         }
+        streamRef.current?.getTracks().forEach((track) => track.stop());
         streamRef.current = media;
         setStream(media);
-        setPermissions({ mic: "Allowed", camera: call.type === "video" ? "Allowed" : permissions.camera });
+        setPermissions((current) => ({ mic: "Allowed", camera: call.type === "video" ? "Allowed" : current.camera }));
         setError("");
       } catch {
         if (!cancelled) {
@@ -150,7 +144,7 @@ export function CallSurface({
     return () => {
       cancelled = true;
     };
-  }, [call.conversationId, call.type, cameraId, microphoneId, permissions.camera]);
+  }, [call.conversationId, call.type, cameraId, microphoneId]);
 
   useEffect(() => {
     let active = true;
@@ -237,6 +231,27 @@ export function CallSurface({
     screenRef.current?.getTracks().forEach((track) => track.stop());
     void rtcRef.current?.leave();
   }, []);
+
+  useEffect(() => {
+    if (phase !== "call") return;
+    let cancelled = false;
+
+    const loadRecordingConsent = async () => {
+      const response = await fetch(`/api/organization/connect/calls/${call.id}/recording`, { cache: "no-store" });
+      if (!response.ok || cancelled) return;
+      const next = (await response.json()) as RecordingConsentState | null;
+      if (cancelled) return;
+      setRecordingConsent(next);
+      setRecordingConsentReady(next?.status === "READY");
+    };
+
+    void loadRecordingConsent();
+    const interval = window.setInterval(() => void loadRecordingConsent(), 5_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [call.id, phase]);
 
   useEffect(() => {
     const objectUrl = customBackground;
@@ -377,15 +392,14 @@ export function CallSurface({
 
   async function joinCall() {
     try {
-      const channel = `connect-${call.conversationId}`;
       const response = await fetch("/api/connect/calls/token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel }),
+        body: JSON.stringify({ callId: call.id }),
       });
-      const payload = (await response.json().catch(() => null)) as { appId?: string; token?: string; uid?: string; message?: string } | null;
+      const payload = (await response.json().catch(() => null)) as { appId?: string; token?: string; uid?: string; channel?: string; message?: string } | null;
 
-      if (!response.ok || !payload?.appId || !payload.token || !payload.uid) {
+      if (!response.ok || !payload?.appId || !payload.token || !payload.uid || !payload.channel) {
         throw new Error(payload?.message ?? "Unable to join the call.");
       }
 
@@ -400,7 +414,7 @@ export function CallSurface({
       });
       rtc.on("error", (nextError) => setError(nextError.message));
 
-      await rtc.join({ channel, token: payload.token, uid: payload.uid });
+      await rtc.join({ channel: payload.channel, token: payload.token, uid: payload.uid });
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
       setStream(null);
@@ -451,6 +465,8 @@ export function CallSurface({
     }
   }
 
+  const leaveLabel = call.scope === "one-to-one" ? "End call" : "Leave call";
+
   async function requestNotificationPermission() {
     if (!("Notification" in window)) {
       setNotificationPermission("unavailable");
@@ -471,26 +487,29 @@ export function CallSurface({
       : [...current, userId]);
   }
 
-  function startRecording() {
-    setRecordingStartedAt(Date.now());
-    setTranscription(true);
-    setRecordConfirmOpen(false);
-  }
+  async function submitRecordingConsent() {
+    const requester = call.callerId === viewerId;
+    const response = await fetch(
+      requester
+        ? `/api/organization/connect/calls/${call.id}/recording/request`
+        : `/api/organization/connect/calls/${call.id}/recording/consent`,
+      requester
+        ? { method: "POST" }
+        : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consent: true }) },
+    );
+    const payload = (await response.json().catch(() => null)) as { status?: string; message?: string } | null;
+    if (!response.ok) throw new Error(payload?.message ?? "Unable to update recording consent.");
 
-  function stopRecording() {
-    if (recordingStartedAt === null) return;
-    const endedAt = Date.now();
-    setRecording({
-      callId: `call_${endedAt}`,
-      initiator: connectUsersById[connectSidebarState.currentUser]?.displayName ?? "You",
-      startedAt: new Date(recordingStartedAt).toISOString(),
-      endedAt: new Date(endedAt).toISOString(),
-      participants,
-      storageUrl: `https://recordings.dhriti.example/${call.conversationId}/${endedAt}`,
-      durationSeconds: Math.max(1, Math.round((endedAt - recordingStartedAt) / 1000)),
-      processingStatus: "processing",
-    });
-    setRecordingStartedAt(null);
+    setRecordingConsentReady(payload?.status === "READY");
+    void fetch(`/api/organization/connect/calls/${call.id}/recording`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() as Promise<RecordingConsentState | null> : null)
+      .then((next) => { if (next) setRecordingConsent(next); });
+    setRecordConfirmOpen(false);
+    setError(payload?.status === "READY"
+      ? "Recording consent is complete. Server-side media capture is not configured yet."
+      : requester
+        ? "Recording consent has been requested from all call participants."
+        : "Your recording consent has been recorded.");
   }
 
   const currentUser = connectUsersById[connectSidebarState.currentUser];
@@ -582,7 +601,7 @@ export function CallSurface({
           </button>
         ) : null}
         <button type="button" onClick={onRestore} className="grid h-9 w-9 place-items-center rounded-md text-white hover:bg-white/15" aria-label="Expand call" title="Expand call"><ExpandMoreRounded fontSize="small" /></button>
-          <button type="button" onClick={() => void endCall()} className="grid h-9 w-9 place-items-center rounded-md bg-error text-white hover:bg-error/90" aria-label="End call" title="End call"><CallEndRounded fontSize="small" /></button>
+        <button type="button" onClick={() => void endCall()} className="grid h-9 w-9 place-items-center rounded-md bg-error text-white hover:bg-error/90" aria-label={leaveLabel} title={leaveLabel}><CallEndRounded fontSize="small" /></button>
       </div>
     );
   }
@@ -594,15 +613,7 @@ export function CallSurface({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="truncate text-base font-semibold">{callTitle}</h2>
-              {recordingStartedAt !== null ? (
-                <span className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-error" role="status" aria-label="Recording in progress">
-                  <span className="relative flex h-3 w-3" aria-hidden="true">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-error opacity-70" />
-                    <span className="relative inline-flex h-3 w-3 rounded-full bg-error ring-2 ring-error/20" />
-                  </span>
-                  Recording
-                </span>
-              ) : null}
+              {recordingConsentReady ? <span className="shrink-0 text-xs font-medium text-warning" role="status">Recording consent ready</span> : null}
             </div>
             <p className="mt-0.5 text-xs text-text-secondary">
               {phase === "call" ? `${time} · ${participantLabel}` : call.direction === "incoming" ? `Incoming ${call.type} call` : call.status === "accepted" ? "Call accepted" : `Calling · ${call.type === "video" ? "Video" : "Audio"}`}
@@ -611,11 +622,11 @@ export function CallSurface({
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" onClick={onMinimize} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Minimize call" title="Minimize call"><MinimizeRounded fontSize="small" /></button>
             {phase === "lobby" && (
-                <button type="button" onClick={() => void endCall()} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Cancel call" title="Cancel call"><CloseRounded fontSize="small" /></button>
-            ) 
-            // : (
-            //   <button type="button" onClick={onEnd} className="rounded-md px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-raised" aria-label="End call">End</button>
-            // )
+              <button type="button" onClick={() => void endCall()} className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-raised" aria-label="Cancel call" title="Cancel call"><CloseRounded fontSize="small" /></button>
+            )
+              // : (
+              //   <button type="button" onClick={onEnd} className="rounded-md px-3 py-2 text-xs font-semibold text-text-secondary hover:bg-surface-raised" aria-label="End call">End</button>
+              // )
             }
           </div>
         </header>
@@ -623,41 +634,41 @@ export function CallSurface({
         {phase === "lobby" ? (
           <div className="grid min-h-0 gap-5 overflow-y-auto p-4 sm:p-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.8fr)]">
             <div className="space-y-4">
-            <div className="relative flex h-[min(56dvh,480px)] w-full flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-800" style={backgroundUrl ? { backgroundImage: `linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08)), url(${backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
-              {call.type === "video" && cameraOn && stream?.getVideoTracks().length ? (
-                <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} />
-              ) : (
-                <div className="text-center">
-                  <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-slate-700 text-2xl font-semibold text-white">{currentUser?.displayName.slice(0, 1) ?? "Y"}</span>
-                  <p className="mt-3 text-sm text-slate-300">{call.type === "video" ? "Camera is off" : "Audio call"}</p>
+              <div className="relative flex h-[min(56dvh,480px)] w-full flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-800" style={backgroundUrl ? { backgroundImage: `linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08)), url(${backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
+                {call.type === "video" && cameraOn && stream?.getVideoTracks().length ? (
+                  <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} />
+                ) : (
+                  <div className="text-center">
+                    <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-slate-700 text-2xl font-semibold text-white">{currentUser?.displayName.slice(0, 1) ?? "Y"}</span>
+                    <p className="mt-3 text-sm text-slate-300">{call.type === "video" ? "Camera is off" : "Audio call"}</p>
+                  </div>
+                )}
+                <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-lg bg-slate-950/90 p-2">
+                  <button type="button" onClick={() => void toggleMicrophone()} title={muted ? "Unmute microphone" : "Mute microphone"} aria-label={muted ? "Unmute microphone" : "Mute microphone"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${muted ? "bg-error" : "bg-slate-800 hover:bg-slate-700"}`}>{muted ? <MicOffRounded fontSize="small" /> : <MicRounded fontSize="small" />}</button>
+                  {call.type === "video" ? <button type="button" onClick={toggleCamera} title={cameraOn ? "Turn camera off" : "Turn camera on"} aria-label={cameraOn ? "Turn camera off" : "Turn camera on"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${cameraOn ? "bg-slate-800 hover:bg-slate-700" : "bg-error"}`}>{cameraOn ? <VideocamRounded fontSize="small" /> : <VideocamOffRounded fontSize="small" />}</button> : null}
+                  <button type="button" onClick={() => setDevicesOpen((value) => !value)} className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700">{devicesOpen ? "Hide devices" : "Device settings"}</button>
                 </div>
-              )}
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-lg bg-slate-950/90 p-2">
-                <button type="button" onClick={() => void toggleMicrophone()} title={muted ? "Unmute microphone" : "Mute microphone"} aria-label={muted ? "Unmute microphone" : "Mute microphone"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${muted ? "bg-error" : "bg-slate-800 hover:bg-slate-700"}`}>{muted ? <MicOffRounded fontSize="small" /> : <MicRounded fontSize="small" />}</button>
-                {call.type === "video" ? <button type="button" onClick={toggleCamera} title={cameraOn ? "Turn camera off" : "Turn camera on"} aria-label={cameraOn ? "Turn camera off" : "Turn camera on"} className={`grid h-10 w-10 place-items-center rounded-md text-white ${cameraOn ? "bg-slate-800 hover:bg-slate-700" : "bg-error"}`}>{cameraOn ? <VideocamRounded fontSize="small" /> : <VideocamOffRounded fontSize="small" />}</button> : null}
-                <button type="button" onClick={() => setDevicesOpen((value) => !value)} className="rounded-md bg-slate-800 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-700">{devicesOpen ? "Hide devices" : "Device settings"}</button>
+                <div className="absolute left-3 top-3 rounded bg-black/80 px-2 py-1 text-[11px] font-medium text-white shadow-sm">{background === "None" ? "No background effect" : `${background} background`}</div>
+                {error ? <p role="alert" className="absolute inset-x-3 top-11 rounded-md bg-rose-950/90 px-3 py-2 text-xs text-white">{error}</p> : null}
               </div>
-              <div className="absolute left-3 top-3 rounded bg-black/80 px-2 py-1 text-[11px] font-medium text-white shadow-sm">{background === "None" ? "No background effect" : `${background} background`}</div>
-              {error ? <p role="alert" className="absolute inset-x-3 top-11 rounded-md bg-rose-950/90 px-3 py-2 text-xs text-white">{error}</p> : null}
-            </div>
-            <section className="rounded-lg border border-border bg-surface p-4 sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><h3 className="text-sm font-semibold">Background and effects</h3><p className="mt-1 text-xs text-text-secondary">Your selection is kept for this call.</p></div>
-                <label className="cursor-pointer rounded-md border border-border-strong px-3 py-2 text-xs font-semibold hover:bg-surface-raised">Upload image<input type="file" accept="image/*" className="sr-only" onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  if (customBackground.startsWith("blob:")) URL.revokeObjectURL(customBackground);
-                  setCustomBackground(URL.createObjectURL(file));
-                  setBackground("Custom");
-                }} /></label>
-              </div>
-              <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-                {["None", "Blur", ...CALL_BACKGROUNDS.map((item) => item.name), ...(customBackground ? ["Custom"] : [])].map((item) => {
-                  const image = item === "Custom" ? customBackground : CALL_BACKGROUNDS.find((entry) => entry.name === item)?.url;
-                  return <button key={item} type="button" onClick={() => setBackground(item)} aria-pressed={background === item} className={`relative aspect-video overflow-hidden rounded border-2 bg-surface-raised text-[10px] font-semibold ${background === item ? "border-brand" : "border-transparent"}`} style={image ? { backgroundImage: `url(${image})`, backgroundSize: "cover" } : undefined}><span className="absolute inset-x-0 bottom-0 bg-text-primary/70 px-1 py-1 text-white">{item}</span></button>;
-                })}
-              </div>
-            </section>
+              <section className="rounded-lg border border-border bg-surface p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div><h3 className="text-sm font-semibold">Background and effects</h3><p className="mt-1 text-xs text-text-secondary">Your selection is kept for this call.</p></div>
+                  <label className="cursor-pointer rounded-md border border-border-strong px-3 py-2 text-xs font-semibold hover:bg-surface-raised">Upload image<input type="file" accept="image/*" className="sr-only" onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (customBackground.startsWith("blob:")) URL.revokeObjectURL(customBackground);
+                    setCustomBackground(URL.createObjectURL(file));
+                    setBackground("Custom");
+                  }} /></label>
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                  {["None", "Blur", ...CALL_BACKGROUNDS.map((item) => item.name), ...(customBackground ? ["Custom"] : [])].map((item) => {
+                    const image = item === "Custom" ? customBackground : CALL_BACKGROUNDS.find((entry) => entry.name === item)?.url;
+                    return <button key={item} type="button" onClick={() => setBackground(item)} aria-pressed={background === item} className={`relative aspect-video overflow-hidden rounded border-2 bg-surface-raised text-[10px] font-semibold ${background === item ? "border-brand" : "border-transparent"}`} style={image ? { backgroundImage: `url(${image})`, backgroundSize: "cover" } : undefined}><span className="absolute inset-x-0 bottom-0 bg-text-primary/70 px-1 py-1 text-white">{item}</span></button>;
+                  })}
+                </div>
+              </section>
             </div>
             <div className="flex flex-col justify-center rounded-lg border border-border bg-surface p-5">
               <p className="text-lg font-semibold">Ready to join?</p>
@@ -672,9 +683,9 @@ export function CallSurface({
               </div>
               {devicesOpen ? <div className="mt-5 space-y-3 border-t border-border pt-4">
                 <DeviceSelect label="Microphone" devices={devices.filter((device) => device.kind === "audioinput")} value={microphoneId} onChange={setMicrophoneId} />
-                  <DeviceSelect label="Microphone" devices={devices.filter((device) => device.kind === "audioinput")} value={microphoneId} onChange={(value) => void changeInputDevice("audio", value)} />
+                <DeviceSelect label="Microphone" devices={devices.filter((device) => device.kind === "audioinput")} value={microphoneId} onChange={(value) => void changeInputDevice("audio", value)} />
                 <DeviceSelect label="Speaker" devices={devices.filter((device) => device.kind === "audiooutput")} value={speakerId} onChange={setSpeakerId} />
-                  {call.type === "video" ? <DeviceSelect label="Camera" devices={devices.filter((device) => device.kind === "videoinput")} value={cameraId} onChange={(value) => void changeInputDevice("video", value)} /> : null}
+                {call.type === "video" ? <DeviceSelect label="Camera" devices={devices.filter((device) => device.kind === "videoinput")} value={cameraId} onChange={(value) => void changeInputDevice("video", value)} /> : null}
                 <div className="grid grid-cols-2 gap-2 text-[11px]"><p className="rounded bg-surface-raised px-2 py-2">Microphone: {permissions.mic}</p><p className="rounded bg-surface-raised px-2 py-2">Camera: {permissions.camera}</p><p className="col-span-2 rounded bg-surface-raised px-2 py-2">Notifications: {notificationPermission === "default" ? "Not requested" : notificationPermission === "granted" ? "Allowed" : notificationPermission === "denied" ? "Blocked" : "Unavailable"}</p></div>
               </div> : null}
               {error ? <button type="button" onClick={() => void requestVideo()} className="mt-3 text-left text-xs font-semibold text-error underline">Retry device access</button> : null}
@@ -715,18 +726,17 @@ export function CallSurface({
                 <CallAction label={`Change layout, currently ${layout}`} active={false} icon={<GridViewRounded />} onClick={() => setLayout((value) => value === "Gallery" ? "Spotlight" : value === "Spotlight" ? "Together" : "Gallery")} />
                 <CallAction label="More call options" active={panel === "apps"} icon={<MoreHorizRounded />} onClick={() => setPanel(panel === "apps" ? null : "apps")} />
                 {/* <CallAction label="Minimize call" active={false} icon={<MinimizeRounded />} onClick={onMinimize} /> */}
-                <button type="button" onClick={() => void endCall()} className="flex h-10 items-center gap-2 rounded-md bg-error px-3 text-sm font-semibold text-white hover:bg-error/90"><CallEndRounded fontSize="small" /></button>
+                <button type="button" onClick={() => void endCall()} className="flex h-10 items-center gap-2 rounded-md bg-error px-3 text-sm font-semibold text-white hover:bg-error/90" aria-label={leaveLabel} title={leaveLabel}><CallEndRounded fontSize="small" /><span>{leaveLabel}</span></button>
               </footer>
               <div className="flex flex-wrap justify-center gap-2 border-t border-border bg-surface px-2 py-2 text-xs">
                 <button type="button" onClick={() => setPanel(panel === "settings" ? null : "settings")} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Settings</button>
                 <button type="button" onClick={() => setCaptions((value) => !value)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{captions ? "Turn captions off" : "Live captions"}</button>
                 <button type="button" onClick={() => setTranscription((value) => !value)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{transcription ? "Stop transcription" : "Transcription"}</button>
-                <button type="button" onClick={() => recordingStartedAt === null ? setRecordConfirmOpen(true) : stopRecording()} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{recordingStartedAt === null ? "Record" : "Stop recording"}</button>
+                <button type="button" onClick={() => setRecordConfirmOpen(true)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{call.callerId === viewerId ? "Request recording" : "Consent to recording"}</button>
                 <button type="button" onClick={() => onHoldChange(!onHold)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">{onHold ? "Resume call" : "Put on hold"}</button>
                 <button type="button" onClick={() => setPanel(panel === "notes" ? null : "notes")} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Meeting notes</button>
                 <button type="button" onClick={() => setTransferOpen(true)} className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary">Transfer call</button>
               </div>
-              {recording ? <p className="mt-2 text-center text-xs text-success">Recording saved for processing · {recording.durationSeconds}s</p> : null}
             </main>
             {panel ? <CallSidePanel panel={panel} close={() => setPanel(null)} participants={participants} availableUsers={availableUsers} inviteSearch={inviteSearch} setInviteSearch={setInviteSearch} toggleParticipant={toggleParticipant} chatMessages={chatMessages} chatDraft={chatDraft} setChatDraft={setChatDraft} sendChat={() => {
               if (!chatDraft.trim()) return;
@@ -736,7 +746,7 @@ export function CallSurface({
           </div>
         )}
       </section>
-      {recordConfirmOpen ? <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={() => setRecordConfirmOpen(false)}><section role="dialog" aria-modal="true" aria-labelledby="record-confirm-title" className="w-full max-w-md rounded-lg bg-white p-5 text-slate-900 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><h3 id="record-confirm-title" className="text-lg font-semibold">Start recording and transcription?</h3><p className="mt-2 text-sm leading-6 text-slate-600">Everyone in this {sessionType === "meeting" ? "meeting" : "call"} should be notified. The recording is marked for processing when stopped.</p><div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setRecordConfirmOpen(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button><button type="button" onClick={startRecording} className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white">Start recording</button></div></section></div> : null}
+      {recordConfirmOpen ? <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={() => setRecordConfirmOpen(false)}><section role="dialog" aria-modal="true" aria-labelledby="record-confirm-title" className="w-full max-w-md rounded-lg bg-white p-5 text-slate-900 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><h3 id="record-confirm-title" className="text-lg font-semibold">{call.callerId === viewerId ? "Request recording consent?" : "Consent to recording?"}</h3><p className="mt-2 text-sm leading-6 text-slate-600">Media capture remains unavailable until every participant has explicitly consented and a server-side recording provider is configured.</p>{recordingConsent ? <ul className="mt-4 space-y-2 text-sm text-slate-700">{recordingConsent.participants.map((participantId) => <li key={participantId} className="flex items-center justify-between"><span>{connectUsersById[participantId]?.displayName ?? "Participant"}</span><span className={recordingConsent.consents[participantId] ? "font-medium text-emerald-700" : "text-slate-500"}>{recordingConsent.consents[participantId] ? "Consented" : "Awaiting consent"}</span></li>)}</ul> : null}<div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setRecordConfirmOpen(false)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold">Cancel</button><button type="button" onClick={() => void submitRecordingConsent()} className="rounded-md bg-rose-700 px-4 py-2 text-sm font-semibold text-white">Confirm</button></div></section></div> : null}
       {transferOpen ? <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={() => setTransferOpen(false)}><section role="dialog" aria-modal="true" aria-labelledby="transfer-title" className="w-full max-w-md rounded-lg bg-white p-5 text-slate-900 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}><div className="flex items-center justify-between"><h3 id="transfer-title" className="text-lg font-semibold">Transfer this call</h3><button type="button" onClick={() => setTransferOpen(false)} aria-label="Close transfer dialog">Close</button></div><input value={transferSearch} onChange={(event) => setTransferSearch(event.target.value)} placeholder="Search colleagues" className="mt-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" /><div className="mt-3 max-h-64 space-y-1 overflow-y-auto">{connectUsers.filter((user) => user.id !== connectSidebarState.currentUser && `${user.displayName} ${user.email}`.toLowerCase().includes(transferSearch.toLowerCase())).map((user) => <button key={user.id} type="button" onClick={() => { setParticipants((items) => Array.from(new Set([...items, user.id]))); setTransferOpen(false); }} className="flex w-full items-center gap-3 rounded-md p-2 text-left hover:bg-slate-100"><ParticipantAvatar userId={user.id} className="h-9 w-9 text-sm" /><span><span className="block text-sm font-semibold">{user.displayName}</span><span className="block text-xs text-slate-500">Consult and transfer to this person</span></span></button>)}</div></section></div> : null}
     </div>
   );

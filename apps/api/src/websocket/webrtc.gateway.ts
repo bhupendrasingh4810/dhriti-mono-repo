@@ -1,4 +1,4 @@
-import { Logger, UsePipes, ValidationPipe } from "@nestjs/common";
+import { HttpStatus, Logger, UsePipes, ValidationPipe } from "@nestjs/common";
 import {
   ConnectedSocket,
   MessageBody,
@@ -10,9 +10,12 @@ import {
   WebSocketServer,
 } from "@nestjs/websockets";
 import type { Server, Socket } from "socket.io";
-import { IsIn, IsString, IsUUID } from "class-validator";
+import { IsIn, IsString, IsUUID, MaxLength } from "class-validator";
 
 import { WsAuthService, type WsPrincipal } from "./ws-auth";
+import { ConnectService } from "../modules/connect/connect.service";
+import { AppError } from "../common/errors/app-error";
+import { ErrorCode } from "../common/errors/error-codes";
 
 /**
  * WebRTC signaling for Connect audio/video calls. This gateway only relays
@@ -34,6 +37,7 @@ class SignalPayload {
   to!: string;
 
   @IsString()
+  @MaxLength(65_536)
   data!: string; // SDP offer/answer or ICE candidate (JSON string)
 }
 
@@ -49,6 +53,10 @@ class MediaStatePayload {
 }
 
 const callRoom = (channelId: string): string => `call:${channelId}`;
+const allowedOrigins = (process.env.CONNECT_SOCKET_ALLOWED_ORIGINS ?? process.env.CORS_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter((origin) => origin.length > 0);
 
 interface CallParticipant {
   socketId: string;
@@ -56,7 +64,7 @@ interface CallParticipant {
   joinedAt: number;
 }
 
-@WebSocketGateway({ namespace: "/connect", cors: { origin: true, credentials: true } })
+@WebSocketGateway({ namespace: "/connect", cors: { origin: allowedOrigins, credentials: true } })
 @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(WebRtcGateway.name);
@@ -67,7 +75,10 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   @WebSocketServer()
   private server!: Server;
 
-  constructor(private readonly wsAuth: WsAuthService) {}
+  constructor(
+    private readonly wsAuth: WsAuthService,
+    private readonly connect: ConnectService,
+  ) {}
 
   afterInit(): void {
     this.logger.log("WebRTC signaling ready on /connect namespace");
@@ -107,7 +118,7 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     @ConnectedSocket() socket: Socket,
     @MessageBody() payload: JoinCallPayload,
   ): Promise<{ ok: true; peers: Array<{ socketId: string; userId: string }> }> {
-    const principal = this.wsAuth.getPrincipal(socket);
+    const principal = await this.authorizeChannelMember(socket, payload.channelId);
     await socket.join(callRoom(payload.channelId));
 
     const room = this.calls.get(payload.channelId) ?? new Map<string, CallParticipant>();
@@ -127,7 +138,7 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   @SubscribeMessage("call:leave")
   async leaveCall(@ConnectedSocket() socket: Socket, @MessageBody() payload: JoinCallPayload): Promise<{ ok: true }> {
-    const principal = this.wsAuth.getPrincipal(socket);
+    const principal = await this.authorizeChannelMember(socket, payload.channelId);
     await socket.leave(callRoom(payload.channelId));
     const room = this.calls.get(payload.channelId);
     if (room?.delete(socket.id)) {
@@ -142,26 +153,50 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   /** Relay SDP offer/answer to a specific peer. */
   @SubscribeMessage("call:signal")
-  signal(@ConnectedSocket() socket: Socket, @MessageBody() payload: SignalPayload): void {
-    const principal = this.wsAuth.getPrincipal(socket);
+  async signal(@ConnectedSocket() socket: Socket, @MessageBody() payload: SignalPayload): Promise<{ ok: true }> {
+    const principal = await this.authorizeChannelMember(socket, payload.channelId);
+    const room = this.requireActiveParticipant(payload.channelId, socket.id);
+    if (!room.has(payload.to)) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Signal target is not an active call participant", HttpStatus.FORBIDDEN);
+    }
     this.server.to(payload.to).emit("call:signal", {
       channelId: payload.channelId,
       from: socket.id,
       userId: principal.userId,
       data: payload.data,
     });
+    return { ok: true };
   }
 
   /** Broadcast mute/video/screen-share state to the call room. */
   @SubscribeMessage("call:media-state")
-  mediaState(@ConnectedSocket() socket: Socket, @MessageBody() payload: MediaStatePayload): void {
-    const principal = this.wsAuth.getPrincipal(socket);
+  async mediaState(@ConnectedSocket() socket: Socket, @MessageBody() payload: MediaStatePayload): Promise<{ ok: true }> {
+    const principal = await this.authorizeChannelMember(socket, payload.channelId);
+    this.requireActiveParticipant(payload.channelId, socket.id);
     socket.to(callRoom(payload.channelId)).emit("call:media-state", {
       channelId: payload.channelId,
       userId: principal.userId,
       kind: payload.kind,
       state: payload.state,
     });
+    return { ok: true };
+  }
+
+  private async authorizeChannelMember(socket: Socket, channelId: string): Promise<WsPrincipal> {
+    const principal = this.wsAuth.getPrincipal(socket);
+    if (!principal.organizationId) {
+      throw new AppError(ErrorCode.ORGANIZATION_REQUIRED, "An active organization is required", HttpStatus.BAD_REQUEST);
+    }
+    await this.connect.getChannelForMember(principal.organizationId, channelId, principal.userId, true);
+    return principal;
+  }
+
+  private requireActiveParticipant(channelId: string, socketId: string): Map<string, CallParticipant> {
+    const room = this.calls.get(channelId);
+    if (!room?.has(socketId)) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Join the call before sending call events", HttpStatus.FORBIDDEN);
+    }
+    return room;
   }
 
   private safePrincipal(socket: Socket): WsPrincipal | null {

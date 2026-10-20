@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RtcRole, RtcTokenBuilder } from "agora-access-token";
-import { authService } from "@/services/auth.server";
+import { apiServiceRequest } from "@/services/api.service";
 
 export const runtime = "nodejs";
 
 const TOKEN_TTL_SECONDS = 60 * 60;
-const CHANNEL_NAME_PATTERN = /^[A-Za-z0-9 !#$%&()+\-:;<=>?@\[\]^_{|}~,.]{1,64}$/;
-
-type AuthenticatedUser = {
-  id: string;
-};
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type TokenRequest = {
-  channel?: unknown;
+  callId?: unknown;
+};
+
+type CallTokenAccess = {
+  channel: string;
+  userId: string;
 };
 
 export async function POST(request: NextRequest) {
@@ -22,17 +23,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Unauthenticated" }, { status: 401 });
   }
 
-  const authResponse = await authService.me(accessToken);
-  if (!authResponse.ok) {
-    return NextResponse.json({ message: "Unauthenticated" }, { status: 401 });
-  }
-
   const body = (await request.json().catch(() => null)) as TokenRequest | null;
-  const channel = typeof body?.channel === "string" ? body.channel.trim() : "";
+  const callId = typeof body?.callId === "string" ? body.callId.trim() : "";
 
-  if (!CHANNEL_NAME_PATTERN.test(channel)) {
-    return NextResponse.json({ message: "Invalid call channel." }, { status: 400 });
+  if (!UUID_PATTERN.test(callId)) {
+    return NextResponse.json({ message: "Invalid call." }, { status: 400 });
   }
+
+  const accessResponse = await apiServiceRequest(`/organization/connect/calls/${callId}/token-access`, {
+    method: "GET",
+    headers: { Accept: "application/json", Authorization: `Bearer ${accessToken}` },
+  });
+  if (!accessResponse.ok) {
+    const status = accessResponse.status === 401 ? 401 : accessResponse.status === 403 ? 403 : 502;
+    return NextResponse.json({ message: status === 403 ? "Call access is not available." : "Unable to authorize the call." }, { status });
+  }
+  const access = (await accessResponse.json()) as CallTokenAccess;
 
   const appId = process.env.AGORA_APP_ID ?? process.env.NEXT_PUBLIC_AGORA_APP_ID;
   const appCertificate = process.env.AGORA_APP_CERTIFICATE;
@@ -41,16 +47,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Call service is not configured." }, { status: 503 });
   }
 
-  const user = (await authResponse.json()) as AuthenticatedUser;
   const expiresAt = Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS;
   const token = RtcTokenBuilder.buildTokenWithAccount(
     appId,
     appCertificate,
-    channel,
-    user.id,
+    access.channel,
+    access.userId,
     RtcRole.PUBLISHER,
     expiresAt,
   );
 
-  return NextResponse.json({ appId, token, uid: user.id, expiresAt });
+  return NextResponse.json({ appId, token, uid: access.userId, channel: access.channel, expiresAt });
 }

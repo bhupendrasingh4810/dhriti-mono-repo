@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Channel, Message, MessageReaction, User, Prisma } from "@prisma/client";
+import type { Channel, ConnectCallScope, ConnectCallStatus, ConnectCallType, Message, MessageReaction, User, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
@@ -630,6 +630,212 @@ export class ConnectService {
     return message;
   }
 
+  async createCallRecord(
+    organizationId: string,
+    channelId: string,
+    initiatorUserId: string,
+    details: {
+      callId: string;
+      scope: "one-to-one" | "group" | "channel" | "meeting";
+      type: "audio" | "video";
+      participantIds: string[];
+    },
+  ): Promise<void> {
+    await this.getChannelForMember(organizationId, channelId, initiatorUserId, true);
+    const scopeByName: Record<typeof details.scope, ConnectCallScope> = {
+      "one-to-one": "ONE_TO_ONE" as ConnectCallScope,
+      group: "GROUP" as ConnectCallScope,
+      channel: "CHANNEL" as ConnectCallScope,
+      meeting: "MEETING" as ConnectCallScope,
+    };
+    const type: ConnectCallType = details.type === "video" ? "VIDEO" as ConnectCallType : "AUDIO" as ConnectCallType;
+    const participantIds = [...new Set(details.participantIds)];
+
+    await this.prisma.connectCall.upsert({
+      where: { id: details.callId },
+      create: {
+        id: details.callId,
+        organizationId,
+        channelId,
+        initiatedById: initiatorUserId,
+        scope: scopeByName[details.scope],
+        type,
+        participants: { create: participantIds.map((userId) => ({ userId })) },
+      },
+      update: {},
+    });
+  }
+
+  async updateCallRecord(
+    organizationId: string,
+    channelId: string,
+    userId: string,
+    details: {
+      callId: string;
+      action: "accept" | "reject" | "miss" | "cancel" | "end";
+      durationSeconds?: number;
+    },
+  ): Promise<void> {
+    await this.getChannelForMember(organizationId, channelId, userId, true);
+    const statusByAction: Record<typeof details.action, ConnectCallStatus> = {
+      accept: "ACTIVE" as ConnectCallStatus,
+      reject: "DECLINED" as ConnectCallStatus,
+      miss: "MISSED" as ConnectCallStatus,
+      cancel: "CANCELLED" as ConnectCallStatus,
+      end: "ENDED" as ConnectCallStatus,
+    };
+    const terminal = details.action === "reject" || details.action === "miss" || details.action === "cancel" || details.action === "end";
+    const updated = await this.prisma.connectCall.updateMany({
+      where: { id: details.callId, organizationId, channelId },
+      data: {
+        status: statusByAction[details.action],
+        ...(terminal ? { endedAt: new Date(), durationSeconds: details.durationSeconds } : {}),
+      },
+    });
+
+    if (updated.count === 0) return;
+
+    await this.prisma.connectCallParticipant.upsert({
+      where: { callId_userId: { callId: details.callId, userId } },
+      create: { callId: details.callId, userId, joinedAt: details.action === "accept" ? new Date() : undefined },
+      update: details.action === "accept" ? { joinedAt: new Date(), leftAt: null } : terminal ? { leftAt: new Date() } : {},
+    });
+  }
+
+  async leaveSharedCall(organizationId: string, channelId: string, userId: string, callId: string): Promise<{ ended: boolean }> {
+    await this.getChannelForMember(organizationId, channelId, userId, true);
+    const call = await this.prisma.connectCall.findFirst({
+      where: { id: callId, organizationId, channelId, scope: { in: ["GROUP", "CHANNEL", "MEETING"] }, status: { in: ["RINGING", "ACTIVE"] } },
+      select: { id: true, startedAt: true },
+    });
+    if (!call) return { ended: false };
+
+    await this.prisma.connectCallParticipant.updateMany({
+      where: { callId, userId, joinedAt: { not: null }, leftAt: null },
+      data: { leftAt: new Date() },
+    });
+    const activeParticipants = await this.prisma.connectCallParticipant.count({
+      where: { callId, joinedAt: { not: null }, leftAt: null },
+    });
+    const ended = activeParticipants === 0;
+    if (ended) {
+      const endedAt = new Date();
+      await this.prisma.connectCall.update({
+        where: { id: call.id },
+        data: {
+          status: "ENDED",
+          endedAt,
+          durationSeconds: Math.max(0, Math.round((endedAt.getTime() - call.startedAt.getTime()) / 1000)),
+        },
+      });
+    }
+    await this.audit.record({
+      action: ended ? "connect.call.ended" : "connect.call.left",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Call",
+      resourceId: callId,
+      metadata: { channelId, activeParticipants },
+    });
+    return { ended };
+  }
+
+  async getCallTokenAccess(organizationId: string, userId: string, callId: string) {
+    const call = await this.prisma.connectCall.findFirst({
+      where: {
+        id: callId,
+        organizationId,
+        status: { in: ["RINGING", "ACTIVE"] },
+        participants: { some: { userId } },
+      },
+      select: { channelId: true },
+    });
+    if (!call) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Call access is not available", HttpStatus.FORBIDDEN);
+    }
+
+    await this.getChannelForMember(organizationId, call.channelId, userId, true);
+    return { channel: `connect-${call.channelId}`, userId };
+  }
+
+  async requestCallRecording(organizationId: string, userId: string, callId: string) {
+    const call = await this.prisma.connectCall.findFirst({
+      where: { id: callId, organizationId, status: "ACTIVE", initiatedById: userId },
+      include: { participants: { select: { userId: true } } },
+    });
+    if (!call) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the call initiator can request recording for an active call", HttpStatus.FORBIDDEN);
+    }
+    await this.getChannelForMember(organizationId, call.channelId, userId, true);
+    const consents = Object.fromEntries(call.participants.map(({ userId: participantId }) => [participantId, participantId === userId]));
+    const recording = await this.prisma.connectCallRecording.upsert({
+      where: { callId },
+      create: { callId, organizationId, requestedById: userId, participantConsents: consents as Prisma.InputJsonObject },
+      update: { participantConsents: consents as Prisma.InputJsonObject, status: "PENDING_CONSENT" },
+    });
+    await this.audit.record({
+      action: "connect.call.recording.requested",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "CallRecording",
+      resourceId: recording.id,
+      metadata: { callId },
+    });
+    return recording;
+  }
+
+  async setCallRecordingConsent(organizationId: string, userId: string, callId: string, consent: boolean) {
+    const call = await this.prisma.connectCall.findFirst({
+      where: { id: callId, organizationId, status: "ACTIVE", participants: { some: { userId } } },
+      include: { participants: { select: { userId: true } }, recording: true },
+    });
+    if (!call?.recording) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Recording consent has not been requested", HttpStatus.BAD_REQUEST);
+    }
+    await this.getChannelForMember(organizationId, call.channelId, userId, true);
+    const existing = call.recording.participantConsents;
+    const consents = existing && typeof existing === "object" && !Array.isArray(existing)
+      ? Object.fromEntries(Object.entries(existing).map(([participantId, value]) => [participantId, value === true]))
+      : {};
+    consents[userId] = consent;
+    const ready = call.participants.every(({ userId: participantId }) => consents[participantId] === true);
+    const recording = await this.prisma.connectCallRecording.update({
+      where: { id: call.recording.id },
+      data: { participantConsents: consents as Prisma.InputJsonObject, status: ready ? "READY" : "PENDING_CONSENT" },
+    });
+    await this.audit.record({
+      action: "connect.call.recording.consent_updated",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "CallRecording",
+      resourceId: recording.id,
+      metadata: { callId, consent },
+    });
+    return recording;
+  }
+
+  async getCallRecordingConsent(organizationId: string, userId: string, callId: string) {
+    const call = await this.prisma.connectCall.findFirst({
+      where: { id: callId, organizationId, participants: { some: { userId } } },
+      include: { participants: { select: { userId: true } }, recording: true },
+    });
+    if (!call) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Call access is not available", HttpStatus.FORBIDDEN);
+    }
+    await this.getChannelForMember(organizationId, call.channelId, userId, true);
+    if (!call.recording) return null;
+
+    const source = call.recording.participantConsents;
+    const consents = source && typeof source === "object" && !Array.isArray(source)
+      ? Object.fromEntries(Object.entries(source).map(([participantId, value]) => [participantId, value === true]))
+      : {};
+    return {
+      status: call.recording.status,
+      participants: call.participants.map(({ userId: participantId }) => participantId),
+      consents,
+    };
+  }
+
   private async getRecipientUserIds(organizationId: string, channel: Channel): Promise<string[]> {
     const channelMembers = await this.prisma.channelMember.findMany({ where: { channelId: channel.id }, select: { userId: true } });
     const organizationMembers = channelMembers.length > 0
@@ -814,7 +1020,7 @@ export class ConnectService {
 
   private async mutatePreferences(organizationId: string, userId: string, mutate: (current: Record<string, unknown>) => Record<string, unknown>) {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`connect-sidebar:${organizationId}:${userId}`}, 0))`;
+      await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`connect-sidebar:${organizationId}:${userId}`}, 0))`;
       const record = await transaction.connectSidebarPreference.findUnique({
         where: { organizationId_userId: { organizationId, userId } },
       });

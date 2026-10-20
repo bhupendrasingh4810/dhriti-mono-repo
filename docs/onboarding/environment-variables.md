@@ -12,4 +12,15 @@ The definitive API contract is [`env.validation.ts`](../../apps/api/src/config/e
 
 `WEB_APP_URL`, `ONBOARDING_URL`, `CORS_ORIGINS`, `DATABASE_URL`, `REDIS_URL`, both JWT secrets, and `S3_BUCKET` are required by the validation schema. In production, `SECRETS_ENCRYPTION_KEY` must be a base64-encoded 32-byte key. OAuth provider settings must be supplied as complete ID, secret, and callback URL triplets.
 
+## Connect Realtime Origins
+
+Set `CORS_ORIGINS` to a comma-separated list of exact web origins. Set `CONNECT_SOCKET_ALLOWED_ORIGINS` when Connect WebSocket origins differ from HTTP origins. The API validates that one of those lists contains the origin of `WEB_APP_URL`; do not use wildcards with credentialed requests.
+
+## Call and Secret Operations
+
+- Keep `AGORA_APP_CERTIFICATE` only in the server-side secret manager. Never expose it through `NEXT_PUBLIC_*` variables.
+- Rotate `JWT_ACCESS_SECRET`, `JWT_MFA_SECRET`, `SECRETS_ENCRYPTION_KEY`, and the Agora certificate under an approved incident or scheduled rotation procedure.
+- Apply Prisma migrations before deploying the API: `pnpm --dir apps/api db:migrate:deploy`.
+- Configure HTTPS and WSS at the ingress layer. Browser media capture and secure session cookies require HTTPS outside local development.
+
 TODO Confirm with team: approved secret manager, environment-file distribution, and production values.

@@ -9,8 +9,8 @@ import {
     Video,
     X,
 } from "lucide-react";
-import type { ActiveCall } from "./WorkspaceCallProvider";
 import { connectSidebarState, connectUsersById } from "@/mocks/connect";
+import type { ActiveCall } from "@/types/connect.types";
 
 type IncomingCallCardProps = {
     call: ActiveCall;

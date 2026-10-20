@@ -2,54 +2,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
-
-export type ConnectMentionsFilter = "unread" | "channels" | "chats";
-
-export type ConnectMentionsViewItem = {
-  id: string;
-  messageId: string;
-  conversationId: string;
-  sourceType: "channel" | "person";
-  sourceName: string;
-  sourceAvatar?: string;
-  senderId: string;
-  senderName: string;
-  senderAvatar: string;
-  excerpt: string;
-  unread: boolean;
-  createdAt: string;
-};
-
-export type ConnectMentionsViewMessage = {
-  id: string;
-  senderId: string;
-  createdAt: string;
-  content: string;
-};
+import type { ConnectMentionsFilter, ConnectMentionsViewItem, ConnectMentionsViewMessage } from "@/types/connect.types";
 
 type ConnectMentionsViewProps = {
   items: ConnectMentionsViewItem[];
   usersById: Record<string, { id: string; displayName: string; avatar: string; jobTitle: string }>;
   selectedMentionId: string | null;
   filter: ConnectMentionsFilter;
-  detail: {
-    mentionId: string;
-    conversationId: string;
-    highlightedMessageId: string;
-    sourceType: "channel" | "person";
-    title: string;
-    avatar?: string;
-    subtitle?: string;
-    lastMessage?: string;
-    messages: ConnectMentionsViewMessage[];
-  } | null;
+  detail: { mentionId: string; conversationId: string; highlightedMessageId: string; sourceType: "channel" | "person"; title: string; avatar?: string; subtitle?: string; lastMessage?: string; messages: ConnectMentionsViewMessage[] } | null;
   onSelectMention: (mentionId: string) => void;
   onFilterChange: (filter: ConnectMentionsFilter) => void;
   onOpenChannelMenu: (event: MouseEvent<HTMLElement>, mentionId: string) => void;
   onOpenCallOptions: (event: MouseEvent<HTMLElement>, mentionId: string) => void;
   onOpenInNewWindow: (mentionId: string) => void;
   onGoToChannel: (conversationId: string) => void;
-  // renderMessageContent: (message: ConnectMentionsViewMessage) => ReactNode;
   composer: ReactNode;
 };
 

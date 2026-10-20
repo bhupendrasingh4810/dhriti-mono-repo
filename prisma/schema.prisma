@@ -109,6 +109,62 @@ model ConnectSidebarPreference {
 	@@map("connect_sidebar_preferences")
 }
 
+model ConnectCall {
+	id              String            @id @db.Uuid
+	organizationId  String            @db.Uuid
+	channelId       String            @db.Uuid
+	initiatedById   String            @db.Uuid
+	scope           ConnectCallScope
+	type            ConnectCallType
+	status          ConnectCallStatus @default(RINGING)
+	startedAt       DateTime          @default(now())
+	endedAt         DateTime?
+	durationSeconds Int?
+
+	channel      Channel                  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+	participants ConnectCallParticipant[]
+	recording    ConnectCallRecording?
+
+	@@index([organizationId, startedAt])
+	@@index([channelId, startedAt])
+	@@map("connect_calls")
+}
+
+model ConnectCallParticipant {
+	id        String      @id @default(uuid()) @db.Uuid
+	callId    String      @db.Uuid
+	userId    String      @db.Uuid
+	joinedAt  DateTime?
+	leftAt    DateTime?
+	createdAt DateTime    @default(now())
+
+	call ConnectCall @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+	@@unique([callId, userId])
+	@@index([userId, createdAt])
+	@@map("connect_call_participants")
+}
+
+model ConnectCallRecording {
+	id                  String                 @id @default(uuid()) @db.Uuid
+	callId              String                 @unique @db.Uuid
+	organizationId      String                 @db.Uuid
+	requestedById       String                 @db.Uuid
+	participantConsents Json                   @db.JsonB
+	status              ConnectRecordingStatus @default(PENDING_CONSENT)
+	storageUrl          String?
+	startedAt           DateTime?
+	endedAt             DateTime?
+	durationSeconds     Int?
+	createdAt           DateTime               @default(now())
+	updatedAt           DateTime               @updatedAt
+
+	call ConnectCall @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+	@@index([organizationId, createdAt])
+	@@map("connect_call_recordings")
+}
+
 
 model LegalDocument {
   id          String            @id @default(uuid()) @db.Uuid
@@ -263,6 +319,15 @@ enum ConnectCallStatus {
   DECLINED
   MISSED
   CANCELLED
+}
+
+enum ConnectRecordingStatus {
+  PENDING_CONSENT
+  READY
+  RECORDING
+  PROCESSING
+  COMPLETE
+  DELETED
 }
 
 enum IssueStatus {
@@ -1870,7 +1935,7 @@ model MessageReaction {
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
-  @@unique([messageId, userId])
+  @@unique([messageId, userId, emoji])
   @@index([messageId])
   @@map("message_reactions")
 }
@@ -2376,41 +2441,6 @@ model Message {
   @@index([organizationId, channelId])
   @@unique([organizationId, channelId, clientMessageId])
   @@map("messages")
-}
-
-model ConnectCall {
-  id            String            @id @db.Uuid
-  organizationId String           @db.Uuid
-  channelId     String            @db.Uuid
-  initiatedById String            @db.Uuid
-  scope         ConnectCallScope
-  type          ConnectCallType
-  status        ConnectCallStatus @default(RINGING)
-  startedAt     DateTime          @default(now())
-  endedAt       DateTime?
-  durationSeconds Int?
-
-  channel       Channel           @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  participants  ConnectCallParticipant[]
-
-  @@index([organizationId, startedAt])
-  @@index([channelId, startedAt])
-  @@map("connect_calls")
-}
-
-model ConnectCallParticipant {
-  id        String      @id @default(uuid()) @db.Uuid
-  callId    String      @db.Uuid
-  userId    String      @db.Uuid
-  joinedAt  DateTime?
-  leftAt    DateTime?
-  createdAt DateTime    @default(now())
-
-  call      ConnectCall @relation(fields: [callId], references: [id], onDelete: Cascade)
-
-  @@unique([callId, userId])
-  @@index([userId, createdAt])
-  @@map("connect_call_participants")
 }
 
 // ==================== Flow ====================

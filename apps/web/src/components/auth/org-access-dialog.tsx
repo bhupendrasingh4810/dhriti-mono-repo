@@ -11,7 +11,7 @@ import {
   // DialogDescription,
   Button,
 } from "@mui/material";
-import { ShieldRounded, PeopleRounded, LogoutRounded } from "@mui/icons-material";
+import { LogOut, Shield, Users } from "lucide-react";
 
 interface OrgAccessDialogProps {
   orgName: string;
@@ -32,7 +32,7 @@ export function OrgAccessDialog({ orgName }: OrgAccessDialogProps) {
       <DialogContent className="sm:max-w-md">
         {/* <DialogHeader> */}
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-          <ShieldRounded className="h-8 w-8 text-muted-foreground" />
+          <Shield className="h-8 w-8 text-muted-foreground" />
         </div>
         <DialogTitle className="text-center">Access Restricted</DialogTitle>
         {/* <DialogDescription className="text-center">
@@ -45,7 +45,7 @@ export function OrgAccessDialog({ orgName }: OrgAccessDialogProps) {
             <>
               <div className="rounded-lg bg-muted p-4">
                 <div className="flex items-center gap-3">
-                  <PeopleRounded className="h-5 w-5 text-muted-foreground" />
+                  <Users className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Your Organization</p>
                     <p className="text-xs text-muted-foreground">{user.organization.name}</p>
@@ -60,7 +60,7 @@ export function OrgAccessDialog({ orgName }: OrgAccessDialogProps) {
           )}
 
           <Button className="w-full" onClick={logout}>
-            <LogoutRounded className="mr-2 h-4 w-4" />
+            <LogOut className="mr-2 h-4 w-4" />
             Sign Out
           </Button>
         </div>

@@ -1,15 +1,17 @@
 "use client";
 
+import type { MouseEvent } from "react";
+
 type ConnectMessageHoverActionsProps = {
   open: boolean;
   align: "left" | "right";
   placement?: "above" | "below";
   isOwn: boolean;
   onQuickReaction: (emoji: string) => void;
-  onOpenEmoji: (event: React.MouseEvent<HTMLElement>) => void;
+  onOpenEmoji: (event: MouseEvent<HTMLElement>) => void;
   onEdit?: () => void;
   onQuote: () => void;
-  onOpenMenu: (event: React.MouseEvent<HTMLElement>) => void;
+  onOpenMenu: (event: MouseEvent<HTMLElement>) => void;
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircleOutlineRounded, DoneAllRounded } from "@mui/icons-material";
+import { CheckCircle2, CheckCheck } from "lucide-react";
 import type { ConnectConversationMessage, ConversationUser } from "@/types/connect.types";
 
 export function MessageDeliveryStatus({ status }: { status: ConnectConversationMessage["status"] }) {
@@ -9,7 +9,7 @@ export function MessageDeliveryStatus({ status }: { status: ConnectConversationM
   const label = seen ? "Seen" : "Sent";
   return (
     <span role="img" aria-label={label} title={label} className={`shrink-0 self-end ${seen ? "text-brand" : "text-text-secondary"}`}>
-      {seen ? <DoneAllRounded fontSize="small" /> : <CheckCircleOutlineRounded fontSize="small" />}
+      {seen ? <CheckCheck size={16} /> : <CheckCircle2 size={16} />}
     </span>
   );
 }

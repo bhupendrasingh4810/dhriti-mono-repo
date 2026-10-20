@@ -9,6 +9,7 @@ import { ConnectPresenceService } from "./connect/connect-presence.service";
 import { ConnectPublisherService } from "./connect/connect-publisher.service";
 import { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
 import { ConnectGateway } from "./connect.gateway";
+import { SessionRevocationSocketService } from "./session-revocation.service";
 import { WsAuthService } from "./ws-auth";
 import { ConnectService } from "../modules/connect/connect.service";
 
@@ -25,6 +26,9 @@ describe("ConnectGateway", () => {
     getChannelForMember: jest.Mock;
     getChannelMemberIds: jest.Mock;
     getUserDisplayName: jest.Mock;
+    createCallRecord: jest.Mock;
+    updateCallRecord: jest.Mock;
+    leaveSharedCall: jest.Mock;
     recordCallActivity: jest.Mock;
   };
   let publisher: { callStatus: jest.Mock; callInvitation: jest.Mock; callAvailable: jest.Mock };
@@ -36,6 +40,9 @@ describe("ConnectGateway", () => {
       getChannelForMember: jest.fn().mockResolvedValue({ id: channelId, type: "DIRECT" }),
       getChannelMemberIds: jest.fn().mockResolvedValue([principal.userId, "recipient-id"]),
       getUserDisplayName: jest.fn().mockResolvedValue("Database caller name"),
+      createCallRecord: jest.fn().mockResolvedValue(undefined),
+      updateCallRecord: jest.fn().mockResolvedValue(undefined),
+      leaveSharedCall: jest.fn().mockResolvedValue({ ended: false }),
       recordCallActivity: jest.fn().mockResolvedValue(undefined),
     };
     publisher = { callStatus: jest.fn(), callInvitation: jest.fn(), callAvailable: jest.fn() };
@@ -53,6 +60,7 @@ describe("ConnectGateway", () => {
       publisher as unknown as ConnectPublisherService,
       { assertAllowed: jest.fn().mockResolvedValue(undefined) } as unknown as ConnectRateLimitService,
       { wsConnected: jest.fn(), wsDisconnected: jest.fn(), wsMessage: jest.fn() } as unknown as MetricsService,
+      { bind: jest.fn() } as unknown as SessionRevocationSocketService,
     );
   });
 
@@ -102,7 +110,53 @@ describe("ConnectGateway", () => {
       principal.userId,
       { callId: "missed-call-id", action: "missed", durationSeconds: undefined },
     );
+    expect(connect.updateCallRecord).toHaveBeenCalledWith(
+      principal.organizationId,
+      channelId,
+      principal.userId,
+      { callId: "missed-call-id", action: "miss", durationSeconds: undefined },
+    );
     expect(result).toEqual({ ok: true });
+  });
+
+  it("publishes a shared-call departure without ending the call while participants remain", async () => {
+    const result = await gateway.respondToCall(socket, {
+      channelId,
+      callId: "shared-call-id",
+      action: "leave",
+    });
+
+    expect(connect.leaveSharedCall).toHaveBeenCalledWith(
+      principal.organizationId,
+      channelId,
+      principal.userId,
+      "shared-call-id",
+    );
+    expect(publisher.callStatus).toHaveBeenCalledWith(
+      principal.organizationId,
+      [principal.userId, "recipient-id"],
+      "call:left",
+      { channelId, callId: "shared-call-id", action: "leave", userId: principal.userId },
+    );
+    expect(connect.updateCallRecord).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("ends a shared call when the final participant leaves", async () => {
+    connect.leaveSharedCall.mockResolvedValue({ ended: true });
+
+    await gateway.respondToCall(socket, {
+      channelId,
+      callId: "final-shared-call-id",
+      action: "leave",
+    });
+
+    expect(publisher.callStatus).toHaveBeenCalledWith(
+      principal.organizationId,
+      [principal.userId, "recipient-id"],
+      "call:ended",
+      { channelId, callId: "final-shared-call-id", action: "leave", userId: principal.userId },
+    );
   });
 
   it("publishes the initiating caller name for a direct call with a blank conversation name", async () => {
@@ -124,6 +178,17 @@ describe("ConnectGateway", () => {
         conversationName: "",
         participantIds: [principal.userId, "recipient-id"],
       }),
+    );
+    expect(connect.createCallRecord).toHaveBeenCalledWith(
+      principal.organizationId,
+      channelId,
+      principal.userId,
+      {
+        callId: "call-id",
+        scope: "one-to-one",
+        type: "audio",
+        participantIds: [principal.userId, "recipient-id"],
+      },
     );
     expect(result).toEqual({ ok: true });
   });

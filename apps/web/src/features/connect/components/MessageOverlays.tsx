@@ -3,11 +3,9 @@
 import { Popover } from "@mui/material";
 import Emoji from "emoji-picker-react";
 import type { ConnectUser } from "@/mocks/connect/types";
+import type { MentionHoverState, ReactionHoverState } from "@/types/connect.types";
 import { ConnectReactionUsersList } from "@/features/connect/components/ConnectReactionUsersList";
 import ConnectUserDetailsCard from "@/features/connect/components/ConnectUserDetailsCard";
-
-export type MentionHoverState = { anchorEl: HTMLElement; userId: string };
-export type ReactionHoverState = { anchorEl: HTMLElement; emoji: string; userIds: string[] };
 
 export function MessageOverlays({
   emojiAnchor,

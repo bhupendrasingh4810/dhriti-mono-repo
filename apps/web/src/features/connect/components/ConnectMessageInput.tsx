@@ -5,7 +5,7 @@ import type { ChangeEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
-import type { ConnectMentionUser, ConnectPendingAttachment } from "@/types/connect.types";
+import type { ConnectMentionUser, ConnectPendingAttachment, IconName } from "@/types/connect.types";
 
 type ConnectMessageInputProps = {
   conversationLabel: string;
@@ -22,32 +22,6 @@ type ConnectMessageInputProps = {
   mode?: "compose" | "edit";
   onCancelEdit?: () => void;
 };
-
-type IconName =
-  | "add"
-  | "bell"
-  | "bold"
-  | "check"
-  | "code"
-  | "close"
-  | "document"
-  | "edit"
-  | "highlight"
-  | "italic"
-  | "link"
-  | "list"
-  | "mail"
-  | "more"
-  | "numbered-list"
-  | "open"
-  | "priority"
-  | "quote"
-  | "send"
-  | "smile"
-  | "table"
-  | "text-size"
-  | "underline"
-  | "video";
 
 function parseMentionQuery(text: string) {
   return text.match(/(?:^|\s)@([a-zA-Z0-9._-]*)$/)?.[1].toLowerCase() ?? null;
