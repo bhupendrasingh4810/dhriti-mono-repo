@@ -153,7 +153,7 @@ export class DhritiWebSdk {
 
   playLocalCamera(target: MediaElementTarget) {
     if (!this.cameraTrack) throw new Error("Camera is not active.");
-    this.cameraTrack.play(target);
+    this.cameraTrack.play(target, { mirror: false });
   }
 
   stopLocalCameraPlayback() {

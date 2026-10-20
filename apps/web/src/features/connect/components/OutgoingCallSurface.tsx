@@ -127,7 +127,9 @@ export function OutgoingCallSurface({
       <main className="flex min-h-0 flex-1 items-center justify-center bg-surface-raised p-6">
         {call.type === "video" && cameraOn && hasVideoPreview ? (
           <div className="relative h-full w-full overflow-hidden rounded-lg bg-text-primary">
-            <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+            <div className="h-full w-full -scale-x-100">
+              <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+            </div>
             <span className="absolute bottom-4 left-4 rounded-md bg-text-primary/75 px-3 py-1 text-sm font-medium text-white">You{muted ? " · Muted" : ""}</span>
           </div>
         ) : (

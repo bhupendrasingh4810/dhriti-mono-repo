@@ -1,27 +1,27 @@
 import { ReactNode } from "react";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import {
-  AddRounded,
-  CheckRounded,
-  DeleteOutlineRounded,
-  EditRounded,
-  ExitToAppRounded,
-  LinkRounded,
-  NotificationsNoneRounded, // 💡 Fixed original typo: "NotificationsNoneRounde"
-  OpenInNewRounded,
-  PersonAddAlt1Rounded,
-  SettingsRounded,
-  VisibilityOffRounded,
-  WbSunnyOutlined,
-  ChevronRightRounded,
-  ForwardToInboxRounded,
-  PushPinRounded,
-  SaveAltRounded,
-  MarkEmailUnreadRounded,
-  TranslateRounded,
-  FlagOutlined,
-  MoreVertRounded,
-} from "@mui/icons-material";
+  Bell,
+  Check,
+  ChevronRight,
+  EyeOff,
+  ExternalLink,
+  Flag,
+  Forward,
+  Link,
+  LogOut,
+  MailOpen,
+  MoreVertical,
+  Pencil,
+  Pin,
+  Plus,
+  Save,
+  Settings,
+  Sun,
+  Trash2,
+  UserPlus,
+  Languages,
+} from "lucide-react";
 
 // 📝 Define clear structural interfaces for your configuration
 export interface MenuItem {
@@ -56,6 +56,12 @@ const getMoveSectionChildren = (setCreateSectionOpen: (open: boolean) => void, i
   ...(includeFavorites ? [{ id: "move-favorites", label: "Favorites" }] : []),
   { id: "move-new-section", label: "New Section", onClick: () => setCreateSectionOpen(true) },
 ];
+
+function conversationUrl(conversationId: string | undefined) {
+  const url = new URL(window.location.href);
+  if (conversationId) url.searchParams.set("conversation", conversationId);
+  return url.toString();
+}
 
 export function getMenuItems(
   sidebarMenuContext: SidebarContext | null | undefined,
@@ -103,7 +109,7 @@ export function getMenuItems(
           {
             id: "create-team",
             label: "Create Team",
-            icon: <AddRounded fontSize="small" />,
+            icon: <Plus size={16} />,
             sectionTitle: "Options",
             onClick: () => setCreateTeamOpen(true),
           },
@@ -118,7 +124,7 @@ export function getMenuItems(
           {
             id: "hide-drafts",
             label: "Hide",
-            icon: <VisibilityOffRounded fontSize="small" />,
+            icon: <EyeOff size={16} />,
             sectionTitle: "Options",
           },
         ];
@@ -144,47 +150,47 @@ export function getMenuItems(
 
     case "personal":
       return [
-        { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
+        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} /> },
         {
           id: "move-section",
           label: "Move to section",
           closeOnClick: false,
           children: getMoveSectionChildren(setCreateSectionOpen),
         },
-        { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
+        { id: "hide", label: "Hide", icon: <EyeOff size={16} /> },
       ];
 
     case "user":
       return [
-        { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
-        { id: "mark-read", label: "Mark as read", icon: <CheckRounded fontSize="small" /> },
-        {
-          id: "move-section",
-          label: "Move to section",
-          closeOnClick: false,
-          children: getMoveSectionChildren(setCreateSectionOpen),
-        },
-        { id: "mute", label: "Mute", icon: <NotificationsNoneRounded fontSize="small" /> },
-        { id: "notify", label: "Notify when available", icon: <WbSunnyOutlined fontSize="small" /> },
-        { id: "workflows", label: "Workflows", icon: <SettingsRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
+        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} />, onClick: () => window.open(conversationUrl(sidebarMenuContext.id), "_blank", "noopener,noreferrer") },
+        { id: "mark-read", label: "Mark as read", icon: <Check size={16} /> },
+        // {
+        //   id: "move-section",
+        //   label: "Move to section",
+        //   closeOnClick: false,
+        //   children: getMoveSectionChildren(setCreateSectionOpen),
+        // },
+        { id: "mute", label: "Mute", icon: <Bell size={16} /> },
+        { id: "notify", label: "Notify when available", icon: <Sun size={16} /> },
+        // { id: "workflows", label: "Workflows", icon: <SettingsRounded fontSize="small" /> }, TODO
+        { id: "copy-link", label: "Copy link", icon: <Link size={16} />, onClick: () => void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)).catch(() => undefined) },
         {
           id: "remove-history",
           label: "Remove Chat History",
-          icon: <DeleteOutlineRounded fontSize="small" />,
+          icon: <Trash2 size={16} />,
           dividerAbove: true,
           danger: true,
         },
-        { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
+        // { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> }, TODO
       ];
 
     case "channel":
       return [
-        { id: "open-window", label: "Open in new window", icon: <OpenInNewRounded fontSize="small" /> },
+        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} /> },
         {
           id: "channel-notifications",
           label: "Channel notifications",
-          icon: <NotificationsNoneRounded fontSize="small" />,
+          icon: <Bell size={16} />,
         },
         {
           id: "move-section",
@@ -192,52 +198,52 @@ export function getMenuItems(
           closeOnClick: false,
           children: getMoveSectionChildren(setCreateSectionOpen, false), // No Favorites for channels
         },
-        { id: "remove-section", label: "Remove from section", icon: <DeleteOutlineRounded fontSize="small" /> },
-        { id: "hide", label: "Hide", icon: <VisibilityOffRounded fontSize="small" /> },
+        { id: "remove-section", label: "Remove from section", icon: <Trash2 size={16} /> },
+        { id: "hide", label: "Hide", icon: <EyeOff size={16} /> },
         {
           id: "manage-channel",
           label: "Manage channel",
-          icon: <SettingsRounded fontSize="small" />,
+          icon: <Settings size={16} />,
           dividerAbove: true,
           onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label || ""}.`),
         },
-        { id: "manage-tags", label: "Manage channel tags", icon: <EditRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
-        { id: "workflows", label: "Work flows", icon: <SettingsRounded fontSize="small" /> },
-        { id: "go-team", label: "Go to team", icon: <ChevronRightRounded fontSize="small" /> },
+        { id: "manage-tags", label: "Manage channel tags", icon: <Pencil size={16} /> },
+        { id: "copy-link", label: "Copy Link", icon: <Link size={16} /> },
+        { id: "workflows", label: "Work flows", icon: <Settings size={16} /> },
+        { id: "go-team", label: "Go to team", icon: <ChevronRight size={16} /> },
       ];
 
     case "team":
       return [
-        { id: "hide-channels", label: "Hide all Channels", icon: <VisibilityOffRounded fontSize="small" /> },
-        { id: "add-member", label: "Add member", icon: <PersonAddAlt1Rounded fontSize="small" /> },
+        { id: "hide-channels", label: "Hide all Channels", icon: <EyeOff size={16} /> },
+        { id: "add-member", label: "Add member", icon: <UserPlus size={16} /> },
         {
           id: "add-channel",
           label: "Add channel",
-          icon: <AddRounded fontSize="small" />,
+          icon: <Plus size={16} />,
           onClick: () => setCreateChannelOpen(true),
         },
         {
           id: "manage-team",
           label: "Manage team",
-          icon: <SettingsRounded fontSize="small" />,
+          icon: <Settings size={16} />,
           onClick: () => pushSystemMessage(`Manage team requested for ${sidebarMenuContext.label || ""}.`),
         },
-        { id: "manage-tags", label: "Manage tags", icon: <EditRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy link", icon: <LinkRounded fontSize="small" /> },
-        { id: "leave-team", label: "Leave team", icon: <ExitToAppRounded fontSize="small" /> },
+        { id: "manage-tags", label: "Manage tags", icon: <Pencil size={16} /> },
+        { id: "copy-link", label: "Copy link", icon: <Link size={16} /> },
+        { id: "leave-team", label: "Leave team", icon: <LogOut size={16} /> },
       ];
 
     case "message":
       return [
-        { id: "forward", label: "Forward", icon: <ForwardToInboxRounded fontSize="small" /> },
-        { id: "copy-link", label: "Copy Link", icon: <LinkRounded fontSize="small" /> },
-        { id: "pin", label: "Pin", icon: <PushPinRounded fontSize="small" /> },
-        { id: "save", label: "Save this Message", icon: <SaveAltRounded fontSize="small" /> },
-        { id: "mark-unread", label: "Mark as unread", icon: <MarkEmailUnreadRounded fontSize="small" /> },
-        { id: "translate", label: "Translations", icon: <TranslateRounded fontSize="small" /> },
-        { id: "report", label: "Report this Message", icon: <FlagOutlined fontSize="small" />, danger: true },
-        { id: "more", label: "More actions", icon: <MoreVertRounded fontSize="small" /> },
+        { id: "forward", label: "Forward", icon: <Forward size={16} /> },
+        { id: "copy-link", label: "Copy Link", icon: <Link size={16} /> },
+        { id: "pin", label: "Pin", icon: <Pin size={16} /> },
+        { id: "save", label: "Save this Message", icon: <Save size={16} /> },
+        { id: "mark-unread", label: "Mark as unread", icon: <MailOpen size={16} /> },
+        { id: "translate", label: "Translations", icon: <Languages size={16} /> },
+        { id: "report", label: "Report this Message", icon: <Flag size={16} />, danger: true },
+        { id: "more", label: "More actions", icon: <MoreVertical size={16} /> },
       ];
     default:
       return [];

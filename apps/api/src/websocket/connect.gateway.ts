@@ -254,7 +254,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         this.publisher.callStatus(organizationId, memberIds, result.ended ? "call:ended" : "call:left", { ...payload, userId: principal.userId });
         return { ok: true };
       }
-      await this.connect.updateCallRecord(organizationId, payload.channelId, principal.userId, {
+      const type = await this.connect.updateCallRecord(organizationId, payload.channelId, principal.userId, {
             callId: payload.callId,
             action: payload.action,
             durationSeconds: payload.durationSeconds,
@@ -263,6 +263,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       await this.connect.recordCallActivity(organizationId, payload.channelId, principal.userId, {
         callId: payload.callId,
         action: payload.action === "accept" ? "accepted" : payload.action === "reject" ? "declined" : payload.action === "miss" || payload.action === "cancel" ? "missed" : "ended",
+        ...(type ? { type } : {}),
         durationSeconds: payload.action === "end" ? payload.durationSeconds : undefined,
       });
       return { ok: true };

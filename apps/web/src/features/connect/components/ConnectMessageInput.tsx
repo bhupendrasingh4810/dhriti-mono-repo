@@ -3,6 +3,34 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+import {
+  Bell,
+  Bold,
+  Check,
+  Code2,
+  ExternalLink,
+  FileText,
+  Highlighter,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Mail,
+  MoreHorizontal,
+  PencilLine,
+  Plus,
+  Quote,
+  Send,
+  Smile,
+  Star,
+  Strikethrough,
+  Table2,
+  Type,
+  Underline,
+  Video,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import type { ConnectMentionUser, ConnectPendingAttachment, IconName } from "@/types/connect.types";
@@ -31,19 +59,44 @@ function parseSlashQuery(text: string) {
   return text.match(/(?:^|\n)\/([a-zA-Z-]*)$/)?.[1].toLowerCase() ?? null;
 }
 
-function insertAtCursor(value: string, start: number, end: number, text: string) {
-  const nextValue = `${value.slice(0, start)}${text}${value.slice(end)}`;
-  const cursor = start + text.length;
-  return { value: nextValue, selectionStart: cursor, selectionEnd: cursor };
+function markdownToEditorHtml(markdown: string) {
+  const escaped = markdown.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return escaped
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+    .replace(/~~([^~]+)~~/g, "<s>$1</s>")
+    .replace(/==([^=]+)==/g, "<mark>$1</mark>")
+    .replace(/&lt;u&gt;(.+?)&lt;\/u&gt;/g, "<u>$1</u>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/\n/g, "<br>");
 }
 
-function wrapWithMarkdown(value: string, start: number, end: number, prefix: string, suffix = prefix) {
-  const selected = value.slice(start, end);
-  return {
-    value: `${value.slice(0, start)}${prefix}${selected}${suffix}${value.slice(end)}`,
-    selectionStart: start + prefix.length,
-    selectionEnd: end + prefix.length,
-  };
+function editorHtmlToMarkdown(element: HTMLElement) {
+  function serialize(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent ?? "";
+    if (!(node instanceof HTMLElement)) return "";
+    const content = Array.from(node.childNodes).map(serialize).join("");
+    switch (node.tagName) {
+      case "BR": return "\n";
+      case "STRONG":
+      case "B": return `**${content}**`;
+      case "EM":
+      case "I": return `*${content}*`;
+      case "U": return `<u>${content}</u>`;
+      case "S":
+      case "STRIKE": return `~~${content}~~`;
+      case "MARK": return `==${content}==`;
+      case "CODE": return `\`${content}\``;
+      case "PRE": return `\`\`\`\n${content}\n\`\`\``;
+      case "A": return node.href.startsWith("http") ? `[${content}](${node.href})` : content;
+      case "DIV":
+      case "P": return `${content}\n`;
+      default: return content;
+    }
+  }
+
+  return Array.from(element.childNodes).map(serialize).join("").replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
 const RAW_URL_PATTERN = /(^|\s)(https?:\/\/[^\s<>\)]+)(?=$|\s)/g;
@@ -114,13 +167,17 @@ export default function ConnectMessageInput({
   const [priorityAnchor, setPriorityAnchor] = useState<HTMLElement | null>(null);
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [priorityFlag, setPriorityFlag] = useState<"normal" | "important" | "urgent">("normal");
+  const [activeFormats, setActiveFormats] = useState<Partial<Record<IconName, boolean>>>({});
   const lastSyncedValueRef = useRef(value);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const composerInputRef = useRef<HTMLTextAreaElement>(null);
+  const composerInputRef = useRef<HTMLDivElement>(null);
   const isEditing = mode === "edit";
 
   useEffect(() => {
-    if (value !== lastSyncedValueRef.current) setDraftValue(value);
+    if (value !== lastSyncedValueRef.current) {
+      setDraftValue(value);
+      if (composerInputRef.current) composerInputRef.current.innerHTML = markdownToEditorHtml(value);
+    }
   }, [value]);
 
   useEffect(() => {
@@ -186,26 +243,59 @@ export default function ConnectMessageInput({
     [priorityItems],
   );
 
-  function updateValueAndSelection(nextValue: string, selectionStart: number, selectionEnd: number) {
+  function updateDraftValue(nextValue: string) {
     setDraftValue(nextValue);
-    window.requestAnimationFrame(() => {
-      composerInputRef.current?.focus();
-      composerInputRef.current?.setSelectionRange(selectionStart, selectionEnd);
-    });
-  }
-
-  function applyMarkdown(prefix: string, suffix = prefix) {
-    const input = composerInputRef.current;
-    if (!input) return;
-    const result = wrapWithMarkdown(draftValue, input.selectionStart ?? 0, input.selectionEnd ?? input.selectionStart ?? 0, prefix, suffix);
-    updateValueAndSelection(result.value, result.selectionStart, result.selectionEnd);
+    if (composerInputRef.current) composerInputRef.current.innerHTML = markdownToEditorHtml(nextValue);
   }
 
   function insertSnippet(snippet: string) {
-    const input = composerInputRef.current;
-    if (!input) return;
-    const result = insertAtCursor(draftValue, input.selectionStart ?? 0, input.selectionEnd ?? input.selectionStart ?? 0, snippet);
-    updateValueAndSelection(result.value, result.selectionStart, result.selectionEnd);
+    composerInputRef.current?.focus();
+    document.execCommand("insertText", false, snippet);
+    syncEditor();
+  }
+
+  function syncEditor() {
+    if (!composerInputRef.current) return;
+    setDraftValue(normalizePastedLinks(editorHtmlToMarkdown(composerInputRef.current)));
+  }
+
+  function syncActiveFormats() {
+    const blockFormat = String(document.queryCommandValue("formatBlock")).toLowerCase();
+    setActiveFormats({
+      bold: document.queryCommandState("bold"),
+      italic: document.queryCommandState("italic"),
+      underline: document.queryCommandState("underline"),
+      strikethrough: document.queryCommandState("strikeThrough"),
+      highlight: Boolean(document.queryCommandValue("hiliteColor")),
+      code: blockFormat.includes("pre"),
+      list: document.queryCommandState("insertUnorderedList"),
+      "numbered-list": document.queryCommandState("insertOrderedList"),
+      quote: blockFormat.includes("blockquote"),
+      link: document.queryCommandState("createLink"),
+      "text-size": Boolean(document.queryCommandValue("fontSize")),
+    });
+  }
+
+  function applyFormat(format: "bold" | "italic" | "underline" | "strikethrough" | "highlight" | "code" | "link" | "text-size" | "list" | "numbered-list" | "quote") {
+    composerInputRef.current?.focus();
+    const command = format === "list" ? "insertUnorderedList"
+      : format === "numbered-list" ? "insertOrderedList"
+      : format === "quote" ? "formatBlock"
+      : format === "strikethrough" ? "strikeThrough"
+      : format === "highlight" ? "hiliteColor"
+        : format === "code" ? "formatBlock"
+          : format === "link" ? "createLink"
+            : format === "text-size" ? "fontSize"
+              : format;
+    const value = format === "quote" ? "blockquote"
+      : format === "highlight" ? "#fef3c7"
+      : format === "code" ? "pre"
+        : format === "link" ? "https://"
+          : format === "text-size" ? "3"
+            : undefined;
+    document.execCommand(command, false, value);
+    syncEditor();
+    window.requestAnimationFrame(syncActiveFormats);
   }
 
   function handleSend() {
@@ -217,6 +307,7 @@ export default function ConnectMessageInput({
     onSend({ content: `${priorityPrefix}${content}`, mentionUserIds });
     lastSyncedValueRef.current = "";
     setDraftValue("");
+    if (composerInputRef.current) composerInputRef.current.innerHTML = "";
     setPriorityFlag("normal");
     onChange("");
   }
@@ -224,17 +315,17 @@ export default function ConnectMessageInput({
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
       event.preventDefault();
-      applyMarkdown("**");
+      applyFormat("bold");
       return;
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "i") {
       event.preventDefault();
-      applyMarkdown("*");
+      applyFormat("italic");
       return;
     }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "u") {
       event.preventDefault();
-      applyMarkdown("<u>", "</u>");
+      applyFormat("underline");
       return;
     }
     if (event.key === "Enter" && !event.shiftKey) {
@@ -250,12 +341,12 @@ export default function ConnectMessageInput({
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{slashSuggestions.length > 0 ? "Slash Commands" : "Mention People"}</p>
           <div className="pb-1">
             {slashSuggestions.map((command) => (
-              <button key={command.id} type="button" onClick={() => setDraftValue(draftValue.replace(/(?:^|\n)\/[a-zA-Z-]*$/, (match) => `${match.startsWith("\n") ? "\n" : ""}${command.insertText}`))} className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50">
+              <button key={command.id} type="button" onClick={() => updateDraftValue(draftValue.replace(/(?:^|\n)\/[a-zA-Z-]*$/, (match) => `${match.startsWith("\n") ? "\n" : ""}${command.insertText}`))} className="flex w-full items-center justify-between px-3 py-2 text-left hover:bg-slate-50">
                 <span className="text-sm font-bold text-slate-800">{command.label}</span><span className="text-xs text-slate-500">{command.description}</span>
               </button>
             ))}
             {mentionSuggestions.map((user) => (
-              <button key={user.id} type="button" onClick={() => setDraftValue(draftValue.replace(/(?:^|\s)@[a-zA-Z0-9._-]*$/, (match) => `${match.startsWith(" ") ? " " : ""}@[${user.displayName}] `))} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50">
+              <button key={user.id} type="button" onClick={() => updateDraftValue(draftValue.replace(/(?:^|\s)@[a-zA-Z0-9._-]*$/, (match) => `${match.startsWith(" ") ? " " : ""}@[${user.displayName}] `))} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-slate-50">
                 <img src={user.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /><span><span className="block text-sm font-semibold text-slate-800">{user.displayName}</span><span className="block text-xs text-slate-500">{user.subtitle}</span></span>
               </button>
             ))}
@@ -270,11 +361,28 @@ export default function ConnectMessageInput({
 
         {!isEditing && draftLinks.length > 0 && <div className="flex flex-wrap gap-2 px-2 pt-2">{draftLinks.map((link) => <div key={link.url} className="flex w-[220px] items-center gap-2 rounded border border-slate-200 bg-slate-50 p-2"><img src={link.thumbnail} alt="" className="h-8 w-8 rounded border border-slate-200 bg-white" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-slate-800">{link.domain}</p><p className="truncate text-xs text-slate-500">{link.url}</p></div><a href={link.url} target="_blank" rel="noreferrer" aria-label={`Open ${link.domain}`} className="rounded p-1 text-slate-500 hover:bg-slate-200"><ComposerIcon name="open" size={16} /></a></div>)}</div>}
 
-        <textarea ref={composerInputRef} rows={2} placeholder={isEditing ? "Edit message" : `Message ${conversationLabel}`} value={draftValue} onChange={(event) => setDraftValue(normalizePastedLinks(event.target.value))} onKeyDown={handleKeyDown} className="block max-h-40 min-h-20 w-full resize-none bg-transparent px-3 py-2 text-sm text-slate-800 outline-none placeholder:text-slate-400" />
+        <div className="relative">
+          {draftValue.trim().length === 0 ? <span aria-hidden="true" className="pointer-events-none absolute left-3 top-2 text-sm text-slate-400">{isEditing ? "Edit message" : `Message ${conversationLabel}`}</span> : null}
+          <div
+            ref={composerInputRef}
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-label={isEditing ? "Edit message" : `Message ${conversationLabel}`}
+            aria-multiline="true"
+            onInput={() => syncEditor()}
+            onPaste={(event) => { event.preventDefault(); document.execCommand("insertText", false, event.clipboardData.getData("text/plain")); syncEditor(); }}
+            onKeyDown={handleKeyDown as unknown as (event: KeyboardEvent<HTMLDivElement>) => void}
+            onKeyUp={syncActiveFormats}
+            onMouseUp={syncActiveFormats}
+            onFocus={syncActiveFormats}
+            className="block max-h-40 min-h-20 w-full overflow-y-auto whitespace-pre-wrap bg-transparent px-3 py-2 text-sm text-slate-800 outline-none"
+          />
+        </div>
 
         {!isEditing && formattingOpen && <div className="flex flex-wrap gap-1 border-y border-slate-200 px-2 py-1.5">{[
-          ["bold", () => applyMarkdown("**"), "Bold"], ["italic", () => applyMarkdown("*"), "Italic"], ["underline", () => applyMarkdown("<u>", "</u>"), "Underline"], ["more", () => applyMarkdown("~~"), "Strikethrough"], ["highlight", () => applyMarkdown("=="), "Highlight"], ["code", () => applyMarkdown("`"), "Inline code"], ["more", () => applyMarkdown("```\n", "\n```"), "Code block"], ["list", () => insertSnippet("- "), "Bulleted list"], ["numbered-list", () => insertSnippet("1. "), "Numbered list"], ["quote", () => insertSnippet("> "), "Quote"], ["link", () => applyMarkdown("[", "](https://)"), "Link"], ["table", () => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n"), "Table"], ["text-size", () => applyMarkdown('<span style="font-size:14px">', "</span>"), "Text size"],
-        ].map(([icon, action, label]) => <IconButton key={label as string} label={label as string} onClick={action as () => void}><ComposerIcon name={icon as IconName} /></IconButton>)}</div>}
+          ["bold", () => applyFormat("bold"), "Bold"], ["italic", () => applyFormat("italic"), "Italic"], ["underline", () => applyFormat("underline"), "Underline"], ["strikethrough", () => applyFormat("strikethrough"), "Strikethrough"], ["highlight", () => applyFormat("highlight"), "Highlight"], ["code", () => applyFormat("code"), "Inline code"], ["list", () => applyFormat("list"), "Bulleted list"], ["numbered-list", () => applyFormat("numbered-list"), "Numbered list"], ["quote", () => applyFormat("quote"), "Quote"], ["link", () => applyFormat("link"), "Link"], ["table", () => insertSnippet("| Column A | Column B |\n| --- | --- |\n| Value 1 | Value 2 |\n"), "Table"], ["text-size", () => applyFormat("text-size"), "Text size"],
+        ].map(([icon, action, label]) => <IconButton key={label as string} label={label as string} active={Boolean(activeFormats[icon as IconName])} onClick={action as () => void}><ComposerIcon name={icon as IconName} /></IconButton>)}</div>}
 
         <div className="flex items-center justify-between border-t border-slate-200 px-2 py-1.5">
           <div className="flex items-center gap-1">{!isEditing && <><IconButton label="Formatting" onClick={() => setFormattingOpen((open) => !open)}><ComposerIcon name="edit" /></IconButton><IconButton label="Emoji" onClick={() => setEmojiOpen((open) => !open)}><ComposerIcon name="smile" /></IconButton><IconButton label="Add attachment" onClick={(event) => setComposerAttachAnchor(event.currentTarget)}><ComposerIcon name="add" /></IconButton><IconButton label="Set priority" onClick={(event) => setPriorityAnchor(event.currentTarget)}><ComposerIcon name={priorityFlag === "urgent" ? "bell" : "priority"} className={priorityFlag === "urgent" ? "text-red-600" : priorityFlag === "important" ? "text-amber-600" : ""} /></IconButton></>}</div>
@@ -290,13 +398,38 @@ export default function ConnectMessageInput({
   );
 }
 
-function IconButton({ children, label, onClick }: { children: ReactNode; label: string; onClick?: (event: MouseEvent<HTMLButtonElement>) => void }) {
-  return <button type="button" title={label} aria-label={label} onClick={onClick} className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-100">{children}</button>;
+function IconButton({ children, label, active = false, onClick }: { children: ReactNode; label: string; active?: boolean; onClick?: (event: MouseEvent<HTMLButtonElement>) => void }) {
+  return <button type="button" title={label} aria-label={label} aria-pressed={active} onMouseDown={(event) => event.preventDefault()} onClick={onClick} className={`grid h-8 w-8 place-items-center rounded ${active ? "bg-brand-muted text-brand" : "text-slate-600 hover:bg-slate-100"}`}>{children}</button>;
 }
 
 function ComposerIcon({ name, size = 20, className = "" }: { name: IconName; size?: number; className?: string }) {
-  const paths: Record<IconName, ReactNode> = {
-    add: <><path d="M12 5v14M5 12h14" /></>, check: <path d="m5 12 4 4L19 6" />, close: <><path d="m18 6-12 12M6 6l12 12" /></>, bold: <><path d="M6 4h8a4 4 0 0 1 0 8H6zM6 12h9a4 4 0 0 1 0 8H6z" /></>, italic: <><path d="M19 4h-8M13 20H5M14 4 8 20" /></>, underline: <><path d="M6 4v7a6 6 0 0 0 12 0V4M4 21h16" /></>, code: <><path d="m8 6-6 6 6 6M16 6l6 6-6 6" /></>, document: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></>, edit: <><path d="M12 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h8" /><path d="m14.5 5.5 4 4L12 16l-4 1 1-4z" /></>, highlight: <><path d="m14 4 6 6-8 8-6-6zM4 20h16" /></>, link: <><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.5-1.5" /></>, list: <><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01" /></>, mail: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" /></>, more: <><circle cx="5" cy="12" r="1" fill="currentColor" /><circle cx="12" cy="12" r="1" fill="currentColor" /><circle cx="19" cy="12" r="1" fill="currentColor" /></>, "numbered-list": <><path d="M10 6h11M10 12h11M10 18h11M4 5h1v3M4 8h2M4 13c2-2 3 0 0 3h2M4 19h2M5 18v4" /></>, open: <><path d="M14 3h7v7M21 3l-9 9M19 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" /></>, priority: <path d="m12 3 3 7 7 .5-5.5 4.5 2 7-6.5-4-6.5 4 2-7L2 10.5 9 10z" />, quote: <><path d="M7 8H3v5h4v3H3a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h4zM21 8h-4v5h4v3h-4a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3h4z" /></>, send: <><path d="m22 2-7 20-4-9-9-4zM22 2 11 13" /></>, smile: <><circle cx="12" cy="12" r="9" /><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" /></>, table: <><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M3 15h18M9 3v18M15 3v18" /></>, "text-size": <><path d="M4 5h16M8 5v14M16 5v14M5 19h6M13 19h6" /></>, bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M10 21h4" /></>, video: <><rect x="3" y="6" width="12" height="12" rx="2" /><path d="m15 10 6-3v10l-6-3z" /></>,
+  const icons: Record<IconName, LucideIcon> = {
+    add: Plus,
+    bell: Bell,
+    bold: Bold,
+    check: Check,
+    code: Code2,
+    close: X,
+    document: FileText,
+    edit: PencilLine,
+    highlight: Highlighter, 
+    italic: Italic,
+    link: Link,
+    list: List,
+    mail: Mail,
+    more: MoreHorizontal,
+    "numbered-list": ListOrdered,
+    open: ExternalLink,
+    priority: Star,
+    quote: Quote,
+    send: Send,
+    smile: Smile,
+    strikethrough: Strikethrough,
+    table: Table2,
+    "text-size": Type,
+    underline: Underline,
+    video: Video,
   };
-  return <svg aria-hidden="true" className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>;
+  const Icon = icons[name];
+  return <Icon aria-hidden="true" className={className} size={size} />;
 }

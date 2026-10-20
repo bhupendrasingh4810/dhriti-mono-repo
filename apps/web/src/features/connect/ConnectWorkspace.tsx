@@ -396,6 +396,53 @@ export default function ConnectWorkspace() {
       closeSidebarMenus();
     }});
   }
+  if (sidebarMenuContext?.kind === "user" && sidebarMenuContext.id) {
+    const conversationId = sidebarMenuContext.id;
+    const latestMessage = (messagesByConversation[conversationId] ?? []).reduce<ConnectMessage | undefined>(
+      (latest, message) => !latest || Date.parse(message.createdAt) > Date.parse(latest.createdAt) ? message : latest,
+      undefined,
+    );
+    const userMenuActions: Record<string, () => void> = {
+      "mark-read": () => {
+        void connectService.markMessagesRead(live.organizationId, conversationId, latestMessage?.id)
+          .then(() => live.refresh())
+          .catch(live.reportError);
+        closeSidebarMenus();
+      },
+      mute: () => {
+        void connectService.updateConversationNotifications(live.organizationId, conversationId, { muted: true })
+          .catch(live.reportError);
+        closeSidebarMenus();
+      },
+      notify: () => {
+        void connectService.updateConversationNotifications(live.organizationId, conversationId, { notifyWhenAvailable: true })
+          .catch(live.reportError);
+        closeSidebarMenus();
+      },
+      "remove-history": () => {
+        void connectService.removeConversationHistory(live.organizationId, conversationId)
+          .then(() => {
+            if (selectedConversationId === conversationId) {
+              const nextConversationId = Object.keys(conversationsById).find((id) => id !== conversationId);
+              if (nextConversationId) handleSelectConversation(nextConversationId);
+              else {
+                setSelectedConversationId("");
+                const nextSearchParams = new URLSearchParams(searchParams.toString());
+                nextSearchParams.delete("conversation");
+                router.replace(nextSearchParams.size ? `${pathname}?${nextSearchParams.toString()}` : pathname, { scroll: false });
+              }
+            }
+            return live.refresh();
+          })
+          .catch(live.reportError);
+        closeSidebarMenus();
+      },
+    };
+    for (const item of sidebarMenuItems) {
+      const action = userMenuActions[item.id];
+      if (action) item.onClick = action;
+    }
+  }
 
   const activeMenuMessage = activeMessageId
     ? selectedMessages.find((message) => message.id === activeMessageId)

@@ -19,7 +19,7 @@ import {
   VideocamOffRounded,
   VideocamRounded,
 } from "@mui/icons-material";
-import { DhritiWebSdk } from "@dhriti/web-sdk";
+import type { DhritiWebSdk } from "@dhriti/web-sdk";
 import { connectSidebarState, connectUsers, connectUsersById } from "@/mocks/connect";
 import type { ActiveCall, CallLayout, CallPanel, SessionType } from "@/types/connect.types";
 import { CallSidePanel } from "./CallSidePanel";
@@ -40,7 +40,6 @@ interface CallSurfaceProps {
   onRestore: () => void;
   onEnd: (durationSeconds?: number) => void;
   onJoin: () => void;
-  onAccept: () => void;
   onHoldChange: (onHold: boolean) => void;
 }
 
@@ -57,7 +56,6 @@ export function CallSurface({
   onRestore,
   onEnd,
   onJoin,
-  onAccept,
   onHoldChange,
 }: CallSurfaceProps) {
   const [phase, setPhase] = useState<"lobby" | "call">("lobby");
@@ -403,6 +401,7 @@ export function CallSurface({
         throw new Error(payload?.message ?? "Unable to join the call.");
       }
 
+      const { DhritiWebSdk } = await import("@dhriti/web-sdk");
       const rtc = new DhritiWebSdk({ appId: payload.appId });
       rtcRef.current = rtc;
       rtc.on("remote-track", ({ participant }) => {
@@ -425,7 +424,6 @@ export function CallSurface({
       }
 
       onJoin();
-      if (call.direction === "incoming") onAccept();
       setPhase("call");
       setJoinedAt(Date.now());
       setError("");
@@ -636,7 +634,9 @@ export function CallSurface({
             <div className="space-y-4">
               <div className="relative flex h-[min(56dvh,480px)] w-full flex-none items-center justify-center overflow-hidden rounded-lg bg-slate-800" style={backgroundUrl ? { backgroundImage: `linear-gradient(rgb(0 0 0 / 0.08), rgb(0 0 0 / 0.08)), url(${backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}>
                 {call.type === "video" && cameraOn && stream?.getVideoTracks().length ? (
-                  <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} />
+                  <div className="h-full w-full -scale-x-100">
+                    <video ref={videoRef} autoPlay muted playsInline className={`h-full w-full object-cover ${background === "Blur" ? "scale-105 blur-sm" : ""}`} />
+                  </div>
                 ) : (
                   <div className="text-center">
                     <span className="mx-auto grid h-20 w-20 place-items-center rounded-full bg-slate-700 text-2xl font-semibold text-white">{currentUser?.displayName.slice(0, 1) ?? "Y"}</span>
@@ -707,7 +707,7 @@ export function CallSurface({
                   <div className="relative col-span-2 row-span-2 flex min-h-64 items-end justify-center gap-3 overflow-hidden rounded-lg bg-gradient-to-b from-sky-900 to-slate-800 p-5 sm:gap-6">{participants.slice(0, 6).map((userId) => <div key={userId} className="flex flex-col items-center"><ParticipantAvatar userId={userId} /><span className="mt-2 max-w-24 truncate rounded bg-slate-950/70 px-2 py-1 text-[10px] text-white">{connectUsersById[userId]?.displayName ?? "Guest"}</span></div>)}<span className="absolute left-3 top-3 rounded bg-slate-950/70 px-2 py-1 text-xs text-white">Together mode</span></div>
                 ) : visibleParticipants.map((userId, index) => (
                   <div key={userId} className={`relative min-h-32 overflow-hidden rounded-lg bg-slate-900 ${layout === "Spotlight" ? "col-span-1 row-span-1" : ""}`}>
-                    {userId === connectSidebarState.currentUser && cameraOn ? <div ref={localCallVideoRef} className={`h-full w-full ${background === "Blur" ? "scale-105 blur-sm" : ""}`} /> : remoteParticipantIds.includes(userId) ? <RemoteVideoTarget participantId={userId} targets={remoteVideoTargetsRef} /> : <div className="flex h-full min-h-32 items-center justify-center">{userId === connectSidebarState.currentUser && backgroundUrl && background !== "Blur" ? <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: `url(${backgroundUrl})` }} /> : null}<ParticipantAvatar userId={userId} className="relative h-20 w-20 text-2xl" /></div>}
+                    {userId === connectSidebarState.currentUser && cameraOn ? <div className="h-full w-full -scale-x-100"><div ref={localCallVideoRef} className={`h-full w-full ${background === "Blur" ? "scale-105 blur-sm" : ""}`} /></div> : remoteParticipantIds.includes(userId) ? <RemoteVideoTarget participantId={userId} targets={remoteVideoTargetsRef} /> : <div className="flex h-full min-h-32 items-center justify-center">{userId === connectSidebarState.currentUser && backgroundUrl && background !== "Blur" ? <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: `url(${backgroundUrl})` }} /> : null}<ParticipantAvatar userId={userId} className="relative h-20 w-20 text-2xl" /></div>}
                     <span className="absolute bottom-3 left-3 rounded bg-black/60 px-2 py-1 text-xs text-white">{userId === connectSidebarState.currentUser ? "You" : connectUsersById[userId]?.displayName ?? "Guest"}</span>
                     {index === 1 ? <span className="absolute right-3 top-3 rounded bg-black/60 px-2 py-1 text-[10px] text-white">Speaking</span> : null}
                   </div>

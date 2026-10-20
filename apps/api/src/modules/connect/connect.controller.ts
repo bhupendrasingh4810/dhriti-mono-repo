@@ -24,7 +24,7 @@ import { TenantGuard } from "../../common/guards/tenant.guard";
 import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
-import { CreateDirectConversationDto, SetSidebarFavoriteDto } from "./dto/sidebar.dto";
+import { CreateDirectConversationDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto } from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
 
 @ApiTags("connect")
@@ -59,6 +59,30 @@ export class ConnectController {
     @Body() dto: SetSidebarFavoriteDto,
   ) {
     return this.connect.setSidebarFavorite(organization.organizationId, user.userId, dto);
+  }
+
+  @Put("conversations/:channelId/notifications")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Update the current user's notification preferences for a conversation" })
+  async updateConversationNotifications(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId", ParseUUIDPipe) channelId: string,
+    @Body() dto: UpdateConversationNotificationDto,
+  ) {
+    return this.connect.updateConversationNotifications(organization.organizationId, channelId, user.userId, dto);
+  }
+
+  @Delete("conversations/:channelId/history")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Remove a direct conversation from the current user's history" })
+  async removeConversationHistory(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId", ParseUUIDPipe) channelId: string,
+  ) {
+    await this.connect.removeConversationHistory(organization.organizationId, channelId, user.userId);
   }
 
   @Get("conversations")

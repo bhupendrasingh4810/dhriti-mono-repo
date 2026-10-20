@@ -67,7 +67,8 @@ export class AddReactionDto {
 }
 
 export class MarkMessagesReadDto {
-  @ApiProperty({ description: "Newest message actually viewed" })
+  @ApiPropertyOptional({ description: "Newest message actually viewed" })
+  @IsOptional()
   @IsUUID()
   messageId!: string;
 }

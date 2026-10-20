@@ -72,6 +72,10 @@ export interface SetConnectFavoriteInput {
   itemId: string;
   isFavorite: boolean;
 }
+export interface UpdateConversationNotificationInput {
+  muted?: boolean;
+  notifyWhenAvailable?: boolean;
+}
 
 export interface ConnectOrganizationUser {
   id: string;
@@ -125,13 +129,22 @@ export const connectService = {
     }),
   listMessages: (organizationId: string, channelId: string, query: ListMessagesInput = {}) =>
     tenantRequest<MessagePage>(organizationId, `${base}/channels/${pathSegment(channelId)}/messages`, { query }),
-  markMessagesRead: (organizationId: string, channelId: string, messageId: string) =>
-    tenantJsonRequest<{ lastReadAt: string | null }, { messageId: string }>(
+  markMessagesRead: (organizationId: string, channelId: string, messageId?: string) =>
+    tenantJsonRequest<{ lastReadAt: string | null }, { messageId?: string }>(
       organizationId,
       `${base}/channels/${pathSegment(channelId)}/read`,
       "POST",
       { messageId },
     ),
+  updateConversationNotifications: (organizationId: string, channelId: string, input: UpdateConversationNotificationInput) =>
+    tenantJsonRequest<ConnectSidebarState, UpdateConversationNotificationInput>(
+      organizationId,
+      `${base}/conversations/${pathSegment(channelId)}/notifications`,
+      "PUT",
+      input,
+    ),
+  removeConversationHistory: (organizationId: string, channelId: string) =>
+    tenantRequest<void>(organizationId, `${base}/conversations/${pathSegment(channelId)}/history`, { method: "DELETE" }),
   createMessage: (organizationId: string, channelId: string, input: CreateMessageInput) =>
     tenantJsonRequest<ConnectApiMessage, CreateMessageInput>(
       organizationId,

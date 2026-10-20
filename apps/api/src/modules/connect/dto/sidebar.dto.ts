@@ -95,6 +95,18 @@ export class SetSidebarFavoriteDto {
   isFavorite!: boolean;
 }
 
+export class UpdateConversationNotificationDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  muted?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  notifyWhenAvailable?: boolean;
+}
+
 export class CreateDirectConversationDto {
   @ApiProperty({ format: "uuid" })
   @IsUUID()

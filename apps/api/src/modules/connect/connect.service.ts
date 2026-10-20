@@ -132,6 +132,52 @@ export class ConnectService {
     return this.getSidebar(organizationId, userId);
   }
 
+  async updateConversationNotifications(
+    organizationId: string,
+    channelId: string,
+    userId: string,
+    input: { muted?: boolean; notifyWhenAvailable?: boolean },
+  ) {
+    await this.getChannelForMember(organizationId, channelId, userId, true);
+    const updated = await this.mutatePreferences(organizationId, userId, (current) => {
+      const settings = toSidebarPreferences(current.settings);
+      const notifications = toSidebarPreferences(settings.conversationNotifications);
+      return {
+        ...current,
+        settings: {
+          ...settings,
+          conversationNotifications: {
+            ...notifications,
+            [channelId]: { ...toSidebarPreferences(notifications[channelId]), ...input },
+          },
+        },
+      };
+    });
+    this.publisher.publishToUsers(organizationId, [userId], "sidebar:settings-changed", { settings: updated.settings });
+    return this.getSidebar(organizationId, userId);
+  }
+
+  async removeConversationHistory(organizationId: string, channelId: string, userId: string): Promise<void> {
+    const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
+    if (channel.type !== "DIRECT") {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Only direct conversations can be removed from history", HttpStatus.BAD_REQUEST);
+    }
+    await this.mutatePreferences(organizationId, userId, (current) => {
+      const settings = toSidebarPreferences(current.settings);
+      const favorites = toSidebarPreferences(current.favorites);
+      return {
+        ...current,
+        recentChats: toStringList(current.recentChats).filter((id) => id !== channelId),
+        favorites: { ...favorites, chats: toStringList(favorites.chats).filter((id) => id !== channelId) },
+        settings: {
+          ...settings,
+          hiddenConversationIds: [...new Set([...toStringList(settings.hiddenConversationIds), channelId])],
+        },
+      };
+    });
+    this.publisher.publishToUsers(organizationId, [userId], "sidebar:chat-activity", { channelId });
+  }
+
   async updateSidebarSettings(organizationId: string, userId: string, settings: UpdateSidebarSettingsDto) {
     await this.assertOrganizationMember(organizationId, userId);
     const conversationIds = new Set([
@@ -175,11 +221,17 @@ export class ConnectService {
 
   async listConversations(organizationId: string, userId: string) {
     await this.assertOrganizationMember(organizationId, userId);
+    const preferences = await this.prisma.connectSidebarPreference.findUnique({
+      where: { organizationId_userId: { organizationId, userId } },
+      select: { preferences: true },
+    });
+    const hiddenConversationIds = toStringList(toSidebarPreferences(toSidebarPreferences(preferences?.preferences).settings).hiddenConversationIds);
     const conversations = await this.prisma.channel.findMany({
       where: {
         organizationId,
         type: { in: ["DIRECT", "GROUP"] },
         deletedAt: null,
+        id: { notIn: hiddenConversationIds },
         members: { some: { userId } },
       },
       include: {
@@ -246,7 +298,16 @@ export class ConnectService {
       include: { members: { select: { userId: true } } },
     });
     const existing = candidates.find((conversation) => conversation.members.length === 2);
-    if (existing) return existing;
+    if (existing) {
+      await this.mutatePreferences(organizationId, creatorUserId, (current) => {
+        const settings = toSidebarPreferences(current.settings);
+        return {
+          ...current,
+          settings: { ...settings, hiddenConversationIds: toStringList(settings.hiddenConversationIds).filter((id) => id !== existing.id) },
+        };
+      });
+      return existing;
+    }
 
     return this.prisma.channel.create({
       data: {
@@ -675,7 +736,7 @@ export class ConnectService {
       action: "accept" | "reject" | "miss" | "cancel" | "end";
       durationSeconds?: number;
     },
-  ): Promise<void> {
+  ): Promise<"audio" | "video" | undefined> {
     await this.getChannelForMember(organizationId, channelId, userId, true);
     const statusByAction: Record<typeof details.action, ConnectCallStatus> = {
       accept: "ACTIVE" as ConnectCallStatus,
@@ -685,21 +746,26 @@ export class ConnectService {
       end: "ENDED" as ConnectCallStatus,
     };
     const terminal = details.action === "reject" || details.action === "miss" || details.action === "cancel" || details.action === "end";
-    const updated = await this.prisma.connectCall.updateMany({
+    const call = await this.prisma.connectCall.findFirst({
       where: { id: details.callId, organizationId, channelId },
+      select: { id: true, type: true },
+    });
+    if (!call) return undefined;
+
+    await this.prisma.connectCall.update({
+      where: { id: call.id },
       data: {
         status: statusByAction[details.action],
         ...(terminal ? { endedAt: new Date(), durationSeconds: details.durationSeconds } : {}),
       },
     });
 
-    if (updated.count === 0) return;
-
     await this.prisma.connectCallParticipant.upsert({
       where: { callId_userId: { callId: details.callId, userId } },
       create: { callId: details.callId, userId, joinedAt: details.action === "accept" ? new Date() : undefined },
       update: details.action === "accept" ? { joinedAt: new Date(), leftAt: null } : terminal ? { leftAt: new Date() } : {},
     });
+    return call.type === "VIDEO" ? "video" : "audio";
   }
 
   async leaveSharedCall(organizationId: string, channelId: string, userId: string, callId: string): Promise<{ ended: boolean }> {

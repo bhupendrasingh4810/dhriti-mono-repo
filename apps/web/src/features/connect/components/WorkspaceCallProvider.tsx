@@ -309,7 +309,6 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
             onRestore={() => restoreCall(call.id)}
             onEnd={(durationSeconds) => endCall(call.id, durationSeconds)}
             onJoin={() => markCallJoined(call.id)}
-            onAccept={() => acceptCall(call.id)}
             onHoldChange={(onHold) => setCallOnHold(call.id, onHold)}
         />
       ))}
