@@ -13,27 +13,16 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./mui": {
-      "types": "./src/components/mui/index.ts",
-      "default": "./src/components/mui/index.ts"
-    },
     "./dialog": {
-      "types": "./src/components/mui/Dialog/index.tsx",
-      "default": "./src/components/mui/Dialog/index.tsx"
+      "types": "./src/components/Dialog/index.tsx",
+      "default": "./src/components/Dialog/index.tsx"
     },
     "./components/dialog": {
-      "types": "./src/components/mui/Dialog/index.tsx",
-      "default": "./src/components/mui/Dialog/index.tsx"
+      "types": "./src/components/Dialog/index.tsx",
+      "default": "./src/components/Dialog/index.tsx"
     }
   },
   "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^9.3.1",
-    "@mui/material": "^9.3.1",
-    "@mui/x-date-pickers": "^8.0.0",
-    "dayjs": "^1.11.13",
-    "emoji-picker-react": "^4.19.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

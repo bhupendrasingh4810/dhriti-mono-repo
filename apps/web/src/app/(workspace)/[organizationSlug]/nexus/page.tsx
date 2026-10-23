@@ -1,16 +1,8 @@
-import { Box, Typography } from "@dhriti/ui";
-
 export default function NexusPage() {
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <Box sx={{ p: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: "fontWeightBold" }}>
-          Nexus
-        </Typography>
-        <Typography color="text.secondary" sx={{ mt: 1 }}>
-          Nexus workspace
-        </Typography>
-      </Box>
-    </Box>
+    <main className="min-h-screen bg-background p-8">
+      <h1 className="text-2xl font-bold text-text-primary">Nexus</h1>
+      <p className="mt-2 text-text-secondary">Nexus workspace</p>
+    </main>
   );
 }

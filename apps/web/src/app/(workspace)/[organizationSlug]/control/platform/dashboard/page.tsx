@@ -51,7 +51,7 @@ const alertColors: Record<Alert["severity"], { bg: string; color: string; label:
   info: { bg: "#dbeafe", color: "#2563eb", label: "Info" },
 };
 
-const statVisuals: Array<Pick<StatCard, "label" | "icon" | "sparkline">> = [
+const statVisuals: StatCard[] = [
   {
     label: "Total Orgs",
     value: "847",
@@ -123,25 +123,47 @@ export default function PlatformDashboard() {
   }, []);
 
   const stats: StatCard[] = [
-    { ...statVisuals[0], value: dashboard?.metrics.totalOrganizations.toLocaleString() ?? "--", change: "Live total", positive: true },
-    { ...statVisuals[1], value: dashboard?.metrics.activeUsers.toLocaleString() ?? "--", change: "Currently active", positive: true },
+    {
+      ...statVisuals[0],
+      value: dashboard?.metrics.totalOrganizations.toLocaleString() ?? "--",
+      change: "Live total",
+      positive: true,
+    },
+    {
+      ...statVisuals[1],
+      value: dashboard?.metrics.activeUsers.toLocaleString() ?? "--",
+      change: "Currently active",
+      positive: true,
+    },
     {
       ...statVisuals[2],
-      value: dashboard ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(dashboard.metrics.monthlyRecurringRevenueMinor / 100) : "--",
+      value: dashboard
+        ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
+            dashboard.metrics.monthlyRecurringRevenueMinor / 100,
+          )
+        : "--",
       change: "Current monthly run rate",
       positive: true,
     },
     {
       ...statVisuals[3],
-      value: dashboard?.metrics.uptimePercent === null || !dashboard ? "--" : `${dashboard.metrics.uptimePercent.toFixed(2)}%`,
-      change: dashboard ? `Observed since ${new Date(dashboard.metrics.observedSince).toLocaleDateString()}` : "Loading",
+      value:
+        dashboard?.metrics.uptimePercent === null || !dashboard
+          ? "--"
+          : `${dashboard.metrics.uptimePercent.toFixed(2)}%`,
+      change: dashboard
+        ? `Observed since ${new Date(dashboard.metrics.observedSince).toLocaleDateString()}`
+        : "Loading",
       positive: true,
     },
   ];
   const orgs: OrgRow[] = (dashboard?.recentOrganizations ?? []).map((organization) => ({
     id: organization.id,
     name: organization.name,
-    plan: { FREE: "Free", STANDARD: "Pro", PREMIUM: "Business", ENTERPRISE: "Enterprise" }[organization.plan] as OrgRow["plan"] ?? "Free",
+    plan:
+      ({ FREE: "Free", STANDARD: "Pro", PREMIUM: "Business", ENTERPRISE: "Enterprise" }[
+        organization.plan
+      ] as OrgRow["plan"]) ?? "Free",
     seats: organization.seats,
     status: organization.status === "SUSPENDED" ? "Suspended" : organization.status === "TRIALING" ? "Trial" : "Active",
   }));

@@ -76,11 +76,11 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const router = useRouter();
   const pathname = usePathname();
   const initializedRef = useRef(false);
-  const loggedOutRef = useRef(false);
 
   const redirectAnonymousOnboardingUser = useCallback(() => {
     if (pathname !== "/onboarding") {
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const currentUser = await getCurrentUser();
 
-      loggedOutRef.current = false;
+      setIsLoggingOut(false);
       setUser(currentUser);
       if (!currentUser) {
         redirectAnonymousOnboardingUser();
@@ -109,7 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!shouldLoadCurrentUser(pathname)) {
-      setLoading(false);
+      void Promise.resolve().then(() => setLoading(false));
       return;
     }
 
@@ -127,7 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const currentUser = await getCurrentUser();
 
-      loggedOutRef.current = false;
+      setIsLoggingOut(false);
       setUser(currentUser);
       if (!currentUser) {
         redirectAnonymousOnboardingUser();
@@ -140,11 +140,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [redirectAnonymousOnboardingUser]);
 
   const logout = useCallback(async () => {
-    if (loggedOutRef.current) {
+    if (isLoggingOut) {
       return;
     }
 
-    loggedOutRef.current = true;
+    setIsLoggingOut(true);
 
     try {
       await logoutSession();
@@ -155,7 +155,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       router.replace("/login");
       router.refresh();
     }
-  }, [router]);
+  }, [isLoggingOut, router]);
 
   const value: AuthContextType = {
     user,

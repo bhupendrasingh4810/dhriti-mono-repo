@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "BACKEND_URL is not configured" }, { status: 503 });
   }
   const url = new URL(process.env.BACKEND_URL);
-  return NextResponse.json({ token, url: `${url.origin}/connect` }, {
-    headers: { "Cache-Control": "no-store" },
-  });
+  return NextResponse.json(
+    { token, url: `${url.origin}/connect` },
+    {
+      headers: { "Cache-Control": "no-store" },
+    },
+  );
 }

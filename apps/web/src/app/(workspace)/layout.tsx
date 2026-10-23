@@ -2,15 +2,13 @@
 
 import { type ReactNode } from "react";
 import { useParams, usePathname } from "next/navigation";
-import { Box } from "@dhriti/ui";
 import Sidebar from "@/components/layout/workspace/sidebar";
 import Header from "@/components/layout/workspace/header";
 import { connectSearchResults, connectUsers } from "@/mocks/connect";
-import { PageName, PageType } from "@/types/app.types";
+import { PageType } from "@/types/app.types";
 
 interface WorkspaceLayoutProps {
   children: ReactNode;
-  params: Promise<{ organizationSlug: string }>;
 }
 
 function getActiveApp(pathname: string): PageType {
@@ -22,24 +20,11 @@ function getActiveApp(pathname: string): PageType {
   return "home";
 }
 
-export default function WorkspaceLayout({ children, params }: WorkspaceLayoutProps) {
+export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { organizationSlug } = useParams();
 
   const pathname = usePathname();
   const activeApp = getActiveApp(pathname);
-  const headerAppName =
-    activeApp === "home"
-      ? PageName.Home
-      : activeApp === "connect"
-        ? PageName.Connect
-        : activeApp === "flow"
-          ? PageName.Flow
-          : activeApp === "atlas"
-            ? PageName.Atlas
-            : activeApp === "pulse"
-              ? PageName.Pulse
-              : PageName.Nexus;
-
   const headerSearchUsers = connectUsers.map((user) => ({
     id: user.id,
     title: user.displayName,
@@ -55,24 +40,22 @@ export default function WorkspaceLayout({ children, params }: WorkspaceLayoutPro
     .map((item) => ({ id: item.id, title: item.title, description: item.description }));
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
-      <Box sx={{ width: "100%", flexShrink: 0 }}>
+    <main className="flex h-screen flex-col bg-background">
+      <div className="w-full shrink-0">
         <Header
           activeView={activeApp}
-          onViewChange={() => {}}
-          connectSearch={activeApp === "connect" ? { users: headerSearchUsers, messages: headerSearchMessages, files: headerSearchFiles } : undefined}
+          connectSearch={
+            activeApp === "connect"
+              ? { users: headerSearchUsers, messages: headerSearchMessages, files: headerSearchFiles }
+              : undefined
+          }
         />
-      </Box>
+      </div>
 
-      <Box sx={{ flex: 1, minHeight: 0, display: "flex" }}>
-        <Sidebar
-          activeView={activeApp}
-          organizationSlug={organizationSlug as string}
-          onViewChange={() => {}}
-          onLogout={() => {}}
-        />
-        <Box sx={{ flex: 1, minWidth: 0, overflowY: "auto" }}>{children}</Box>
-      </Box>
-    </Box>
+      <div className="flex min-h-0 flex-1">
+        <Sidebar activeView={activeApp} organizationSlug={organizationSlug as string} />
+        <div className="min-w-0 flex-1 overflow-y-auto">{children}</div>
+      </div>
+    </main>
   );
 }

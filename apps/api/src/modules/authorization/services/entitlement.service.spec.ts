@@ -22,6 +22,10 @@ describe("EntitlementService", () => {
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "FEATURE" });
     prisma.subscription.findFirst.mockResolvedValue({
       planId: "plan-a",
+      status: "ACTIVE",
+      currentPeriodEnd: new Date(Date.now() + 60_000),
+      trialEndsAt: null,
+      gracePeriodEndsAt: null,
       planRecord: { entitlements: [{ enabled: true, value: null }] },
     });
     prisma.organizationEntitlement.findFirst.mockResolvedValue(null);
@@ -54,6 +58,10 @@ describe("EntitlementService", () => {
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "LIMIT" });
     prisma.subscription.findFirst.mockResolvedValue({
       planId: "plan-a",
+      status: "ACTIVE",
+      currentPeriodEnd: new Date(Date.now() + 60_000),
+      trialEndsAt: null,
+      gracePeriodEndsAt: null,
       planRecord: { entitlements: [{ enabled: true, value: 10 }] },
     });
     prisma.organizationEntitlement.findFirst.mockResolvedValue({ enabled: true, value: 25 });
@@ -70,6 +78,10 @@ describe("EntitlementService", () => {
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "FEATURE" });
     prisma.subscription.findFirst.mockResolvedValue({
       planId: "plan-a",
+      status: "ACTIVE",
+      currentPeriodEnd: new Date(Date.now() + 60_000),
+      trialEndsAt: null,
+      gracePeriodEndsAt: null,
       planRecord: { entitlements: [{ enabled: true, value: null }] },
     });
     prisma.organizationEntitlement.findFirst.mockResolvedValue(null);
@@ -85,6 +97,10 @@ describe("EntitlementService", () => {
     prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a", kind: "LIMIT" });
     prisma.subscription.findFirst.mockResolvedValue({
       planId: "plan-a",
+      status: "ACTIVE",
+      currentPeriodEnd: new Date(Date.now() + 60_000),
+      trialEndsAt: null,
+      gracePeriodEndsAt: null,
       planRecord: { entitlements: [{ enabled: true, value: -1 }] },
     });
     prisma.organizationEntitlement.findFirst.mockResolvedValue(null);

@@ -139,8 +139,8 @@ const TERM_CONTENT: Record<string, ReactNode> = {
   acceptance: (
     <>
       <p>
-        By creating an account, accessing, or using Dhriti OS ("the Service"), you acknowledge that you have read,
-        understood, and agree to be bound by these Terms of Service and our Privacy Policy.
+        By creating an account, accessing, or using Dhriti OS (&quot;the Service&quot;), you acknowledge that you have
+        read, understood, and agree to be bound by these Terms of Service and our Privacy Policy.
       </p>
       <p>
         If you are entering into this agreement on behalf of a company or other legal entity, you represent that you
@@ -208,7 +208,7 @@ const TERM_CONTENT: Record<string, ReactNode> = {
         Paid plans are billed in advance on a monthly or annual basis. All fees are non-refundable except as required by
         law or as explicitly stated in our refund policy.
       </p>
-      <p>We may change pricing with 30 days' notice. Continued use after a price change constitutes acceptance.</p>
+      <p>We may change pricing with 30 days&apos; notice. Continued use after a price change constitutes acceptance.</p>
     </>
   ),
   termination: (
@@ -241,8 +241,8 @@ const TERM_CONTENT: Record<string, ReactNode> = {
   changes: (
     <>
       <p>
-        We may modify these terms at any time. We will provide at least 30 days' notice via email for material changes.
-        Your continued use after the effective date constitutes acceptance of the updated terms.
+        We may modify these terms at any time. We will provide at least 30 days&apos; notice via email for material
+        changes. Your continued use after the effective date constitutes acceptance of the updated terms.
       </p>
     </>
   ),

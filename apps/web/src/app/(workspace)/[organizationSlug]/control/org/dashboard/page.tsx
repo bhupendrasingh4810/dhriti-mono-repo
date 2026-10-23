@@ -2,14 +2,7 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
-import { controlOrganizationService } from "@/services/control.service";
-
-interface OrgDashboardData {
-  members: { total: number; active: number };
-  teams: number;
-  products: { enabled: number; total: number };
-  storage: { files: number; bytes: number };
-}
+import { controlOrganizationService, type ControlOrganizationDashboard } from "@/services/control.service";
 
 const recentActivity = [
   { actor: "Alice Johnson", action: "invited 3 new members", time: "10m ago" },
@@ -22,12 +15,12 @@ const recentActivity = [
 export default function OrgDashboard() {
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
-  const [dashboard, setDashboard] = useState<OrgDashboardData | null>(null);
+  const [dashboard, setDashboard] = useState<ControlOrganizationDashboard | null>(null);
 
   const loadDashboard = useEffectEvent(async () => {
     try {
       const result = await controlOrganizationService.dashboard(organizationSlug);
-      setDashboard(result as OrgDashboardData);
+      setDashboard(result);
     } catch (error) {
       addToast(error instanceof Error ? error.message : "Unable to load organization dashboard", "error");
     }
@@ -46,7 +39,12 @@ export default function OrgDashboard() {
       change: "Available products",
       positive: true,
     },
-    { label: "Stored Files", value: String(dashboard?.storage.files ?? 0), change: "Organization files", positive: true },
+    {
+      label: "Stored Files",
+      value: String(dashboard?.storage.files ?? 0),
+      change: "Organization files",
+      positive: true,
+    },
   ];
 
   return (

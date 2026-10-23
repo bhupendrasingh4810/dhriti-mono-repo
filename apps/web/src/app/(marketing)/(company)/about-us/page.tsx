@@ -1,4 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+"use client";
+
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const TEAM = [
@@ -117,7 +119,7 @@ export default function AboutPage() {
             className="text-5xl md:text-6xl font-black text-white mb-6 leading-none"
             style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}
           >
-            We're building the OS
+            We&apos;re building the OS
             <br />
             for modern teams
           </h1>
@@ -159,7 +161,7 @@ export default function AboutPage() {
             </p>
             <p className="text-slate-500 leading-relaxed">
               We started Dhriti OS because we felt the pain ourselves: scattered conversations, lost decisions,
-              duplicated context. We're building the workspace we always wished we had.
+              duplicated context. We&apos;re building the workspace we always wished we had.
             </p>
           </div>
           <div className="space-y-3">
@@ -258,7 +260,7 @@ export default function AboutPage() {
           Ready to transform how your team works?
         </h2>
         <p className="text-white/70 mb-8 max-w-md mx-auto">
-          Join 250,000+ users who've made Dhriti OS their central workspace.
+          Join 250,000+ users who&apos;ve made Dhriti OS their central workspace.
         </p>
         <div className="flex gap-3 justify-center flex-wrap">
           <button

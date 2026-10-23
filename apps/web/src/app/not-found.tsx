@@ -90,7 +90,7 @@ export default function Page404() {
           Page not found
         </h1>
         <p className="text-base mb-10 leading-relaxed" style={{ color: "#64748b" }}>
-          The page you're looking for has been moved, deleted, or never existed. Let's get you back on track.
+          The page you&apos;re looking for has been moved, deleted, or never existed. Let&apos;s get you back on track.
         </p>
 
         {/* Suggestions */}

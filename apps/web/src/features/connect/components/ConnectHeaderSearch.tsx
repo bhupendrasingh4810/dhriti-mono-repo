@@ -15,7 +15,11 @@ export function ConnectHeaderSearch({ users, messages, files }: ConnectHeaderSea
   const query = value.trim().toLowerCase();
   const filter = (items: ConnectHeaderSearchItem[]) =>
     items.filter((item) => `${item.title} ${item.description ?? ""}`.toLowerCase().includes(query)).slice(0, 6);
-  const sections = [{ title: "Users", items: filter(users) }, { title: "Messages", items: filter(messages) }, { title: "Files", items: filter(files) }];
+  const sections = [
+    { title: "Users", items: filter(users) },
+    { title: "Messages", items: filter(messages) },
+    { title: "Files", items: filter(files) },
+  ];
 
   return (
     <div className="relative mx-auto w-full max-w-[640px]">
@@ -33,7 +37,16 @@ export function ConnectHeaderSearch({ users, messages, files }: ConnectHeaderSea
           {sections.map((section) => (
             <section key={section.title} className="border-b border-slate-200 p-3 last:border-b-0">
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{section.title}</p>
-              {section.items.map((item) => <button key={item.id} type="button" className="block w-full rounded px-2 py-2 text-left hover:bg-slate-50"><span className="block text-sm font-semibold text-slate-800">{item.title}</span>{item.description && <span className="block text-xs text-slate-500">{item.description}</span>}</button>)}
+              {section.items.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className="block w-full rounded px-2 py-2 text-left hover:bg-slate-50"
+                >
+                  <span className="block text-sm font-semibold text-slate-800">{item.title}</span>
+                  {item.description && <span className="block text-xs text-slate-500">{item.description}</span>}
+                </button>
+              ))}
               {section.items.length === 0 && <p className="px-2 py-2 text-xs text-slate-400">No results</p>}
             </section>
           ))}

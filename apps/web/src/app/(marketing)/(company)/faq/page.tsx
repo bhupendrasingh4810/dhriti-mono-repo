@@ -161,7 +161,7 @@ export default function FaqPage({ navigate }: Props) {
             Frequently asked questions
           </h1>
           <p className="text-white/70 text-base mb-8">
-            Quick answers to the most common questions. Can't find yours?{" "}
+            Quick answers to the most common questions. Can&apos;t find yours?{" "}
             <button
               onClick={() => navigate("contact" as string)}
               className="text-white underline underline-offset-2 hover:no-underline"
@@ -257,8 +257,8 @@ export default function FaqPage({ navigate }: Props) {
           {searchResults ? (
             <>
               <p className="text-sm text-slate-500 mb-5">
-                {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} for "
-                <strong className="text-slate-800">{search}</strong>"
+                {searchResults.length} result{searchResults.length !== 1 ? "s" : ""} for &quot;
+                <strong className="text-slate-800">{search}</strong>&quot;
               </p>
               {searchResults.length === 0 ? (
                 <div className="text-center py-16">

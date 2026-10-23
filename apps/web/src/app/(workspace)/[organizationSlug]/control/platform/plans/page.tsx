@@ -165,7 +165,9 @@ export default function PlansPage() {
         </p>
       )}
       <section aria-labelledby="published-plans-heading">
-        <h2 id="published-plans-heading" className="text-lg font-semibold text-slate-950">Published plans</h2>
+        <h2 id="published-plans-heading" className="text-lg font-semibold text-slate-950">
+          Published plans
+        </h2>
         {plans.length > 0 ? (
           <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {plans.map((plan) => (
@@ -200,7 +202,11 @@ export default function PlansPage() {
           )
         }
       />
-      <DeletePlanDialog plan={deleteTarget} onCancel={() => setDeleteTarget(null)} onConfirm={(plan) => void deletePlan(plan)} />
+      <DeletePlanDialog
+        plan={deleteTarget}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={(plan) => void deletePlan(plan)}
+      />
       <CreatePlanDrawer
         isOpen={isCreateOpen}
         name={name}

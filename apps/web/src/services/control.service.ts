@@ -63,6 +63,13 @@ export interface ControlProductEntitlement extends ApiEntity {
   product: { key: string; name: string; isActive: boolean };
 }
 
+export interface ControlOrganizationDashboard {
+  members: { total: number; active: number };
+  teams: number;
+  products: { enabled: number; total: number };
+  storage: { files: number; bytes: number };
+}
+
 export interface ControlEntitlementDefinition extends ApiEntity {
   key: string;
   name: string;
@@ -149,8 +156,9 @@ export const controlPlatformService = {
   listProducts: () => tenantRequest<ApiEntity[]>("", `${platform}/products`),
   listEntitlements: (query: ListEntitlementsQuery = {}) =>
     tenantRequest<ControlEntitlementPage>("", `${platform}/entitlements`, { query }),
-  createEntitlement: (input: Required<Pick<ControlEntitlementInput, "key" | "name" | "kind">> & ControlEntitlementInput) =>
-    jsonRequest<ControlEntitlementDefinition, ControlEntitlementInput>(`${platform}/entitlements`, "POST", input),
+  createEntitlement: (
+    input: Required<Pick<ControlEntitlementInput, "key" | "name" | "kind">> & ControlEntitlementInput,
+  ) => jsonRequest<ControlEntitlementDefinition, ControlEntitlementInput>(`${platform}/entitlements`, "POST", input),
   updateEntitlement: (entitlementId: string, input: ControlEntitlementInput) =>
     jsonRequest<ControlEntitlementDefinition, ControlEntitlementInput>(
       `${platform}/entitlements/${pathSegment(entitlementId)}`,
@@ -214,7 +222,7 @@ export const contentService = {
 };
 export const controlOrganizationService = {
   dashboard: (organizationId: string) =>
-    tenantRequest<ApiEntity>(organizationId, "/api/control/organization/dashboard"),
+    tenantRequest<ControlOrganizationDashboard>(organizationId, "/api/control/organization/dashboard"),
   getSettings: (organizationId: string) =>
     tenantRequest<ApiEntity>(organizationId, "/api/control/organization/settings"),
   updateSettings: (organizationId: string, input: Input) =>
@@ -224,9 +232,16 @@ export const controlOrganizationService = {
   listMembers: (organizationId: string) =>
     tenantRequest<ControlOrganizationMember[]>(organizationId, "/api/control/organization/members"),
   removeMember: (organizationId: string, memberId: string) =>
-    tenantRequest<void>(organizationId, `/api/control/organization/members/${pathSegment(memberId)}`, { method: "DELETE" }),
+    tenantRequest<void>(organizationId, `/api/control/organization/members/${pathSegment(memberId)}`, {
+      method: "DELETE",
+    }),
   setEntitlement: (organizationId: string, input: Input) =>
-    tenantJsonRequest<ControlProductEntitlement, Input>(organizationId, "/api/control/organization/entitlements", "POST", input),
+    tenantJsonRequest<ControlProductEntitlement, Input>(
+      organizationId,
+      "/api/control/organization/entitlements",
+      "POST",
+      input,
+    ),
   listFeatureFlags: (organizationId: string) =>
     tenantRequest<ApiEntity[]>(organizationId, "/api/control/organization/feature-flags"),
   upsertFeatureFlag: (organizationId: string, input: Input) =>

@@ -3,9 +3,9 @@ import type { Socket } from "socket.io";
 
 import { AppError } from "../common/errors/app-error";
 import { ErrorCode } from "../common/errors/error-codes";
-import { ConnectService } from "../modules/connect/connect.service";
+import type { ConnectService } from "../modules/connect/connect.service";
 import { WebRtcGateway } from "./webrtc.gateway";
-import { WsAuthService } from "./ws-auth";
+import type { WsAuthService } from "./ws-auth";
 
 describe("WebRtcGateway", () => {
   const organizationId = "b133000b-57b0-4ca3-9063-13a1e25cf2d1";

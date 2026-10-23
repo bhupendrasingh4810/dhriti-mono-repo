@@ -18,15 +18,26 @@ export function DeletePlanDialog({ plan, onCancel, onConfirm }: DeletePlanDialog
         className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <h2 id="delete-plan-title" className="text-lg font-semibold text-slate-950">Delete plan?</h2>
+        <h2 id="delete-plan-title" className="text-lg font-semibold text-slate-950">
+          Delete plan?
+        </h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          This will permanently delete <strong>{plan.name}</strong>. Plans assigned to an organization cannot be deleted.
+          This will permanently delete <strong>{plan.name}</strong>. Plans assigned to an organization cannot be
+          deleted.
         </p>
         <div className="mt-6 flex justify-end gap-2">
-          <button type="button" className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold" onClick={onCancel}>
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold"
+            onClick={onCancel}
+          >
             Cancel
           </button>
-          <button type="button" className="cursor-pointer rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white" onClick={() => onConfirm(plan)}>
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg bg-red-700 px-3 py-2 text-xs font-semibold text-white"
+            onClick={() => onConfirm(plan)}
+          >
             Delete plan
           </button>
         </div>

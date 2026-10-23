@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm format:check
+
+      - name: Lint API
+        run: pnpm --filter @dhriti/api lint
+
+      - name: Type-check API
+        run: pnpm --filter @dhriti/api typecheck
+
+      - name: Test API
+        run: pnpm --filter @dhriti/api exec jest --config jest.config.cjs --runInBand
+
+      - name: Build API
+        run: pnpm --filter @dhriti/api build
+
+      - name: Lint web
+        run: pnpm --filter web lint
+
+      - name: Type-check web
+        run: pnpm --filter web typecheck
+
+      - name: Build web
+        run: pnpm --filter web build
+
+      - name: Validate Prisma schema
+        run: DATABASE_URL=postgresql://postgres:postgres@localhost:5432/dhriti pnpm --filter @dhriti/api db:build && pnpm exec prisma validate --schema prisma/schema.prisma

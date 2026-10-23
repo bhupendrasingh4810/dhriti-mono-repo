@@ -1,13 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type {
-  Address,
-  EnabledProduct,
-  Group,
-  Organization,
-  OrganizationMember,
-  User,
-  UserRole,
-} from "@prisma/client";
+import type { Address, EnabledProduct, Group, Organization, OrganizationMember, User, UserRole } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
@@ -15,6 +7,7 @@ import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import { EntitlementService } from "../../authorization/services/entitlement.service";
 import { assignDefaultUserPermissionGroups } from "./default-permission-groups";
+import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization-membership";
 
 const ORGANIZATION_APPS = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"] as const;
 const DEFAULT_PERMISSION_GROUP_TYPES = ["admins", "users", "guest"] as const;
@@ -81,6 +74,7 @@ export class OrganizationService {
     const organizationName = input.name.trim();
 
     return this.prisma.$transaction(async (transaction) => {
+      await assertUserHasNoOtherActiveOrganizationMembership(transaction, creatorUserId);
       const organization = await transaction.organization.create({
         data: {
           name: organizationName,
@@ -336,6 +330,7 @@ export class OrganizationService {
     }
 
     const membership = await this.prisma.$transaction(async (transaction) => {
+      await assertUserHasNoOtherActiveOrganizationMembership(transaction, user.id, organizationId);
       await transaction.user.update({ where: { id: user.id }, data: { role } });
       const member = await transaction.organizationMember.upsert({
         where: { organizationId_userId: { organizationId, userId: user.id } },
@@ -428,10 +423,15 @@ export class OrganizationService {
     if (member.isOwner && status !== "ACTIVE") {
       await this.assertOwnerCanBeDeactivated(organizationId);
     }
-    const updated = await this.prisma.organizationMember.update({
-      where: { id: member.id },
-      data: { status, suspendedAt: status === "SUSPENDED" ? new Date() : null },
-      include: { user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } } },
+    const updated = await this.prisma.$transaction(async (transaction) => {
+      if (status === "ACTIVE") {
+        await assertUserHasNoOtherActiveOrganizationMembership(transaction, member.userId, organizationId);
+      }
+      return transaction.organizationMember.update({
+        where: { id: member.id },
+        data: { status, suspendedAt: status === "SUSPENDED" ? new Date() : null },
+        include: { user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } } },
+      });
     });
     await this.audit.record({
       action: `iam.member.${status.toLowerCase()}`,

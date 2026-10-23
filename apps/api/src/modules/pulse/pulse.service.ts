@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Calendar, CalendarEvent, EventAttendee, RsvpStatus, User } from "@prisma/client";
+import type { Calendar, CalendarEvent, EventAttendee, Prisma, RsvpStatus, User } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
@@ -134,6 +134,18 @@ export class PulseService {
       await this.assertOrgMembers(organizationId, dto.attendeeUserIds);
     }
 
+    const attendees: Prisma.EventAttendeeUncheckedCreateWithoutEventInput[] = [
+      { userId: creatorUserId, isOrganizer: true, status: "ACCEPTED" },
+      ...(dto.attendeeUserIds ?? [])
+        .filter((id) => id !== creatorUserId)
+        .map(
+          (id): Prisma.EventAttendeeUncheckedCreateWithoutEventInput => ({
+            userId: id,
+            status: "PENDING",
+          }),
+        ),
+    ];
+
     const event = await this.prisma.calendarEvent.create({
       data: {
         organizationId,
@@ -148,12 +160,7 @@ export class PulseService {
         recurrenceRule: dto.recurrenceRule ?? null,
         createdById: creatorUserId,
         attendees: {
-          create: [
-            { userId: creatorUserId, isOrganizer: true, status: "ACCEPTED" },
-            ...(dto.attendeeUserIds ?? [])
-              .filter((id) => id !== creatorUserId)
-              .map((id) => ({ userId: id, status: "PENDING" as RsvpStatus })),
-          ],
+          create: attendees,
         },
       },
       include: this.eventInclude,
@@ -319,7 +326,7 @@ export class PulseService {
     attendees: {
       include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
     },
-  } as const;
+  } as const satisfies Prisma.CalendarEventInclude;
 
   private async getCalendar(organizationId: string, calendarId: string): Promise<Calendar> {
     const calendar = await this.prisma.calendar.findFirst({

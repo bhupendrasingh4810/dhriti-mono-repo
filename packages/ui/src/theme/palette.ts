@@ -1,4 +1,4 @@
-import type { PaletteMode, PaletteOptions } from "@mui/material/styles";
+export type PaletteMode = "light" | "dark";
 
 export type SurfaceScale = {
   background: string;
@@ -128,32 +128,4 @@ export const darkPaletteTokens: SemanticPalette = {
 
 export function getPaletteTokens(mode: PaletteMode): SemanticPalette {
   return mode === "dark" ? darkPaletteTokens : lightPaletteTokens;
-}
-
-export function createMuiPalette(mode: PaletteMode, tokens: SemanticPalette): PaletteOptions {
-  return {
-    mode,
-    primary: {
-      main: tokens.primary,
-      contrastText: tokens.text.inverse,
-    },
-    secondary: {
-      main: tokens.secondary,
-      contrastText: tokens.text.inverse,
-    },
-    success: { main: tokens.success },
-    warning: { main: tokens.warning },
-    error: { main: tokens.error },
-    info: { main: tokens.info },
-    background: {
-      default: tokens.surface.background,
-      paper: tokens.surface.surface,
-    },
-    text: {
-      primary: tokens.text.primary,
-      secondary: tokens.text.secondary,
-      disabled: tokens.text.disabled,
-    },
-    divider: tokens.border.borderSubtle,
-  };
 }

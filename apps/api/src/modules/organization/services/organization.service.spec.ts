@@ -70,6 +70,7 @@ describe("OrganizationService membership lifecycle", () => {
     const adminGroups = apps.map((app, index) => ({ id: `admin-group-${index}`, name: `Northwind_${app}_admins` }));
     const transaction = {
       organization: { create: jest.fn().mockResolvedValue(organization) },
+      organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
       onBoardingProfile: { upsert: jest.fn().mockResolvedValue({}) },
       permission: { findUnique: jest.fn().mockResolvedValue({ id: "manage-permission" }) },
       organizationPermissionGroup: {
@@ -81,7 +82,9 @@ describe("OrganizationService membership lifecycle", () => {
     };
     const prisma = {
       organization: { findUnique: jest.fn().mockResolvedValue(null) },
-      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction)),
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
     };
     const service = new OrganizationService(prisma as never, {} as never, {} as never);
 

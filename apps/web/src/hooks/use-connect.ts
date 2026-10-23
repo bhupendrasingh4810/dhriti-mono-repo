@@ -3,11 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useAuth } from "@/hooks/use-auth";
-import { connectService, type ConnectApiMessage, type ConnectSidebarSettings, type ConnectSidebarState, type CreateMessageInput, type MessagePage } from "@/services/connect.service";
+import {
+  connectService,
+  type ConnectApiMessage,
+  type ConnectSidebarSettings,
+  type ConnectSidebarState,
+  type CreateMessageInput,
+  type MessagePage,
+} from "@/services/connect.service";
 import { tenantRequest } from "@/services/request.service";
 import type { ConnectConversation, ConnectMessage, ConnectUser } from "@/mocks/connect/types";
 
-const emptySidebar: ConnectSidebarState = { favorites: { chats: [], teams: [], channels: [] }, recentChats: [], settings: {} };
+const emptySidebar: ConnectSidebarState = {
+  favorites: { chats: [], teams: [], channels: [] },
+  recentChats: [],
+  settings: {},
+};
 type Team = { id: string; name: string; users: string[] };
 type Ack = { ok: boolean; error?: { message: string } };
 type HistoryState = {
@@ -28,10 +39,17 @@ export function adaptConnectMessage(message: ConnectApiMessage): ConnectMessage 
     grouped.set(reaction.emoji, users);
   }
   return {
-    id: message.id, conversationId: message.channelId, conversationType: "channel",
-    senderId: message.authorId, content: isCallActivity ? message.content.slice(7) : message.content, contentType: isCallActivity ? "system" : "text",
-    createdAt: message.createdAt, editedAt: message.editedAt, status: "sent",
-    deletedAt: message.deletedAt, isDeleted: message.isDeleted,
+    id: message.id,
+    conversationId: message.channelId,
+    conversationType: "channel",
+    senderId: message.authorId,
+    content: isCallActivity ? message.content.slice(7) : message.content,
+    contentType: isCallActivity ? "system" : "text",
+    createdAt: message.createdAt,
+    editedAt: message.editedAt,
+    status: "sent",
+    deletedAt: message.deletedAt,
+    isDeleted: message.isDeleted,
     replyCount: message._count?.replies ?? 0,
     mentions: (message.mentions ?? []).map((mention) => mention.userId),
     quotedMessageId: message.parentId ?? undefined,
@@ -93,12 +111,23 @@ export function useConnect(selectedConversationId: string) {
     const requestId = (historyRequests.current[channelId] ?? 0) + 1;
     historyRequests.current[channelId] = requestId;
     if (initial) {
-      setHistoryState((previous) => ({ ...previous, [channelId]: {
-        loading: true, paging: false, firstUnreadId: null, olderCursor: null, newerCursor: null, error: "",
-      } }));
+      setHistoryState((previous) => ({
+        ...previous,
+        [channelId]: {
+          loading: true,
+          paging: false,
+          firstUnreadId: null,
+          olderCursor: null,
+          newerCursor: null,
+          error: "",
+        },
+      }));
     }
     try {
-      const result = await connectService.listMessages(organizationId, channelId, { limit: initial ? 50 : 100, ...(initial ? { initial: "unread" as const } : {}) });
+      const result = await connectService.listMessages(organizationId, channelId, {
+        limit: initial ? 50 : 100,
+        ...(initial ? { initial: "unread" as const } : {}),
+      });
       if (current !== generation.current || requestId !== historyRequests.current[channelId]) return;
       applyReceipts(channelId, result.readReceipts);
       setMessages((previous) => {
@@ -108,16 +137,32 @@ export function useConnect(selectedConversationId: string) {
         const retained = (previous[channelId] ?? []).filter((message) => Date.parse(message.createdAt) < earliest);
         return { ...previous, [channelId]: [...retained, ...incoming] };
       });
-      if (initial) setHistoryState((previous) => ({ ...previous, [channelId]: {
-        loading: false, paging: false, firstUnreadId: result.firstUnreadId,
-        olderCursor: result.nextCursor ?? null, newerCursor: result.newerCursor, error: "",
-      } }));
+      if (initial)
+        setHistoryState((previous) => ({
+          ...previous,
+          [channelId]: {
+            loading: false,
+            paging: false,
+            firstUnreadId: result.firstUnreadId,
+            olderCursor: result.nextCursor ?? null,
+            newerCursor: result.newerCursor,
+            error: "",
+          },
+        }));
     } catch (reason) {
       if (current !== generation.current || requestId !== historyRequests.current[channelId]) return;
-      if (initial) setHistoryState((previous) => ({ ...previous, [channelId]: {
-        loading: false, paging: false, firstUnreadId: null, olderCursor: null, newerCursor: null,
-        error: reason instanceof Error ? reason.message : "Unable to load messages.",
-      } }));
+      if (initial)
+        setHistoryState((previous) => ({
+          ...previous,
+          [channelId]: {
+            loading: false,
+            paging: false,
+            firstUnreadId: null,
+            olderCursor: null,
+            newerCursor: null,
+            error: reason instanceof Error ? reason.message : "Unable to load messages.",
+          },
+        }));
       throw reason;
     }
   }
@@ -131,7 +176,8 @@ export function useConnect(selectedConversationId: string) {
     setHistoryState((previous) => ({ ...previous, [channelId]: { ...previous[channelId], paging: true } }));
     try {
       const result = await connectService.listMessages(organizationId, channelId, {
-        limit: 50, ...(direction === "older" ? { cursor } : { after: cursor }),
+        limit: 50,
+        ...(direction === "older" ? { cursor } : { after: cursor }),
       });
       if (current !== generation.current) return;
       applyReceipts(channelId, result.readReceipts);
@@ -140,10 +186,14 @@ export function useConnect(selectedConversationId: string) {
         for (const message of result.messages) merged.set(message.id, adaptConnectMessage(message));
         return { ...previous, [channelId]: [...merged.values()] };
       });
-      setHistoryState((previous) => ({ ...previous, [channelId]: {
-        ...previous[channelId], paging: false,
-        ...(direction === "older" ? { olderCursor: result.nextCursor ?? null } : { newerCursor: result.newerCursor }),
-      } }));
+      setHistoryState((previous) => ({
+        ...previous,
+        [channelId]: {
+          ...previous[channelId],
+          paging: false,
+          ...(direction === "older" ? { olderCursor: result.nextCursor ?? null } : { newerCursor: result.newerCursor }),
+        },
+      }));
     } catch (reason) {
       if (current === generation.current) {
         setHistoryState((previous) => ({ ...previous, [channelId]: { ...previous[channelId], paging: false } }));
@@ -175,10 +225,21 @@ export function useConnect(selectedConversationId: string) {
 
   useEffect(() => {
     const current = ++generation.current;
-    setUsers({}); setConversations({}); setMessages({}); setTeams([]); setSidebar(emptySidebar);
-    setHistoryState({}); setReadReceipts({}); requestedReads.current = {}; historyRequests.current = {};
+    setUsers({});
+    setConversations({});
+    setMessages({});
+    setTeams([]);
+    setSidebar(emptySidebar);
+    setHistoryState({});
+    setReadReceipts({});
+    requestedReads.current = {};
+    historyRequests.current = {};
     paginationRequests.current.clear();
-    setUnread({}); setTypingUsers({}); setLoading(true); setConnected(false); setError("");
+    setUnread({});
+    setTypingUsers({});
+    setLoading(true);
+    setConnected(false);
+    setError("");
     if (!organizationId || !user) {
       setLoading(false);
       if (user) setError("Select an organization to open Connect.");
@@ -190,9 +251,11 @@ export function useConnect(selectedConversationId: string) {
 
     async function reload() {
       const [peopleResult, chatsResult, channelsResult, preferencesResult, teamsResult] = await Promise.allSettled([
-        connectService.listUsers(organizationId), connectService.listConversations(organizationId),
-        connectService.listChannels(organizationId), connectService.getSidebar(organizationId),
-          tenantRequest<Team[]>(organizationId, "/api/organization/connect/teams"),
+        connectService.listUsers(organizationId),
+        connectService.listConversations(organizationId),
+        connectService.listChannels(organizationId),
+        connectService.getSidebar(organizationId),
+        tenantRequest<Team[]>(organizationId, "/api/organization/connect/teams"),
       ]);
       if (cancelled || generation.current !== current) return;
       const people = peopleResult.status === "fulfilled" ? peopleResult.value : [];
@@ -201,35 +264,65 @@ export function useConnect(selectedConversationId: string) {
       const preferences = preferencesResult.status === "fulfilled" ? preferencesResult.value : emptySidebar;
       const organizationTeams = teamsResult.status === "fulfilled" ? teamsResult.value : [];
       const failures = [
-        ["Members", peopleResult], ["Chats", chatsResult], ["Channels", channelsResult],
-        ["Sidebar", preferencesResult], ["Teams", teamsResult],
+        ["Members", peopleResult],
+        ["Chats", chatsResult],
+        ["Channels", channelsResult],
+        ["Sidebar", preferencesResult],
+        ["Teams", teamsResult],
       ] as const;
-      const errors = failures.flatMap(([label, result]) => result.status === "rejected"
-        ? [`${label}: ${result.reason instanceof Error ? result.reason.message : "Unable to load"}`]
-        : []);
+      const errors = failures.flatMap(([label, result]) =>
+        result.status === "rejected"
+          ? [`${label}: ${result.reason instanceof Error ? result.reason.message : "Unable to load"}`]
+          : [],
+      );
       setError(errors.join("; "));
       const peopleById: Record<string, ConnectUser> = {};
       for (const person of people) {
         peopleById[person.id] = {
-          id: person.id, organizationId, displayName: person.name, firstName: person.name.split(" ")[0],
-          lastName: person.name.split(" ").slice(1).join(" "), email: person.email, avatar: person.avatarUrl ?? "",
-          jobTitle: "", department: "", role: "member", status: "offline", presence: "offline",
-          location: "", timezone: "", lastSeen: null, createdAt: "",
+          id: person.id,
+          organizationId,
+          displayName: person.name,
+          firstName: person.name.split(" ")[0],
+          lastName: person.name.split(" ").slice(1).join(" "),
+          email: person.email,
+          avatar: person.avatarUrl ?? "",
+          jobTitle: "",
+          department: "",
+          role: "member",
+          status: "offline",
+          presence: "offline",
+          location: "",
+          timezone: "",
+          lastSeen: null,
+          createdAt: "",
         };
       }
-      setUsers(peopleById); setTeams(organizationTeams); setSidebar(preferences);
+      setUsers(peopleById);
+      setTeams(organizationTeams);
+      setSidebar(preferences);
       const next: Record<string, ConnectConversation> = {};
       for (const channel of [...channels, ...chats]) {
         const participants = (channel.members ?? []).map((member) => member.userId);
         const other = participants.find((id) => id !== user!.id);
         next[channel.id] = {
-          id: channel.id, organizationId, type: channel.type.toLowerCase() as ConnectConversation["type"],
-          name: channel.type === "DIRECT" ? peopleById[other ?? ""]?.displayName ?? channel.name : channel.name,
+          id: channel.id,
+          organizationId,
+          type: channel.type.toLowerCase() as ConnectConversation["type"],
+          name: channel.type === "DIRECT" ? (peopleById[other ?? ""]?.displayName ?? channel.name) : channel.name,
           avatar: channel.type === "DIRECT" ? peopleById[other ?? ""]?.avatar : undefined,
-          teamId: channel.teamId, channelId: channel.id, createdBy: channel.createdById ?? "",
-          createdAt: channel.createdAt, participants, lastMessageAt: channel.messages?.[0]?.createdAt ?? channel.createdAt,
-          unreadCount: 0, isFavorite: preferences.favorites.chats.includes(channel.id) || preferences.favorites.channels.includes(channel.id),
-          muted: false, pinned: false, archived: channel.isArchived, description: channel.description ?? "",
+          teamId: channel.teamId,
+          channelId: channel.id,
+          createdBy: channel.createdById ?? "",
+          createdAt: channel.createdAt,
+          participants,
+          lastMessageAt: channel.messages?.[0]?.createdAt ?? channel.createdAt,
+          unreadCount: 0,
+          isFavorite:
+            preferences.favorites.chats.includes(channel.id) || preferences.favorites.channels.includes(channel.id),
+          muted: false,
+          pinned: false,
+          archived: channel.isArchived,
+          description: channel.description ?? "",
         };
       }
       setConversations(next);
@@ -238,7 +331,9 @@ export function useConnect(selectedConversationId: string) {
     async function history(channelId: string) {
       try {
         if (!cancelled && !historyRef.current[channelId]?.loading) await loadMessages(channelId);
-      } catch (reason) { if (!cancelled) reportError(reason); }
+      } catch (reason) {
+        if (!cancelled) reportError(reason);
+      }
     }
     reloadRef.current = reload;
 
@@ -264,34 +359,85 @@ export function useConnect(selectedConversationId: string) {
         typingTimers.clear();
         outgoingTyping.current = null;
       });
-      socket.on("connect_error", () => { setConnected(false); setError("Real-time connection unavailable. Messages can still be sent using the API."); });
+      socket.on("connect_error", () => {
+        setConnected(false);
+        setError("Real-time connection unavailable. Messages can still be sent using the API.");
+      });
       socket.on("connect:error", (payload: { message: string }) => setError(payload.message));
       socket.on("message:created", (payload: { channelId: string; message: ConnectApiMessage }) => {
         const message = adaptConnectMessage(payload.message);
-        setMessages((previous) => ({ ...previous, [payload.channelId]: [...(previous[payload.channelId] ?? []).filter((item) => item.id !== message.id), message] }));
+        setMessages((previous) => ({
+          ...previous,
+          [payload.channelId]: [
+            ...(previous[payload.channelId] ?? []).filter((item) => item.id !== message.id),
+            message,
+          ],
+        }));
         if (message.senderId !== user!.id) {
           setUnread((previous) => ({ ...previous, [payload.channelId]: (previous[payload.channelId] ?? 0) + 1 }));
         }
       });
       socket.on("message:updated", (payload: { channelId: string; message: ConnectApiMessage }) => {
-        setMessages((previous) => ({ ...previous, [payload.channelId]: [...(previous[payload.channelId] ?? []).filter((message) => message.id !== payload.message.id), adaptConnectMessage(payload.message)] }));
+        setMessages((previous) => ({
+          ...previous,
+          [payload.channelId]: [
+            ...(previous[payload.channelId] ?? []).filter((message) => message.id !== payload.message.id),
+            adaptConnectMessage(payload.message),
+          ],
+        }));
       });
       socket.on("message:deleted", (payload: { channelId: string; messageId: string }) => {
-        setMessages((previous) => ({ ...previous, [payload.channelId]: (previous[payload.channelId] ?? []).filter((message) => message.id !== payload.messageId) }));
+        setMessages((previous) => ({
+          ...previous,
+          [payload.channelId]: (previous[payload.channelId] ?? []).filter(
+            (message) => message.id !== payload.messageId,
+          ),
+        }));
       });
-      socket.on("message:reaction-changed", (payload: { channelId: string }) => { void history(payload.channelId); });
-      socket.on("sidebar:favorites-changed", (payload: { favorites: ConnectSidebarState["favorites"] }) => setSidebar((previous) => ({ ...previous, favorites: payload.favorites })));
-      socket.on("sidebar:settings-changed", (payload: { settings: ConnectSidebarSettings }) => setSidebar((previous) => ({ ...previous, settings: payload.settings })));
-      socket.on("sidebar:chat-activity", () => { void reload().catch(reportError); });
+      socket.on("message:reaction-changed", (payload: { channelId: string }) => {
+        void history(payload.channelId);
+      });
+      socket.on("sidebar:favorites-changed", (payload: { favorites: ConnectSidebarState["favorites"] }) =>
+        setSidebar((previous) => ({ ...previous, favorites: payload.favorites })),
+      );
+      socket.on("sidebar:settings-changed", (payload: { settings: ConnectSidebarSettings }) =>
+        setSidebar((previous) => ({ ...previous, settings: payload.settings })),
+      );
+      socket.on("sidebar:chat-activity", () => {
+        void reload().catch(reportError);
+      });
       socket.on("presence:changed", (payload: { userId: string; status: string }) => {
-        const status = payload.status === "online" ? "available" : payload.status === "busy" ? "busy" : payload.status === "away" ? "away" : "offline";
-        setUsers((previous) => previous[payload.userId] ? { ...previous, [payload.userId]: { ...previous[payload.userId], status, presence: status === "available" ? "online" : status } } : previous);
+        const status =
+          payload.status === "online"
+            ? "available"
+            : payload.status === "busy"
+              ? "busy"
+              : payload.status === "away"
+                ? "away"
+                : "offline";
+        setUsers((previous) =>
+          previous[payload.userId]
+            ? {
+                ...previous,
+                [payload.userId]: {
+                  ...previous[payload.userId],
+                  status,
+                  presence: status === "available" ? "online" : status,
+                },
+              }
+            : previous,
+        );
       });
       socket.on("channel:marked-read", (payload: { channelId: string; userId: string; lastReadAt: string | null }) => {
         applyReceipts(payload.channelId, [{ userId: payload.userId, lastReadAt: payload.lastReadAt }]);
         if (payload.userId === user!.id && payload.lastReadAt) {
-          setUnread((previous) => ({ ...previous, [payload.channelId]: (messagesRef.current[payload.channelId] ?? [])
-            .filter((message) => message.senderId !== user!.id && Date.parse(message.createdAt) > Date.parse(payload.lastReadAt!)).length }));
+          setUnread((previous) => ({
+            ...previous,
+            [payload.channelId]: (messagesRef.current[payload.channelId] ?? []).filter(
+              (message) =>
+                message.senderId !== user!.id && Date.parse(message.createdAt) > Date.parse(payload.lastReadAt!),
+            ).length,
+          }));
         }
       });
       socket.on("typing", (payload: { channelId: string; userId: string; isTyping: boolean }) => {
@@ -299,19 +445,33 @@ export function useConnect(selectedConversationId: string) {
         const key = `${payload.channelId}:${payload.userId}`;
         clearTimeout(typingTimers.get(key));
         typingTimers.delete(key);
-        setTypingUsers((previous) => ({ ...previous, [payload.channelId]: payload.isTyping
-          ? [...new Set([...(previous[payload.channelId] ?? []), payload.userId])]
-          : (previous[payload.channelId] ?? []).filter((id) => id !== payload.userId) }));
-        if (payload.isTyping) typingTimers.set(key, setTimeout(() => {
-          typingTimers.delete(key);
-          setTypingUsers((previous) => ({ ...previous, [payload.channelId]:
-            (previous[payload.channelId] ?? []).filter((id) => id !== payload.userId) }));
-        }, 5000));
+        setTypingUsers((previous) => ({
+          ...previous,
+          [payload.channelId]: payload.isTyping
+            ? [...new Set([...(previous[payload.channelId] ?? []), payload.userId])]
+            : (previous[payload.channelId] ?? []).filter((id) => id !== payload.userId),
+        }));
+        if (payload.isTyping)
+          typingTimers.set(
+            key,
+            setTimeout(() => {
+              typingTimers.delete(key);
+              setTypingUsers((previous) => ({
+                ...previous,
+                [payload.channelId]: (previous[payload.channelId] ?? []).filter((id) => id !== payload.userId),
+              }));
+            }, 5000),
+          );
       });
       socket.connect();
     }
 
-    void reload().then(connectSocket).catch(reportError).finally(() => { if (!cancelled) setLoading(false); });
+    void reload()
+      .then(connectSocket)
+      .catch(reportError)
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
       generation.current++;
@@ -330,7 +490,10 @@ export function useConnect(selectedConversationId: string) {
     void loadMessages(selectedConversationId, true).catch(reportError);
     const socket = socketRef.current;
     socket?.emit("channel:join", { channelId: selectedConversationId }, (ack: Ack) => {
-      if (!ack.ok) { setError(ack.error?.message ?? "Unable to join channel."); return; }
+      if (!ack.ok) {
+        setError(ack.error?.message ?? "Unable to join channel.");
+        return;
+      }
     });
     return () => {
       if (outgoingTyping.current?.channelId === selectedConversationId) {
@@ -346,7 +509,11 @@ export function useConnect(selectedConversationId: string) {
   async function send(channelId: string, input: CreateMessageInput) {
     const current = generation.current;
     const result = adaptConnectMessage(await connectService.createMessage(organizationId, channelId, input));
-    if (current === generation.current) setMessages((previous) => ({ ...previous, [channelId]: [...(previous[channelId] ?? []).filter((item) => item.id !== result.id), result] }));
+    if (current === generation.current)
+      setMessages((previous) => ({
+        ...previous,
+        [channelId]: [...(previous[channelId] ?? []).filter((item) => item.id !== result.id), result],
+      }));
     return result;
   }
 
@@ -392,5 +559,32 @@ export function useConnect(selectedConversationId: string) {
     }, 2500);
   }
 
-  return { user, organizationId, users, conversations, teams, sidebar, messages, historyState, readReceipts, unread, typingUsers, loading, connected, error, setError, socket: socketRef.current, send, favorite, updateSidebarSettings, startDirect, typing, loadMessages, loadMoreMessages, markVisibleMessageRead, reportError, refresh: () => reloadRef.current?.() };
+  return {
+    user,
+    organizationId,
+    users,
+    conversations,
+    teams,
+    sidebar,
+    messages,
+    historyState,
+    readReceipts,
+    unread,
+    typingUsers,
+    loading,
+    connected,
+    error,
+    setError,
+    socket: socketRef.current,
+    send,
+    favorite,
+    updateSidebarSettings,
+    startDirect,
+    typing,
+    loadMessages,
+    loadMoreMessages,
+    markVisibleMessageRead,
+    reportError,
+    refresh: () => reloadRef.current?.(),
+  };
 }

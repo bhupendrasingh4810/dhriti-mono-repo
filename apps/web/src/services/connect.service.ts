@@ -150,7 +150,8 @@ export const connectService = {
       "PUT",
       input,
     ),
-  listConversations: (organizationId: string) => tenantRequest<ConnectApiConversation[]>(organizationId, `${base}/conversations`),
+  listConversations: (organizationId: string) =>
+    tenantRequest<ConnectApiConversation[]>(organizationId, `${base}/conversations`),
   createDirectConversation: (organizationId: string, userId: string) =>
     tenantJsonRequest<ConnectApiConversation, { userId: string }>(
       organizationId,
@@ -204,7 +205,11 @@ export const connectService = {
       "POST",
       { messageId },
     ),
-  updateConversationNotifications: (organizationId: string, channelId: string, input: UpdateConversationNotificationInput) =>
+  updateConversationNotifications: (
+    organizationId: string,
+    channelId: string,
+    input: UpdateConversationNotificationInput,
+  ) =>
     tenantJsonRequest<ConnectSidebarState, UpdateConversationNotificationInput>(
       organizationId,
       `${base}/conversations/${pathSegment(channelId)}/notifications`,
@@ -212,7 +217,9 @@ export const connectService = {
       input,
     ),
   removeConversationHistory: (organizationId: string, channelId: string) =>
-    tenantRequest<void>(organizationId, `${base}/conversations/${pathSegment(channelId)}/history`, { method: "DELETE" }),
+    tenantRequest<void>(organizationId, `${base}/conversations/${pathSegment(channelId)}/history`, {
+      method: "DELETE",
+    }),
   createMessage: (organizationId: string, channelId: string, input: CreateMessageInput) =>
     tenantJsonRequest<ConnectApiMessage, CreateMessageInput>(
       organizationId,
@@ -230,7 +237,9 @@ export const connectService = {
   deleteMessage: (organizationId: string, messageId: string) =>
     tenantRequest<void>(organizationId, `${base}/messages/${pathSegment(messageId)}`, { method: "DELETE" }),
   restoreMessage: (organizationId: string, messageId: string) =>
-    tenantRequest<ConnectApiMessage>(organizationId, `${base}/messages/${pathSegment(messageId)}/restore`, { method: "POST" }),
+    tenantRequest<ConnectApiMessage>(organizationId, `${base}/messages/${pathSegment(messageId)}/restore`, {
+      method: "POST",
+    }),
   addReaction: (organizationId: string, messageId: string, emoji: string) =>
     tenantJsonRequest<void, { emoji: string }>(
       organizationId,

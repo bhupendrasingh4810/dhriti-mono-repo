@@ -1,7 +1,4 @@
-import type {
-  ControlEntitlementDefinition,
-  ControlPlanEntitlementInput,
-} from "@/services/control.service";
+import type { ControlEntitlementDefinition, ControlPlanEntitlementInput } from "@/services/control.service";
 
 type PlanEntitlementEditorProps = {
   definitions: ControlEntitlementDefinition[];

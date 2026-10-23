@@ -369,6 +369,7 @@ describe("AuthService email verification", () => {
       userId: "user-1",
       user: { email: "jane@acme.com", name: "Jane Doe" },
     });
+    prisma.verificationToken.updateMany.mockResolvedValue({ count: 1 });
     prisma.user.update.mockResolvedValue(makeUser());
     prisma.user.findUnique.mockResolvedValue(makeUser());
     const { service, emailSender } = makeSut(prisma);

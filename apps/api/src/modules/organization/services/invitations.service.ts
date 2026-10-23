@@ -13,6 +13,7 @@ import { EntitlementService } from "../../authorization/services/entitlement.ser
 import { AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
 import { OrganizationContext } from "../../../common/decorators/organization.decorator";
 import { assignDefaultUserPermissionGroups } from "./default-permission-groups";
+import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization-membership";
 
 export interface MemberWithUser extends OrganizationMember {
   user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;
@@ -191,6 +192,7 @@ export class InvitationsService {
 
     const acceptedAt = new Date();
     await this.prisma.$transaction(async (transaction) => {
+      await assertUserHasNoOtherActiveOrganizationMembership(transaction, userId, invitation.organizationId);
       const claim = await transaction.invitation.updateMany({
         where: { id: invitation.id, status: "PENDING", expiresAt: { gt: acceptedAt } },
         data: { status: "ACCEPTED", acceptedAt },

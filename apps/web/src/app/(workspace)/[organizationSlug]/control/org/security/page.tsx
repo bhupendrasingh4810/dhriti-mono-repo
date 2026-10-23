@@ -18,7 +18,8 @@ export default function OrgSecurity() {
     try {
       const settings = await controlOrganizationService.getSettings(organizationSlug);
       if (typeof settings.mfaEnforced === "boolean") setMfaRequired(settings.mfaEnforced);
-      if (typeof settings.sessionTimeoutMinutes === "number") setSessionTimeout(String(settings.sessionTimeoutMinutes / 60));
+      if (typeof settings.sessionTimeoutMinutes === "number")
+        setSessionTimeout(String(settings.sessionTimeoutMinutes / 60));
       if (typeof settings.passwordMinLength === "number") setPasswordMinLength(String(settings.passwordMinLength));
     } catch (error) {
       addToast(error instanceof Error ? error.message : "Unable to load security settings", "error");

@@ -40,18 +40,40 @@ export function OrganizationFilters({
       <select
         value={plan}
         onChange={(event) => onPlanChange(event.target.value as Plan | "All")}
-        style={{ padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, cursor: "pointer", backgroundColor: "white" }}
+        style={{
+          padding: "9px 12px",
+          border: "1px solid #e2e8f0",
+          borderRadius: 8,
+          fontSize: 13,
+          cursor: "pointer",
+          backgroundColor: "white",
+        }}
       >
         <option value="All">All Plans</option>
-        {(["Free", "Standard", "Premium", "Enterprise"] as Plan[]).map((item) => <option key={item} value={item}>{item}</option>)}
+        {(["Free", "Standard", "Premium", "Enterprise"] as Plan[]).map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
       <select
         value={status}
         onChange={(event) => onStatusChange(event.target.value as Status | "All")}
-        style={{ padding: "9px 12px", border: "1px solid #e2e8f0", borderRadius: 8, fontSize: 13, cursor: "pointer", backgroundColor: "white" }}
+        style={{
+          padding: "9px 12px",
+          border: "1px solid #e2e8f0",
+          borderRadius: 8,
+          fontSize: 13,
+          cursor: "pointer",
+          backgroundColor: "white",
+        }}
       >
         <option value="All">All Status</option>
-        {(["Active", "Trial", "Suspended", "Churned"] as Status[]).map((item) => <option key={item} value={item}>{item}</option>)}
+        {(["Active", "Trial", "Suspended", "Churned"] as Status[]).map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
       </select>
     </div>
   );

@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { CalendarDays, FileText, LayoutDashboard, ListChecks, MessageCircle, Shield, Star } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { AppView } from "@/types/app.types";
 import { useAuth } from "@/hooks/use-auth";
@@ -64,18 +63,10 @@ const NAV_ITEMS: NavItem[] = [
 interface SidebarProps {
   activeView: AppView;
   organizationSlug: string;
-  onViewChange: (v: AppView) => void;
-  onLogout: () => void;
 }
 
-export default function Sidebar({ activeView, onViewChange, onLogout, organizationSlug }: SidebarProps) {
-  const router = useRouter();
+export default function Sidebar({ activeView, organizationSlug }: SidebarProps) {
   const { user } = useAuth();
-  const [selectedView, setSelectedView] = useState<AppView>(activeView);
-
-  useEffect(() => {
-    setSelectedView(activeView);
-  }, [activeView]);
 
   const getNavHref = (item: NavItem) => {
     if (item.id === "control") {
@@ -91,7 +82,7 @@ export default function Sidebar({ activeView, onViewChange, onLogout, organizati
       {/* Nav items */}
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
-          const active = selectedView === item.id;
+          const active = activeView === item.id;
           return (
             <Link
               key={item.id}

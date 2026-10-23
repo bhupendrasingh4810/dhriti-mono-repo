@@ -158,7 +158,9 @@ export function ConnectCascadingMenu({
   return createPortal(
     <>
       <MenuSurface level={0} style={rootMenuStyle()} onEscape={() => closeFromLevel(0)}>
-        {heading ? <p className="px-3.5 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{heading}</p> : null}
+        {heading ? (
+          <p className="px-3.5 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{heading}</p>
+        ) : null}
         <MenuItems items={itemsByLevel[0] ?? []} level={0} columns={columns} />
       </MenuSurface>
 
@@ -170,7 +172,12 @@ export function ConnectCascadingMenu({
         if (!submenuState || levelItems.length === 0) return null;
 
         return (
-          <MenuSurface key={`cascading-menu-level-${level}`} level={level} style={submenuStyle(submenuState)} onEscape={() => closeFromLevel(level)}>
+          <MenuSurface
+            key={`cascading-menu-level-${level}`}
+            level={level}
+            style={submenuStyle(submenuState)}
+            onEscape={() => closeFromLevel(level)}
+          >
             <MenuItems items={levelItems} level={level} />
           </MenuSurface>
         );
@@ -179,7 +186,15 @@ export function ConnectCascadingMenu({
     document.body,
   );
 
-  function MenuItems({ items: levelItems, level, columns = 1 }: { items: ConnectCascadingMenuItem[]; level: number; columns?: 1 | 2 | 3 }) {
+  function MenuItems({
+    items: levelItems,
+    level,
+    columns = 1,
+  }: {
+    items: ConnectCascadingMenuItem[];
+    level: number;
+    columns?: 1 | 2 | 3;
+  }) {
     const useSectionGrid = columns > 1 && level === 0;
     const sections = useSectionGrid ? groupMenuItems(levelItems) : [];
     const sectionRows = sections.reduce<Array<typeof sections>>((rows, section, index) => {
@@ -192,11 +207,18 @@ export function ConnectCascadingMenu({
       return (
         <div className="py-1" role="menu">
           {sectionRows.map((row, rowIndex) => (
-            <div key={row[0]?.id ?? rowIndex} className={rowIndex > 0 ? "mt-2 border-t border-slate-100 pt-2" : undefined}>
+            <div
+              key={row[0]?.id ?? rowIndex}
+              className={rowIndex > 0 ? "mt-2 border-t border-slate-100 pt-2" : undefined}
+            >
               <div className={columns === 3 ? "grid grid-cols-3 gap-x-1" : "grid grid-cols-2 gap-x-1"}>
                 {row.map((section) => (
                   <div key={section.id} className="min-w-0">
-                    {section.title ? <p className="px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{section.title}</p> : null}
+                    {section.title ? (
+                      <p className="px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        {section.title}
+                      </p>
+                    ) : null}
                     {section.items.map(renderMenuItem)}
                   </div>
                 ))}
@@ -208,40 +230,69 @@ export function ConnectCascadingMenu({
     }
 
     return (
-      <div className={columns === 3 ? "grid grid-cols-3 gap-x-1 py-1" : columns === 2 ? "grid grid-cols-2 gap-x-1 py-1" : "py-1"} role="menu">
+      <div
+        className={
+          columns === 3 ? "grid grid-cols-3 gap-x-1 py-1" : columns === 2 ? "grid grid-cols-2 gap-x-1 py-1" : "py-1"
+        }
+        role="menu"
+      >
         {levelItems.map(renderMenuItem)}
       </div>
     );
 
     function renderMenuItem(item: ConnectCascadingMenuItem) {
-          const hasChildren = Boolean(item.children?.length) && level < safeMaxDepth - 1;
-          const selectedSubmenu = submenuStates[level];
+      const hasChildren = Boolean(item.children?.length) && level < safeMaxDepth - 1;
+      const selectedSubmenu = submenuStates[level];
 
-          return (
-            <div key={item.id} className={columns === 2 ? "contents" : undefined}>
-              {!useSectionGrid && item.dividerAbove ? <div className={columns === 2 ? "col-span-2 my-1 border-t border-slate-100" : "my-1 border-t border-slate-100"} role="separator" /> : null}
-              {!useSectionGrid && item.sectionTitle ? <p className={columns === 2 ? "col-span-2 px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400" : "px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400"}>{item.sectionTitle}</p> : null}
-              <button
-                type="button"
-                role="menuitem"
-                aria-haspopup={hasChildren ? "menu" : undefined}
-                aria-expanded={hasChildren ? selectedSubmenu?.itemId === item.id : undefined}
-                onClick={(event) => handleItemClick(level, item, event)}
-                className="flex w-full min-w-0 cursor-pointer items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+      return (
+        <div key={item.id} className={columns === 2 ? "contents" : undefined}>
+          {!useSectionGrid && item.dividerAbove ? (
+            <div
+              className={columns === 2 ? "col-span-2 my-1 border-t border-slate-100" : "my-1 border-t border-slate-100"}
+              role="separator"
+            />
+          ) : null}
+          {!useSectionGrid && item.sectionTitle ? (
+            <p
+              className={
+                columns === 2
+                  ? "col-span-2 px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                  : "px-3.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-400"
+              }
+            >
+              {item.sectionTitle}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            aria-haspopup={hasChildren ? "menu" : undefined}
+            aria-expanded={hasChildren ? selectedSubmenu?.itemId === item.id : undefined}
+            onClick={(event) => handleItemClick(level, item, event)}
+            className="flex w-full min-w-0 cursor-pointer items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+          >
+            <span
+              className={`flex shrink-0 items-center justify-center ${item.descriptionLayout === "stacked" ? "h-8 w-8" : "w-5"} ${item.selected ? "text-emerald-600" : "text-slate-500"}`}
+            >
+              {item.selected ? <CheckIcon /> : item.icon}
+            </span>
+            <span
+              className={`flex min-w-0 flex-1 ${item.descriptionLayout === "stacked" ? "flex-col items-start gap-0.5" : "items-center gap-2"}`}
+            >
+              <span
+                className={`min-w-0 truncate text-sm ${item.danger ? "text-red-600" : "text-slate-900"} ${item.selected ? "font-bold" : "font-medium"}`}
               >
-                <span className={`flex shrink-0 items-center justify-center ${item.descriptionLayout === "stacked" ? "h-8 w-8" : "w-5"} ${item.selected ? "text-emerald-600" : "text-slate-500"}`}>
-                  {item.selected ? <CheckIcon /> : item.icon}
-                </span>
-                <span className={`flex min-w-0 flex-1 ${item.descriptionLayout === "stacked" ? "flex-col items-start gap-0.5" : "items-center gap-2"}`}>
-                  <span className={`min-w-0 truncate text-sm ${item.danger ? "text-red-600" : "text-slate-900"} ${item.selected ? "font-bold" : "font-medium"}`}>
-                    {item.label}
-                  </span>
-                  {item.description ? <span className="min-w-0 truncate text-xs text-slate-500">{item.description}</span> : null}
-                </span>
-                {item.endAdornment ?? (hasChildren ? selectedSubmenu?.openLeft ? <ChevronLeftIcon /> : <ChevronRightIcon /> : null)}
-              </button>
-            </div>
-          );
+                {item.label}
+              </span>
+              {item.description ? (
+                <span className="min-w-0 truncate text-xs text-slate-500">{item.description}</span>
+              ) : null}
+            </span>
+            {item.endAdornment ??
+              (hasChildren ? selectedSubmenu?.openLeft ? <ChevronLeftIcon /> : <ChevronRightIcon /> : null)}
+          </button>
+        </div>
+      );
     }
   }
 }
@@ -257,7 +308,17 @@ function groupMenuItems(items: ConnectCascadingMenuItem[]) {
   }, []);
 }
 
-function MenuSurface({ children, level, style, onEscape }: { children: ReactNode; level: number; style: CSSProperties; onEscape: () => void }) {
+function MenuSurface({
+  children,
+  level,
+  style,
+  onEscape,
+}: {
+  children: ReactNode;
+  level: number;
+  style: CSSProperties;
+  onEscape: () => void;
+}) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState<number | null>(null);
 
@@ -299,7 +360,15 @@ function MenuSurface({ children, level, style, onEscape }: { children: ReactNode
 
 function CheckIcon() {
   return (
-    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+    >
       <path d="m5 12 4 4L19 6" />
     </svg>
   );
@@ -307,7 +376,16 @@ function CheckIcon() {
 
 function ChevronLeftIcon() {
   return (
-    <svg aria-hidden="true" className="shrink-0 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      aria-hidden="true"
+      className="shrink-0 text-slate-400"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="m15 18-6-6 6-6" />
     </svg>
   );
@@ -315,7 +393,16 @@ function ChevronLeftIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg aria-hidden="true" className="shrink-0 text-slate-400" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      aria-hidden="true"
+      className="shrink-0 text-slate-400"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <path d="m9 18 6-6-6-6" />
     </svg>
   );

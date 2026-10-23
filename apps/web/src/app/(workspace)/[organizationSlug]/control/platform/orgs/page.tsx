@@ -8,10 +8,7 @@ import {
   type AddOrganizationForm,
   type OrganizationPlan,
 } from "@/features/control/orgs/add-organization-drawer";
-import {
-  OrganizationDetailModal,
-  type OrganizationDetailTab,
-} from "@/features/control/orgs/organization-detail-modal";
+import { OrganizationDetailModal, type OrganizationDetailTab } from "@/features/control/orgs/organization-detail-modal";
 import { DeleteOrganizationDialog } from "@/features/control/orgs/delete-organization-dialog";
 import { OrganizationFilters } from "@/features/control/orgs/organization-filters";
 import { OrganizationPageHeader } from "@/features/control/orgs/organization-page-header";
@@ -107,7 +104,10 @@ export default function OrgsPanel() {
     try {
       const result = await controlPlatformService.listOrganizations({
         search: search.trim() || undefined,
-        plan: filterPlan === "All" ? undefined : filterPlan.toUpperCase() as "FREE" | "STANDARD" | "PREMIUM" | "ENTERPRISE",
+        plan:
+          filterPlan === "All"
+            ? undefined
+            : (filterPlan.toUpperCase() as "FREE" | "STANDARD" | "PREMIUM" | "ENTERPRISE"),
         status: filterStatus === "All" ? undefined : statusByApiValue[filterStatus],
         sortBy,
         sortOrder,
@@ -130,7 +130,7 @@ export default function OrgsPanel() {
 
   const sort = (field: PlatformOrganizationSortField) => {
     if (field === sortBy) {
-      setSortOrder((current) => current === "asc" ? "desc" : "asc");
+      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
     } else {
       setSortBy(field);
       setSortOrder("asc");

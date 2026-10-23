@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { ThemeProvider } from "@dhriti/ui";
 import { AlertProvider } from "@/components/shared/alert";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -18,13 +17,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body suppressHydrationWarning>
-        <AppRouterCacheProvider>
-          <ThemeProvider mode="system" density="comfortable">
-            <AuthProvider>
-              <AlertProvider>{children}</AlertProvider>
-            </AuthProvider>
-          </ThemeProvider>
-        </AppRouterCacheProvider>
+        <ThemeProvider mode="system" density="comfortable">
+          <AuthProvider>
+            <AlertProvider>{children}</AlertProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

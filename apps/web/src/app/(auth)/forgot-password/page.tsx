@@ -73,7 +73,9 @@ export default function ForgotPasswordPage() {
           </div>
 
           <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-            <p className="text-sm text-slate-600 text-center">Didn't receive the email? Check your spam folder, or</p>
+            <p className="text-sm text-slate-600 text-center">
+              Didn&apos;t receive the email? Check your spam folder, or
+            </p>
             <button
               onClick={() => setSent(false)}
               className="w-full text-sm text-[#036c5f] font-semibold hover:text-[#024d44] cursor-pointer transition-colors text-center"

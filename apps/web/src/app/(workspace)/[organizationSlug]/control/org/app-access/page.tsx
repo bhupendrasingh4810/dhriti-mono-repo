@@ -160,7 +160,9 @@ function toApp(entitlement: ControlProductEntitlement): App {
     id: entitlement.id,
     key: entitlement.product.key,
     name: entitlement.product.name,
-    description: entitlement.product.isActive ? "Managed product access for this organization" : "This product is currently unavailable",
+    description: entitlement.product.isActive
+      ? "Managed product access for this organization"
+      : "This product is currently unavailable",
     icon: entitlement.product.name.slice(0, 2).toUpperCase(),
     connected: entitlement.isEnabled,
     users: 0,

@@ -1,5 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { stripeSubscriptionEventSchema, type StripeSubscriptionEvent } from "@dhriti/validation";
 import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
 import { ApiConfigService } from "../../../config/config.service";
@@ -9,21 +10,8 @@ import { PrismaService } from "../../../database/prisma.service";
 import { EntitlementService } from "./entitlement.service";
 import { MetricsService } from "../../../common/metrics/metrics.service";
 
-interface StripeEvent {
-  id: string;
-  type: string;
-  created: number;
-  data: { object: StripeSubscription };
-}
-
-interface StripeSubscription {
-  id: string;
-  status: "active" | "trialing" | "past_due" | "canceled" | "unpaid" | "incomplete" | "incomplete_expired" | "paused";
-  current_period_start?: number;
-  current_period_end?: number;
-  trial_end?: number | null;
-  cancel_at_period_end?: boolean;
-}
+type StripeEvent = StripeSubscriptionEvent;
+type StripeSubscription = StripeEvent["data"]["object"];
 
 @Injectable()
 export class BillingWebhookService {
@@ -162,7 +150,7 @@ export class BillingWebhookService {
             providerEventId,
             providerCreatedAt: new Date(payload.created * 1000),
             payloadHash,
-            eventData: this.toStoredEvent(payload) as unknown as Prisma.InputJsonValue,
+            eventData: this.toStoredEvent(payload),
             attemptCount: 1,
             processingStartedAt: new Date(),
           },
@@ -301,17 +289,11 @@ export class BillingWebhookService {
       throw new AppError(ErrorCode.FORBIDDEN, "Invalid billing webhook signature", HttpStatus.FORBIDDEN);
     }
     try {
-      const event = JSON.parse(rawBody.toString("utf8")) as StripeEvent;
-      if (
-        !event.id ||
-        !Number.isSafeInteger(event.created) ||
-        !event.data?.object?.id ||
-        !this.isStripeSubscriptionStatus(event.data.object.status) ||
-        !event.type.startsWith("customer.subscription.")
-      ) {
+      const parsed = stripeSubscriptionEventSchema.safeParse(JSON.parse(rawBody.toString("utf8")));
+      if (!parsed.success) {
         throw new Error("Unsupported event");
       }
-      return event;
+      return parsed.data;
     } catch {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "Invalid billing webhook event", HttpStatus.BAD_REQUEST);
     }
@@ -345,24 +327,18 @@ export class BillingWebhookService {
   }
 
   private toDate(timestamp: number | null | undefined): Date | undefined {
-    return timestamp == null ? undefined : new Date(timestamp * 1000);
+    return timestamp === null || timestamp === undefined ? undefined : new Date(timestamp * 1000);
   }
 
   private parseStoredStripeEvent(value: Prisma.JsonValue): StripeEvent {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "Invalid stored billing webhook event", HttpStatus.BAD_REQUEST);
     }
-    const event = value as unknown as StripeEvent;
-    if (
-      !event.id ||
-      !Number.isSafeInteger(event.created) ||
-      !event.data?.object?.id ||
-      !this.isStripeSubscriptionStatus(event.data.object.status) ||
-      !event.type?.startsWith("customer.subscription.")
-    ) {
+    const parsed = stripeSubscriptionEventSchema.safeParse(value);
+    if (!parsed.success) {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "Invalid stored billing webhook event", HttpStatus.BAD_REQUEST);
     }
-    return event;
+    return parsed.data;
   }
 
   private toStoredEvent(event: StripeEvent): StripeEvent {
@@ -381,15 +357,6 @@ export class BillingWebhookService {
         },
       },
     };
-  }
-
-  private isStripeSubscriptionStatus(status: unknown): status is StripeSubscription["status"] {
-    return (
-      typeof status === "string" &&
-      ["active", "trialing", "past_due", "canceled", "unpaid", "incomplete", "incomplete_expired", "paused"].includes(
-        status,
-      )
-    );
   }
 
   private nextRetryAt(attemptCount: number): Date | null {

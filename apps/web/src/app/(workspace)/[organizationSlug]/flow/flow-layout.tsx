@@ -56,9 +56,9 @@ export function FlowLayout({ children }: FlowLayoutProps) {
       >
         <FlowSidebar
           navView={navView}
-          onNav={() => { }}
+          onNav={() => {}}
           selectedSpace={selectedProject}
-          onSpace={() => { }}
+          onSpace={() => {}}
           collapsed={collapsed}
           onCollapse={() => setCollapsed(!collapsed)}
         />

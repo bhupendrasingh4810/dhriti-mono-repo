@@ -1,17 +1,17 @@
 import { HttpStatus } from "@nestjs/common";
 import type { Socket } from "socket.io";
 
-import { MetricsService } from "../common/metrics/metrics.service";
+import type { MetricsService } from "../common/metrics/metrics.service";
 import { AppError } from "../common/errors/app-error";
 import { ErrorCode } from "../common/errors/error-codes";
-import { ConnectAdapterLifecycleService } from "./connect/connect-adapter-lifecycle.service";
-import { ConnectPresenceService } from "./connect/connect-presence.service";
-import { ConnectPublisherService } from "./connect/connect-publisher.service";
-import { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
+import type { ConnectAdapterLifecycleService } from "./connect/connect-adapter-lifecycle.service";
+import type { ConnectPresenceService } from "./connect/connect-presence.service";
+import type { ConnectPublisherService } from "./connect/connect-publisher.service";
+import type { ConnectRateLimitService } from "./connect/connect-rate-limit.service";
 import { ConnectGateway } from "./connect.gateway";
-import { SessionRevocationSocketService } from "./session-revocation.service";
-import { WsAuthService } from "./ws-auth";
-import { ConnectService } from "../modules/connect/connect.service";
+import type { SessionRevocationSocketService } from "./session-revocation.service";
+import type { WsAuthService } from "./ws-auth";
+import type { ConnectService } from "../modules/connect/connect.service";
 
 describe("ConnectGateway", () => {
   const principal = {

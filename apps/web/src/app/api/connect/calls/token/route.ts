@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
   });
   if (!accessResponse.ok) {
     const status = accessResponse.status === 401 ? 401 : accessResponse.status === 403 ? 403 : 502;
-    return NextResponse.json({ message: status === 403 ? "Call access is not available." : "Unable to authorize the call." }, { status });
+    return NextResponse.json(
+      { message: status === 403 ? "Call access is not available." : "Unable to authorize the call." },
+      { status },
+    );
   }
   const access = (await accessResponse.json()) as CallTokenAccess;
 

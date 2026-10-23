@@ -114,7 +114,7 @@ export class ProfileService {
       timezone: user.profile?.timezone ?? "UTC",
       locale: user.profile?.locale ?? "en",
       status: user.status,
-      emailVerified: user.auth?.emailVerifiedAt != null,
+      emailVerified: Boolean(user.auth?.emailVerifiedAt),
       mfaEnabled: user.auth?.mfaEnabled ?? false,
       lastLoginAt: user.auth?.lastLoginAt ? user.auth.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),

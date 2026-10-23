@@ -107,7 +107,7 @@ export class ConnectService {
         where: { id: input.itemId, organizationId, deletedAt: null },
         select: { id: true },
       });
-      if (!team) throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+      if (!team) {throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);}
     } else {
       const channel = await this.getChannelForMember(organizationId, input.itemId, userId);
       const expectedTypes = input.itemType === "chat" ? ["DIRECT", "GROUP"] : ["CHANNEL"];
@@ -120,8 +120,8 @@ export class ConnectService {
       const currentFavorites = toSidebarPreferences(current.favorites);
       const key = input.itemType === "chat" ? "chats" : input.itemType === "team" ? "teams" : "channels";
       const items = new Set(toStringList(currentFavorites[key]));
-      if (input.isFavorite) items.add(input.itemId);
-      else items.delete(input.itemId);
+      if (input.isFavorite) {items.add(input.itemId);}
+      else {items.delete(input.itemId);}
 
       const favorites: SidebarFavorites = {
         chats: toStringList(currentFavorites.chats),
@@ -199,7 +199,7 @@ export class ConnectService {
         where: { teamId, userId, team: { organizationId, deletedAt: null } },
         select: { id: true },
       });
-      if (!membership) throw new AppError(ErrorCode.FORBIDDEN, "Team is not accessible", HttpStatus.FORBIDDEN);
+      if (!membership) {throw new AppError(ErrorCode.FORBIDDEN, "Team is not accessible", HttpStatus.FORBIDDEN);}
     }
     const patch = Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined));
     const updated = await this.mutatePreferences(organizationId, userId, (current) => ({
@@ -217,9 +217,9 @@ export class ConnectService {
     const targetId = kind === "followed" ? message.parentId ?? message.id : message.id;
     const updated = await this.mutatePreferences(organizationId, userId, (current) => {
       const ids = new Set(toStringList(current[key]));
-      if (enabled) ids.add(targetId);
-      else ids.delete(targetId);
-      if (ids.size > 500) throw new AppError(ErrorCode.VALIDATION_FAILED, "Personal message limit reached", HttpStatus.BAD_REQUEST);
+      if (enabled) {ids.add(targetId);}
+      else {ids.delete(targetId);}
+      if (ids.size > 500) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Personal message limit reached", HttpStatus.BAD_REQUEST);}
       return { ...current, [key]: [...ids] };
     });
     this.publisher.publishToUsers(organizationId, [userId], "sidebar:personal-messages-changed", { [key]: updated[key] });
@@ -404,7 +404,7 @@ export class ConnectService {
         },
       },
     });
-    if (!team) throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+    if (!team) {throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);}
 
     return {
       id: team.id,
@@ -430,7 +430,7 @@ export class ConnectService {
       where: { organizationId_slug: { organizationId, slug: dto.slug } },
       select: { id: true },
     });
-    if (slugTaken) throw new AppError(ErrorCode.TEAM_SLUG_TAKEN, "A team with this slug already exists", HttpStatus.CONFLICT);
+    if (slugTaken) {throw new AppError(ErrorCode.TEAM_SLUG_TAKEN, "A team with this slug already exists", HttpStatus.CONFLICT);}
 
     const teamCount = await this.prisma.team.count({ where: { organizationId, deletedAt: null } });
     await this.entitlements.assertWithinLimit(organizationId, "max_teams", teamCount + 1);
@@ -484,7 +484,7 @@ export class ConnectService {
     const membership = await this.prisma.teamMember.findUnique({ where: { teamId_userId: { teamId, userId } }, select: { role: true } });
     if (membership?.role === "ADMIN") {
       const adminCount = await this.prisma.teamMember.count({ where: { teamId, role: "ADMIN" } });
-      if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "A team must have at least one admin", HttpStatus.BAD_REQUEST);
+      if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "A team must have at least one admin", HttpStatus.BAD_REQUEST);}
     }
     await this.prisma.teamMember.deleteMany({ where: { teamId, userId } });
   }
@@ -494,10 +494,10 @@ export class ConnectService {
       where: { teamId, userId, team: { organizationId, deletedAt: null } },
       select: { role: true },
     });
-    if (!membership) throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this team", HttpStatus.FORBIDDEN);
+    if (!membership) {throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this team", HttpStatus.FORBIDDEN);}
     if (membership.role === "ADMIN") {
       const adminCount = await this.prisma.teamMember.count({ where: { teamId, role: "ADMIN" } });
-      if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "Assign another team admin before leaving", HttpStatus.BAD_REQUEST);
+      if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "Assign another team admin before leaving", HttpStatus.BAD_REQUEST);}
     }
     await this.prisma.teamMember.delete({ where: { teamId_userId: { teamId, userId } } });
   }
@@ -693,7 +693,7 @@ export class ConnectService {
     const membership = await this.prisma.channelMember.findUnique({ where: { channelId_userId: { channelId, userId } }, select: { role: true } });
     if (membership?.role === "ADMIN") {
       const adminCount = await this.prisma.channelMember.count({ where: { channelId, role: "ADMIN" } });
-      if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "A channel must have at least one admin", HttpStatus.BAD_REQUEST);
+      if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "A channel must have at least one admin", HttpStatus.BAD_REQUEST);}
     }
     await this.prisma.channelMember.deleteMany({ where: { channelId, userId } });
   }
@@ -900,12 +900,12 @@ export class ConnectService {
   ): Promise<void> {
     await this.getChannelForMember(organizationId, channelId, initiatorUserId, true);
     const scopeByName: Record<typeof details.scope, ConnectCallScope> = {
-      "one-to-one": "ONE_TO_ONE" as ConnectCallScope,
-      group: "GROUP" as ConnectCallScope,
-      channel: "CHANNEL" as ConnectCallScope,
-      meeting: "MEETING" as ConnectCallScope,
+      "one-to-one": "ONE_TO_ONE",
+      group: "GROUP",
+      channel: "CHANNEL",
+      meeting: "MEETING",
     };
-    const type: ConnectCallType = details.type === "video" ? "VIDEO" as ConnectCallType : "AUDIO" as ConnectCallType;
+    const type: ConnectCallType = details.type === "video" ? "VIDEO" : "AUDIO";
     const participantIds = [...new Set(details.participantIds)];
 
     await this.prisma.connectCall.upsert({
@@ -935,18 +935,18 @@ export class ConnectService {
   ): Promise<"audio" | "video" | undefined> {
     await this.getChannelForMember(organizationId, channelId, userId, true);
     const statusByAction: Record<typeof details.action, ConnectCallStatus> = {
-      accept: "ACTIVE" as ConnectCallStatus,
-      reject: "DECLINED" as ConnectCallStatus,
-      miss: "MISSED" as ConnectCallStatus,
-      cancel: "CANCELLED" as ConnectCallStatus,
-      end: "ENDED" as ConnectCallStatus,
+      accept: "ACTIVE",
+      reject: "DECLINED",
+      miss: "MISSED",
+      cancel: "CANCELLED",
+      end: "ENDED",
     };
     const terminal = details.action === "reject" || details.action === "miss" || details.action === "cancel" || details.action === "end";
     const call = await this.prisma.connectCall.findFirst({
       where: { id: details.callId, organizationId, channelId },
       select: { id: true, type: true },
     });
-    if (!call) return undefined;
+    if (!call) {return undefined;}
 
     await this.prisma.connectCall.update({
       where: { id: call.id },
@@ -970,7 +970,7 @@ export class ConnectService {
       where: { id: callId, organizationId, channelId, scope: { in: ["GROUP", "CHANNEL", "MEETING"] }, status: { in: ["RINGING", "ACTIVE"] } },
       select: { id: true, startedAt: true },
     });
-    if (!call) return { ended: false };
+    if (!call) {return { ended: false };}
 
     await this.prisma.connectCallParticipant.updateMany({
       where: { callId, userId, joinedAt: { not: null }, leftAt: null },
@@ -1032,8 +1032,8 @@ export class ConnectService {
     const consents = Object.fromEntries(call.participants.map(({ userId: participantId }) => [participantId, participantId === userId]));
     const recording = await this.prisma.connectCallRecording.upsert({
       where: { callId },
-      create: { callId, organizationId, requestedById: userId, participantConsents: consents as Prisma.InputJsonObject },
-      update: { participantConsents: consents as Prisma.InputJsonObject, status: "PENDING_CONSENT" },
+      create: { callId, organizationId, requestedById: userId, participantConsents: consents },
+      update: { participantConsents: consents, status: "PENDING_CONSENT" },
     });
     await this.audit.record({
       action: "connect.call.recording.requested",
@@ -1063,7 +1063,7 @@ export class ConnectService {
     const ready = call.participants.every(({ userId: participantId }) => consents[participantId] === true);
     const recording = await this.prisma.connectCallRecording.update({
       where: { id: call.recording.id },
-      data: { participantConsents: consents as Prisma.InputJsonObject, status: ready ? "READY" : "PENDING_CONSENT" },
+      data: { participantConsents: consents, status: ready ? "READY" : "PENDING_CONSENT" },
     });
     await this.audit.record({
       action: "connect.call.recording.consent_updated",
@@ -1085,7 +1085,7 @@ export class ConnectService {
       throw new AppError(ErrorCode.FORBIDDEN, "Call access is not available", HttpStatus.FORBIDDEN);
     }
     await this.getChannelForMember(organizationId, call.channelId, userId, true);
-    if (!call.recording) return null;
+    if (!call.recording) {return null;}
 
     const source = call.recording.participantConsents;
     const consents = source && typeof source === "object" && !Array.isArray(source)
@@ -1246,7 +1246,7 @@ export class ConnectService {
       orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { createdAt: true },
     });
     if (!message) {
-      if (messageId) throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);
+      if (messageId) {throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);}
       return null;
     }
     await this.prisma.channelMember.updateMany({
@@ -1381,7 +1381,7 @@ export class ConnectService {
       where: { teamId, userId, role: "ADMIN", team: { organizationId, deletedAt: null } },
       select: { team: true },
     });
-    if (!membership) throw new AppError(ErrorCode.FORBIDDEN, "Only team admins can perform this action", HttpStatus.FORBIDDEN);
+    if (!membership) {throw new AppError(ErrorCode.FORBIDDEN, "Only team admins can perform this action", HttpStatus.FORBIDDEN);}
     return membership.team;
   }
 
@@ -1391,7 +1391,7 @@ export class ConnectService {
       where: { channelId_userId: { channelId, userId } },
       select: { role: true },
     });
-    if (membership?.role !== "ADMIN") throw new AppError(ErrorCode.FORBIDDEN, "Only channel admins can perform this action", HttpStatus.FORBIDDEN);
+    if (membership?.role !== "ADMIN") {throw new AppError(ErrorCode.FORBIDDEN, "Only channel admins can perform this action", HttpStatus.FORBIDDEN);}
     return channel;
   }
 }

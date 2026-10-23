@@ -1,6 +1,5 @@
 "use client";
 
-import { Typography } from "@dhriti/ui";
 import { Dialog } from "@dhriti/ui/dialog";
 
 type ConfirmationDialogProps = {
@@ -35,7 +34,7 @@ export function ConfirmationDialog({
       onPrimaryAction={onConfirm}
       maxWidth="xs"
     >
-      <Typography color="text.secondary">{description}</Typography>
+      <p className="text-text-secondary">{description}</p>
     </Dialog>
   );
 }

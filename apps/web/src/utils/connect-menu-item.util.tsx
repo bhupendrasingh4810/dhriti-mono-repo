@@ -120,7 +120,9 @@ export function getMenuItems(
             selected: sectionViewMode[sectionId] === "unread",
             onClick: () => {
               setSectionViewMode((prev) => ({ ...prev, [sectionId]: "unread" }));
-              onSaveSidebarSettings(sectionId === "favorites" ? { favoritesFilter: "unread" } : { chatsFilter: "unread" });
+              onSaveSidebarSettings(
+                sectionId === "favorites" ? { favoritesFilter: "unread" } : { chatsFilter: "unread" },
+              );
             },
           },
         ];
@@ -194,7 +196,12 @@ export function getMenuItems(
 
     case "user":
       return [
-        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} />, onClick: () => window.open(conversationUrl(sidebarMenuContext.id), "_blank", "noopener,noreferrer") },
+        {
+          id: "open-window",
+          label: "Open in new window",
+          icon: <ExternalLink size={16} />,
+          onClick: () => window.open(conversationUrl(sidebarMenuContext.id), "_blank", "noopener,noreferrer"),
+        },
         { id: "mark-read", label: "Mark as read", icon: <Check size={16} /> },
         // {
         //   id: "move-section",
@@ -205,7 +212,13 @@ export function getMenuItems(
         { id: "mute", label: "Mute", icon: <Bell size={16} /> },
         { id: "notify", label: "Notify when available", icon: <Sun size={16} /> },
         // { id: "workflows", label: "Workflows", icon: <SettingsRounded fontSize="small" /> }, TODO
-        { id: "copy-link", label: "Copy link", icon: <Link size={16} />, onClick: () => void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)).catch(() => undefined) },
+        {
+          id: "copy-link",
+          label: "Copy link",
+          icon: <Link size={16} />,
+          onClick: () =>
+            void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)).catch(() => undefined),
+        },
         {
           id: "remove-history",
           label: "Remove Chat History",
@@ -218,7 +231,12 @@ export function getMenuItems(
 
     case "channel":
       return [
-        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} />, onClick: () => window.open(conversationUrl(sidebarMenuContext.id), "_blank", "noopener,noreferrer") },
+        {
+          id: "open-window",
+          label: "Open in new window",
+          icon: <ExternalLink size={16} />,
+          onClick: () => window.open(conversationUrl(sidebarMenuContext.id), "_blank", "noopener,noreferrer"),
+        },
         // {
         //   id: "channel-notifications",
         //   label: "Channel notifications",
@@ -240,7 +258,12 @@ export function getMenuItems(
         //   onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label || ""}.`),
         // },
         // { id: "manage-tags", label: "Manage channel tags", icon: <Pencil size={16} /> },
-        { id: "copy-link", label: "Copy Link", icon: <Link size={16} />, onClick: () => void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)) },
+        {
+          id: "copy-link",
+          label: "Copy Link",
+          icon: <Link size={16} />,
+          onClick: () => void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)),
+        },
         // { id: "workflows", label: "Work flows", icon: <Settings size={16} /> },
         // { id: "go-team", label: "Go to team", icon: <ChevronRight size={16} /> },
       ];
@@ -263,7 +286,18 @@ export function getMenuItems(
         },
         // { id: "manage-tags", label: "Manage tags", icon: <Pencil size={16} /> },
         // { id: "copy-link", label: "Copy link", icon: <Link size={16} /> },
-        ...(teamActions?.canLeave ? [{ id: "leave-team", label: "Leave team", icon: <LogOut size={16} />, dividerAbove: true, danger: true, onClick: teamActions.onLeaveTeam }] : []),
+        ...(teamActions?.canLeave
+          ? [
+              {
+                id: "leave-team",
+                label: "Leave team",
+                icon: <LogOut size={16} />,
+                dividerAbove: true,
+                danger: true,
+                onClick: teamActions.onLeaveTeam,
+              },
+            ]
+          : []),
       ];
 
     case "message":

@@ -17,7 +17,7 @@ export function WorkspaceCallSocketBridge({ registerSocket }: WorkspaceCallSocke
         const response = await fetch("/api/connect/socket", { method: "POST", cache: "no-store" });
         if (!response.ok) return;
 
-        const credentials = await response.json() as { token: string; url: string };
+        const credentials = (await response.json()) as { token: string; url: string };
         if (cancelled) return;
 
         socket = io(credentials.url, { auth: { token: credentials.token }, autoConnect: false });

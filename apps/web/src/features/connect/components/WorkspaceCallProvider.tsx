@@ -10,7 +10,14 @@ import { CallAvailableCard } from "./CallAvailableCard";
 import { CallSwitchDialog } from "./CallSwitchDialog";
 import { IncomingCallCard } from "./IncomingCallCard";
 import { WorkspaceCallSocketBridge } from "./WorkspaceCallSocketBridge";
-import type { ActiveCall, CallContext, CallControls, CallInvitation, CallStatusEvent, CallType } from "@/types/connect.types";
+import type {
+  ActiveCall,
+  CallContext,
+  CallControls,
+  CallInvitation,
+  CallStatusEvent,
+  CallType,
+} from "@/types/connect.types";
 
 const RING_TIMEOUT_MS = 30_000;
 
@@ -70,18 +77,19 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
         callId: call.id,
         action: call.direction === "incoming" ? "miss" : "cancel",
       });
-      setCalls((current) => current.flatMap((item) => {
-        if (item.id !== call.id || item.status !== "ringing") return [item];
-        return call.direction === "outgoing" ? [{ ...item, status: "unanswered" as const }] : [];
-      }));
+      setCalls((current) =>
+        current.flatMap((item) => {
+          if (item.id !== call.id || item.status !== "ringing") return [item];
+          return call.direction === "outgoing" ? [{ ...item, status: "unanswered" as const }] : [];
+        }),
+      );
     }, RING_TIMEOUT_MS);
 
     ringTimeoutsRef.current.set(call.id, timeout);
   }
 
   function startCall(context: CallContext) {
-    const currentCall = calls.find((item) => item.joined && !item.onHold)
-      ?? calls.find((item) => !item.minimized);
+    const currentCall = calls.find((item) => item.joined && !item.onHold) ?? calls.find((item) => !item.minimized);
     if (currentCall?.joined) {
       setSwitchingCallId(currentCall.id);
       setPendingCall(context);
@@ -90,12 +98,9 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
 
     const call = {
       ...createCall(context, "outgoing"),
-      status: isDirectRecipientOffline(context) ? "unavailable" as const : "ringing" as const,
+      status: isDirectRecipientOffline(context) ? ("unavailable" as const) : ("ringing" as const),
     };
-    setCalls((current) => [
-      ...current.filter((item) => item.id !== currentCall?.id),
-      call,
-    ]);
+    setCalls((current) => [...current.filter((item) => item.id !== currentCall?.id), call]);
     if (call.status === "unavailable") return;
     if (call.scope === "one-to-one" || call.scope === "meeting") scheduleRingTimeout(call);
     const callerName = context.callerName?.trim() || user?.name.trim() || user?.email || "Someone";
@@ -111,13 +116,19 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
   }
 
   function minimizeCall(callId: string) {
-    setCalls((current) => current.map((item) => item.id === callId ? { ...item, minimized: true } : item));
+    setCalls((current) => current.map((item) => (item.id === callId ? { ...item, minimized: true } : item)));
   }
 
   function restoreCall(callId: string) {
-    setCalls((current) => current.map((item) => item.id === callId
-      ? { ...item, minimized: false, onHold: false }
-      : !item.minimized ? { ...item, minimized: true, onHold: true } : item));
+    setCalls((current) =>
+      current.map((item) =>
+        item.id === callId
+          ? { ...item, minimized: false, onHold: false }
+          : !item.minimized
+            ? { ...item, minimized: true, onHold: true }
+            : item,
+      ),
+    );
   }
 
   function endCall(callId: string, durationSeconds?: number) {
@@ -130,7 +141,13 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
         socketRef.current?.emit("call:respond", {
           channelId: call.conversationId,
           callId,
-          action: sharedCall ? "leave" : call.direction === "incoming" && call.status === "ringing" ? "reject" : call.joined ? "end" : "cancel",
+          action: sharedCall
+            ? "leave"
+            : call.direction === "incoming" && call.status === "ringing"
+              ? "reject"
+              : call.joined
+                ? "end"
+                : "cancel",
           ...(call.joined && durationSeconds !== undefined ? { durationSeconds } : {}),
         });
       }
@@ -139,24 +156,26 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
       const remaining = current.filter((item) => item.id !== callId);
       if (remaining.some((item) => !item.minimized) || remaining.length === 0) return remaining;
       const resume = remaining[remaining.length - 1];
-      return remaining.map((item) => item.id === resume.id ? { ...item, minimized: false, onHold: false } : item);
+      return remaining.map((item) => (item.id === resume.id ? { ...item, minimized: false, onHold: false } : item));
     });
   }
 
   function setCallOnHold(callId: string, onHold: boolean) {
-    setCalls((current) => current.map((item) => item.id === callId ? { ...item, onHold } : item));
+    setCalls((current) => current.map((item) => (item.id === callId ? { ...item, onHold } : item)));
   }
 
   function launchPendingCall(keepCurrentOnHold: boolean) {
     if (!pendingCall) return;
     const nextCall = {
       ...createCall(pendingCall, "outgoing"),
-      status: isDirectRecipientOffline(pendingCall) ? "unavailable" as const : "ringing" as const,
+      status: isDirectRecipientOffline(pendingCall) ? ("unavailable" as const) : ("ringing" as const),
     };
     setCalls((current) => {
       const withoutCurrent = current.filter((item) => keepCurrentOnHold || item.id !== switchingCallId);
       const callsWithCurrentOnHold = keepCurrentOnHold
-        ? withoutCurrent.map((item) => item.id === switchingCallId ? { ...item, minimized: true, onHold: true } : item)
+        ? withoutCurrent.map((item) =>
+            item.id === switchingCallId ? { ...item, minimized: true, onHold: true } : item,
+          )
         : withoutCurrent;
       return [...callsWithCurrentOnHold, nextCall];
     });
@@ -186,7 +205,9 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
 
     clearRingTimeout(callId);
     socketRef.current?.emit("call:respond", { channelId: call.conversationId, callId, action: "accept" });
-    setCalls((current) => current.map((item) => item.id === callId ? { ...item, status: "accepted", autoJoin: true } : item));
+    setCalls((current) =>
+      current.map((item) => (item.id === callId ? { ...item, status: "accepted", autoJoin: true } : item)),
+    );
   }
 
   function markCallJoined(callId: string) {
@@ -196,11 +217,13 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
     if (call.status === "ringing") {
       socketRef.current?.emit("call:respond", { channelId: call.conversationId, callId, action: "accept" });
     }
-    setCalls((current) => current.map((item) => item.id === callId ? { ...item, status: "accepted", joined: true } : item));
+    setCalls((current) =>
+      current.map((item) => (item.id === callId ? { ...item, status: "accepted", joined: true } : item)),
+    );
   }
 
   function acceptVideoCall(callId: string) {
-    setCalls((current) => current.map((item) => item.id === callId ? { ...item, type: "video" } : item));
+    setCalls((current) => current.map((item) => (item.id === callId ? { ...item, type: "video" } : item)));
     acceptCall(callId);
   }
 
@@ -213,9 +236,8 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
     if (!socket) return;
 
     const receiveInvitation = (invitation: CallInvitation) => {
-      const callerName = invitation.callerName?.trim()
-        || connectUsersById[invitation.callerId]?.displayName
-        || "Someone";
+      const callerName =
+        invitation.callerName?.trim() || connectUsersById[invitation.callerId]?.displayName || "Someone";
       const call: ActiveCall = {
         id: invitation.callId,
         callerId: invitation.callerId,
@@ -232,32 +254,40 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
         onHold: false,
         joined: false,
       };
-      setCalls((current) => current.some((item) => item.id === call.id) ? current : [...current, call]);
+      setCalls((current) => (current.some((item) => item.id === call.id) ? current : [...current, call]));
       if (call.scope === "one-to-one" || call.scope === "meeting") scheduleRingTimeout(call);
     };
     const acceptInvitation = (event: CallStatusEvent) => {
       clearRingTimeout(event.callId);
-      setCalls((current) => current.map((call) => call.id === event.callId
-        ? { ...call, status: "accepted", autoJoin: call.direction === "outgoing" ? true : call.autoJoin }
-        : call));
+      setCalls((current) =>
+        current.map((call) =>
+          call.id === event.callId
+            ? { ...call, status: "accepted", autoJoin: call.direction === "outgoing" ? true : call.autoJoin }
+            : call,
+        ),
+      );
     };
     const rejectCall = (event: CallStatusEvent) => {
       clearRingTimeout(event.callId);
-      setCalls((current) => current.flatMap((call) => {
-        if (call.id !== event.callId) return [call];
-        return call.direction === "outgoing" && call.status === "ringing"
-          ? [{ ...call, status: "declined" as const }]
-          : [];
-      }));
+      setCalls((current) =>
+        current.flatMap((call) => {
+          if (call.id !== event.callId) return [call];
+          return call.direction === "outgoing" && call.status === "ringing"
+            ? [{ ...call, status: "declined" as const }]
+            : [];
+        }),
+      );
     };
     const cancelCall = (event: CallStatusEvent) => {
       clearRingTimeout(event.callId);
-      setCalls((current) => current.flatMap((call) => {
-        if (call.id !== event.callId) return [call];
-        return call.direction === "outgoing" && call.status === "ringing"
-          ? [{ ...call, status: "unanswered" as const }]
-          : [];
-      }));
+      setCalls((current) =>
+        current.flatMap((call) => {
+          if (call.id !== event.callId) return [call];
+          return call.direction === "outgoing" && call.status === "ringing"
+            ? [{ ...call, status: "unanswered" as const }]
+            : [];
+        }),
+      );
     };
     const removeCall = (event: CallStatusEvent) => {
       clearRingTimeout(event.callId);
@@ -279,28 +309,41 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => () => {
-    socketCleanupRef.current?.();
-    ringTimeoutsRef.current.forEach((timeout) => window.clearTimeout(timeout as unknown as ReturnType<typeof setTimeout>));
-    ringTimeoutsRef.current.clear();
-  }, []);
+  useEffect(
+    () => () => {
+      socketCleanupRef.current?.();
+      ringTimeoutsRef.current.forEach((timeout) =>
+        window.clearTimeout(timeout as unknown as ReturnType<typeof setTimeout>),
+      );
+      ringTimeoutsRef.current.clear();
+    },
+    [],
+  );
 
   return (
     <WorkspaceCallContext.Provider value={{ startCall, registerSocket }}>
       {children}
       <WorkspaceCallSocketBridge registerSocket={registerSocket} />
-      {calls.map((call) => call.direction === "incoming" && call.status === "ringing" && (call.scope === "group" || call.scope === "channel") ? (
-        <CallAvailableCard key={call.id} call={call} onJoin={() => acceptCall(call.id)} onDismiss={() => endCall(call.id)} />
-      ) : call.direction === "incoming" && call.status === "ringing" ? (
-        <IncomingCallCard
-          key={call.id}
-          call={call}
-          onAccept={() => acceptCall(call.id)}
-          onDecline={() => endCall(call.id)}
-          onAcceptVideo={() => acceptVideoCall(call.id)}
-        />
-      ) : (
-        <CallSurface
+      {calls.map((call) =>
+        call.direction === "incoming" &&
+        call.status === "ringing" &&
+        (call.scope === "group" || call.scope === "channel") ? (
+          <CallAvailableCard
+            key={call.id}
+            call={call}
+            onJoin={() => acceptCall(call.id)}
+            onDismiss={() => endCall(call.id)}
+          />
+        ) : call.direction === "incoming" && call.status === "ringing" ? (
+          <IncomingCallCard
+            key={call.id}
+            call={call}
+            onAccept={() => acceptCall(call.id)}
+            onDecline={() => endCall(call.id)}
+            onAcceptVideo={() => acceptVideoCall(call.id)}
+          />
+        ) : (
+          <CallSurface
             key={call.id}
             call={call}
             viewerId={user?.id ?? connectSidebarState.currentUser}
@@ -310,15 +353,18 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
             onEnd={(durationSeconds) => endCall(call.id, durationSeconds)}
             onJoin={() => markCallJoined(call.id)}
             onHoldChange={(onHold) => setCallOnHold(call.id, onHold)}
-        />
-      ))}
+          />
+        ),
+      )}
       <CallSwitchDialog
         open={Boolean(pendingCall)}
-        onCancel={() => { setPendingCall(null); setSwitchingCallId(null); }}
+        onCancel={() => {
+          setPendingCall(null);
+          setSwitchingCallId(null);
+        }}
         onDisconnectCurrent={() => launchPendingCall(false)}
         onKeepOnHold={() => launchPendingCall(true)}
       />
     </WorkspaceCallContext.Provider>
   );
 }
-

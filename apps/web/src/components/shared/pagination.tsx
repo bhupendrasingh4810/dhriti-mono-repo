@@ -25,7 +25,10 @@ export function Pagination({
   const lastItem = Math.min(page * pageSize, total);
 
   return (
-    <nav aria-label={ariaLabel} className="flex flex-wrap items-center justify-end gap-5 px-4 py-3 text-xs text-slate-600">
+    <nav
+      aria-label={ariaLabel}
+      className="flex flex-wrap items-center justify-end gap-5 px-4 py-3 text-xs text-slate-600"
+    >
       <label className="flex items-center gap-2">
         Rows per page:
         <select

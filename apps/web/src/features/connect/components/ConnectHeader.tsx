@@ -42,7 +42,9 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
     <header className="flex h-[68px] shrink-0 items-center border-b border-slate-200 bg-white px-4">
       <div className="grid w-full grid-cols-[minmax(120px,auto)_1fr] items-center gap-x-4 md:grid-cols-[1fr_minmax(420px,640px)_1fr]">
         <div className="flex min-w-fit items-center gap-2">
-          <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-700 text-sm font-bold italic text-white">F</div>
+          <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-700 text-sm font-bold italic text-white">
+            F
+          </div>
           <span className="text-lg font-bold text-slate-900">Flowrise</span>
         </div>
 
@@ -92,13 +94,29 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
         </div>
 
         <div className="col-start-2 flex items-center justify-self-end gap-2 md:col-start-3">
-          <button type="button" aria-label="Notifications" className="relative grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-50">
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-50"
+          >
             <BellIcon />
-            <span className="absolute right-0.5 top-0.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-amber-500 px-0.5 text-[9px] font-bold text-white">3</span>
+            <span className="absolute right-0.5 top-0.5 grid h-3.5 min-w-3.5 place-items-center rounded-full bg-amber-500 px-0.5 text-[9px] font-bold text-white">
+              3
+            </span>
           </button>
-          <button type="button" aria-label="Help" className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-50"><HelpIcon /></button>
+          <button
+            type="button"
+            aria-label="Help"
+            className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-50"
+          >
+            <HelpIcon />
+          </button>
           <div className="ml-1 flex items-center gap-2 border-l border-slate-200 pl-3">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg" alt="User profile" className="h-8 w-8 rounded-full object-cover" />
+            <img
+              src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-4.jpg"
+              alt="User profile"
+              className="h-8 w-8 rounded-full object-cover"
+            />
             <ChevronIcon className="h-[18px] w-[18px] text-slate-400" />
           </div>
         </div>
@@ -108,17 +126,55 @@ export function ConnectHeader({ users = [], messages = [], files = [] }: Connect
 }
 
 function SearchIcon({ className = "" }: { className?: string }) {
-  return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>;
+  return (
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-4-4" />
+    </svg>
+  );
 }
 
 function BellIcon() {
-  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
+  return (
+    <svg
+      aria-hidden="true"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+    >
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
 }
 
 function HelpIcon() {
-  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" /><path d="M12 17h.01" /></svg>;
+  return (
+    <svg
+      aria-hidden="true"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
 }
 
 function ChevronIcon({ className = "" }: { className?: string }) {
-  return <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>;
+  return (
+    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
 }

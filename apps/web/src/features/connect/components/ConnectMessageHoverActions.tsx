@@ -59,24 +59,55 @@ export function ConnectMessageHoverActions({
       } ${placement === "above" ? "top-0 -translate-y-[calc(100%+6px)]" : "top-full translate-y-1.5"}`}
     >
       {quickReactions.map((reaction) => (
-        <button key={reaction.emoji} type="button" title={reaction.name} aria-label={`React with ${reaction.name}`} onClick={() => onQuickReaction(reaction.emoji)} className="grid h-8 w-8 place-items-center rounded text-lg leading-none hover:bg-slate-50">
+        <button
+          key={reaction.emoji}
+          type="button"
+          title={reaction.name}
+          aria-label={`React with ${reaction.name}`}
+          onClick={() => onQuickReaction(reaction.emoji)}
+          className="grid h-8 w-8 place-items-center rounded text-lg leading-none hover:bg-slate-50"
+        >
           {reaction.emoji}
         </button>
       ))}
-      <button type="button" title="More reactions" aria-label="More reactions" onClick={keepOpenAndRun(onOpenEmoji)} className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50">
+      <button
+        type="button"
+        title="More reactions"
+        aria-label="More reactions"
+        onClick={keepOpenAndRun(onOpenEmoji)}
+        className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50"
+      >
         <SmilePlus size={20} aria-hidden="true" />
       </button>
       {isOwn ? (
-        <button type="button" title="Edit message" aria-label="Edit message" onClick={onEdit} className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50">
+        <button
+          type="button"
+          title="Edit message"
+          aria-label="Edit message"
+          onClick={onEdit}
+          className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50"
+        >
           <Pencil size={20} aria-hidden="true" />
         </button>
       ) : (
-        <button type="button" title="Reply with quote" aria-label="Reply with quote" onClick={onQuote} className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50">
+        <button
+          type="button"
+          title="Reply with quote"
+          aria-label="Reply with quote"
+          onClick={onQuote}
+          className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50"
+        >
           <Quote size={20} aria-hidden="true" />
         </button>
       )}
       <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-slate-200" />
-      <button type="button" title="More options" aria-label="More options" onClick={keepOpenAndRun(onOpenMenu)} className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50">
+      <button
+        type="button"
+        title="More options"
+        aria-label="More options"
+        onClick={keepOpenAndRun(onOpenMenu)}
+        className="grid h-8 w-8 place-items-center rounded text-slate-600 hover:bg-slate-50"
+      >
         <MoreHorizontal size={20} aria-hidden="true" />
       </button>
     </div>

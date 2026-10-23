@@ -10,24 +10,74 @@ const SPACES = [
 ];
 
 const PAGES = [
-  { id: 1, title: "API Documentation v3", space: "ENG", author: "Alex Chen", updated: "2h ago", views: 142, spaceColor: "#0052CC" },
-  { id: 2, title: "Q3 Product Roadmap", space: "PROD", author: "Emily Park", updated: "Today", views: 89, spaceColor: "#ED7B53" },
-  { id: 3, title: "Design System Guidelines", space: "DES", author: "Mia Torres", updated: "Yesterday", views: 203, spaceColor: "#EC4899" },
-  { id: 4, title: "Sprint 42 Retrospective", space: "ENG", author: "Mark Johnson", updated: "2d ago", views: 56, spaceColor: "#0052CC" },
-  { id: 5, title: "Onboarding Checklist", space: "GEN", author: "Sarah Kim", updated: "3d ago", views: 317, spaceColor: "#036c5f" },
-  { id: 6, title: "Infrastructure Architecture", space: "ENG", author: "Alex Chen", updated: "1w ago", views: 98, spaceColor: "#0052CC" },
+  {
+    id: 1,
+    title: "API Documentation v3",
+    space: "ENG",
+    author: "Alex Chen",
+    updated: "2h ago",
+    views: 142,
+    spaceColor: "#0052CC",
+  },
+  {
+    id: 2,
+    title: "Q3 Product Roadmap",
+    space: "PROD",
+    author: "Emily Park",
+    updated: "Today",
+    views: 89,
+    spaceColor: "#ED7B53",
+  },
+  {
+    id: 3,
+    title: "Design System Guidelines",
+    space: "DES",
+    author: "Mia Torres",
+    updated: "Yesterday",
+    views: 203,
+    spaceColor: "#EC4899",
+  },
+  {
+    id: 4,
+    title: "Sprint 42 Retrospective",
+    space: "ENG",
+    author: "Mark Johnson",
+    updated: "2d ago",
+    views: 56,
+    spaceColor: "#0052CC",
+  },
+  {
+    id: 5,
+    title: "Onboarding Checklist",
+    space: "GEN",
+    author: "Sarah Kim",
+    updated: "3d ago",
+    views: 317,
+    spaceColor: "#036c5f",
+  },
+  {
+    id: 6,
+    title: "Infrastructure Architecture",
+    space: "ENG",
+    author: "Alex Chen",
+    updated: "1w ago",
+    views: 98,
+    spaceColor: "#0052CC",
+  },
 ];
 
 export default function ConfluenceView() {
   const [activeSpace, setActiveSpace] = useState<number | null>(null);
 
-  const filtered = activeSpace ? PAGES.filter(p => SPACES.find(s => s.id === activeSpace)?.key === p.space) : PAGES;
+  const filtered = activeSpace ? PAGES.filter((p) => SPACES.find((s) => s.id === activeSpace)?.key === p.space) : PAGES;
 
   return (
     <div className="w-full p-4">
       {/* Spaces */}
       <div className="mb-4">
-        <h3 className="text-sm font-semibold text-slate-700 mb-3" style={{ fontFamily: "var(--font-display)" }}>Spaces</h3>
+        <h3 className="text-sm font-semibold text-slate-700 mb-3" style={{ fontFamily: "var(--font-display)" }}>
+          Spaces
+        </h3>
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveSpace(null)}
@@ -70,15 +120,28 @@ export default function ConfluenceView() {
             Recent Spaces
           </h3>
           <button className="flex items-center gap-1.5 text-xs text-[#036c5f] font-medium hover:text-[#024d44]">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
             New Space
           </button>
         </div>
         <div className="divide-y divide-slate-50">
           {filtered.map((page) => (
-            <div key={page.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors cursor-pointer group">
+            <div
+              key={page.id}
+              className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors cursor-pointer group"
+            >
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                 style={{ backgroundColor: page.spaceColor }}
@@ -98,8 +161,18 @@ export default function ConfluenceView() {
                 </div>
               </div>
               <div className="flex items-center gap-1 text-slate-400 text-xs flex-shrink-0">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
                 </svg>
                 {page.views}
               </div>

@@ -75,6 +75,22 @@ describe("BillingWebhookService", () => {
     expect(prisma.billingWebhookEvent.create).not.toHaveBeenCalled();
   });
 
+  it("rejects a signed event that does not match the shared subscription-event contract", async () => {
+    const prisma = makePrisma();
+    const service = new BillingWebhookService(
+      prisma as never,
+      config as never,
+      { invalidate: jest.fn() } as never,
+      { billingWebhookDeadLettered: jest.fn() } as never,
+    );
+    const request = stripeRequest({ ...event, type: "invoice.created" });
+
+    await expect(service.process("stripe", request.signature, request.rawBody)).rejects.toMatchObject({
+      code: "VALIDATION_FAILED",
+    });
+    expect(prisma.billingWebhookEvent.create).not.toHaveBeenCalled();
+  });
+
   it("acknowledges an already successful provider event without reprocessing it", async () => {
     const prisma = makePrisma();
     prisma.billingWebhookEvent.findUnique.mockResolvedValue({ status: "SUCCEEDED" });

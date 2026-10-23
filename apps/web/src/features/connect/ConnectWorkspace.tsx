@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
-import { CircularProgress } from "@mui/material";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type {
   ConnectConversation,
@@ -771,7 +770,11 @@ export default function ConnectWorkspace() {
   if (live.loading || !live.user)
     return (
       <div className="flex h-full w-full items-center justify-center text-brand">
-        <CircularProgress color="inherit" aria-label="Loading Connect" />
+        <span
+          aria-label="Loading Connect"
+          className="size-8 animate-spin rounded-full border-4 border-brand border-t-transparent"
+          role="status"
+        />
       </div>
     );
 

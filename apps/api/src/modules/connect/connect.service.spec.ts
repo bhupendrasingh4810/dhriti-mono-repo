@@ -3,10 +3,10 @@ import type { Channel } from "@prisma/client";
 
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
-import { PrismaService } from "../../database/prisma.service";
-import { ConnectPublisherService } from "../../websocket/connect/connect-publisher.service";
-import { AuditService } from "../audit/audit.service";
-import { EntitlementService } from "../authorization/services/entitlement.service";
+import type { PrismaService } from "../../database/prisma.service";
+import type { ConnectPublisherService } from "../../websocket/connect/connect-publisher.service";
+import type { AuditService } from "../audit/audit.service";
+import type { EntitlementService } from "../authorization/services/entitlement.service";
 import { ConnectService } from "./connect.service";
 
 describe("ConnectService message restore", () => {

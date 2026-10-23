@@ -886,7 +886,7 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                <p className="text-sm text-slate-600 leading-relaxed flex-1 mb-6">"{t.quote}"</p>
+                <p className="text-sm text-slate-600 leading-relaxed flex-1 mb-6">&quot;{t.quote}&quot;</p>
 
                 <div className="flex items-center gap-3">
                   <div
@@ -934,7 +934,7 @@ export default function LandingPage() {
               className="text-5xl font-black text-white mb-5"
               style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.03em" }}
             >
-              Your team's best work
+              Your team&apos;s best work
               <br />
               <span style={{ color: "#4ade80" }}>starts here.</span>
             </h2>
@@ -999,7 +999,7 @@ export default function LandingPage() {
               >
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span className="text-green-400 font-semibold text-sm">You're on the list! Check your inbox.</span>
+              <span className="text-green-400 font-semibold text-sm">You&apos;re on the list! Check your inbox.</span>
             </div>
           )}
 

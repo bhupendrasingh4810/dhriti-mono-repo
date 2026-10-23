@@ -37,33 +37,20 @@ describe("TenantGuard", () => {
     const prisma = {
       organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
       userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
-      user: { findFirst: jest.fn().mockResolvedValue(null) },
-      organization: { findFirst: jest.fn().mockResolvedValue({ id: organizationId }) },
     };
     const guard = new TenantGuard(prisma as never);
 
     await expect(guard.canActivate(context() as never)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it("allows an active platform administrator without organization membership", async () => {
+  it("does not allow a platform administrator without organization membership", async () => {
     const prisma = {
       organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
       userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
-      user: { findFirst: jest.fn().mockResolvedValue({ role: "PLATFORM_ADMIN" }) },
-      organization: { findFirst: jest.fn().mockResolvedValue({ id: organizationId }) },
-    };
-    const request: {
-      user: { userId: string; organizationId: string; sessionId: string };
-      headers: Record<string, string>;
-      organization?: { organizationId: string; memberId: string | null; role: string };
-    } = {
-      user: { userId: "user-a", organizationId, sessionId: "session-a" },
-      headers: {},
     };
     const guard = new TenantGuard(prisma as never);
 
-    await expect(guard.canActivate({ switchToHttp: () => ({ getRequest: () => request }) } as never)).resolves.toBe(true);
-    expect(request.organization).toEqual({ organizationId, memberId: null, role: "PLATFORM_ADMIN" });
+    await expect(guard.canActivate(context() as never)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("rejects an invalid organization identifier before querying membership", async () => {
@@ -74,6 +61,21 @@ describe("TenantGuard", () => {
     const guard = new TenantGuard(prisma as never);
 
     await expect(guard.canActivate(context(null) as never)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(prisma.organizationMember.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("rejects an organization header that differs from the authenticated session", async () => {
+    const prisma = {
+      organizationMember: { findFirst: jest.fn() },
+      userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
+    };
+    const request = {
+      user: { userId: "user-a", organizationId, sessionId: "session-a" },
+      headers: { "x-organization-id": "22222222-2222-4222-8222-222222222222" },
+    };
+    const guard = new TenantGuard(prisma as never);
+
+    await expect(guard.canActivate({ switchToHttp: () => ({ getRequest: () => request }) } as never)).rejects.toBeInstanceOf(ForbiddenException);
     expect(prisma.organizationMember.findFirst).not.toHaveBeenCalled();
   });
 });

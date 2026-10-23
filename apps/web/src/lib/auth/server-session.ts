@@ -1,7 +1,6 @@
 // apps/web/src/lib/auth/server-session.ts
 import { cookies } from "next/headers";
 import { decodeJWT } from "./tokens";
-import { User } from "@/types/user.types";
 
 export interface SessionUser {
   id: string;
@@ -14,6 +13,8 @@ export interface SessionUser {
   };
 }
 
+type DecodedSessionUser = Partial<SessionUser> & { userId?: string };
+
 export async function getSession(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const userCoockie = cookieStore.get("user")?.value;
@@ -22,9 +23,9 @@ export async function getSession(): Promise<SessionUser | null> {
     return null;
   }
 
-  const user: any = decodeJWT(userCoockie);
+  const user = decodeJWT(userCoockie) as DecodedSessionUser;
 
-  if (!user?.id) {
+  if (!user.userId || !user.email || !user.name || !user.organization) {
     return null;
   }
 

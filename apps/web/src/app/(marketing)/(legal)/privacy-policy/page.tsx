@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const DATA_CATEGORIES = [
   { icon: "👤", label: "Identity", examples: "Name, email, profile photo", color: "#e6f4f2", accent: "#036c5f" },
   { icon: "🖥️", label: "Usage", examples: "Features used, session data", color: "#eff6ff", accent: "#2563eb" },
@@ -241,13 +243,13 @@ export default function PrivacyPage() {
               <p className="text-sm font-semibold text-slate-800">Exercise your rights</p>
               <p className="text-xs text-slate-500 mt-0.5">Submit a request and we&apos;ll respond within 30 days</p>
             </div>
-            <a
+            <Link
               href="/contact-us"
               className="px-4 py-2 rounded-lg text-sm font-semibold text-white flex-shrink-0 transition-all"
               style={{ backgroundColor: "#036c5f" }}
             >
               Contact privacy team
-            </a>
+            </Link>
           </div>
         </section>
       </div>

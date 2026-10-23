@@ -67,13 +67,7 @@ export class SessionService {
       },
     });
 
-    await this.cacheSession(session);
-    const sessionTtlSeconds = Math.max(1, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
-    await this.redis.raw
-      .multi()
-      .sadd(userSessionsKey(userId), session.id)
-      .expire(userSessionsKey(userId), sessionTtlSeconds)
-      .exec();
+    await this.trackSession(session);
 
     return { sessionId: session.id, refreshToken, expiresAt };
   }
@@ -109,19 +103,46 @@ export class SessionService {
 
     const nextRefreshToken = this.tokens.generateOpaqueToken();
 
-    const updated = await this.prisma.userSession.update({
-      where: { id: session.id },
-      data: {
-        rotatedAt: now,
-        refreshTokenHash: this.tokens.hashToken(nextRefreshToken),
-        ipAddress: context.ipAddress ?? session.ipAddress,
-        userAgent: context.userAgent ?? session.userAgent,
-      },
+    const nextSession = await this.prisma.$transaction(async (tx) => {
+      const transition = await tx.userSession.updateMany({
+        where: {
+          id: session.id,
+          refreshTokenHash: tokenHash,
+          rotatedAt: null,
+          revokedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { rotatedAt: now, revokedAt: now },
+      });
+      if (transition.count !== 1) {return null;}
+
+      return tx.userSession.create({
+        data: {
+          userId: session.userId,
+          organizationId: session.organizationId,
+          refreshTokenHash: this.tokens.hashToken(nextRefreshToken),
+          ipAddress: context.ipAddress ?? session.ipAddress,
+          userAgent: context.userAgent ?? session.userAgent,
+          expiresAt: session.expiresAt,
+        },
+      });
     });
 
-    await this.cacheSession(updated);
+    if (!nextSession) {
+      await this.revokeAllUserSessions(session.userId);
+      this.logger.warn(`Refresh token reuse detected for user=${session.userId}; all sessions revoked`);
+      throw new AppError(
+        ErrorCode.REFRESH_TOKEN_REUSED,
+        "Refresh token was already used; all sessions have been revoked",
+        HttpStatus.UNAUTHORIZED,
+      );
+    }
 
-    return { sessionId: updated.id, refreshToken: nextRefreshToken, expiresAt: updated.expiresAt };
+    await this.redis.delete(sessionKey(session.id));
+    await this.redis.raw.publish(SESSION_REVOCATION_CHANNEL, session.id);
+    await this.trackSession(nextSession);
+
+    return { sessionId: nextSession.id, refreshToken: nextRefreshToken, expiresAt: nextSession.expiresAt };
   }
 
   /**
@@ -222,6 +243,16 @@ export class SessionService {
       expiresAt: session.expiresAt.toISOString(),
     };
     await this.redis.setJson(sessionKey(session.id), payload, ttlSeconds);
+  }
+
+  private async trackSession(session: UserSession): Promise<void> {
+    await this.cacheSession(session);
+    const sessionTtlSeconds = Math.max(1, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000));
+    await this.redis.raw
+      .multi()
+      .sadd(userSessionsKey(session.userId), session.id)
+      .expire(userSessionsKey(session.userId), sessionTtlSeconds)
+      .exec();
   }
 
   private refreshExpiry(): Date {

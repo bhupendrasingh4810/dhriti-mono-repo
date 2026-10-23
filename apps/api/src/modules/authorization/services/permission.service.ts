@@ -52,7 +52,7 @@ export class PermissionService {
   }
 
   async hasPermission(params: PermissionCheck): Promise<boolean> {
-    if (await this.hasUnrestrictedPlatformAccess(params.userId, params.organizationId)) return true;
+    if (await this.hasUnrestrictedPlatformAccess(params.userId, params.organizationId)) {return true;}
 
     const membership = await this.prisma.organizationMember.findFirst({
       where: { organizationId: params.organizationId, userId: params.userId, status: "ACTIVE", deletedAt: null },

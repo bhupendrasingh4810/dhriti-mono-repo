@@ -42,7 +42,9 @@ export function useConversationHistory({
     if (!list || loading || error) return;
     const lastMessage = messages[messages.length - 1];
     if (initializedConversation.current !== conversationId) {
-      const unreadElement = firstUnreadId ? list.querySelector<HTMLElement>(`[data-message-id="${firstUnreadId}"]`) : null;
+      const unreadElement = firstUnreadId
+        ? list.querySelector<HTMLElement>(`[data-message-id="${firstUnreadId}"]`)
+        : null;
       list.scrollTop = unreadElement
         ? unreadElement.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop
         : list.scrollHeight;
@@ -51,10 +53,14 @@ export function useConversationHistory({
     } else if (scrollAnchor.current) {
       const anchor = scrollAnchor.current;
       const element = list.querySelector<HTMLElement>(`[data-message-id="${anchor.id}"]`);
-      if (element) list.scrollTop += element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
+      if (element)
+        list.scrollTop += element.getBoundingClientRect().top - list.getBoundingClientRect().top - anchor.offset;
       if (!loadingMore) scrollAnchor.current = null;
-    } else if (lastMessage?.id !== previousLastMessage.current && !hasNewerMessages
-      && (nearBottom.current || lastMessage?.senderId === currentUserId)) {
+    } else if (
+      lastMessage?.id !== previousLastMessage.current &&
+      !hasNewerMessages &&
+      (nearBottom.current || lastMessage?.senderId === currentUserId)
+    ) {
       list.scrollTop = list.scrollHeight;
     }
     previousLastMessage.current = lastMessage?.id ?? null;
@@ -67,19 +73,24 @@ export function useConversationHistory({
     const visibleIncoming = new Map<string, ConnectConversationMessage>();
     const reportVisible = () => {
       if (document.visibilityState !== "visible") return;
-      const latest = [...visibleIncoming.values()].sort((first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt))[0];
+      const latest = [...visibleIncoming.values()].sort(
+        (first, second) => Date.parse(second.createdAt) - Date.parse(first.createdAt),
+      )[0];
       if (latest) notifyRead(latest.id);
     };
-    const observer = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        const messageId = (entry.target as HTMLElement).dataset.messageId;
-        const message = messages.find((item) => item.id === messageId);
-        if (!message || message.senderId === currentUserId) continue;
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) visibleIncoming.set(message.id, message);
-        else visibleIncoming.delete(message.id);
-      }
-      reportVisible();
-    }, { root: list, threshold: [0, 0.5] });
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const messageId = (entry.target as HTMLElement).dataset.messageId;
+          const message = messages.find((item) => item.id === messageId);
+          if (!message || message.senderId === currentUserId) continue;
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.5) visibleIncoming.set(message.id, message);
+          else visibleIncoming.delete(message.id);
+        }
+        reportVisible();
+      },
+      { root: list, threshold: [0, 0.5] },
+    );
     list.querySelectorAll("[data-message-id]").forEach((element) => observer.observe(element));
     document.addEventListener("visibilitychange", reportVisible);
     return () => {
@@ -93,7 +104,11 @@ export function useConversationHistory({
     const list = messageListRef.current;
     if (direction === "older" && list) {
       const first = list.querySelector<HTMLElement>("[data-message-id]");
-      if (first) scrollAnchor.current = { id: first.dataset.messageId!, offset: first.getBoundingClientRect().top - list.getBoundingClientRect().top };
+      if (first)
+        scrollAnchor.current = {
+          id: first.dataset.messageId!,
+          offset: first.getBoundingClientRect().top - list.getBoundingClientRect().top,
+        };
     }
     onLoadMore?.(direction);
   }

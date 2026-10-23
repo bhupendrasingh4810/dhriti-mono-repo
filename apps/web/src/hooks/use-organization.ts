@@ -4,6 +4,12 @@ import { useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { usePathname } from "next/navigation";
 
+type OrganizationRole = "owner" | "admin" | "member";
+
+function isOrganizationRole(role: string | undefined): role is OrganizationRole {
+  return role === "owner" || role === "admin" || role === "member";
+}
+
 /**
  * Hook to access the current organization context.
  * Extracts organization from URL and validates user membership.
@@ -28,7 +34,8 @@ export function useOrganization() {
   }, [user, currentOrg]);
 
   const isMember = !!organization;
-  // const role = organization?.role || null;
+  const role = user?.role.toLowerCase();
+  const organizationRole = isOrganizationRole(role) ? role : null;
 
   return {
     /** Current organization name from URL */
@@ -38,7 +45,7 @@ export function useOrganization() {
     /** Whether user is a member of this organization */
     isMember,
     /** User's role in this organization (owner, admin, member) */
-    // role,
+    role: organizationRole,
     /** Alias for isMember - can user access this org? */
     canAccess: isMember,
   };

@@ -1,5 +1,3 @@
-import { Stack, Typography } from "@dhriti/ui";
-
 interface SectionHeadingProps {
   eyebrow?: string;
   title: string;
@@ -8,25 +6,10 @@ interface SectionHeadingProps {
 
 export function SectionHeading({ eyebrow, title, description }: SectionHeadingProps) {
   return (
-    <Stack spacing={1.5} sx={{ alignItems: "flex-start" }}>
-      {eyebrow ? (
-        <Typography
-          variant="overline"
-          sx={{
-            textTransform: "uppercase",
-            color: "primary.main",
-            fontWeight: 800,
-          }}
-        >
-          {eyebrow}
-        </Typography>
-      ) : null}
-      <Typography variant="h3" sx={{ fontWeight: 800, color: "text.primary" }}>
-        {title}
-      </Typography>
-      <Typography variant="body1" sx={{ color: "text.secondary", maxWidth: 640 }}>
-        {description}
-      </Typography>
-    </Stack>
+    <section className="flex flex-col items-start gap-1.5">
+      {eyebrow ? <p className="text-xs font-extrabold uppercase text-brand">{eyebrow}</p> : null}
+      <h2 className="text-3xl font-extrabold text-text-primary">{title}</h2>
+      <p className="max-w-[40rem] text-base text-text-secondary">{description}</p>
+    </section>
   );
 }

@@ -16,7 +16,7 @@ export async function assignDefaultUserPermissionGroups(
     },
     select: { id: true },
   });
-  if (groups.length === 0) return;
+  if (groups.length === 0) {return;}
 
   const assignmentWhere = {
     organizationId,

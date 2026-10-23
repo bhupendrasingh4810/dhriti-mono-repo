@@ -49,10 +49,18 @@ export function PlanDrawer({
               {mode === "edit" ? `Edit ${plan.name}` : plan.name}
             </h2>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              {mode === "edit" ? "Configure the entitlements included with this plan." : plan.description || "No description provided."}
+              {mode === "edit"
+                ? "Configure the entitlements included with this plan."
+                : plan.description || "No description provided."}
             </p>
           </div>
-          <button type="button" aria-label="Close plan details" className="cursor-pointer text-slate-500 hover:text-slate-950" title="Close" onClick={onClose}>
+          <button
+            type="button"
+            aria-label="Close plan details"
+            className="cursor-pointer text-slate-500 hover:text-slate-950"
+            title="Close"
+            onClick={onClose}
+          >
             <Icon name="close" />
           </button>
         </div>
@@ -66,7 +74,9 @@ export function PlanDrawer({
             />
           ) : (
             <div className="space-y-4">
-              <code className="inline-block rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">{plan.key}</code>
+              <code className="inline-block rounded bg-slate-100 px-2 py-1 font-mono text-xs text-slate-600">
+                {plan.key}
+              </code>
               <div>
                 <h3 className="text-sm font-semibold text-slate-950">Included entitlements</h3>
                 <div className="mt-3 space-y-2">
@@ -78,27 +88,41 @@ export function PlanDrawer({
                           <code className="text-xs text-slate-500">{entitlement.key}</code>
                         </div>
                         <span className="text-xs font-semibold text-slate-600">
-                          {enabled ? (entitlement.kind === "LIMIT" ? value ?? 0 : "Enabled") : "Disabled"}
+                          {enabled ? (entitlement.kind === "LIMIT" ? (value ?? 0) : "Enabled") : "Disabled"}
                         </span>
                       </div>
                     </div>
                   ))}
-                  {plan.entitlements.length === 0 && <p className="text-sm text-slate-500">No entitlements are included in this plan.</p>}
+                  {plan.entitlements.length === 0 && (
+                    <p className="text-sm text-slate-500">No entitlements are included in this plan.</p>
+                  )}
                 </div>
               </div>
             </div>
           )}
         </div>
         <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4">
-          <button type="button" className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700" onClick={onClose}>
+          <button
+            type="button"
+            className="cursor-pointer rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+            onClick={onClose}
+          >
             Cancel
           </button>
           {mode === "edit" ? (
-            <button type="button" className="cursor-pointer rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white" onClick={onSave}>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white"
+              onClick={onSave}
+            >
               Save access
             </button>
           ) : (
-            <button type="button" className="cursor-pointer rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white" onClick={onEdit}>
+            <button
+              type="button"
+              className="cursor-pointer rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white"
+              onClick={onEdit}
+            >
               Edit
             </button>
           )}

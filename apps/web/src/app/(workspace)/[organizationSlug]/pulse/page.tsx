@@ -1,15 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  AddRounded,
-  ChevronLeftRounded,
-  ChevronRightRounded,
-  FilterListRounded,
-  MoreVertRounded,
-} from "@mui/icons-material";
-import { Avatar, Box, Button, Checkbox, Divider, IconButton, Paper, Stack, Typography } from "@dhriti/ui";
-import { alpha } from "@mui/material/styles";
+import { ChevronLeft, ChevronRight, Filter, MoreVertical, Plus } from "lucide-react";
 
 type EventTone = "info" | "success" | "warning" | "secondary" | "error";
 
@@ -110,33 +102,13 @@ const events: CalendarEvent[] = [
   },
 ];
 
-function eventPalette(tone: EventTone) {
-  if (tone === "success") {
-    return {
-      border: "success.main",
-      bg: (theme: any) => alpha(theme.palette.success.main, 0.12),
-      text: "success.dark",
-    };
-  }
-  if (tone === "warning") {
-    return {
-      border: "warning.main",
-      bg: (theme: any) => alpha(theme.palette.warning.main, 0.12),
-      text: "warning.dark",
-    };
-  }
-  if (tone === "secondary") {
-    return {
-      border: "secondary.main",
-      bg: (theme: any) => alpha(theme.palette.secondary.main, 0.12),
-      text: "secondary.main",
-    };
-  }
-  if (tone === "error") {
-    return { border: "error.main", bg: (theme: any) => alpha(theme.palette.error.main, 0.12), text: "error.dark" };
-  }
-  return { border: "info.main", bg: (theme: any) => alpha(theme.palette.info.main, 0.12), text: "info.dark" };
-}
+const eventToneClasses: Record<EventTone, string> = {
+  success: "border-success bg-success/10 text-success",
+  warning: "border-warning bg-warning/10 text-warning",
+  secondary: "border-brand bg-brand-muted text-brand",
+  error: "border-error bg-error/10 text-error",
+  info: "border-info bg-info/10 text-info",
+};
 
 function MiniCalendar({ value, onChange }: { value: Date; onChange: (date: Date) => void }) {
   const monthStart = new Date(value.getFullYear(), value.getMonth(), 1);
@@ -148,38 +120,33 @@ function MiniCalendar({ value, onChange }: { value: Date; onChange: (date: Date)
   });
 
   return (
-    <Stack spacing={1.5}>
-      <Typography variant="h6" sx={{ fontWeight: "fontWeightBold" }}>
+    <section className="flex flex-col gap-1.5">
+      <h2 className="text-lg font-bold text-text-primary">
         {value.toLocaleString("default", { month: "long", year: "numeric" })}
-      </Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 0.5 }}>
+      </h2>
+      <div className="grid grid-cols-7 gap-0.5">
         {["S", "M", "T", "W", "T", "F", "S"].map((label, index) => (
-          <Typography
-            key={`${label}-${index}`}
-            variant="caption"
-            color="text.disabled"
-            sx={{ textAlign: "center", fontWeight: 700 }}
-          >
+          <span key={`${label}-${index}`} className="text-center text-xs font-bold text-text-muted">
             {label}
-          </Typography>
+          </span>
         ))}
         {cells.map((day, index) => {
           const selected = day === value.getDate();
           return (
-            <Button
+            <button
               key={`${day ?? "empty"}-${index}`}
-              size="small"
               disabled={!day}
-              variant={selected ? "contained" : "text"}
               onClick={() => day && onChange(new Date(value.getFullYear(), value.getMonth(), day))}
-              sx={{ minWidth: 0, width: 32, height: 32, p: 0, borderRadius: (theme) => theme.tokens.radius.pill }}
+              className={`h-8 w-8 rounded-full text-sm font-medium ${
+                selected ? "bg-brand text-white" : "text-text-secondary hover:bg-brand-muted"
+              } disabled:cursor-default disabled:opacity-0`}
             >
               {day ?? ""}
-            </Button>
+            </button>
           );
         })}
-      </Box>
-    </Stack>
+      </div>
+    </section>
   );
 }
 
@@ -192,279 +159,184 @@ export default function PulsePage() {
   }, [selectedDate]);
 
   return (
-    <Box
-      sx={{
-        bgcolor: "background.paper",
-        color: "text.primary",
-        height: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
-    >
-      <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
-        <Box
-          sx={{ width: 300, borderRight: 1, borderColor: "divider", bgcolor: "background.paper", overflowY: "auto" }}
-        >
-          <Box sx={{ p: 2.5 }}>
+    <main className="flex h-screen flex-col overflow-hidden bg-surface text-text-primary">
+      <div className="flex min-h-0 flex-1">
+        <aside className="w-75 overflow-y-auto border-r border-border bg-surface">
+          <div className="p-5">
             <MiniCalendar value={selectedDate} onChange={setSelectedDate} />
-          </Box>
-          <Divider />
-          <Stack spacing={3} sx={{ p: 2.5 }}>
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: "text.secondary",
-                  fontWeight: 800,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  mb: 1.25,
-                }}
-              >
+          </div>
+          <div className="border-t border-border" />
+          <div className="flex flex-col gap-6 p-5">
+            <section>
+              <h2 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-secondary">
                 My Calendars
-              </Typography>
-              <Stack spacing={1.25}>
+              </h2>
+              <div className="flex flex-col gap-1.5">
                 {[
                   { label: "Calendar", checked: true },
                   { label: "Birthdays", checked: true },
                   { label: "Holidays", checked: true },
                 ].map((item) => (
-                  <Stack key={item.label} direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                    <Checkbox checked={item.checked} size="small" />
-                    <Typography sx={{ fontSize: 14, color: "text.secondary", fontWeight: 600 }}>
-                      {item.label}
-                    </Typography>
-                  </Stack>
+                  <label key={item.label} className="flex items-center gap-2 text-sm font-semibold text-text-secondary">
+                    <input checked={item.checked} readOnly type="checkbox" className="accent-brand" />
+                    {item.label}
+                  </label>
                 ))}
-              </Stack>
-            </Box>
+              </div>
+            </section>
 
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  color: "text.secondary",
-                  fontWeight: 800,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  mb: 1.25,
-                }}
-              >
+            <section>
+              <h2 className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-secondary">
                 Team: Rahul Sharma
-              </Typography>
-              <Stack spacing={1}>
+              </h2>
+              <div className="flex flex-col gap-1">
                 {["Rahul Sharma (You)", "Amit Verma", "Priya Nair", "Neha Joshi", "Karan Mehta"].map((name, index) => (
-                  <Stack key={name} direction="row" spacing={1} sx={{ alignItems: "center" }}>
-                    <Checkbox checked={index === 0} size="small" />
-                    <Avatar sx={{ width: 20, height: 20, fontSize: 10 }}>
+                  <label key={name} className="flex items-center gap-2 text-sm font-semibold text-text-secondary">
+                    <input checked={index === 0} readOnly type="checkbox" className="accent-brand" />
+                    <span className="flex size-5 items-center justify-center rounded-full bg-brand text-[10px] text-white">
                       {name
                         .split(" ")
                         .map((part) => part[0])
                         .slice(0, 2)
                         .join("")}
-                    </Avatar>
-                    <Typography sx={{ fontSize: 14, color: "text.secondary", fontWeight: 600 }}>{name}</Typography>
-                  </Stack>
+                    </span>
+                    {name}
+                  </label>
                 ))}
-              </Stack>
-            </Box>
-          </Stack>
-        </Box>
+              </div>
+            </section>
+          </div>
+        </aside>
 
-        <Box sx={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", bgcolor: "background.default" }}>
-          <Stack
-            direction="row"
-            sx={{
-              p: 2.5,
-              borderBottom: 1,
-              borderColor: "divider",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 1.5,
-              bgcolor: "background.paper",
-            }}
-          >
-            <Stack direction="row" spacing={1.25} sx={{ alignItems: "center" }}>
-              <Button variant="outlined" size="small">
-                Today
-              </Button>
-              <IconButton size="small">
-                <ChevronLeftRounded />
-              </IconButton>
-              <IconButton size="small">
-                <ChevronRightRounded />
-              </IconButton>
-              <Typography sx={{ fontSize: 18, fontWeight: 800 }}>25 - 29 August 2025</Typography>
-            </Stack>
-
-            <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
-              <Button variant="outlined" sx={{ px: 0 }} startIcon={<FilterListRounded />} />
-              <Button variant="contained" startIcon={<AddRounded />}>
-                New Meeting
-              </Button>
-              <IconButton>
-                <MoreVertRounded />
-              </IconButton>
-            </Stack>
-          </Stack>
-
-          <Box sx={{ flex: 1, minHeight: 0, overflow: "auto", position: "relative" }}>
-            <Box
-              sx={{
-                minWidth: 980,
-                display: "grid",
-                gridTemplateColumns: "80px repeat(5, minmax(160px, 1fr))",
-                gridTemplateRows: "56px 44px",
-                gridAutoRows: "80px",
-                bgcolor: "background.paper",
-              }}
-            >
-              <Box
-                sx={{
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 3,
-                  borderBottom: 1,
-                  borderRight: 1,
-                  borderColor: "divider",
-                  bgcolor: "background.paper",
-                  display: "grid",
-                  placeItems: "center",
-                }}
+        <div className="flex min-w-0 flex-1 flex-col bg-background">
+          <div className="flex items-center justify-between gap-1.5 border-b border-border bg-surface p-5">
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-text-primary"
               >
-                <Typography
-                  sx={{
-                    fontSize: 11,
-                    color: "text.secondary",
-                    fontWeight: 800,
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Time
-                </Typography>
-              </Box>
+                Today
+              </button>
+              <button
+                type="button"
+                aria-label="Previous week"
+                className="rounded-md p-1.5 text-text-secondary hover:bg-surface-raised"
+              >
+                <ChevronLeft aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                aria-label="Next week"
+                className="rounded-md p-1.5 text-text-secondary hover:bg-surface-raised"
+              >
+                <ChevronRight aria-hidden="true" />
+              </button>
+              <h2 className="text-lg font-extrabold text-text-primary">25 - 29 August 2025</h2>
+            </div>
+
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Filter"
+                className="rounded-md border border-border p-1.5 text-text-secondary hover:bg-surface-raised"
+              >
+                <Filter aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
+              >
+                <Plus aria-hidden="true" />
+                New Meeting
+              </button>
+              <button
+                type="button"
+                aria-label="More actions"
+                className="rounded-md p-1.5 text-text-secondary hover:bg-surface-raised"
+              >
+                <MoreVertical aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          <div className="relative min-h-0 flex-1 overflow-auto">
+            <div className="grid min-w-[980px] grid-cols-[80px_repeat(5,minmax(160px,1fr))] grid-rows-[56px_44px] auto-rows-[80px] bg-surface">
+              <div className="sticky top-0 z-3 grid place-items-center border-b border-r border-border bg-surface">
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-text-secondary">Time</span>
+              </div>
               {dayHeaders.map((day, index) => (
-                <Box
+                <div
                   key={day}
-                  sx={{
-                    position: "sticky",
-                    top: 0,
-                    zIndex: 3,
-                    borderBottom: 1,
-                    borderColor: "divider",
-                    bgcolor: "background.paper",
-                    display: "grid",
-                    placeItems: "center",
-                    color: index === 4 ? "primary.main" : "text.secondary",
-                  }}
+                  className={`sticky top-0 z-3 grid place-items-center border-b border-border bg-surface ${
+                    index === 4 ? "text-brand" : "text-text-secondary"
+                  }`}
                 >
-                  <Typography sx={{ fontSize: 13, fontWeight: 800 }}>{day}</Typography>
-                </Box>
+                  <span className="text-[13px] font-extrabold">{day}</span>
+                </div>
               ))}
 
-              <Box
-                sx={{ borderBottom: 1, borderRight: 1, borderColor: "divider", display: "grid", placeItems: "center" }}
-              >
-                <Typography sx={{ fontSize: 11, fontWeight: 700, color: "text.secondary" }}>All Day</Typography>
-              </Box>
+              <div className="grid place-items-center border-b border-r border-border">
+                <span className="text-[11px] font-bold text-text-secondary">All Day</span>
+              </div>
               {["Independence Day", "", "Priya Nair Birthday", "", ""].map((label, index) => (
-                <Box
+                <div
                   key={`all-day-${index}`}
-                  sx={{ borderBottom: 1, borderRight: index < 4 ? 1 : 0, borderColor: "divider", p: 0.75 }}
+                  className={`border-b border-border p-0.75 ${index < 4 ? "border-r" : ""}`}
                 >
                   {label ? (
-                    <Paper
-                      variant="outlined"
-                      sx={{ px: 1, py: 0.65, borderColor: "divider", bgcolor: "background.default" }}
-                    >
-                      <Typography sx={{ fontSize: 11, fontWeight: 700 }}>{label}</Typography>
-                    </Paper>
+                    <p className="border border-border bg-background px-1 py-0.65 text-[11px] font-bold">{label}</p>
                   ) : null}
-                </Box>
+                </div>
               ))}
 
-              {timeSlots.map((slot, rowIndex) => (
-                <Box key={slot} sx={{ display: "contents" }}>
-                  <Box sx={{ borderBottom: 1, borderRight: 1, borderColor: "divider", p: 1 }}>
-                    <Typography sx={{ fontSize: 11, color: "text.secondary", fontWeight: 700 }}>{slot}</Typography>
-                  </Box>
+              {timeSlots.map((slot) => (
+                <div key={slot} className="contents">
+                  <div className="border-b border-r border-border p-1">
+                    <span className="text-[11px] font-bold text-text-secondary">{slot}</span>
+                  </div>
                   {Array.from({ length: 5 }).map((_, colIndex) => (
-                    <Box
+                    <div
                       key={`${slot}-${colIndex}`}
-                      sx={{
-                        borderBottom: 1,
-                        borderRight: colIndex < 4 ? 1 : 0,
-                        borderColor: "divider",
-                        position: "relative",
-                      }}
+                      className={`relative border-b border-border ${colIndex < 4 ? "border-r" : ""}`}
                     />
                   ))}
-                </Box>
+                </div>
               ))}
 
               {events.map((event) => {
-                const palette = eventPalette(event.tone);
                 const top = 56 + 44 + (event.startHour - 8) * 80;
-                const left = 80 + event.day * ((100 - 0) / 5);
-
                 return (
-                  <Box
+                  <div
                     key={event.id}
-                    sx={{
-                      position: "absolute",
+                    className={`absolute z-2 overflow-hidden rounded-md border-l-4 p-1 ${eventToneClasses[event.tone]}`}
+                    style={{
                       top,
                       left: `calc(80px + (${event.day} * (100% - 80px) / 5) + 8px)`,
                       width: "calc((100% - 80px) / 5 - 16px)",
                       height: Math.max(event.durationHours * 80 - 8, 48),
-                      borderLeft: 4,
-                      borderColor: palette.border,
-                      bgcolor: palette.bg,
-                      borderRadius: (theme) => theme.tokens.radius.md,
-                      p: 1,
-                      overflow: "hidden",
-                      zIndex: 2,
                     }}
                   >
-                    <Typography sx={{ fontSize: 11, fontWeight: 800, color: palette.text, lineHeight: 1.25 }} noWrap>
-                      {event.title}
-                    </Typography>
-                    <Typography sx={{ fontSize: 10, color: "text.secondary", mt: 0.25 }}>{event.time}</Typography>
-                    <Typography sx={{ fontSize: 10, color: "text.disabled", mt: 0.2 }} noWrap>
-                      {event.location}
-                    </Typography>
-                  </Box>
+                    <p className="truncate text-[11px] font-extrabold leading-[1.25]">{event.title}</p>
+                    <p className="mt-0.25 text-[10px] text-text-secondary">{event.time}</p>
+                    <p className="mt-0.2 truncate text-[10px] text-text-muted">{event.location}</p>
+                  </div>
                 );
               })}
 
-              <Box
-                sx={{
-                  position: "absolute",
+              <div
+                className="absolute z-4 h-0.5 bg-error"
+                style={{
                   left: "calc(80px + (3 * (100% - 80px) / 5))",
                   width: "calc((100% - 80px) / 5)",
                   top: 56 + 44 + nowLinePosition,
-                  height: 2,
-                  bgcolor: "error.main",
-                  zIndex: 4,
                 }}
               >
-                <Box
-                  sx={{
-                    position: "absolute",
-                    top: -4,
-                    left: -4,
-                    width: 8,
-                    height: 8,
-                    borderRadius: (theme) => theme.tokens.radius.pill,
-                    bgcolor: "error.main",
-                  }}
-                />
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-      </Stack>
-    </Box>
+                <span className="absolute -left-1 -top-1 size-2 rounded-full bg-error" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
   );
 }

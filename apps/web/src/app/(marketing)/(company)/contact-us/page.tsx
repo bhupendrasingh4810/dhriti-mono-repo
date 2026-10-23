@@ -119,7 +119,7 @@ export default function ContactPage({ navigate }: Props) {
               Get in touch
             </h1>
             <p className="text-slate-500 text-base">
-              Choose what brings you here and we'll connect you with the right team.
+              Choose what brings you here and we&apos;ll connect you with the right team.
             </p>
           </div>
 
@@ -172,7 +172,8 @@ export default function ContactPage({ navigate }: Props) {
                 Message sent!
               </h3>
               <p className="text-sm text-slate-600 mb-5">
-                We've received your message and will get back to you at <strong>{form.email}</strong> within 24 hours.
+                We&apos;ve received your message and will get back to you at <strong>{form.email}</strong> within 24
+                hours.
               </p>
               <button
                 onClick={() => {

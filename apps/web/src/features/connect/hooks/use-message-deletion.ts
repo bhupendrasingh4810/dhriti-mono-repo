@@ -53,7 +53,7 @@ export function useMessageDeletion({
     setUndoInProgress(true);
     try {
       await connectService.restoreMessage(deletedMessage.organizationId, deletedMessage.message.id);
-      setDeletedMessage((current) => current?.message.id === deletedMessage.message.id ? null : current);
+      setDeletedMessage((current) => (current?.message.id === deletedMessage.message.id ? null : current));
       await loadMessages(deletedMessage.conversationId);
     } catch (reason) {
       onError(reason);

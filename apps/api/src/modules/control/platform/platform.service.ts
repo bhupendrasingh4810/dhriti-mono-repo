@@ -7,6 +7,7 @@ import { RedisService } from "../../../redis/redis.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
+import { assertUserHasNoOtherActiveOrganizationMembership } from "../../organization/services/organization-membership";
 import type {
   CreateEntitlementDto,
   ListPlatformOrganizationsQueryDto,
@@ -84,44 +85,46 @@ export class PlatformService {
       database,
       redis,
     ] = await Promise.all([
-        this.prisma.organization.count({ where: { deletedAt: null } }),
-        this.prisma.subscription.count({ where: { organization: { deletedAt: null }, status: "SUSPENDED" } }),
-        this.prisma.user.count({ where: { deletedAt: null } }),
-        this.prisma.user.count({ where: { deletedAt: null, status: "ACTIVE" } }),
-        this.prisma.userAuth.count({ where: { mfaEnabled: true, user: { deletedAt: null } } }),
-        this.prisma.subscription.groupBy({ by: ["status"], _count: true }),
-        this.prisma.product.count(),
-        this.prisma.supportTicket.count({ where: { status: "OPEN" } }),
-        this.prisma.supportTicket.count({ where: { status: "ESCALATED" } }),
-        this.prisma.organization.findMany({
-          where: { deletedAt: null },
-          orderBy: { createdAt: "desc" },
-          take: 8,
-          select: {
-            id: true,
-            name: true,
-            seats: true,
-            _count: { select: { members: true } },
-            subscription: { select: { plan: true, status: true, seats: true } },
+      this.prisma.organization.count({ where: { deletedAt: null } }),
+      this.prisma.subscription.count({ where: { organization: { deletedAt: null }, status: "SUSPENDED" } }),
+      this.prisma.user.count({ where: { deletedAt: null } }),
+      this.prisma.user.count({ where: { deletedAt: null, status: "ACTIVE" } }),
+      this.prisma.userAuth.count({ where: { mfaEnabled: true, user: { deletedAt: null } } }),
+      this.prisma.subscription.groupBy({ by: ["status"], _count: true }),
+      this.prisma.product.count(),
+      this.prisma.supportTicket.count({ where: { status: "OPEN" } }),
+      this.prisma.supportTicket.count({ where: { status: "ESCALATED" } }),
+      this.prisma.organization.findMany({
+        where: { deletedAt: null },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          name: true,
+          seats: true,
+          _count: { select: { members: true } },
+          subscription: { select: { plan: true, status: true, seats: true } },
+        },
+      }),
+      this.prisma.subscription.findMany({
+        where: { status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
+        select: {
+          seats: true,
+          planRecord: {
+            select: { prices: { where: { interval: "MONTH", isActive: true }, select: { amountMinor: true } } },
           },
-        }),
-        this.prisma.subscription.findMany({
-          where: { status: { in: ["ACTIVE", "TRIALING", "PAST_DUE"] } },
-          select: {
-            seats: true,
-            planRecord: { select: { prices: { where: { interval: "MONTH", isActive: true }, select: { amountMinor: true } } } },
-          },
-        }),
-        this.prisma.message.groupBy({
-          by: ["organizationId"],
-          where: { deletedAt: null, createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
-          _count: { id: true },
-          orderBy: { _count: { id: "desc" } },
-          take: 5,
-        }),
-        this.checkDatabase(),
-        this.checkRedis(),
-      ]);
+        },
+      }),
+      this.prisma.message.groupBy({
+        by: ["organizationId"],
+        where: { deletedAt: null, createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } },
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 5,
+      }),
+      this.checkDatabase(),
+      this.checkRedis(),
+    ]);
 
     const subCounts = Object.fromEntries(subs.map((row) => [row.status, row._count]));
     const metrics = this.metrics.snapshot();
@@ -166,8 +169,17 @@ export class PlatformService {
       alerts,
       topOrganizationsByUsage: usageByOrganization.flatMap((entry) => {
         const name = organizationNames.get(entry.organizationId);
-        if (!name) {return [];}
-        return [{ id: entry.organizationId, name, usage: entry._count.id, percentage: highestUsage === 0 ? 0 : Math.round((entry._count.id / highestUsage) * 100) }];
+        if (!name) {
+          return [];
+        }
+        return [
+          {
+            id: entry.organizationId,
+            name,
+            usage: entry._count.id,
+            percentage: highestUsage === 0 ? 0 : Math.round((entry._count.id / highestUsage) * 100),
+          },
+        ];
       }),
       monitoring: { ...metrics, dependencies: { database, redis } },
     };
@@ -186,16 +198,47 @@ export class PlatformService {
   ): PlatformDashboard["alerts"] {
     const observedAt = new Date().toISOString();
     const alerts: PlatformDashboard["alerts"] = [];
-    if (database === "down") {alerts.push({ severity: "critical", message: "Database health check failed", observedAt, source: "database" });}
-    if (redis === "down") {alerts.push({ severity: "critical", message: "Redis health check failed", observedAt, source: "redis" });}
-    if ((metrics.http.p95LatencyMs ?? 0) >= 1_000) {alerts.push({ severity: "critical", message: `API p95 latency is ${Math.round(metrics.http.p95LatencyMs ?? 0)}ms`, observedAt, source: "http" });}
-    else if ((metrics.http.p95LatencyMs ?? 0) >= 500) {alerts.push({ severity: "warning", message: `API p95 latency is ${Math.round(metrics.http.p95LatencyMs ?? 0)}ms`, observedAt, source: "http" });}
-    if (metrics.redis.cacheHitRate !== null && metrics.redis.cacheHitRate < 0.8) {alerts.push({ severity: "warning", message: `Redis cache hit rate is ${Math.round(metrics.redis.cacheHitRate * 100)}%`, observedAt, source: "redis" });}
+    if (database === "down") {
+      alerts.push({ severity: "critical", message: "Database health check failed", observedAt, source: "database" });
+    }
+    if (redis === "down") {
+      alerts.push({ severity: "critical", message: "Redis health check failed", observedAt, source: "redis" });
+    }
+    if ((metrics.http.p95LatencyMs ?? 0) >= 1_000) {
+      alerts.push({
+        severity: "critical",
+        message: `API p95 latency is ${Math.round(metrics.http.p95LatencyMs ?? 0)}ms`,
+        observedAt,
+        source: "http",
+      });
+    } else if ((metrics.http.p95LatencyMs ?? 0) >= 500) {
+      alerts.push({
+        severity: "warning",
+        message: `API p95 latency is ${Math.round(metrics.http.p95LatencyMs ?? 0)}ms`,
+        observedAt,
+        source: "http",
+      });
+    }
+    if (metrics.redis.cacheHitRate !== null && metrics.redis.cacheHitRate < 0.8) {
+      alerts.push({
+        severity: "warning",
+        message: `Redis cache hit rate is ${Math.round(metrics.redis.cacheHitRate * 100)}%`,
+        observedAt,
+        source: "redis",
+      });
+    }
     const nearCapacity = organizations.filter((organization) => {
       const purchasedSeats = organization.subscription?.seats ?? organization.seats;
       return purchasedSeats > 0 && organization._count.members / purchasedSeats >= 0.8;
     });
-    if (nearCapacity.length > 0) {alerts.push({ severity: "info", message: `${nearCapacity.length} recent organization${nearCapacity.length === 1 ? " is" : "s are"} at or above 80% of configured seats`, observedAt, source: "organization" });}
+    if (nearCapacity.length > 0) {
+      alerts.push({
+        severity: "info",
+        message: `${nearCapacity.length} recent organization${nearCapacity.length === 1 ? " is" : "s are"} at or above 80% of configured seats`,
+        observedAt,
+        source: "organization",
+      });
+    }
     return alerts;
   }
 
@@ -230,7 +273,11 @@ export class PlatformService {
       deletedAt: null,
       ...(query.search ? { name: { contains: query.search, mode: "insensitive" } } : {}),
       ...(query.plan || query.status
-        ? { subscription: { is: { ...(query.plan ? { plan: query.plan } : {}), ...(query.status ? { status: query.status } : {}) } } }
+        ? {
+            subscription: {
+              is: { ...(query.plan ? { plan: query.plan } : {}), ...(query.status ? { status: query.status } : {}) },
+            },
+          }
         : {}),
     };
     const sortBy = query.sortBy ?? "createdAt";
@@ -266,8 +313,9 @@ export class PlatformService {
     }
 
     const slug = await this.nextOrganizationSlug(dto.name);
-    const organization = await this.prisma.$transaction((transaction) =>
-      transaction.organization.create({
+    const organization = await this.prisma.$transaction(async (transaction) => {
+      await assertUserHasNoOtherActiveOrganizationMembership(transaction, admin.id);
+      return transaction.organization.create({
         data: {
           name: dto.name.trim(),
           slug,
@@ -280,8 +328,8 @@ export class PlatformService {
           _count: { select: { members: true } },
           subscription: { select: { plan: true, status: true, seats: true } },
         },
-      }),
-    );
+      });
+    });
 
     await this.audit.record({
       action: "control.org.created",
@@ -523,13 +571,18 @@ export class PlatformService {
       },
       include: { _count: { select: { planEntitlements: true, overrides: true } } },
     });
-    await this.audit.record({ action: "control.entitlement.created", actorUserId, resourceType: "Entitlement", resourceId: entitlement.id });
+    await this.audit.record({
+      action: "control.entitlement.created",
+      actorUserId,
+      resourceType: "Entitlement",
+      resourceId: entitlement.id,
+    });
     return entitlement;
   }
 
   async updateEntitlement(entitlementId: string, actorUserId: string, dto: UpdateEntitlementDefinitionDto) {
     const existing = await this.prisma.entitlement.findUnique({ where: { id: entitlementId }, select: { id: true } });
-    if (!existing) throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);
+    if (!existing) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);}
     const entitlement = await this.prisma.entitlement.update({
       where: { id: entitlementId },
       data: {
@@ -541,7 +594,12 @@ export class PlatformService {
       },
       include: { _count: { select: { planEntitlements: true, overrides: true } } },
     });
-    await this.audit.record({ action: "control.entitlement.updated", actorUserId, resourceType: "Entitlement", resourceId: entitlementId });
+    await this.audit.record({
+      action: "control.entitlement.updated",
+      actorUserId,
+      resourceType: "Entitlement",
+      resourceId: entitlementId,
+    });
     return entitlement;
   }
 
@@ -550,12 +608,21 @@ export class PlatformService {
       where: { id: entitlementId },
       select: { _count: { select: { planEntitlements: true, overrides: true } } },
     });
-    if (!usage) throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);
+    if (!usage) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);}
     if (usage._count.planEntitlements > 0 || usage._count.overrides > 0) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlements assigned to plans or overrides cannot be deleted", HttpStatus.CONFLICT);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Entitlements assigned to plans or overrides cannot be deleted",
+        HttpStatus.CONFLICT,
+      );
     }
     await this.prisma.entitlement.delete({ where: { id: entitlementId } });
-    await this.audit.record({ action: "control.entitlement.deleted", actorUserId, resourceType: "Entitlement", resourceId: entitlementId });
+    await this.audit.record({
+      action: "control.entitlement.deleted",
+      actorUserId,
+      resourceType: "Entitlement",
+      resourceId: entitlementId,
+    });
   }
 
   async listPlans() {
@@ -580,9 +647,13 @@ export class PlatformService {
     return plan;
   }
 
-  async replacePlanEntitlements(planId: string, actorUserId: string, input: Array<{ entitlementKey: string; enabled: boolean; value?: number }>) {
+  async replacePlanEntitlements(
+    planId: string,
+    actorUserId: string,
+    input: Array<{ entitlementKey: string; enabled: boolean; value?: number }>,
+  ) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: { id: true } });
-    if (!plan) throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);
+    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);}
     const assignments = await this.resolvePlanEntitlements(input);
     const updated = await this.prisma.$transaction(async (transaction) => {
       await transaction.planEntitlement.deleteMany({ where: { planId } });
@@ -592,13 +663,18 @@ export class PlatformService {
         include: { entitlements: { include: { entitlement: true } } },
       });
     });
-    await this.audit.record({ action: "control.plan.entitlements-updated", actorUserId, resourceType: "Plan", resourceId: planId });
+    await this.audit.record({
+      action: "control.plan.entitlements-updated",
+      actorUserId,
+      resourceType: "Plan",
+      resourceId: planId,
+    });
     return updated;
   }
 
   async updatePlanStatus(planId: string, actorUserId: string, isActive: boolean) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: { id: true } });
-    if (!plan) throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);
+    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);}
     const updated = await this.prisma.plan.update({
       where: { id: planId },
       data: { isActive },
@@ -618,9 +694,13 @@ export class PlatformService {
       where: { id: planId },
       select: { id: true, _count: { select: { subscriptions: true } } },
     });
-    if (!plan) throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);
+    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);}
     if (plan._count.subscriptions > 0) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Plans assigned to organizations cannot be deleted", HttpStatus.CONFLICT);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Plans assigned to organizations cannot be deleted",
+        HttpStatus.CONFLICT,
+      );
     }
     await this.prisma.plan.delete({ where: { id: planId } });
     await this.audit.record({ action: "control.plan.deleted", actorUserId, resourceType: "Plan", resourceId: planId });
@@ -628,14 +708,30 @@ export class PlatformService {
 
   private async resolvePlanEntitlements(input: Array<{ entitlementKey: string; enabled: boolean; value?: number }>) {
     const keys = input.map((assignment) => assignment.entitlementKey);
-    const definitions = await this.prisma.entitlement.findMany({ where: { key: { in: keys } }, select: { id: true, key: true, kind: true } });
-    if (definitions.length !== keys.length) throw new AppError(ErrorCode.VALIDATION_FAILED, "Unknown entitlement key", HttpStatus.BAD_REQUEST);
+    const definitions = await this.prisma.entitlement.findMany({
+      where: { key: { in: keys } },
+      select: { id: true, key: true, kind: true },
+    });
+    if (definitions.length !== keys.length) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Unknown entitlement key", HttpStatus.BAD_REQUEST);
+    }
     return input.map((assignment) => {
-      const definition = definitions.find((item) => item.key === assignment.entitlementKey)!;
-      if (definition.kind === "LIMIT" && (assignment.value === undefined || !assignment.enabled)) {
-        throw new AppError(ErrorCode.VALIDATION_FAILED, `A value is required for ${definition.key}`, HttpStatus.BAD_REQUEST);
+      const definition = definitions.find((item) => item.key === assignment.entitlementKey);
+      if (!definition) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Unknown entitlement key", HttpStatus.BAD_REQUEST);
       }
-      return { entitlementId: definition.id, enabled: assignment.enabled, value: definition.kind === "LIMIT" ? assignment.value : null };
+      if (definition.kind === "LIMIT" && (assignment.value === undefined || !assignment.enabled)) {
+        throw new AppError(
+          ErrorCode.VALIDATION_FAILED,
+          `A value is required for ${definition.key}`,
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return {
+        entitlementId: definition.id,
+        enabled: assignment.enabled,
+        value: definition.kind === "LIMIT" ? assignment.value : null,
+      };
     });
   }
 

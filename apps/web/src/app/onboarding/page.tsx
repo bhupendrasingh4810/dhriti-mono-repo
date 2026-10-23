@@ -54,7 +54,7 @@ export default function OnboardingPage() {
     }
 
     if (!user) {
-      setIsLoading(false);
+      void Promise.resolve().then(() => setIsLoading(false));
       return;
     }
 

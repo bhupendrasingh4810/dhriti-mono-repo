@@ -32,13 +32,13 @@ export default function OnboardingStepSix({ orgName, onEnter }: OnboardingStepSi
       </div>
 
       <h1 className="text-3xl font-bold text-slate-900 mb-3" style={{ fontFamily: "var(--font-display)" }}>
-        You're all set! 🎉
+        You&apos;re all set! 🎉
       </h1>
       <p className="text-slate-500 text-base mb-2">
         <strong className="text-slate-700">{orgName}</strong> is ready on Dhriti OS.
       </p>
       <p className="text-slate-400 text-sm mb-10">
-        Your workspace has been configured based on your goals. Let's get to work.
+        Your workspace has been configured based on your goals. Let&apos;s get to work.
       </p>
 
       {/* Feature highlights */}

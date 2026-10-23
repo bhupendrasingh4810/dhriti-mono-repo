@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useConversationHistory } from "@/features/connect/hooks/use-conversation-history";
-import { CircularProgress } from "@mui/material";
 import { ConversationTypingIndicator, MessageDeliveryStatus } from "@/features/connect/components/MessageStatus";
 import type { MouseEvent, ReactNode } from "react";
 import type {
@@ -213,7 +212,8 @@ export function ConnectConversations({
   useEffect(() => {
     if (disableHoverActions) {
       clearHoverActionCloseTimer();
-      setHoveredMessageId(null);
+      const timer = window.setTimeout(() => setHoveredMessageId(null), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [disableHoverActions]);
 
@@ -259,7 +259,11 @@ export function ConnectConversations({
       <div className="relative flex min-h-0 flex-1 flex-col">
         {messagesLoading || (!positioned && !historyError) ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface text-brand">
-            <CircularProgress color="inherit" aria-label="Loading messages" />
+            <span
+              aria-label="Loading messages"
+              className="size-8 animate-spin rounded-full border-4 border-brand border-t-transparent"
+              role="status"
+            />
           </div>
         ) : null}
         {historyError ? (
@@ -475,7 +479,11 @@ export function ConnectConversations({
             })}
           {loadingMoreMessages ? (
             <div className="flex justify-center py-2 text-brand">
-              <CircularProgress size="1.25rem" color="inherit" aria-label="Loading more messages" />
+              <span
+                aria-label="Loading more messages"
+                className="size-5 animate-spin rounded-full border-2 border-brand border-t-transparent"
+                role="status"
+              />
             </div>
           ) : hasNewerMessages ? (
             <button

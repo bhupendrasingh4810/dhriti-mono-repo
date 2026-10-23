@@ -194,7 +194,7 @@ export default function DashboardHome({ setView }: Props) {
             Good morning, Jane!
           </h2>
           <p className="text-sm text-slate-400 mb-1">Thursday, 11 September 2026</p>
-          <p className="text-sm text-slate-500">Here's what's happening across your workspace.</p>
+          <p className="text-sm text-slate-500">Here&apos;s what&apos;s happening across your workspace.</p>
         </div>
 
         {/* Center stats */}

@@ -47,7 +47,7 @@ export default function ParabolView() {
   const [tab, setTab] = useState<"meetings" | "actions">("meetings");
 
   const toggle = (id: number) => {
-    setActions((a) => a.map((item) => item.id === id ? { ...item, done: !item.done } : item));
+    setActions((a) => a.map((item) => (item.id === id ? { ...item, done: !item.done } : item)));
   };
 
   return (
@@ -91,7 +91,10 @@ export default function ParabolView() {
                   <span className="text-slate-200">·</span>
                   <span className="text-xs text-slate-400">{m.participants} people</span>
                 </div>
-                <p className="text-xs font-medium mt-1" style={{ color: m.status === "upcoming" ? "#ED7B53" : "#94a3b8" }}>
+                <p
+                  className="text-xs font-medium mt-1"
+                  style={{ color: m.status === "upcoming" ? "#ED7B53" : "#94a3b8" }}
+                >
                   {m.date}
                 </p>
               </div>
@@ -137,15 +140,27 @@ export default function ParabolView() {
                   }}
                 >
                   {action.done && (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12"/>
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
                     </svg>
                   )}
                 </button>
                 <div className="flex-1 min-w-0">
                   <p
                     className="text-sm text-slate-800 leading-snug"
-                    style={{ textDecoration: action.done ? "line-through" : "none", color: action.done ? "#94a3b8" : "#1e293b" }}
+                    style={{
+                      textDecoration: action.done ? "line-through" : "none",
+                      color: action.done ? "#94a3b8" : "#1e293b",
+                    }}
                   >
                     {action.text}
                   </p>

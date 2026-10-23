@@ -1,31 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ArrowForwardRoundedIcon from "@mui/icons-material/ArrowForwardRounded";
-import CheckRoundedIcon from "@mui/icons-material/CheckRounded";
-import CloseRoundedIcon from "@mui/icons-material/CloseRounded";
-import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
-import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
-import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
-import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
-import CalendarMonthOutlinedIcon from "@mui/icons-material/CalendarMonthOutlined";
-import AutoAwesomeOutlinedIcon from "@mui/icons-material/AutoAwesomeOutlined";
+import { ArrowRight, Check, X } from "lucide-react";
 
 interface InvitationAcceptanceFormProps {
   token: string;
 }
 
 type InvitationState = "idle" | "accepting" | "accepted" | "declining" | "declined";
-
-const FEATURES = [
-  { label: "Team Channels", Icon: ForumOutlinedIcon },
-  { label: "Project Boards", Icon: HubOutlinedIcon },
-  { label: "Docs & Wikis", Icon: DescriptionOutlinedIcon },
-  { label: "Nexus AI", Icon: AutoAwesomeOutlinedIcon },
-  { label: "Calendar", Icon: CalendarMonthOutlinedIcon },
-  { label: "Integrations", Icon: GroupsOutlinedIcon },
-];
 
 const DECLINE_REASONS = ["Wrong workspace", "Not interested", "Already have an account", "Other"];
 
@@ -80,7 +64,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
         <section className="w-full max-w-md text-center">
           <div className="mx-auto grid size-28 place-items-center rounded-full bg-brand-muted">
             <div className="grid size-20 place-items-center rounded-full bg-brand text-white">
-              <CheckRoundedIcon fontSize="large" />
+              <Check className="size-9" aria-hidden="true" />
             </div>
           </div>
           <p className="mt-8 inline-flex bg-brand-muted px-3 py-1 text-xs font-semibold text-brand">
@@ -103,7 +87,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
             className="mt-8 inline-flex w-full items-center justify-center gap-2 bg-brand px-4 py-4 text-sm font-semibold text-white transition-colors hover:bg-brand-dark"
           >
             Open workspace
-            <ArrowForwardRoundedIcon fontSize="small" />
+            <ArrowRight className="size-4" aria-hidden="true" />
           </button>
         </section>
       </main>
@@ -115,7 +99,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
       <main className="grid min-h-screen place-items-center bg-background px-6 py-12 text-text-primary">
         <section className="w-full max-w-sm text-center">
           <div className="mx-auto grid size-20 place-items-center rounded-full bg-surface-raised text-text-muted">
-            <CloseRoundedIcon fontSize="large" />
+            <X className="size-9" aria-hidden="true" />
           </div>
           <h1 className="mt-6 font-display text-2xl font-bold">Invitation declined</h1>
           <p className="mt-3 text-sm leading-6 text-text-secondary">
@@ -240,7 +224,7 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
                 style={{ borderRadius: "20px" }}
               >
                 {isSubmitting ? "Joining workspace..." : "Accept invitation"}
-                <CheckRoundedIcon fontSize="small" />
+                <Check className="size-4" aria-hidden="true" />
               </button>
               {!showDeclinePanel ? (
                 <button
@@ -256,13 +240,13 @@ export default function InvitationAcceptanceForm({ token }: InvitationAcceptance
             </div>
             <p className="mt-6 text-center text-xs leading-5 text-text-muted">
               By accepting, you agree to Dhriti OS&apos;s{" "}
-              <a href="/terms-and-conditions" className="font-semibold text-brand">
+              <Link href="/terms-and-conditions" className="font-semibold text-brand">
                 Terms of Service
-              </a>{" "}
+              </Link>{" "}
               and{" "}
-              <a href="/privacy-policy" className="font-semibold text-brand">
+              <Link href="/privacy-policy" className="font-semibold text-brand">
                 Privacy Policy
-              </a>
+              </Link>
               . Already have an account?{" "}
               <button
                 type="button"

@@ -27,7 +27,6 @@ import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 
 interface Props {
   activeView: AppView;
-  onViewChange: (v: AppView) => void;
   connectSearch?: {
     users: ConnectHeaderSearchItem[];
     messages: ConnectHeaderSearchItem[];
@@ -35,7 +34,7 @@ interface Props {
   };
 }
 
-export default function Header({ activeView, onViewChange, connectSearch }: Props) {
+export default function Header({ activeView, connectSearch }: Props) {
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const { user, logout } = useAuth();
@@ -55,7 +54,11 @@ export default function Header({ activeView, onViewChange, connectSearch }: Prop
       icon: <Settings aria-hidden="true" size={16} strokeWidth={1.75} />,
       sectionTitle: "Personal Settings",
     },
-    { id: "notification-settings", label: "Notification Settings", icon: <Bell aria-hidden="true" size={16} strokeWidth={1.75} /> },
+    {
+      id: "notification-settings",
+      label: "Notification Settings",
+      icon: <Bell aria-hidden="true" size={16} strokeWidth={1.75} />,
+    },
     {
       id: "user-management",
       label: "User Management",
@@ -72,7 +75,11 @@ export default function Header({ activeView, onViewChange, connectSearch }: Prop
       dividerAbove: true,
     },
     { id: "space-settings", label: "Spaces", icon: <Grid2X2 aria-hidden="true" size={16} strokeWidth={1.75} /> },
-    { id: "work-item-settings", label: "Work Items", icon: <SquareCheckBig aria-hidden="true" size={16} strokeWidth={1.75} /> },
+    {
+      id: "work-item-settings",
+      label: "Work Items",
+      icon: <SquareCheckBig aria-hidden="true" size={16} strokeWidth={1.75} />,
+    },
     {
       id: "connect-settings",
       label: "Connect Settings",
@@ -108,7 +115,6 @@ export default function Header({ activeView, onViewChange, connectSearch }: Prop
       sectionTitle: "HRMS Settings",
       dividerAbove: true,
     },
-    
   ];
 
   const userItems: ConnectCascadingMenuItem[] = [
@@ -124,7 +130,12 @@ export default function Header({ activeView, onViewChange, connectSearch }: Prop
       ),
       closeOnClick: false,
     },
-    { id: "profile", label: "Profile", icon: <UserRound aria-hidden="true" size={16} strokeWidth={1.75} />, dividerAbove: true },
+    {
+      id: "profile",
+      label: "Profile",
+      icon: <UserRound aria-hidden="true" size={16} strokeWidth={1.75} />,
+      dividerAbove: true,
+    },
     { id: "theme", label: "Theme", icon: <Sun aria-hidden="true" size={16} strokeWidth={1.75} /> },
     {
       id: "logout",
@@ -151,8 +162,7 @@ export default function Header({ activeView, onViewChange, connectSearch }: Prop
       </span>
 
       {/* Nav */}
-      <nav className="flex items-center gap-1">
-      </nav>
+      <nav className="flex items-center gap-1"></nav>
 
       {activeView === "connect" && connectSearch && (
         <div className="absolute left-1/2 z-10 w-full max-w-[680px] -translate-x-1/2 px-4">
@@ -220,4 +230,3 @@ export default function Header({ activeView, onViewChange, connectSearch }: Prop
     </header>
   );
 }
-

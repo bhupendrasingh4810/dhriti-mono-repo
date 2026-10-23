@@ -207,7 +207,32 @@ export type ConnectMentionsViewMessage = {
   content: string;
 };
 
-export type IconName = "add" | "bell" | "bold" | "check" | "code" | "close" | "document" | "edit" | "highlight" | "italic" | "link" | "list" | "mail" | "more" | "numbered-list" | "open" | "priority" | "quote" | "send" | "smile" | "strikethrough" | "table" | "text-size" | "underline" | "video";
+export type IconName =
+  | "add"
+  | "bell"
+  | "bold"
+  | "check"
+  | "code"
+  | "close"
+  | "document"
+  | "edit"
+  | "highlight"
+  | "italic"
+  | "link"
+  | "list"
+  | "mail"
+  | "more"
+  | "numbered-list"
+  | "open"
+  | "priority"
+  | "quote"
+  | "send"
+  | "smile"
+  | "strikethrough"
+  | "table"
+  | "text-size"
+  | "underline"
+  | "video";
 
 export type ConnectReactionUser = {
   id: string;
@@ -216,7 +241,17 @@ export type ConnectReactionUser = {
   jobTitle: string;
 };
 
-export type DetailIconName = "chat" | "organization" | "video" | "phone" | "available" | "time" | "mail" | "location" | "chevronUp" | "chevronDown";
+export type DetailIconName =
+  | "chat"
+  | "organization"
+  | "video"
+  | "phone"
+  | "available"
+  | "time"
+  | "mail"
+  | "location"
+  | "chevronUp"
+  | "chevronDown";
 
 export type MentionHoverState = { anchorEl: HTMLElement; userId: string };
 export type ReactionHoverState = { anchorEl: HTMLElement; emoji: string; userIds: string[] };

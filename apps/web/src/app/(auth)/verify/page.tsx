@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { Suspense, useState, useRef, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 // import type { Page } from "../App";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -11,7 +11,7 @@ interface Props {
   email: string;
 }
 
-export default function VerifyEmailPage({ email }: Props) {
+function VerifyEmailForm({ email }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showAlert } = useAlert();
@@ -174,7 +174,7 @@ export default function VerifyEmailPage({ email }: Props) {
             </p>
           ) : (
             <p className="text-sm text-slate-500">
-              Didn't receive a code?{" "}
+              Didn&apos;t receive a code?{" "}
               <button
                 type="button"
                 onClick={handleResend}
@@ -195,5 +195,13 @@ export default function VerifyEmailPage({ email }: Props) {
         </div>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function VerifyEmailPage({ email }: Props) {
+  return (
+    <Suspense fallback={null}>
+      <VerifyEmailForm email={email} />
+    </Suspense>
   );
 }

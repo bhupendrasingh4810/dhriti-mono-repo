@@ -1,5 +1,4 @@
 export * from "./breakpoints";
-export * from "./components";
 export * from "./density";
 export * from "./palette";
 export * from "./shape";

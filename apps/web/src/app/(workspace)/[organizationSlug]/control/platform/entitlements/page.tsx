@@ -109,13 +109,13 @@ export default function EntitlementsCatalog() {
       const result = drawer.selected
         ? await controlPlatformService.updateEntitlement(drawer.selected.id, input)
         : await controlPlatformService.createEntitlement({
-          ...input,
-          key: submittedDraft.key.trim(),
-        } as ControlEntitlementInput & {
-          key: string;
-          name: string;
-          kind: "FEATURE" | "LIMIT";
-        });
+            ...input,
+            key: submittedDraft.key.trim(),
+          } as ControlEntitlementInput & {
+            key: string;
+            name: string;
+            kind: "FEATURE" | "LIMIT";
+          });
       if (!drawer.selected) setPage(1);
       setReloadToken((current) => current + 1);
       closeDrawer();

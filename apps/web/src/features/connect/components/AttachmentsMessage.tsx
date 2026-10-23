@@ -24,27 +24,16 @@ export function AttachmentsMessage({ message, openAttachmentMenu }: AttachmentsM
           >
             <div className="relative grid h-[200px] w-[300px] shrink-0 place-items-center overflow-hidden rounded border border-slate-200 bg-slate-50 text-sky-600">
               {isImage ? (
-                <img
-                  src={attachment.url}
-                  alt={attachment.name}
-                  className="h-full w-full object-cover"
-                />
+                <img src={attachment.url} alt={attachment.name} className="h-full w-full object-cover" />
               ) : isVideo ? (
                 <>
-                  <video
-                    src={attachment.url}
-                    muted
-                    preload="metadata"
-                    className="h-full w-full object-cover"
-                  />
+                  <video src={attachment.url} muted preload="metadata" className="h-full w-full object-cover" />
                   <PlayIcon className="absolute h-[22px] w-[22px] text-white" />
                 </>
               ) : (
                 <div className="flex items-center justify-center">
                   <FileIcon className="h-[18px] w-[18px]" />
-                  <span className="ml-1 text-[10px] font-semibold uppercase">
-                    {getFileExtension(attachment.name)}
-                  </span>
+                  <span className="ml-1 text-[10px] font-semibold uppercase">{getFileExtension(attachment.name)}</span>
                 </div>
               )}
             </div>
@@ -66,7 +55,15 @@ export function AttachmentsMessage({ message, openAttachmentMenu }: AttachmentsM
 
 function MoreIcon({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <circle cx="12" cy="5" r="1" fill="currentColor" />
       <circle cx="12" cy="12" r="1" fill="currentColor" />
       <circle cx="12" cy="19" r="1" fill="currentColor" />
@@ -84,7 +81,16 @@ function PlayIcon({ className }: { className?: string }) {
 
 function FileIcon({ className }: { className?: string }) {
   return (
-    <svg aria-hidden="true" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      aria-hidden="true"
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       <path d="M14 2v6h6" />
     </svg>

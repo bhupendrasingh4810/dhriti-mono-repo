@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthLayout from "../../../components/auth/AuthLayout";
-import { useAlert } from "@/components/alerts/alert-provider";
+import { useAlert } from "@/components/shared/alert";
 import { resetPassword } from "@/services/auth.service";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showAlert } = useAlert();
@@ -17,20 +17,19 @@ export default function ResetPasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!token) {
-      showAlert({ title: "Password reset link is invalid or incomplete.", severity: "error", variant: "filled" });
+      showAlert({ message: "Password reset link is invalid or incomplete.", variant: "error" });
       return;
     }
 
     setLoading(true);
     try {
       await resetPassword({ token, newPassword: password });
-      showAlert({ title: "Your password has been reset. Please sign in.", severity: "success", variant: "filled" });
+      showAlert({ message: "Your password has been reset. Please sign in.", variant: "success" });
       router.replace("/login");
     } catch (error) {
       showAlert({
-        title: error instanceof Error ? error.message : "Unable to reset your password.",
-        severity: "error",
-        variant: "filled",
+        message: error instanceof Error ? error.message : "Unable to reset your password.",
+        variant: "error",
       });
     } finally {
       setLoading(false);
@@ -112,5 +111,13 @@ export default function ResetPasswordPage() {
         </button>
       </form>
     </AuthLayout>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
