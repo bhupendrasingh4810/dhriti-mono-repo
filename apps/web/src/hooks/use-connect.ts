@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import { useAuth } from "@/hooks/use-auth";
-import { connectService, type ConnectApiMessage, type ConnectSidebarState, type CreateMessageInput, type MessagePage } from "@/services/connect.service";
+import { connectService, type ConnectApiMessage, type ConnectSidebarSettings, type ConnectSidebarState, type CreateMessageInput, type MessagePage } from "@/services/connect.service";
 import { tenantRequest } from "@/services/request.service";
 import type { ConnectConversation, ConnectMessage, ConnectUser } from "@/mocks/connect/types";
 
-const emptySidebar: ConnectSidebarState = { favorites: { chats: [], teams: [], channels: [] }, recentChats: [] };
-type Team = { id: string; name: string };
+const emptySidebar: ConnectSidebarState = { favorites: { chats: [], teams: [], channels: [] }, recentChats: [], settings: {} };
+type Team = { id: string; name: string; users: string[] };
 type Ack = { ok: boolean; error?: { message: string } };
 type HistoryState = {
   loading: boolean;
@@ -281,6 +281,7 @@ export function useConnect(selectedConversationId: string) {
       });
       socket.on("message:reaction-changed", (payload: { channelId: string }) => { void history(payload.channelId); });
       socket.on("sidebar:favorites-changed", (payload: { favorites: ConnectSidebarState["favorites"] }) => setSidebar((previous) => ({ ...previous, favorites: payload.favorites })));
+      socket.on("sidebar:settings-changed", (payload: { settings: ConnectSidebarSettings }) => setSidebar((previous) => ({ ...previous, settings: payload.settings })));
       socket.on("sidebar:chat-activity", () => { void reload().catch(reportError); });
       socket.on("presence:changed", (payload: { userId: string; status: string }) => {
         const status = payload.status === "online" ? "available" : payload.status === "busy" ? "busy" : payload.status === "away" ? "away" : "offline";
@@ -355,6 +356,12 @@ export function useConnect(selectedConversationId: string) {
     if (current === generation.current) setSidebar(result);
   }
 
+  async function updateSidebarSettings(settings: ConnectSidebarSettings) {
+    const current = generation.current;
+    const result = await connectService.updateSidebarSettings(organizationId, settings);
+    if (current === generation.current) setSidebar(result);
+  }
+
   async function startDirect(userId: string) {
     const current = generation.current;
     const conversation = await connectService.createDirectConversation(organizationId, userId);
@@ -385,5 +392,5 @@ export function useConnect(selectedConversationId: string) {
     }, 2500);
   }
 
-  return { user, organizationId, users, conversations, teams, sidebar, messages, historyState, readReceipts, unread, typingUsers, loading, connected, error, setError, socket: socketRef.current, send, favorite, startDirect, typing, loadMessages, loadMoreMessages, markVisibleMessageRead, reportError, refresh: () => reloadRef.current?.() };
+  return { user, organizationId, users, conversations, teams, sidebar, messages, historyState, readReceipts, unread, typingUsers, loading, connected, error, setError, socket: socketRef.current, send, favorite, updateSidebarSettings, startDirect, typing, loadMessages, loadMoreMessages, markVisibleMessageRead, reportError, refresh: () => reloadRef.current?.() };
 }

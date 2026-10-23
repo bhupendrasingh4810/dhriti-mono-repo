@@ -71,7 +71,7 @@ function SidebarSection({
                     title={menuTooltip}
                     aria-label={menuTooltip}
                     onClick={onOpenMenu}
-                    className={`absolute right-7 grid h-7 w-7 place-items-center rounded text-white/70 transition-opacity duration-150 hover:bg-white/10 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
+                    className={`absolute right-7 grid h-7 w-7 cursor-pointer place-items-center rounded text-white/70 transition-opacity duration-150 hover:bg-white/10 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
                 >
                     <Ellipsis aria-hidden="true" />
                 </button>
@@ -104,7 +104,7 @@ function SidebarTrailingSlot({
                 title={tooltip}
                 aria-label={tooltip}
                 onClick={onOpenMenu}
-                className={`absolute inset-0 grid h-7 w-7 place-items-center rounded text-white/70 transition-opacity duration-150 hover:bg-white/10 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
+                className={`absolute inset-0 grid h-7 w-7 cursor-pointer place-items-center rounded text-white/70 transition-opacity duration-150 hover:bg-white/10 ${hovered ? "opacity-100" : "pointer-events-none opacity-0"}`}
             >
                 <Ellipsis aria-hidden="true" />
             </button>

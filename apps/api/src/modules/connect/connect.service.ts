@@ -274,6 +274,31 @@ export class ConnectService {
     return memberships.map(({ user }) => user);
   }
 
+  async listUsersPage(organizationId: string, cursor?: string, requestedLimit?: number) {
+    const limit = Math.min(Math.max(requestedLimit ?? 12, 1), 50);
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        status: "ACTIVE",
+        deletedAt: null,
+        user: { deletedAt: null },
+      },
+      select: {
+        id: true,
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: "asc" },
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    });
+    const page = memberships.slice(0, limit);
+
+    return {
+      users: page.map(({ user }) => user),
+      nextCursor: memberships.length > limit ? page[page.length - 1]?.id ?? null : null,
+    };
+  }
+
   async createDirectConversation(organizationId: string, creatorUserId: string, otherUserId: string) {
     if (creatorUserId === otherUserId) {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "A direct conversation requires another user", HttpStatus.BAD_REQUEST);
@@ -345,6 +370,60 @@ export class ConnectService {
     return teams.map((team) => this.serializeTeam(team));
   }
 
+  async getTeamDetails(organizationId: string, teamId: string, userId: string) {
+    await this.assertOrganizationMember(organizationId, userId);
+    const team = await this.prisma.team.findFirst({
+      where: {
+        id: teamId,
+        organizationId,
+        deletedAt: null,
+        OR: [{ visibility: "PUBLIC" }, { members: { some: { userId } } }],
+      },
+      include: {
+        channels: {
+          where: { deletedAt: null, isArchived: false, type: "CHANNEL" },
+          select: { id: true, name: true, slug: true, visibility: true, createdAt: true },
+          orderBy: { createdAt: "asc" },
+        },
+        members: {
+          select: {
+            userId: true,
+            role: true,
+            createdAt: true,
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatarUrl: true,
+                profile: { select: { jobTitle: true } },
+                hrmsProfile: { select: { officeLocation: true, location: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+    if (!team) throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+
+    return {
+      id: team.id,
+      name: team.name,
+      description: team.description,
+      visibility: team.visibility,
+      channels: team.channels,
+      members: team.members.map((member) => ({
+        id: member.user.id,
+        name: member.user.name,
+        avatarUrl: member.user.avatarUrl,
+        jobTitle: member.user.profile?.jobTitle ?? null,
+        location: member.user.hrmsProfile?.officeLocation ?? member.user.hrmsProfile?.location ?? null,
+        role: member.role,
+        joinedAt: member.createdAt,
+      })),
+    };
+  }
+
   async createTeam(organizationId: string, creatorUserId: string, dto: CreateConnectTeamDto) {
     await this.assertOrganizationMember(organizationId, creatorUserId);
     const slugTaken = await this.prisma.team.findUnique({
@@ -408,6 +487,19 @@ export class ConnectService {
       if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "A team must have at least one admin", HttpStatus.BAD_REQUEST);
     }
     await this.prisma.teamMember.deleteMany({ where: { teamId, userId } });
+  }
+
+  async leaveTeam(organizationId: string, teamId: string, userId: string): Promise<void> {
+    const membership = await this.prisma.teamMember.findFirst({
+      where: { teamId, userId, team: { organizationId, deletedAt: null } },
+      select: { role: true },
+    });
+    if (!membership) throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this team", HttpStatus.FORBIDDEN);
+    if (membership.role === "ADMIN") {
+      const adminCount = await this.prisma.teamMember.count({ where: { teamId, role: "ADMIN" } });
+      if (adminCount === 1) throw new AppError(ErrorCode.FORBIDDEN, "Assign another team admin before leaving", HttpStatus.BAD_REQUEST);
+    }
+    await this.prisma.teamMember.delete({ where: { teamId_userId: { teamId, userId } } });
   }
 
   async listChannels(organizationId: string, userId: string) {

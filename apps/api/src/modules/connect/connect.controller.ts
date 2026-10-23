@@ -25,7 +25,7 @@ import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import { CreateConnectTeamDto, UpdateConnectTeamDto, UpsertConnectMemberDto } from "./dto/team.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
-import { CreateDirectConversationDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto } from "./dto/sidebar.dto";
+import { CreateDirectConversationDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
 
 @ApiTags("connect")
@@ -44,11 +44,33 @@ export class ConnectController {
     return this.connect.listUsers(organization.organizationId);
   }
 
+  @Get("users/paged")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "List active Connect users with cursor pagination" })
+  async listUsersPage(
+    @CurrentOrganization() organization: OrganizationContext,
+    @Query("cursor") cursor?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.connect.listUsersPage(organization.organizationId, cursor, limit ? Number(limit) : undefined);
+  }
+
   @Get("sidebar")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @ApiOperation({ summary: "Get the current user's Connect sidebar state" })
   async getSidebar(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
     return this.connect.getSidebar(organization.organizationId, user.userId);
+  }
+
+  @Put("sidebar/settings")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Update the current user's Connect sidebar settings" })
+  async updateSidebarSettings(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: UpdateSidebarSettingsDto,
+  ) {
+    return this.connect.updateSidebarSettings(organization.organizationId, user.userId, dto);
   }
 
   @Put("sidebar/favorites")
@@ -190,6 +212,13 @@ export class ConnectController {
     return this.connect.listTeams(organization.organizationId, user.userId);
   }
 
+  @Get("teams/:teamId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Get Connect team details, members, and channels" })
+  async getTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string) {
+    return this.connect.getTeamDetails(organization.organizationId, teamId, user.userId);
+  }
+
   @Post("teams")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.create" })
   @ApiOperation({ summary: "Create a Connect team" })
@@ -226,6 +255,14 @@ export class ConnectController {
   @ApiOperation({ summary: "Remove a user from a Connect team" })
   async removeTeamMember(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Param("userId") userId: string): Promise<void> {
     return this.connect.removeTeamMember(organization.organizationId, teamId, user.userId, userId);
+  }
+
+  @Post("teams/:teamId/leave")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Leave a Connect team" })
+  async leaveTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string): Promise<void> {
+    return this.connect.leaveTeam(organization.organizationId, teamId, user.userId);
   }
 
   @Patch("channels/:channelId")

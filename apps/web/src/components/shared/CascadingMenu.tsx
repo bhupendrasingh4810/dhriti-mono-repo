@@ -227,7 +227,7 @@ export function ConnectCascadingMenu({
                 aria-haspopup={hasChildren ? "menu" : undefined}
                 aria-expanded={hasChildren ? selectedSubmenu?.itemId === item.id : undefined}
                 onClick={(event) => handleItemClick(level, item, event)}
-                className="flex w-full min-w-0 items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+                className="flex w-full min-w-0 cursor-pointer items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
               >
                 <span className={`flex shrink-0 items-center justify-center ${item.descriptionLayout === "stacked" ? "h-8 w-8" : "w-5"} ${item.selected ? "text-emerald-600" : "text-slate-500"}`}>
                   {item.selected ? <CheckIcon /> : item.icon}

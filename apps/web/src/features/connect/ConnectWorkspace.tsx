@@ -4,7 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { CircularProgress } from "@mui/material";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { ConnectConversation, ConnectMessage, ConnectFile, ConnectMeeting, ConnectMentionFeedItem } from "@/mocks/connect/types";
+import type {
+  ConnectConversation,
+  ConnectMessage,
+  ConnectFile,
+  ConnectMeeting,
+  ConnectMentionFeedItem,
+} from "@/mocks/connect/types";
 import { useConnect } from "@/hooks/use-connect";
 import { useMessageDeletion } from "@/features/connect/hooks/use-message-deletion";
 import { connectService } from "@/services/connect.service";
@@ -25,9 +31,10 @@ import {
   Video,
 } from "lucide-react";
 import ConnectSidebar from "@/features/connect/components/ConnectSidebar";
-import { getMenuItems } from "@/utils/connect-menu-item.util";
+import { getMenuItems, type SectionViewModeState } from "@/utils/connect-menu-item.util";
 import { CreateChannelDialog } from "@/components/dialogs/create-channel.dialog";
 import { CreateTeamDialog } from "@/components/dialogs/create-team.dialog";
+import { AddTeamMembersDialog, ManageTeamDialog } from "@/components/dialogs/manage-team.dialog";
 import { CreateSectionDialog } from "@/components/dialogs/create-section.dialog";
 import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
@@ -90,11 +97,19 @@ export default function ConnectWorkspace() {
   const connectConversations = Object.values(conversationsById);
   const messagesByConversation = live.messages;
   const connectSidebarState = {
-    ...live.sidebar, currentUser: live.user?.id ?? "", unread: live.unread, mentions: {} as Record<string, number>,
+    ...live.sidebar,
+    currentUser: live.user?.id ?? "",
+    unread: live.unread,
+    mentions: {} as Record<string, number>,
   };
-  const connectChannels = connectConversations.filter((conversation) => conversation.type === "channel").map((conversation) => ({
-    ...conversation, slug: conversation.name, isArchived: conversation.archived, visibility: "team",
-  }));
+  const connectChannels = connectConversations
+    .filter((conversation) => conversation.type === "channel")
+    .map((conversation) => ({
+      ...conversation,
+      slug: conversation.name,
+      isArchived: conversation.archived,
+      visibility: "team",
+    }));
   const connectFiles: ConnectFile[] = [];
   const connectMeetings: ConnectMeeting[] = [];
   const connectPinnedItems: { conversationId: string }[] = [];
@@ -109,16 +124,27 @@ export default function ConnectWorkspace() {
 
   const [activeQuickViewId, setActiveQuickViewId] = useState<string | null>(null);
   const [expandedTeamIds, setExpandedTeamIds] = useState<Record<string, boolean>>({ team_001: true });
-  const [sectionViewMode, setSectionViewMode] = useState({
-    favorites: "all",
-    chats: "all",
-    mentions: "always",
-    threads: "always",
-  });
+  const persistedSectionViewMode: SectionViewModeState = {
+    favorites: live.sidebar.settings.favoritesFilter ?? "all",
+    chats: live.sidebar.settings.chatsFilter ?? "all",
+    mentions: live.sidebar.settings.mentions ?? "always",
+    threads: live.sidebar.settings.threads ?? "always",
+    drafts: live.sidebar.settings.drafts ?? "visible",
+  };
+  const [sectionViewModeOverride, setSectionViewModeOverride] = useState<SectionViewModeState | null>(null);
+  const sectionViewMode = sectionViewModeOverride ?? persistedSectionViewMode;
+  const setSectionViewMode: React.Dispatch<React.SetStateAction<SectionViewModeState>> = (update) => {
+    setSectionViewModeOverride((previous) => {
+      const current = previous ?? persistedSectionViewMode;
+      return typeof update === "function" ? update(current) : update;
+    });
+  };
   const [quotedMessage, setQuotedMessage] = useState<ConnectMessage | null>(null);
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
+  const [addTeamMembersTeamId, setAddTeamMembersTeamId] = useState<string | null>(null);
+  const [manageTeamId, setManageTeamId] = useState<string | null>(null);
   const [mentionsFilter, setMentionsFilter] = useState<ConnectMentionsFilter>("unread");
   const [selectedMentionId, setSelectedMentionId] = useState<string | null>(null);
   const [mentionHover, setMentionHover] = useState<MentionHoverState | null>(null);
@@ -203,17 +229,23 @@ export default function ConnectWorkspace() {
     [messagesByConversation],
   );
 
-  const selectedMessages = useMemo(() => {
+  const selectedMessages = (() => {
     const current = messagesByConversation[selectedConversation?.id] ?? [];
-    const recipientId = selectedConversation?.type === "direct"
-      ? selectedConversation.participants.find((userId) => userId !== live.user?.id) : undefined;
+    const recipientId =
+      selectedConversation?.type === "direct"
+        ? selectedConversation.participants.find((userId) => userId !== live.user?.id)
+        : undefined;
     const readAt = recipientId ? live.readReceipts[selectedConversation.id]?.[recipientId] : null;
-    return current.map((message): ConnectMessage => ({
-      ...message,
-      status: message.senderId === live.user?.id && readAt && Date.parse(readAt) >= Date.parse(message.createdAt)
-        ? "read" : message.status,
-    })).sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt));
-  }, [messagesByConversation, selectedConversation, live.readReceipts, live.user?.id]);
+    return current
+      .map((message): ConnectMessage => ({
+        ...message,
+        status:
+          message.senderId === live.user?.id && readAt && Date.parse(readAt) >= Date.parse(message.createdAt)
+            ? "read"
+            : message.status,
+      }))
+      .sort((first, second) => Date.parse(first.createdAt) - Date.parse(second.createdAt));
+  })();
 
   const conversationFiles = useMemo(
     () => connectFiles.filter((file) => file.conversationId === selectedConversation?.id),
@@ -251,13 +283,18 @@ export default function ConnectWorkspace() {
 
   const sidebarQuickViews = useMemo(
     () =>
-      quickViewsConfig.map((item) => ({
-        id: item.label.toLowerCase() as "mentions" | "threads" | "drafts",
-        icon: item.icon,
-        label: item.label,
-        value: item.label === "Mentions" ? mentionTotal : item.label === "Threads" ? threadCount : draftCount,
-      })),
-    [draftCount, mentionTotal, threadCount],
+      quickViewsConfig
+        .map((item) => ({
+          id: item.label.toLowerCase() as "mentions" | "threads" | "drafts",
+          icon: item.icon,
+          label: item.label,
+          value: item.label === "Mentions" ? mentionTotal : item.label === "Threads" ? threadCount : draftCount,
+        }))
+        .filter((item) => {
+          if (item.id === "drafts") return sectionViewMode.drafts === "visible";
+          return sectionViewMode[item.id] === "always" || item.value > 0;
+        }),
+    [draftCount, mentionTotal, sectionViewMode.drafts, sectionViewMode.mentions, sectionViewMode.threads, threadCount],
   );
 
   const visibleChatConversations = useMemo(() => {
@@ -281,20 +318,28 @@ export default function ConnectWorkspace() {
     unreadCount: live.unread[conversation.id] ?? conversation.unreadCount,
   }));
   if (sectionViewMode.chats === "all") {
-    const existingDirectUsers = new Set(chatConversations
-      .filter((conversation) => conversation.type === "direct")
-      .flatMap((conversation) => conversation.participants));
-    sidebarChatRows.push(...connectUsers
-      .filter((person) => person.organizationId === live.organizationId
-        && person.id !== live.user?.id && !existingDirectUsers.has(person.id))
-      .map((person): ConnectSidebarConversation => ({
-        id: `contact-${person.id}`,
-        userId: person.id,
-        name: person.displayName,
-        type: "direct",
-        avatar: person.avatar,
-        unreadCount: 0,
-      })));
+    const existingDirectUsers = new Set(
+      chatConversations
+        .filter((conversation) => conversation.type === "direct")
+        .flatMap((conversation) => conversation.participants),
+    );
+    sidebarChatRows.push(
+      ...connectUsers
+        .filter(
+          (person) =>
+            person.organizationId === live.organizationId &&
+            person.id !== live.user?.id &&
+            !existingDirectUsers.has(person.id),
+        )
+        .map((person): ConnectSidebarConversation => ({
+          id: `contact-${person.id}`,
+          userId: person.id,
+          name: person.displayName,
+          type: "direct",
+          avatar: person.avatar,
+          unreadCount: 0,
+        })),
+    );
   }
 
   const mentionItems = useMemo(() => {
@@ -378,49 +423,80 @@ export default function ConnectWorkspace() {
   ];
 
   const sidebarMenuItems: ConnectCascadingMenuItem[] = getMenuItems(
-        sidebarMenuContext,
-        sectionViewMode,
-        setSectionViewMode,
-        setCreateSectionOpen,
-        setCreateTeamOpen,
-        setCreateChannelOpen,
-        pushSystemMessage,
-      );
-  if (sidebarMenuContext?.id && ["user", "channel", "team"].includes(sidebarMenuContext.kind)) {
+    sidebarMenuContext,
+    sectionViewMode,
+    setSectionViewMode,
+    setCreateSectionOpen,
+    setCreateTeamOpen,
+    setCreateChannelOpen,
+    pushSystemMessage,
+    (settings) => {
+      void live
+        .updateSidebarSettings(settings)
+        .then(() => setSectionViewModeOverride(null))
+        .catch((reason) => {
+          setSectionViewModeOverride(null);
+          live.reportError(reason);
+        });
+    },
+    sidebarMenuContext?.kind === "team" && sidebarMenuContext.id
+      ? {
+          canLeave: Boolean(connectTeamsById[sidebarMenuContext.id]?.users.includes(live.user?.id ?? "")),
+          onAddMember: () => setAddTeamMembersTeamId(sidebarMenuContext.id),
+          onManageTeam: () => setManageTeamId(sidebarMenuContext.id),
+          onLeaveTeam: () => {
+            void connectService
+              .leaveTeam(live.organizationId, sidebarMenuContext.id)
+              .then(() => live.refresh())
+              .catch(live.reportError);
+          },
+        }
+      : undefined,
+  );
+  if (sidebarMenuContext?.id && ["user", "channel"].includes(sidebarMenuContext.kind)) {
     const itemId = sidebarMenuContext.id;
-    const itemType = sidebarMenuContext.kind === "team" ? "team" : sidebarMenuContext.kind === "channel" ? "channel" : "chat";
-    const ids = itemType === "team" ? live.sidebar.favorites.teams : itemType === "channel" ? live.sidebar.favorites.channels : live.sidebar.favorites.chats;
+    const itemType = sidebarMenuContext.kind === "channel" ? "channel" : "chat";
+    const ids = itemType === "channel" ? live.sidebar.favorites.channels : live.sidebar.favorites.chats;
     const isFavorite = ids.includes(itemId);
-    sidebarMenuItems.unshift({ id: "toggle-favorite", label: isFavorite ? "Remove from favorites" : "Add to favorites", icon: <Pin />, onClick: () => {
-      void live.favorite(itemType, itemId, !isFavorite).catch(live.reportError);
-      closeSidebarMenus();
-    }});
+    sidebarMenuItems.unshift({
+      id: "toggle-favorite",
+      label: isFavorite ? "Remove from favorites" : "Add to favorites",
+      icon: <Pin />,
+      onClick: () => {
+        void live.favorite(itemType, itemId, !isFavorite).catch(live.reportError);
+        closeSidebarMenus();
+      },
+    });
   }
   if (sidebarMenuContext?.kind === "user" && sidebarMenuContext.id) {
     const conversationId = sidebarMenuContext.id;
     const latestMessage = (messagesByConversation[conversationId] ?? []).reduce<ConnectMessage | undefined>(
-      (latest, message) => !latest || Date.parse(message.createdAt) > Date.parse(latest.createdAt) ? message : latest,
+      (latest, message) => (!latest || Date.parse(message.createdAt) > Date.parse(latest.createdAt) ? message : latest),
       undefined,
     );
     const userMenuActions: Record<string, () => void> = {
       "mark-read": () => {
-        void connectService.markMessagesRead(live.organizationId, conversationId, latestMessage?.id)
+        void connectService
+          .markMessagesRead(live.organizationId, conversationId, latestMessage?.id)
           .then(() => live.refresh())
           .catch(live.reportError);
         closeSidebarMenus();
       },
       mute: () => {
-        void connectService.updateConversationNotifications(live.organizationId, conversationId, { muted: true })
+        void connectService
+          .updateConversationNotifications(live.organizationId, conversationId, { muted: true })
           .catch(live.reportError);
         closeSidebarMenus();
       },
       notify: () => {
-        void connectService.updateConversationNotifications(live.organizationId, conversationId, { notifyWhenAvailable: true })
+        void connectService
+          .updateConversationNotifications(live.organizationId, conversationId, { notifyWhenAvailable: true })
           .catch(live.reportError);
         closeSidebarMenus();
       },
       "remove-history": () => {
-        void connectService.removeConversationHistory(live.organizationId, conversationId)
+        void connectService
+          .removeConversationHistory(live.organizationId, conversationId)
           .then(() => {
             if (selectedConversationId === conversationId) {
               const nextConversationId = Object.keys(conversationsById).find((id) => id !== conversationId);
@@ -429,7 +505,9 @@ export default function ConnectWorkspace() {
                 setSelectedConversationId("");
                 const nextSearchParams = new URLSearchParams(searchParams.toString());
                 nextSearchParams.delete("conversation");
-                router.replace(nextSearchParams.size ? `${pathname}?${nextSearchParams.toString()}` : pathname, { scroll: false });
+                router.replace(nextSearchParams.size ? `${pathname}?${nextSearchParams.toString()}` : pathname, {
+                  scroll: false,
+                });
               }
             }
             return live.refresh();
@@ -525,9 +603,15 @@ export default function ConnectWorkspace() {
 
   function addReactionToMessage(conversationId: string, messageId: string, emoji: string) {
     if (!currentUser) return;
-    const existing = messagesByConversation[conversationId]?.find((message) => message.id === messageId)?.reactions?.find((reaction) => reaction.emoji === emoji);
-    const action = existing?.userIds.includes(currentUser.id) ? connectService.removeReaction : connectService.addReaction;
-    void action(live.organizationId, messageId, emoji).then(() => live.loadMessages(conversationId)).catch(live.reportError);
+    const existing = messagesByConversation[conversationId]
+      ?.find((message) => message.id === messageId)
+      ?.reactions?.find((reaction) => reaction.emoji === emoji);
+    const action = existing?.userIds.includes(currentUser.id)
+      ? connectService.removeReaction
+      : connectService.addReaction;
+    void action(live.organizationId, messageId, emoji)
+      .then(() => live.loadMessages(conversationId))
+      .catch(live.reportError);
   }
 
   function pushSystemMessage(content: string) {
@@ -549,17 +633,19 @@ export default function ConnectWorkspace() {
   async function handleSendMessage(payload: { content: string; mentionUserIds: string[] }) {
     if (!selectedConversation) return;
     try {
-    await handleSendMessageToConversation(
-      selectedConversation.id,
-      payload,
-      pendingAttachments.length ? pendingAttachments : undefined,
-    );
+      await handleSendMessageToConversation(
+        selectedConversation.id,
+        payload,
+        pendingAttachments.length ? pendingAttachments : undefined,
+      );
 
-    setComposerMessage("");
-    setPendingAttachments([]);
-    setQuotedMessage(null);
-    live.typing(false);
-    } catch (reason) { live.reportError(reason); }
+      setComposerMessage("");
+      setPendingAttachments([]);
+      setQuotedMessage(null);
+      live.typing(false);
+    } catch (reason) {
+      live.reportError(reason);
+    }
   }
 
   async function handleSendGreeting() {
@@ -639,11 +725,13 @@ export default function ConnectWorkspace() {
     if (!nextContent) return;
 
     try {
-    await connectService.updateMessage(live.organizationId, editingMessageId, { content: nextContent });
-    await live.loadMessages(selectedConversation.id);
-    setEditingMessageId(null);
-    setEditingMessageDraft("");
-    } catch (reason) { live.reportError(reason); }
+      await connectService.updateMessage(live.organizationId, editingMessageId, { content: nextContent });
+      await live.loadMessages(selectedConversation.id);
+      setEditingMessageId(null);
+      setEditingMessageDraft("");
+    } catch (reason) {
+      live.reportError(reason);
+    }
   }
 
   function createPendingAttachmentsFromFiles(fileList: FileList | null): ConnectPendingAttachment[] {
@@ -680,32 +768,40 @@ export default function ConnectWorkspace() {
     setMentionPendingAttachments((previous) => previous.filter((attachment) => attachment.id !== attachmentId));
   }
 
-  if (live.loading || !live.user) return (
-    <div className="flex h-full w-full items-center justify-center text-brand">
-      <CircularProgress color="inherit" aria-label="Loading Connect" />
-    </div>
-  );
+  if (live.loading || !live.user)
+    return (
+      <div className="flex h-full w-full items-center justify-center text-brand">
+        <CircularProgress color="inherit" aria-label="Loading Connect" />
+      </div>
+    );
 
   const quotedPreview = quotedMessage
     ? {
-      senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-      content: quotedMessage.content,
-    }
+        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+        content: quotedMessage.content,
+      }
     : null;
 
   const mentionQuotedPreview =
     quotedMessage && selectedMention
       ? {
-        senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
-        content: quotedMessage.content,
-      }
+          senderName: connectUsersById[quotedMessage.senderId]?.displayName ?? "Unknown",
+          content: quotedMessage.content,
+        }
       : null;
 
   const isMentionsView = activeQuickViewId === "mentions";
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
-      {live.error ? <div role="alert" className="mb-2 flex items-center justify-between bg-error/10 p-2 text-sm text-error"><span>{live.error}</span><button type="button" onClick={() => live.setError("")}>Dismiss</button></div> : null}
+      {live.error ? (
+        <div role="alert" className="mb-2 flex items-center justify-between bg-error/10 p-2 text-sm text-error">
+          <span>{live.error}</span>
+          <button type="button" onClick={() => live.setError("")}>
+            Dismiss
+          </button>
+        </div>
+      ) : null}
       {/* <div role="status" className="mb-2 text-xs text-text-secondary">{live.connected ? "Connected" : "Reconnecting"}{(live.typingUsers[selectedConversationId] ?? []).length ? ` · ${(live.typingUsers[selectedConversationId] ?? []).map((id) => connectUsersById[id]?.displayName ?? "Member").join(", ")} typing` : ""}</div> */}
       {/* <div className="mb-2 flex items-center gap-2">
         <button type="button" className="grid h-9 w-9 place-items-center rounded border border-border bg-surface" aria-label="New conversation" title="New conversation" onClick={() => setContactPickerOpen((open) => !open)}><UserPlus size={16} /></button>
@@ -734,9 +830,12 @@ export default function ConnectWorkspace() {
             onToggleTeam={handleToggleTeam}
             onSelectConversation={handleSelectConversation}
             onSelectUser={(userId) => {
-              void live.startDirect(userId).then((conversationId) => {
-                if (conversationId) handleSelectConversation(conversationId);
-              }).catch(live.reportError);
+              void live
+                .startDirect(userId)
+                .then((conversationId) => {
+                  if (conversationId) handleSelectConversation(conversationId);
+                })
+                .catch(live.reportError);
             }}
             onSelectQuickView={handleSelectQuickView}
             onOpenSidebarMenu={openSidebarMenu}
@@ -747,153 +846,201 @@ export default function ConnectWorkspace() {
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             {!selectedConversation || !currentUser ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-text-primary">
-                <h2 className="text-base font-semibold">{live.error ? "Unable to load all Connect data" : "No conversations yet"}</h2>
-                {live.error ? <button type="button" onClick={() => { void live.refresh()?.catch(live.reportError); }} className="rounded-md border border-border bg-surface px-3 py-2 text-sm">Retry</button> : null}
-                {!live.error && connectUsers.filter((person) => person.id !== live.user?.id).length === 0 ? <p className="text-sm text-text-secondary">No other active members in this organization.</p> : null}
-                <div className="flex flex-wrap justify-center gap-2">{connectUsers.filter((person) => person.id !== live.user?.id).map((person) => (
-                  <button key={person.id} type="button" className="rounded-md border border-border bg-surface px-3 py-2 text-sm" onClick={() => {
-                    void live.startDirect(person.id).then(handleSelectConversation).catch(live.reportError);
-                  }}>{person.displayName}</button>
-                ))}</div>
+                <h2 className="text-base font-semibold">
+                  {live.error ? "Unable to load all Connect data" : "No conversations yet"}
+                </h2>
+                {live.error ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void live.refresh()?.catch(live.reportError);
+                    }}
+                    className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                  >
+                    Retry
+                  </button>
+                ) : null}
+                {!live.error && connectUsers.filter((person) => person.id !== live.user?.id).length === 0 ? (
+                  <p className="text-sm text-text-secondary">No other active members in this organization.</p>
+                ) : null}
+                <div className="flex flex-wrap justify-center gap-2">
+                  {connectUsers
+                    .filter((person) => person.id !== live.user?.id)
+                    .map((person) => (
+                      <button
+                        key={person.id}
+                        type="button"
+                        className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
+                        onClick={() => {
+                          void live.startDirect(person.id).then(handleSelectConversation).catch(live.reportError);
+                        }}
+                      >
+                        {person.displayName}
+                      </button>
+                    ))}
+                </div>
               </div>
             ) : isMentionsView ? (
-            <ConnectMentionsView
-              items={mentionItems}
-              usersById={Object.fromEntries(
-                Object.values(connectUsersById).map((user) => [
-                  user.id,
-                  { id: user.id, displayName: user.displayName, avatar: user.avatar, jobTitle: user.jobTitle },
-                ]),
-              )}
-              selectedMentionId={selectedMentionId}
-              filter={mentionsFilter}
-              detail={mentionDetail}
-              onSelectMention={setSelectedMentionId}
-              onFilterChange={setMentionsFilter}
-              onOpenChannelMenu={(event, mentionId) => {
-                setMentionSourceMenuAnchor(event.currentTarget);
-                setActiveMentionMenuId(mentionId);
-              }}
-              onOpenCallOptions={(event, mentionId) => {
-                setMentionCallMenuAnchor(event.currentTarget);
-                setActiveMentionMenuId(mentionId);
-              }}
-              onOpenInNewWindow={() => {
-                pushSystemMessage("Open in new window requested from mentions.");
-              }}
-              onGoToChannel={(conversationId) => {
-                if (!conversationId) return;
-                handleSelectConversation(conversationId);
-              }}
-              composer={
-                selectedMention ? (
-                  <ConnectMessageInput
-                    conversationLabel={getConversationLabel(
-                      conversationsById[selectedMention.conversationId] ?? selectedConversation,
-                    )}
-                    value={mentionComposerMessage}
-                    users={connectUsers.map((user) => ({
-                      id: user.id,
-                      displayName: user.displayName,
-                      avatar: user.avatar,
-                      subtitle: user.jobTitle,
-                    }))}
-                    currentUserId={currentUser.id}
-                    quotedMessage={mentionQuotedPreview}
-                    pendingAttachments={mentionPendingAttachments}
-                    onChange={setMentionComposerMessage}
-                    onSend={(payload) => {
-                      handleSendMessageToConversation(
-                        selectedMention.conversationId,
-                        payload,
-                        mentionPendingAttachments.length ? mentionPendingAttachments : undefined,
-                      );
-                      setMentionComposerMessage("");
-                      setMentionPendingAttachments([]);
-                      setQuotedMessage(null);
-                    }}
-                    onClearQuotedMessage={() => setQuotedMessage(null)}
-                    onAttachFiles={handleAttachFilesForMention}
-                    onRemovePendingAttachment={handleRemoveMentionPendingAttachment}
-                  />
-                ) : null
-              }
-            />
-            ) : (
-            <ConnectConversations
-              key={`${live.organizationId}-${selectedConversation.id}`}
-              conversation={{
-                id: selectedConversation.id,
-                name: selectedConversation.name,
-                type: selectedConversation.type,
-                isFavorite: selectedConversation.isFavorite,
-                participants: selectedConversation.participants,
-              }}
-              teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
-              currentUserId={currentUser.id}
-              usersById={connectUsersById}
-              messages={selectedMessages as ConnectConversationMessage[]}
-              typingUserIds={live.typingUsers[selectedConversation.id] ?? []}
-              messagesLoading={live.historyState[selectedConversation.id]?.loading ?? true}
-              historyError={live.historyState[selectedConversation.id]?.error}
-              firstUnreadId={live.historyState[selectedConversation.id]?.firstUnreadId}
-              hasOlderMessages={Boolean(live.historyState[selectedConversation.id]?.olderCursor)}
-              hasNewerMessages={Boolean(live.historyState[selectedConversation.id]?.newerCursor)}
-              loadingMoreMessages={live.historyState[selectedConversation.id]?.paging}
-              onLoadMoreMessages={(direction) => { void live.loadMoreMessages(selectedConversation.id, direction); }}
-              onReadMessage={(messageId) => { void live.markVisibleMessageRead(selectedConversation.id, messageId); }}
-              onRetryMessages={() => { void live.loadMessages(selectedConversation.id, true).catch(live.reportError); }}
-              activeMessageMenuId={activeMessageId}
-              activeMessageEmojiId={activeMessageForEmoji}
-              getQuotedMessageById={(id) =>
-                (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as
-                ConnectConversationMessage | undefined
-              }
-              onOpenDetails={() => setShowDetails(true)}
-              onStartCall={(type) => startCall({
-                conversationId: selectedConversation.id,
-                conversationName: selectedConversation.name,
-                participantIds: selectedConversation.participants,
-                callerName: currentUser.displayName,
-                type,
-                scope: selectedConversation.type === "direct" ? "one-to-one" : selectedConversation.type,
-              })}
-              onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
-              onOpenMessageEmoji={openMessageEmojiMenu}
-              onOpenMessageMenu={openMessageMenu}
-              onQuoteMessage={(message) => setQuotedMessage(message as ConnectMessage)}
-              onOpenReactionHover={openReactionHover}
-              onCloseReactionHover={scheduleReactionHoverClose}
-              onOpenUserHover={openMentionHover}
-              onCloseUserHover={scheduleMentionHoverClose}
-              editingMessageId={editingMessageId}
-              editingMessageValue={editingMessageDraft}
-              onStartEditMessage={startEditMessage}
-              onChangeEditMessage={setEditingMessageDraft}
-              onSaveEditMessage={saveEditMessage}
-              onCancelEditMessage={requestCancelEditMessage}
-              onSendGreeting={handleSendGreeting}
-              disableHoverActions={Boolean(mentionHover)}
-            >
-              <ConnectMessageInput
-                conversationLabel={getConversationLabel(selectedConversation)}
-                value={composerMessage}
-                users={connectUsers.map((user) => ({
-                  id: user.id,
-                  displayName: user.displayName,
-                  avatar: user.avatar,
-                  subtitle: user.jobTitle,
-                }))}
-                currentUserId={currentUser.id}
-                quotedMessage={quotedPreview}
-                pendingAttachments={pendingAttachments}
-                onChange={(value) => { setComposerMessage(value); live.typing(Boolean(value.trim())); }}
-                onSend={handleSendMessage}
-                onClearQuotedMessage={() => setQuotedMessage(null)}
-                onAttachFiles={handleAttachFiles}
-                onRemovePendingAttachment={handleRemovePendingAttachment}
+              <ConnectMentionsView
+                items={mentionItems}
+                usersById={Object.fromEntries(
+                  Object.values(connectUsersById).map((user) => [
+                    user.id,
+                    { id: user.id, displayName: user.displayName, avatar: user.avatar, jobTitle: user.jobTitle },
+                  ]),
+                )}
+                selectedMentionId={selectedMentionId}
+                filter={mentionsFilter}
+                detail={mentionDetail}
+                onSelectMention={setSelectedMentionId}
+                onFilterChange={setMentionsFilter}
+                onOpenChannelMenu={(event, mentionId) => {
+                  setMentionSourceMenuAnchor(event.currentTarget);
+                  setActiveMentionMenuId(mentionId);
+                }}
+                onOpenCallOptions={(event, mentionId) => {
+                  setMentionCallMenuAnchor(event.currentTarget);
+                  setActiveMentionMenuId(mentionId);
+                }}
+                onOpenInNewWindow={() => {
+                  pushSystemMessage("Open in new window requested from mentions.");
+                }}
+                onGoToChannel={(conversationId) => {
+                  if (!conversationId) return;
+                  handleSelectConversation(conversationId);
+                }}
+                composer={
+                  selectedMention ? (
+                    <ConnectMessageInput
+                      conversationLabel={getConversationLabel(
+                        conversationsById[selectedMention.conversationId] ?? selectedConversation,
+                      )}
+                      value={mentionComposerMessage}
+                      users={connectUsers.map((user) => ({
+                        id: user.id,
+                        displayName: user.displayName,
+                        avatar: user.avatar,
+                        subtitle: user.jobTitle,
+                      }))}
+                      currentUserId={currentUser.id}
+                      quotedMessage={mentionQuotedPreview}
+                      pendingAttachments={mentionPendingAttachments}
+                      onChange={setMentionComposerMessage}
+                      onSend={(payload) => {
+                        handleSendMessageToConversation(
+                          selectedMention.conversationId,
+                          payload,
+                          mentionPendingAttachments.length ? mentionPendingAttachments : undefined,
+                        );
+                        setMentionComposerMessage("");
+                        setMentionPendingAttachments([]);
+                        setQuotedMessage(null);
+                      }}
+                      onClearQuotedMessage={() => setQuotedMessage(null)}
+                      onAttachFiles={handleAttachFilesForMention}
+                      onRemovePendingAttachment={handleRemoveMentionPendingAttachment}
+                    />
+                  ) : null
+                }
               />
-            </ConnectConversations>
+            ) : (
+              <ConnectConversations
+                key={`${live.organizationId}-${selectedConversation.id}`}
+                conversation={{
+                  id: selectedConversation.id,
+                  name: selectedConversation.name,
+                  type: selectedConversation.type,
+                  isFavorite: selectedConversation.isFavorite,
+                  participants: selectedConversation.participants,
+                }}
+                teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
+                currentUserId={currentUser.id}
+                usersById={connectUsersById}
+                messages={selectedMessages as ConnectConversationMessage[]}
+                typingUserIds={live.typingUsers[selectedConversation.id] ?? []}
+                messagesLoading={live.historyState[selectedConversation.id]?.loading ?? true}
+                historyError={live.historyState[selectedConversation.id]?.error}
+                firstUnreadId={live.historyState[selectedConversation.id]?.firstUnreadId}
+                hasOlderMessages={Boolean(live.historyState[selectedConversation.id]?.olderCursor)}
+                hasNewerMessages={Boolean(live.historyState[selectedConversation.id]?.newerCursor)}
+                loadingMoreMessages={live.historyState[selectedConversation.id]?.paging}
+                onLoadMoreMessages={(direction) => {
+                  void live.loadMoreMessages(selectedConversation.id, direction);
+                }}
+                onReadMessage={(messageId) => {
+                  void live.markVisibleMessageRead(selectedConversation.id, messageId);
+                }}
+                onRetryMessages={() => {
+                  void live.loadMessages(selectedConversation.id, true).catch(live.reportError);
+                }}
+                activeMessageMenuId={activeMessageId}
+                activeMessageEmojiId={activeMessageForEmoji}
+                getQuotedMessageById={(id) =>
+                  (messagesByConversation[selectedConversation.id] ?? []).find((message) => message.id === id) as
+                    ConnectConversationMessage | undefined
+                }
+                onOpenDetails={() => setShowDetails(true)}
+                onStartCall={(type) =>
+                  startCall({
+                    conversationId: selectedConversation.id,
+                    conversationName: selectedConversation.name,
+                    participantIds: selectedConversation.participants,
+                    callerName: currentUser.displayName,
+                    type,
+                    scope: selectedConversation.type === "direct" ? "one-to-one" : selectedConversation.type,
+                  })
+                }
+                onAddParticipant={(userId) => {
+                  void connectService
+                    .addMember(live.organizationId, selectedConversation.id, userId)
+                    .then(() => live.refresh())
+                    .catch(live.reportError);
+                }}
+                onRemoveParticipant={(userId) => {
+                  void connectService
+                    .removeMember(live.organizationId, selectedConversation.id, userId)
+                    .then(() => live.refresh())
+                    .catch(live.reportError);
+                }}
+                onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
+                onOpenMessageEmoji={openMessageEmojiMenu}
+                onOpenMessageMenu={openMessageMenu}
+                onQuoteMessage={(message) => setQuotedMessage(message as ConnectMessage)}
+                onOpenReactionHover={openReactionHover}
+                onCloseReactionHover={scheduleReactionHoverClose}
+                onOpenUserHover={openMentionHover}
+                onCloseUserHover={scheduleMentionHoverClose}
+                editingMessageId={editingMessageId}
+                editingMessageValue={editingMessageDraft}
+                onStartEditMessage={startEditMessage}
+                onChangeEditMessage={setEditingMessageDraft}
+                onSaveEditMessage={saveEditMessage}
+                onCancelEditMessage={requestCancelEditMessage}
+                onSendGreeting={handleSendGreeting}
+                disableHoverActions={Boolean(mentionHover)}
+              >
+                <ConnectMessageInput
+                  conversationLabel={getConversationLabel(selectedConversation)}
+                  value={composerMessage}
+                  users={connectUsers.map((user) => ({
+                    id: user.id,
+                    displayName: user.displayName,
+                    avatar: user.avatar,
+                    subtitle: user.jobTitle,
+                  }))}
+                  currentUserId={currentUser.id}
+                  quotedMessage={quotedPreview}
+                  pendingAttachments={pendingAttachments}
+                  onChange={(value) => {
+                    setComposerMessage(value);
+                    live.typing(Boolean(value.trim()));
+                  }}
+                  onSend={handleSendMessage}
+                  onClearQuotedMessage={() => setQuotedMessage(null)}
+                  onAttachFiles={handleAttachFiles}
+                  onRemovePendingAttachment={handleRemovePendingAttachment}
+                />
+              </ConnectConversations>
             )}
           </div>
 
@@ -911,7 +1058,11 @@ export default function ConnectWorkspace() {
                   message.content.includes("http"),
                 ).length
               }
-              files={conversationFiles.map((file) => ({ id: file.id, originalName: file.originalName, size: file.size }))}
+              files={conversationFiles.map((file) => ({
+                id: file.id,
+                originalName: file.originalName,
+                size: file.size,
+              }))}
               meetings={relatedMeetings.map((meeting) => ({ id: meeting.id, title: meeting.title }))}
               onClose={() => setShowDetails(false)}
             />
@@ -995,7 +1146,10 @@ export default function ConnectWorkspace() {
       <MessageOverlays
         emojiAnchor={messageEmojiAnchor}
         emojiMessageId={activeMessageForEmoji}
-        onCloseEmoji={() => { setMessageEmojiAnchor(null); setActiveMessageForEmoji(null); }}
+        onCloseEmoji={() => {
+          setMessageEmojiAnchor(null);
+          setActiveMessageForEmoji(null);
+        }}
         onReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
         reactionHover={reactionHover}
         onCloseReaction={scheduleReactionHoverClose}
@@ -1031,6 +1185,26 @@ export default function ConnectWorkspace() {
         closeSidebarMenus={closeSidebarMenus}
         organizationId={live.organizationId}
         onCreated={() => live.refresh()}
+      />
+
+      <AddTeamMembersDialog
+        key={addTeamMembersTeamId ?? "add-team-members"}
+        open={Boolean(addTeamMembersTeamId)}
+        teamId={addTeamMembersTeamId}
+        organizationId={live.organizationId}
+        onClose={() => setAddTeamMembersTeamId(null)}
+        onUpdated={() => live.refresh()}
+        onError={live.reportError}
+      />
+
+      <ManageTeamDialog
+        key={manageTeamId ?? "manage-team"}
+        open={Boolean(manageTeamId)}
+        teamId={manageTeamId}
+        organizationId={live.organizationId}
+        onClose={() => setManageTeamId(null)}
+        onUpdated={() => live.refresh()}
+        onError={live.reportError}
       />
     </div>
   );

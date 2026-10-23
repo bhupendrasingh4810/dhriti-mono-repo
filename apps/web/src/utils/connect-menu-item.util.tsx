@@ -49,6 +49,14 @@ export interface SectionViewModeState {
   chats: string;
   mentions: string;
   threads: string;
+  drafts: string;
+}
+
+export interface TeamMenuActions {
+  canLeave: boolean;
+  onAddMember: () => void;
+  onManageTeam: () => void;
+  onLeaveTeam: () => void;
 }
 
 // 🧬 Shared action sub-menus used across multiple context variants
@@ -65,12 +73,20 @@ function conversationUrl(conversationId: string | undefined) {
 
 export function getMenuItems(
   sidebarMenuContext: SidebarContext | null | undefined,
-  sectionViewMode: Record<string, string>,
+  sectionViewMode: SectionViewModeState,
   setSectionViewMode: React.Dispatch<React.SetStateAction<SectionViewModeState>>,
   setCreateSectionOpen: (open: boolean) => void,
   setCreateTeamOpen: (open: boolean) => void,
   setCreateChannelOpen: (open: boolean) => void,
   pushSystemMessage: (msg: string) => void,
+  onSaveSidebarSettings: (settings: {
+    favoritesFilter?: "all" | "unread";
+    chatsFilter?: "all" | "unread";
+    mentions?: "always" | "unread";
+    threads?: "always" | "unread";
+    drafts?: "visible" | "hidden";
+  }) => void,
+  teamActions?: TeamMenuActions,
 ): ConnectCascadingMenuItem[] {
   if (!sidebarMenuContext?.kind) return [];
 
@@ -93,13 +109,19 @@ export function getMenuItems(
             label: "All",
             selected: sectionViewMode[sectionId] === "all",
             sectionTitle: "View",
-            onClick: () => setSectionViewMode((prev) => ({ ...prev, [sectionId]: "all" })),
+            onClick: () => {
+              setSectionViewMode((prev) => ({ ...prev, [sectionId]: "all" }));
+              onSaveSidebarSettings(sectionId === "favorites" ? { favoritesFilter: "all" } : { chatsFilter: "all" });
+            },
           },
           {
             id: "view-unread",
             label: "Unread only",
             selected: sectionViewMode[sectionId] === "unread",
-            onClick: () => setSectionViewMode((prev) => ({ ...prev, [sectionId]: "unread" })),
+            onClick: () => {
+              setSectionViewMode((prev) => ({ ...prev, [sectionId]: "unread" }));
+              onSaveSidebarSettings(sectionId === "favorites" ? { favoritesFilter: "unread" } : { chatsFilter: "unread" });
+            },
           },
         ];
       }
@@ -126,6 +148,10 @@ export function getMenuItems(
             label: "Hide",
             icon: <EyeOff size={16} />,
             sectionTitle: "Options",
+            onClick: () => {
+              setSectionViewMode((prev) => ({ ...prev, drafts: "hidden" }));
+              onSaveSidebarSettings({ drafts: "hidden" });
+            },
           },
         ];
       }
@@ -137,13 +163,19 @@ export function getMenuItems(
           label: "Always",
           selected: sectionViewMode[key] === "always",
           sectionTitle: "Show",
-          onClick: () => setSectionViewMode((prev) => ({ ...prev, [key]: "always" })),
+          onClick: () => {
+            setSectionViewMode((prev) => ({ ...prev, [key]: "always" }));
+            onSaveSidebarSettings({ [key]: "always" });
+          },
         },
         {
           id: "show-unread",
           label: "When unread",
           selected: sectionViewMode[key] === "unread",
-          onClick: () => setSectionViewMode((prev) => ({ ...prev, [key]: "unread" })),
+          onClick: () => {
+            setSectionViewMode((prev) => ({ ...prev, [key]: "unread" }));
+            onSaveSidebarSettings({ [key]: "unread" });
+          },
         },
       ];
     }
@@ -186,37 +218,37 @@ export function getMenuItems(
 
     case "channel":
       return [
-        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} /> },
-        {
-          id: "channel-notifications",
-          label: "Channel notifications",
-          icon: <Bell size={16} />,
-        },
-        {
-          id: "move-section",
-          label: "Move to section",
-          closeOnClick: false,
-          children: getMoveSectionChildren(setCreateSectionOpen, false), // No Favorites for channels
-        },
-        { id: "remove-section", label: "Remove from section", icon: <Trash2 size={16} /> },
-        { id: "hide", label: "Hide", icon: <EyeOff size={16} /> },
-        {
-          id: "manage-channel",
-          label: "Manage channel",
-          icon: <Settings size={16} />,
-          dividerAbove: true,
-          onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label || ""}.`),
-        },
-        { id: "manage-tags", label: "Manage channel tags", icon: <Pencil size={16} /> },
-        { id: "copy-link", label: "Copy Link", icon: <Link size={16} /> },
-        { id: "workflows", label: "Work flows", icon: <Settings size={16} /> },
-        { id: "go-team", label: "Go to team", icon: <ChevronRight size={16} /> },
+        { id: "open-window", label: "Open in new window", icon: <ExternalLink size={16} />, onClick: () => window.open(conversationUrl(sidebarMenuContext.id), "_blank", "noopener,noreferrer") },
+        // {
+        //   id: "channel-notifications",
+        //   label: "Channel notifications",
+        //   icon: <Bell size={16} />,
+        // },
+        // {
+        //   id: "move-section",
+        //   label: "Move to section",
+        //   closeOnClick: false,
+        //   children: getMoveSectionChildren(setCreateSectionOpen, false), // No Favorites for channels
+        // },
+        // { id: "remove-section", label: "Remove from section", icon: <Trash2 size={16} /> },
+        // { id: "hide", label: "Hide", icon: <EyeOff size={16} /> },
+        // {
+        //   id: "manage-channel",
+        //   label: "Manage channel",
+        //   icon: <Settings size={16} />,
+        //   dividerAbove: true,
+        //   onClick: () => pushSystemMessage(`Manage channel requested for ${sidebarMenuContext.label || ""}.`),
+        // },
+        // { id: "manage-tags", label: "Manage channel tags", icon: <Pencil size={16} /> },
+        { id: "copy-link", label: "Copy Link", icon: <Link size={16} />, onClick: () => void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)) },
+        // { id: "workflows", label: "Work flows", icon: <Settings size={16} /> },
+        // { id: "go-team", label: "Go to team", icon: <ChevronRight size={16} /> },
       ];
 
     case "team":
       return [
-        { id: "hide-channels", label: "Hide all Channels", icon: <EyeOff size={16} /> },
-        { id: "add-member", label: "Add member", icon: <UserPlus size={16} /> },
+        // { id: "hide-channels", label: "Hide all Channels", icon: <EyeOff size={16} /> },
+        { id: "add-member", label: "Add member", icon: <UserPlus size={16} />, onClick: teamActions?.onAddMember },
         {
           id: "add-channel",
           label: "Add channel",
@@ -227,11 +259,11 @@ export function getMenuItems(
           id: "manage-team",
           label: "Manage team",
           icon: <Settings size={16} />,
-          onClick: () => pushSystemMessage(`Manage team requested for ${sidebarMenuContext.label || ""}.`),
+          onClick: teamActions?.onManageTeam,
         },
-        { id: "manage-tags", label: "Manage tags", icon: <Pencil size={16} /> },
-        { id: "copy-link", label: "Copy link", icon: <Link size={16} /> },
-        { id: "leave-team", label: "Leave team", icon: <LogOut size={16} /> },
+        // { id: "manage-tags", label: "Manage tags", icon: <Pencil size={16} /> },
+        // { id: "copy-link", label: "Copy link", icon: <Link size={16} /> },
+        ...(teamActions?.canLeave ? [{ id: "leave-team", label: "Leave team", icon: <LogOut size={16} />, dividerAbove: true, danger: true, onClick: teamActions.onLeaveTeam }] : []),
       ];
 
     case "message":

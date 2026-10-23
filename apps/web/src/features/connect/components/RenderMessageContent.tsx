@@ -74,7 +74,7 @@ const MentionToken = ({ token, connectUsers, openMentionHover }: MentionTokenPro
       }}
       className={`font-bold text-brand ${matchedUser ? "cursor-pointer" : "cursor-default"}`}
     >
-      @{displayName}
+      {displayName}
     </span>
   );
 };
@@ -104,34 +104,25 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
 
         if (/^`[^`]+`$/.test(token)) {
           return (
-            <code key={`${currentKey}-code`} className="mx-0.5 rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-xs">
+            <code
+              key={`${currentKey}-code`}
+              className="mx-0.5 rounded border border-slate-200 bg-slate-50 px-1 py-0.5 font-mono text-xs"
+            >
               {token.slice(1, -1)}
             </code>
           );
         }
 
         if (/^\*\*[^*]+\*\*$/.test(token)) {
-          return (
-            <strong key={`${currentKey}-bold`}>
-              {token.slice(2, -2)}
-            </strong>
-          );
+          return <strong key={`${currentKey}-bold`}>{token.slice(2, -2)}</strong>;
         }
 
         if (/^\*[^*]+\*$/.test(token)) {
-          return (
-            <em key={`${currentKey}-italic`}>
-              {token.slice(1, -1)}
-            </em>
-          );
+          return <em key={`${currentKey}-italic`}>{token.slice(1, -1)}</em>;
         }
 
         if (/^~~[^~]+~~$/.test(token)) {
-          return (
-            <s key={`${currentKey}-strike`}>
-              {token.slice(2, -2)}
-            </s>
-          );
+          return <s key={`${currentKey}-strike`}>{token.slice(2, -2)}</s>;
         }
 
         if (/^==[^=]+==$/.test(token)) {
@@ -159,17 +150,31 @@ const InlineMarkdown = ({ text, keyPrefix, connectUsers, openMentionHover }: Inl
           );
         }
 
-        const names = connectUsers.map((user) => user.displayName.trim())
+        const names = connectUsers
+          .map((user) => user.displayName.trim())
           .filter(Boolean)
           .sort((first, second) => second.length - first.length)
           .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
         if (!names.length) return <Fragment key={`${currentKey}-txt`}>{token}</Fragment>;
         const mentionPattern = new RegExp(`(?<![\\p{L}\\p{N}_@])(@(?:${names.join("|")}))(?![\\p{L}\\p{N}_])`, "giu");
-        return <Fragment key={`${currentKey}-txt`}>{token.split(mentionPattern).map((part, partIndex) => (
-          partIndex % 2 === 1
-            ? <MentionToken key={`${currentKey}-${partIndex}`} token={part} connectUsers={connectUsers} openMentionHover={openMentionHover} />
-            : <Fragment key={`${currentKey}-${partIndex}`}>{part}</Fragment>
-        ))}</Fragment>;
+        return (
+          <Fragment key={`${currentKey}-txt`}>
+            {token
+              .split(mentionPattern)
+              .map((part, partIndex) =>
+                partIndex % 2 === 1 ? (
+                  <MentionToken
+                    key={`${currentKey}-${partIndex}`}
+                    token={part}
+                    connectUsers={connectUsers}
+                    openMentionHover={openMentionHover}
+                  />
+                ) : (
+                  <Fragment key={`${currentKey}-${partIndex}`}>{part}</Fragment>
+                ),
+              )}
+          </Fragment>
+        );
       })}
     </>
   );
@@ -218,16 +223,18 @@ function LinkPreviewCard({ url, label }: { url: string; label: string }) {
 
   return (
     <div className="mt-3 flex max-w-[360px] items-center gap-3 rounded border border-slate-200 bg-white p-2">
-      <img
-        src={meta.thumbnail}
-        alt=""
-        className="h-9 w-9 rounded border border-slate-100 bg-slate-50"
-      />
+      <img src={meta.thumbnail} alt="" className="h-9 w-9 rounded border border-slate-100 bg-slate-50" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-extrabold text-slate-900">{label}</p>
         <p className="truncate text-xs text-slate-500">{meta.domain}</p>
       </div>
-      <a aria-label={`Open ${label}`} href={meta.href} target="_blank" rel="noreferrer" className="rounded p-1 text-slate-500 hover:bg-slate-50">
+      <a
+        aria-label={`Open ${label}`}
+        href={meta.href}
+        target="_blank"
+        rel="noreferrer"
+        className="rounded p-1 text-slate-500 hover:bg-slate-50"
+      >
         <OpenInNewIcon />
       </a>
     </div>
@@ -254,8 +261,24 @@ function CodeBlock({ code, blockKey }: { code: string; blockKey: string }) {
       <div className="flex items-center justify-between border-b border-slate-200 px-3 py-1.5">
         <span className="text-xs font-medium text-slate-500">Plain Text</span>
         <span className="flex items-center gap-1">
-          <button type="button" title="Copy code" aria-label="Copy code" onClick={copyCode} className="rounded p-1 text-slate-500 hover:bg-slate-100"><CopyIcon /></button>
-          <button type="button" title="Download code" aria-label="Download code" onClick={downloadCode} className="rounded p-1 text-slate-500 hover:bg-slate-100"><DownloadIcon /></button>
+          <button
+            type="button"
+            title="Copy code"
+            aria-label="Copy code"
+            onClick={copyCode}
+            className="rounded p-1 text-slate-500 hover:bg-slate-100"
+          >
+            <CopyIcon />
+          </button>
+          <button
+            type="button"
+            title="Download code"
+            aria-label="Download code"
+            onClick={downloadCode}
+            className="rounded p-1 text-slate-500 hover:bg-slate-100"
+          >
+            <DownloadIcon />
+          </button>
         </span>
       </div>
       <pre className="m-0 max-h-[13rem] overflow-auto whitespace-pre p-3 font-mono text-xs leading-5 text-slate-800">
@@ -281,11 +304,7 @@ export function RenderMessageContent({ message, connectUsers, openMentionHover }
   // 2️⃣ Handle Single Jumbo Emoji Layouts View
   const trimmedContent = content.trim();
   if (!priority && isSingleEmojiMessage(trimmedContent)) {
-    return (
-      <div className="text-[52px] leading-[1.1] tracking-normal">
-        {trimmedContent}
-      </div>
-    );
+    return <div className="text-[52px] leading-[1.1] tracking-normal">{trimmedContent}</div>;
   }
 
   // 3️⃣ Break Content Down into Codeblocks and Standard Text Regions
@@ -317,7 +336,10 @@ export function RenderMessageContent({ message, connectUsers, openMentionHover }
               // Handle Blockquote Elements
               if (/^\s*>\s?/.test(line)) {
                 return (
-                  <blockquote key={lineKey} className="border-l-[3px] border-slate-200 pl-2 text-sm italic text-slate-500">
+                  <blockquote
+                    key={lineKey}
+                    className="border-l-[3px] border-slate-200 pl-2 text-sm italic text-slate-500"
+                  >
                     <InlineMarkdown
                       text={line.replace(/^\s*>\s?/, "")}
                       keyPrefix={`${lineKey}-q`}
@@ -366,14 +388,50 @@ export function RenderMessageContent({ message, connectUsers, openMentionHover }
 }
 
 function DownloadIcon() {
-  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" /></svg>;
+  return (
+    <svg
+      aria-hidden="true"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14" />
+    </svg>
+  );
 }
 
 function CopyIcon() {
-  return <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" /></svg>;
+  return (
+    <svg
+      aria-hidden="true"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M15 9V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h4" />
+    </svg>
+  );
 }
 
 function OpenInNewIcon() {
-  return <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 3h7v7M10 14 21 3M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" /></svg>;
+  return (
+    <svg
+      aria-hidden="true"
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M14 3h7v7M10 14 21 3M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" />
+    </svg>
+  );
 }
-

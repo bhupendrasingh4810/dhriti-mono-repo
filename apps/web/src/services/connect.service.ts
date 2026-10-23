@@ -25,6 +25,22 @@ export interface ConnectTeam {
   admins: string[];
   users: string[];
 }
+export interface ConnectTeamDetails {
+  id: string;
+  name: string;
+  description: string | null;
+  visibility: string;
+  channels: Array<{ id: string; name: string; slug: string; visibility: string; createdAt: string }>;
+  members: Array<{
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+    jobTitle: string | null;
+    location: string | null;
+    role: "ADMIN" | "MEMBER";
+    joinedAt: string;
+  }>;
+}
 export interface UpdateChannelInput {
   name?: string;
   topic?: string;
@@ -81,6 +97,14 @@ export interface ConnectApiConversation {
 export interface ConnectSidebarState {
   favorites: { chats: string[]; teams: string[]; channels: string[] };
   recentChats: string[];
+  settings: ConnectSidebarSettings;
+}
+export interface ConnectSidebarSettings {
+  mentions?: "always" | "unread" | "hidden";
+  threads?: "always" | "unread" | "hidden";
+  drafts?: "visible" | "hidden";
+  favoritesFilter?: "all" | "unread";
+  chatsFilter?: "all" | "unread";
 }
 export interface SetConnectFavoriteInput {
   itemType: "chat" | "team" | "channel";
@@ -98,12 +122,27 @@ export interface ConnectOrganizationUser {
   email: string;
   avatarUrl: string | null;
 }
+export interface ConnectOrganizationUsersPage {
+  users: ConnectOrganizationUser[];
+  nextCursor: string | null;
+}
 
 const base = "/api/organization/connect";
 
 export const connectService = {
   listUsers: (organizationId: string) => tenantRequest<ConnectOrganizationUser[]>(organizationId, `${base}/users`),
+  listUsersPage: (organizationId: string, cursor?: string) =>
+    tenantRequest<ConnectOrganizationUsersPage>(organizationId, `${base}/users/paged`, {
+      query: { limit: 12, ...(cursor ? { cursor } : {}) },
+    }),
   getSidebar: (organizationId: string) => tenantRequest<ConnectSidebarState>(organizationId, `${base}/sidebar`),
+  updateSidebarSettings: (organizationId: string, input: ConnectSidebarSettings) =>
+    tenantJsonRequest<ConnectSidebarState, ConnectSidebarSettings>(
+      organizationId,
+      `${base}/sidebar/settings`,
+      "PUT",
+      input,
+    ),
   setSidebarFavorite: (organizationId: string, input: SetConnectFavoriteInput) =>
     tenantJsonRequest<ConnectSidebarState, SetConnectFavoriteInput>(
       organizationId,
@@ -121,8 +160,19 @@ export const connectService = {
     ),
   listChannels: (organizationId: string) => tenantRequest<ConnectApiConversation[]>(organizationId, `${base}/channels`),
   listTeams: (organizationId: string) => tenantRequest<ConnectTeam[]>(organizationId, `${base}/teams`),
+  getTeam: (organizationId: string, teamId: string) =>
+    tenantRequest<ConnectTeamDetails>(organizationId, `${base}/teams/${pathSegment(teamId)}`),
   createTeam: (organizationId: string, input: CreateConnectTeamInput) =>
     tenantJsonRequest<ConnectTeam, CreateConnectTeamInput>(organizationId, `${base}/teams`, "POST", input),
+  addTeamMember: (organizationId: string, teamId: string, userId: string) =>
+    tenantJsonRequest<void, { userId: string }>(
+      organizationId,
+      `${base}/teams/${pathSegment(teamId)}/members`,
+      "POST",
+      { userId },
+    ),
+  leaveTeam: (organizationId: string, teamId: string) =>
+    tenantRequest<void>(organizationId, `${base}/teams/${pathSegment(teamId)}/leave`, { method: "POST" }),
   joinPublicChannel: (organizationId: string, channelId: string) =>
     tenantRequest<void>(organizationId, `${base}/channels/${pathSegment(channelId)}/join`, { method: "POST" }),
   createChannel: (organizationId: string, input: CreateChannelInput) =>

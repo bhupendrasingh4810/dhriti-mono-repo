@@ -20,6 +20,8 @@ describe("ConnectService message restore", () => {
     message: { findFirst: jest.Mock; update: jest.Mock };
     channelMember: { findMany: jest.Mock };
     organizationMember: { findMany: jest.Mock };
+    team: { findFirst: jest.Mock };
+    channel: { findUnique: jest.Mock; create: jest.Mock };
   };
   let publisher: { publishToUsers: jest.Mock };
   let audit: { record: jest.Mock };
@@ -33,6 +35,11 @@ describe("ConnectService message restore", () => {
       },
       channelMember: { findMany: jest.fn().mockResolvedValue([{ userId: authorId }, { userId: "removed-user" }]) },
       organizationMember: { findMany: jest.fn().mockResolvedValue([{ userId: authorId }]) },
+      team: { findFirst: jest.fn().mockResolvedValue({ id: "team-id" }) },
+      channel: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: channelId, organizationId, teamId: "team-id", members: [{ userId: authorId, role: "ADMIN" }] }),
+      },
     };
     publisher = { publishToUsers: jest.fn() };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
@@ -95,5 +102,17 @@ describe("ConnectService message restore", () => {
     await expect(service.restoreMessage(organizationId, messageId, authorId)).rejects.toThrow("Not a channel member");
     expect(prisma.message.update).not.toHaveBeenCalled();
     expect(publisher.publishToUsers).not.toHaveBeenCalled();
+  });
+
+  it("persists the selected team ID when creating a channel", async () => {
+    await service.createChannel(organizationId, authorId, {
+      name: "Product updates",
+      slug: "product-updates",
+      teamId: "team-id",
+    });
+
+    expect(prisma.channel.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ teamId: "team-id" }),
+    }));
   });
 });
