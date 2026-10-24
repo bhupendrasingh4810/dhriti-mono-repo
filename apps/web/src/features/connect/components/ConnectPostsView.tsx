@@ -593,12 +593,12 @@ function PostCard({
   const poll = post.poll;
   const totalVotes = poll?.options.reduce((sum, option) => sum + option.voteCount, 0) ?? 0;
   const isClosed = poll?.closesAt ? new Date(poll.closesAt) <= new Date() : false;
-  const backgroundClass = post.backgroundColor === "var(--app-color-brand-muted)" ? "bg-brand/10" : post.backgroundColor === "var(--app-color-surface-raised)" ? "bg-surface-raised" : "bg-surface";
+  const backgroundClass = post.backgroundColor === "var(--app-color-brand-muted)" ? "bg-brand/10" : post.backgroundColor === "var(--app-color-surface-raised)" ? "bg-surface-raised" : "bg-brand/5";
   const [comment, setComment] = useState("");
   const [commentError, setCommentError] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
-  const [commentsVisible, setCommentsVisible] = useState(true);
+  const [commentsVisible, setCommentsVisible] = useState(false);
   const [contentExpanded, setContentExpanded] = useState(false);
   const [contentOverflows, setContentOverflows] = useState(false);
   const contentRef = useRef<HTMLParagraphElement>(null);
@@ -631,32 +631,32 @@ function PostCard({
   }, [post.content]);
 
   return (
-    <article data-unread-post={post.isUnread ? "true" : undefined} className={`overflow-hidden rounded-xl border border-border ${backgroundClass} shadow-sm`}>
+    <article data-unread-post={post.isUnread ? "true" : undefined} className={`overflow-hidden rounded-2xl border border-brand/15 ${backgroundClass} shadow-sm transition-shadow hover:shadow-md`}>
       {post.backgroundImageUrl ? <img src={post.backgroundImageUrl} alt="" className="h-28 w-full object-cover" /> : null}
       <div className="p-4">
         <div className="flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-full bg-surface-raised text-xs font-bold text-text-primary">{(author?.displayName ?? "U").slice(0, 1)}</span>
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-brand/10 text-xs font-bold text-brand">{(author?.displayName ?? "U").slice(0, 1)}</span>
           <div>
-            <p className="text-sm font-semibold text-text-primary">{author?.displayName ?? "Unknown user"}</p>
+            <p className="text-sm font-semibold text-brand">{author?.displayName ?? "Unknown user"}</p>
             <time className="text-xs text-text-secondary">{formatTime(post.createdAt)}</time>
           </div>
           {post.authorId === currentUserId ? <button type="button" onClick={(event) => setMenuAnchor(event.currentTarget)} className="ml-auto grid h-8 w-8 place-items-center rounded text-text-secondary hover:bg-surface-raised hover:text-text-primary" aria-label="Post actions" title="Post actions"><EllipsisVertical size={18} /></button> : null}
         </div>
         {post.title ? <h3 className="mt-4 text-lg font-bold text-text-primary">{post.title}</h3> : null}
         <div className="relative mt-2">
-          <p ref={contentRef} className={`whitespace-pre-wrap text-sm leading-6 text-text-primary ${contentExpanded ? "" : "max-h-[300px] overflow-hidden"}`}>{post.content}</p>
+          <p ref={contentRef} className={`whitespace-pre-wrap text-[15px] leading-6 text-text-primary ${contentExpanded ? "" : "max-h-[300px] overflow-hidden"}`}>{post.content}</p>
           {contentOverflows && !contentExpanded ? <div className="absolute inset-x-0 bottom-0 flex justify-center bg-linear-to-t from-surface via-surface/95 pt-8 text-sm"><button type="button" onClick={() => setContentExpanded(true)} className="font-semibold text-brand hover:text-brand-dark">Show more</button></div> : null}
         </div>
-        {post.imageUrl ? <img src={post.imageUrl} alt="" className="mt-4 max-h-[200px] w-full rounded-lg bg-surface-raised object-contain" /> : null}
-        {poll ? <div className="mt-4 rounded-lg border border-border bg-surface p-3"><div className="mt-3 space-y-2">{poll.options.map((option) => { const percentage = totalVotes ? Math.round(option.voteCount / totalVotes * 100) : 0; const selected = option.id === poll.currentVote?.pollOptionId; return <button key={option.id} type="button" disabled={isClosed || (Boolean(poll.currentVote) && !poll.allowsVoteChanges)} onClick={() => onVote(post.id, option.id)} className={`relative w-full overflow-hidden rounded border px-3 py-2 text-left text-sm ${selected ? "border-brand" : "border-border"} disabled:cursor-default`}><span className="absolute inset-y-0 left-0 bg-brand/10" style={{ width: `${percentage}%` }} /><span className="relative flex justify-between gap-3"><span>{option.content}</span><span>{percentage}%</span></span></button>; })}</div><p className="mt-3 text-xs text-text-secondary">{totalVotes} votes · {isClosed ? "Closed" : poll.closesAt ? `Closes ${formatTime(poll.closesAt)}` : "Open"}</p></div> : null}
+        {post.imageUrl ? <img src={post.imageUrl} alt="" className="mt-4 max-h-[200px] w-full rounded-xl bg-surface/80 object-contain" /> : null}
+        {poll ? <div className="mt-4 rounded-xl border border-brand/15 bg-surface/80 p-3"><div className="mt-3 space-y-2">{poll.options.map((option) => { const percentage = totalVotes ? Math.round(option.voteCount / totalVotes * 100) : 0; const selected = option.id === poll.currentVote?.pollOptionId; return <button key={option.id} type="button" disabled={isClosed || (Boolean(poll.currentVote) && !poll.allowsVoteChanges)} onClick={() => onVote(post.id, option.id)} className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-sm ${selected ? "border-brand" : "border-border"} disabled:cursor-default`}><span className="absolute inset-y-0 left-0 bg-brand/10" style={{ width: `${percentage}%` }} /><span className="relative flex justify-between gap-3"><span>{option.content}</span><span>{percentage}%</span></span></button>; })}</div><p className="mt-3 text-xs text-text-secondary">{totalVotes} votes · {isClosed ? "Closed" : poll.closesAt ? `Closes ${formatTime(poll.closesAt)}` : "Open"}</p></div> : null}
 
-        <div className="mt-4 border-t border-border pt-3">
+        <div className="mt-4 border-t border-brand/15 pt-3">
           <div className="flex flex-wrap items-center gap-2">
             {REACTION_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => onReact(post.id, emoji, currentReaction)} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-full border px-2 text-sm ${currentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React with ${emoji}`}>{emoji}{reactionCounts[emoji] ? <span>{reactionCounts[emoji]}</span> : null}</button>)}
             <span className="ml-auto inline-flex items-center gap-1 text-xs text-text-secondary"><MessageCircle size={14} /> {post.comments.length} comments</span>
           </div>
           <div className="mt-3 flex gap-2">
-            <input value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void submitComment(); }} placeholder="Write a comment..." className="min-w-0 flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand" />
+            <input value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void submitComment(); }} placeholder="Write a comment..." className="min-w-0 flex-1 rounded-lg border border-brand/15 bg-surface/80 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand" />
             <button type="button" disabled={submittingComment || !comment.trim()} onClick={() => void submitComment()} aria-label="Add comment" title="Add comment" className="grid h-9 w-9 place-items-center rounded-md bg-brand text-white hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"><Send size={15} /></button>
           </div>
           {commentError ? <p role="alert" className="mt-2 text-sm text-error">{commentError}</p> : null}
@@ -668,7 +668,7 @@ function PostCard({
             }, {});
             const canDelete = item.authorId === currentUserId || post.authorId === currentUserId;
             const canEdit = item.authorId === currentUserId;
-            return <div key={item.id} className="flex gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-raised text-xs font-bold text-text-primary">{item.author.name.slice(0, 1)}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-semibold text-text-primary">{item.author.name}</p><time className="text-xs text-text-muted">{formatTime(item.createdAt)}</time>{canEdit || canDelete ? <CommentActions onEdit={canEdit ? () => onEditComment(item) : undefined} onDelete={canDelete ? () => onDeleteComment(post.id, item.id) : undefined} /> : null}</div><p className="whitespace-pre-wrap text-sm text-text-secondary">{item.content}</p><div className="mt-2 flex flex-wrap gap-1.5">{REACTION_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => onReactToComment(post.id, item.id, emoji, commentReaction)} className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-1.5 text-xs ${commentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React to comment with ${emoji}`}>{emoji}{commentReactionCounts[emoji] ? <span>{commentReactionCounts[emoji]}</span> : null}</button>)}</div></div></div>;
+            return <div key={item.id} className="flex gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-raised text-xs font-bold text-text-primary">{item.author.name.slice(0, 1)}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-semibold text-brand">{item.author.name}</p><time className="text-xs text-text-muted">{formatTime(item.createdAt)}</time>{canEdit || canDelete ? <CommentActions onEdit={canEdit ? () => onEditComment(item) : undefined} onDelete={canDelete ? () => onDeleteComment(post.id, item.id) : undefined} /> : null}</div><p className="whitespace-pre-wrap text-sm text-text-secondary">{item.content}</p><div className="mt-2 flex flex-wrap gap-1.5">{REACTION_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => onReactToComment(post.id, item.id, emoji, commentReaction)} className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-1.5 text-xs ${commentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React to comment with ${emoji}`}>{emoji}{commentReactionCounts[emoji] ? <span>{commentReactionCounts[emoji]}</span> : null}</button>)}</div></div></div>;
           })}</div> : null}
           {post.comments.length > 0 ? <button type="button" onClick={() => setCommentsVisible((visible) => !visible)} className="mt-4 flex w-full justify-center text-sm font-semibold text-brand hover:text-brand-dark" aria-expanded={commentsVisible}>{commentsVisible ? "Hide comments" : "Show comments"}</button> : null}
         </div>

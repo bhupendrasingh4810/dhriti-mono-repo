@@ -75,6 +75,7 @@ export type ConnectConversationMessage = {
   contentType: string;
   createdAt: string;
   status?: "sending" | "sent" | "delivered" | "read";
+  isPinned?: boolean;
   quotedMessageId?: string;
   attachments?: ConversationAttachment[];
   reactions?: ConversationReaction[];

@@ -1117,10 +1117,22 @@ export class ConnectService {
       include: this.messageInclude(userId),
     });
 
+    const [pinnedMessages, pinnedCount] = await Promise.all([
+      this.prisma.message.findMany({
+        where: { organizationId, channelId, deletedAt: null, pinnedAt: { not: null } },
+        orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
+        include: this.messageInclude(userId),
+      }),
+      this.prisma.message.count({
+        where: { organizationId, channelId, deletedAt: null, pinnedAt: { not: null } },
+      }),
+    ]);
     const hasMore = messages.length > limit;
     const page = hasMore ? messages.slice(0, limit) : messages;
     return {
       messages: page.map((message) => this.serializeMessage(message)),
+      pinnedMessages: pinnedMessages.map((message) => this.serializeMessage(message)),
+      pinnedCount,
       nextCursor: forward ? (page[0]?.id ?? null) : hasMore ? (page[page.length - 1]?.id ?? null) : null,
       newerCursor: forward && hasMore ? (page[page.length - 1]?.id ?? null) : null,
       firstUnreadId: firstUnread?.id ?? null,
@@ -1518,6 +1530,7 @@ export class ConnectService {
     if (message.authorId !== userId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the author can edit a message", HttpStatus.FORBIDDEN);
     }
+
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
     const mentionUserIds = await this.resolveMentions(organizationId, dto.content, undefined);
@@ -1537,6 +1550,30 @@ export class ConnectService {
     });
     this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", { channelId: channel.id, message: updated });
     return updated;
+  }
+
+  async toggleMessagePin(organizationId: string, messageId: string, userId: string) {
+    const message = await this.getMessage(organizationId, messageId);
+    const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
+    const updated = await this.prisma.message.update({
+      where: { id: message.id },
+      data: { pinnedAt: message.pinnedAt ? null : new Date() },
+      include: this.messageInclude(userId),
+    });
+    const serialized = this.serializeMessage(updated);
+    await this.audit.record({
+      action: updated.pinnedAt ? "connect.message.pinned" : "connect.message.unpinned",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Message",
+      resourceId: message.id,
+      metadata: { channelId: channel.id },
+    });
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", {
+      channelId: channel.id,
+      message: serialized,
+    });
+    return serialized;
   }
 
   async deleteMessage(organizationId: string, messageId: string, userId: string): Promise<void> {

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Ellipsis, MessagesSquare, Phone, Star, UserMinus, UserPlus, Users, Video } from "lucide-react";
+import { BellOff, Copy, Ellipsis, ExternalLink, Info, MessagesSquare, Phone, Star, Trash2, Users, Video } from "lucide-react";
+import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { CallType, ConversationUser } from "@/types/connect.types";
 
 type ConversationHeaderProps = {
@@ -12,28 +13,32 @@ type ConversationHeaderProps = {
     participants: string[];
   };
   teamLabel: string;
-  currentUserId: string;
   usersById: Record<string, ConversationUser>;
   onOpenDetails: () => void;
   onStartCall: (type: CallType) => void;
-  onAddParticipant: (userId: string) => void;
-  onRemoveParticipant: (userId: string) => void;
+  isChannelAdmin?: boolean;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
+  onDeleteChannel?: () => void;
+  onOpenInNewTab?: () => void;
   actions?: ReactNode;
 };
 
 export function ConversationHeader({
   conversation,
   teamLabel,
-  currentUserId,
   usersById,
   onOpenDetails,
   onStartCall,
-  onAddParticipant,
-  onRemoveParticipant,
+  isChannelAdmin = false,
+  isMuted = false,
+  onToggleMute,
+  onDeleteChannel,
+  onOpenInNewTab,
   actions,
 }: ConversationHeaderProps) {
   const [participantsAnchor, setParticipantsAnchor] = useState<HTMLElement | null>(null);
-  const [participantSearch, setParticipantSearch] = useState("");
+  const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
   const participantsPopoverRef = useRef<HTMLDivElement>(null);
 
   const participants = useMemo(
@@ -42,28 +47,11 @@ export function ConversationHeader({
     [conversation.participants, usersById],
   );
 
-  const addableUsers = useMemo(() => {
-    const set = new Set(conversation.participants);
-    return Object.values(usersById)
-      .filter((user) => !set.has(user.id))
-      .filter((user) => user.displayName.toLowerCase().includes(participantSearch.toLowerCase()))
-      .slice(0, 8);
-  }, [conversation.participants, participantSearch, usersById]);
-
-  function handleAddParticipant(userId: string) {
-    onAddParticipant(userId);
-  }
-
-  function handleRemoveParticipant(userId: string) {
-    onRemoveParticipant(userId);
-  }
-
   useEffect(() => {
     if (!participantsAnchor) return;
 
     const closePopover = () => {
       setParticipantsAnchor(null);
-      setParticipantSearch("");
     };
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target as Node;
@@ -86,16 +74,20 @@ export function ConversationHeader({
 
   const participantsAnchorRect = participantsAnchor?.getBoundingClientRect();
 
+  function copyChannelLink() {
+    void navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?conversation=${conversation.id}`);
+  }
+
   return (
     <>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-6">
         <div className="flex min-w-0 items-center gap-3">
           {conversation.type === "channel" ? (
             conversation.avatar ? (
-              <img src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-lg object-cover" />
+              <img src={conversation.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full border border-brand object-cover" />
             ) : (
-              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-surface-raised text-brand">
-                <MessagesSquare size={16} aria-hidden="true" />
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface-raised text-brand">
+                <MessagesSquare size={18} aria-hidden="true" />
               </span>
             )
           ) : (
@@ -104,7 +96,7 @@ export function ConversationHeader({
           <button
             type="button"
             onClick={onOpenDetails}
-            className="truncate text-lg font-bold text-slate-900 hover:text-emerald-700"
+            className="truncate text-lg font-bold text-brand hover:text-brand-dark"
           >
             {conversation.name}
           </button>
@@ -118,17 +110,16 @@ export function ConversationHeader({
 
         <div className="flex items-center gap-1">
           {actions}
-          {conversation.type !== "channel" && (
-            <button
-              type="button"
-              onClick={(event) => setParticipantsAnchor(event.currentTarget)}
-              className="flex h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
-              aria-label="Manage participants"
-            >
-              <Users className="h-[18px] w-[18px]" />
-              {conversation.participants.length}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={(event) => setParticipantsAnchor(event.currentTarget)}
+            className="flex h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
+            aria-label="Show participants"
+            title="Show participants"
+          >
+            <Users className="h-[18px] w-[18px]" />
+            {conversation.participants.length}
+          </button>
           <button
             type="button"
             onClick={() => onStartCall("video")}
@@ -147,16 +138,31 @@ export function ConversationHeader({
           >
             <Phone className="h-[22px] w-[22px]" />
           </button>
-          <button
+          {conversation.type === "channel" ? <button
             type="button"
-            aria-label="More conversation actions"
-            title="More conversation actions"
+            onClick={(event) => setMoreAnchor(event.currentTarget)}
+            aria-label="More channel actions"
+            title="More channel actions"
             className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100"
           >
             <Ellipsis className="h-[22px] w-[22px]" />
-          </button>
+          </button> : null}
         </div>
       </header>
+
+      {conversation.type === "channel" ? <ConnectCascadingMenu
+        anchorEl={moreAnchor}
+        open={Boolean(moreAnchor)}
+        onClose={() => setMoreAnchor(null)}
+        minWidth={220}
+        items={[
+          { id: "channel-info", label: "Channel info", icon: <Info size={16} />, onClick: onOpenDetails },
+          { id: "mute-channel", label: isMuted ? "Unmute channel" : "Mute channel", icon: <BellOff size={16} />, onClick: onToggleMute },
+          { id: "copy-link", label: "Copy link", icon: <Copy size={16} />, onClick: copyChannelLink },
+          { id: "open-new-tab", label: "Open in new tab", icon: <ExternalLink size={16} />, onClick: onOpenInNewTab },
+          ...(isChannelAdmin && onDeleteChannel ? [{ id: "delete-channel", label: "Delete channel", icon: <Trash2 size={16} />, danger: true, dividerAbove: true, onClick: onDeleteChannel }] : []),
+        ]}
+      /> : null}
 
       {participantsAnchor && participantsAnchorRect ? (
         <div
@@ -167,16 +173,7 @@ export function ConversationHeader({
             top: participantsAnchorRect.bottom + 4,
           }}
         >
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Participants</p>
-          <input
-            type="search"
-            placeholder="Search user to add"
-            value={participantSearch}
-            onChange={(event) => setParticipantSearch(event.target.value)}
-            className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-emerald-600"
-          />
-
-          <p className="mb-1.5 mt-4 text-xs font-bold text-slate-400">In this conversation</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Channel members</p>
           <div className="max-h-40 space-y-1 overflow-y-auto">
             {participants.map((user) => (
               <div key={user.id} className="flex items-center justify-between rounded px-1 py-1.5">
@@ -187,48 +184,6 @@ export function ConversationHeader({
                     <p className="truncate text-xs text-slate-500">{user.jobTitle}</p>
                   </div>
                 </div>
-                {user.id !== currentUserId ? (
-                  <button
-                    type="button"
-                    aria-label={`Remove ${user.displayName}`}
-                    title={`Remove ${user.displayName}`}
-                    onClick={() => handleRemoveParticipant(user.id)}
-                    className="grid h-7 w-7 place-items-center rounded text-slate-400 hover:bg-slate-100 hover:text-red-600"
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-
-          <p className="mb-1.5 mt-4 text-xs font-bold text-slate-400">Add more users</p>
-          <div className="max-h-40 space-y-1 overflow-y-auto">
-            {addableUsers.map((user) => (
-              <div
-                key={user.id}
-                onClick={() => handleAddParticipant(user.id)}
-                className="flex cursor-pointer items-center justify-between rounded px-1 py-1.5 hover:bg-slate-50"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <UserAvatar avatar={user.avatar} name={user.displayName} />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-800">{user.displayName}</p>
-                    <p className="truncate text-xs text-slate-500">{user.jobTitle}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  aria-label={`Add ${user.displayName}`}
-                  title={`Add ${user.displayName}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleAddParticipant(user.id);
-                  }}
-                  className="grid h-7 w-7 place-items-center rounded text-slate-400 hover:bg-slate-100 hover:text-emerald-700"
-                >
-                  <UserPlus className="h-4 w-4" />
-                </button>
               </div>
             ))}
           </div>

@@ -17,6 +17,7 @@ import { ConversationHeader } from "./ConversationHeader";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
+import { CircleAlert, Download, ExternalLink, Link2, Pin, Share2, X } from "lucide-react";
 import { AttachmentsMessage } from "./AttachmentsMessage";
 
 type ConnectConversationProps = {
@@ -47,8 +48,12 @@ type ConnectConversationProps = {
   getQuotedMessageById: (id: string) => ConnectConversationMessage | undefined;
   onOpenDetails: () => void;
   onStartCall: (type: CallType) => void;
-  onAddParticipant: (userId: string) => void;
-  onRemoveParticipant: (userId: string) => void;
+  isChannelAdmin?: boolean;
+  isMuted?: boolean;
+  onToggleMute?: () => void;
+  onDeleteChannel?: () => void;
+  onOpenInNewTab?: () => void;
+  onClearPinnedMessages: () => void;
   onAddReaction: (messageId: string, emoji: string) => void;
   onOpenMessageEmoji: (event: MouseEvent<HTMLElement>, messageId: string) => void;
   onOpenMessageMenu: (event: MouseEvent<HTMLElement>, messageId: string) => void;
@@ -101,8 +106,12 @@ export function ConnectConversations({
   getQuotedMessageById,
   onOpenDetails,
   onStartCall,
-  onAddParticipant,
-  onRemoveParticipant,
+  isChannelAdmin,
+  isMuted,
+  onToggleMute,
+  onDeleteChannel,
+  onOpenInNewTab,
+  onClearPinnedMessages,
   onAddReaction,
   onOpenMessageEmoji,
   onOpenMessageMenu,
@@ -174,12 +183,12 @@ export function ConnectConversations({
         {
           id: "open-in-browser",
           label: "Open In Browser",
-          icon: <ConversationIcon name="open" />,
+          icon: <ExternalLink size={16} />,
           onClick: handleOpenInBrowser,
         },
-        { id: "download", label: "Download", icon: <ConversationIcon name="download" />, onClick: handleDownload },
-        { id: "share", label: "Share", icon: <ConversationIcon name="share" />, onClick: handleShare },
-        { id: "copy-link", label: "Copy link", icon: <ConversationIcon name="link" />, onClick: handleCopyLink },
+        { id: "download", label: "Download", icon: <Download size={16} />, onClick: handleDownload },
+        { id: "share", label: "Share", icon: <Share2 size={16} />, onClick: handleShare },
+        { id: "copy-link", label: "Copy link", icon: <Link2 size={16} />, onClick: handleCopyLink },
       ]
     : [];
 
@@ -222,6 +231,7 @@ export function ConnectConversations({
     () => [...messages].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     [messages],
   );
+  const pinnedMessages = useMemo(() => sortedMessages.filter((message) => message.isPinned), [sortedMessages]);
   const connectUsers = Object.values(usersById);
   const greetingRecipient =
     conversation.type === "direct"
@@ -250,13 +260,45 @@ export function ConnectConversations({
       <ConversationHeader
         conversation={conversation}
         teamLabel={teamLabel}
-        currentUserId={currentUserId}
         usersById={usersById}
         onOpenDetails={onOpenDetails}
         onStartCall={onStartCall}
-        onAddParticipant={onAddParticipant}
-        onRemoveParticipant={onRemoveParticipant}
+        isChannelAdmin={isChannelAdmin}
+        isMuted={isMuted}
+        onToggleMute={onToggleMute}
+        onDeleteChannel={onDeleteChannel}
+        onOpenInNewTab={onOpenInNewTab}
       />
+      {pinnedMessages.length > 0 ? (
+        <section className="border-b border-brand/15 bg-brand/5 py-2 pl-[2.3rem] pr-[1.6rem]" aria-label="Pinned messages">
+          <div className="flex w-full items-start gap-2">
+            <Pin className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden="true" />
+            <div className="flex max-h-[180px] min-w-0 flex-1 flex-col gap-1 overflow-y-auto">
+              {pinnedMessages.map((message) => (
+                <button
+                  key={message.id}
+                  type="button"
+                  onClick={() => document.querySelector(`[data-message-id="${message.id}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" })}
+                  className="truncate text-left text-sm text-text-primary hover:text-brand"
+                  title={message.content}
+                >
+                  <span className="font-semibold text-brand">{usersById[message.senderId]?.displayName ?? "Unknown"}: </span>
+                  {message.content}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={onClearPinnedMessages}
+              className="grid size-6 shrink-0 place-items-center rounded text-text-secondary hover:bg-brand/10 hover:text-brand"
+              aria-label="Unpin all messages"
+              title="Unpin all messages"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+      ) : null}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {messagesLoading || (!positioned && !historyError) ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface text-brand">
@@ -374,6 +416,13 @@ export function ConnectConversations({
                       <time dateTime={message.createdAt} className="mb-0.5 text-xs font-medium text-text-secondary">
                         {formatTime(message.createdAt)}
                       </time>
+                    ) : null}
+
+                    {message.isPinned ? (
+                      <span className="mb-1 flex items-center gap-1 text-xs font-semibold text-brand">
+                        <Pin className="size-3" aria-hidden="true" />
+                        Pinned
+                      </span>
                     ) : null}
 
                     <div className="flex max-w-full items-start gap-1.5">
@@ -519,63 +568,8 @@ function PriorityBadge({ priority }: { priority: "IMPORTANT" | "URGENT" }) {
     <span
       className={`inline-flex shrink-0 items-center gap-1 py-1 text-sm font-extrabold ${urgent ? "text-red-600" : "text-amber-700"}`}
     >
-      <ConversationIcon name="priority" />
+      <CircleAlert size={18} aria-hidden="true" />
       {priority.slice(0, 1) + priority.slice(1).toLowerCase()}
     </span>
-  );
-}
-
-function ConversationIcon({ name }: { name: "download" | "link" | "open" | "priority" | "share" }) {
-  const paths = {
-    open: (
-      <>
-        <path d="M14 3h7v7" />
-        <path d="M10 14 21 3" />
-        <path d="M21 14v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6" />
-      </>
-    ),
-    download: (
-      <>
-        <path d="M12 3v12" />
-        <path d="m7 10 5 5 5-5" />
-        <path d="M5 21h14" />
-      </>
-    ),
-    share: (
-      <>
-        <circle cx="18" cy="5" r="2" />
-        <circle cx="6" cy="12" r="2" />
-        <circle cx="18" cy="19" r="2" />
-        <path d="m8 11 8-5M8 13l8 5" />
-      </>
-    ),
-    link: (
-      <>
-        <path d="M10 13a5 5 0 0 0 7.1.1l2-2a5 5 0 0 0-7.1-7.1l-1.1 1.1" />
-        <path d="M14 11a5 5 0 0 0-7.1-.1l-2 2A5 5 0 0 0 12 20l1.1-1.1" />
-      </>
-    ),
-    priority: (
-      <>
-        <path d="M12 3v12" />
-        <path d="M12 21h.01" />
-      </>
-    ),
-  }[name];
-
-  return (
-    <svg
-      aria-hidden="true"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {paths}
-    </svg>
   );
 }

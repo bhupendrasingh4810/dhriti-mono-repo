@@ -27,6 +27,7 @@ type HistoryState = {
   firstUnreadId: string | null;
   olderCursor: string | null;
   newerCursor: string | null;
+  pinnedCount: number;
   error: string;
 };
 
@@ -50,6 +51,7 @@ export function adaptConnectMessage(message: ConnectApiMessage): ConnectMessage 
     status: "sent",
     deletedAt: message.deletedAt,
     isDeleted: message.isDeleted,
+    isPinned: Boolean(message.pinnedAt),
     replyCount: message._count?.replies ?? 0,
     mentions: (message.mentions ?? []).map((mention) => mention.userId),
     quotedMessageId: message.parentId ?? undefined,
@@ -119,6 +121,7 @@ export function useConnect(selectedConversationId: string) {
           firstUnreadId: null,
           olderCursor: null,
           newerCursor: null,
+          pinnedCount: 0,
           error: "",
         },
       }));
@@ -131,8 +134,8 @@ export function useConnect(selectedConversationId: string) {
       if (current !== generation.current || requestId !== historyRequests.current[channelId]) return;
       applyReceipts(channelId, result.readReceipts);
       setMessages((previous) => {
-        const incoming = result.messages.map(adaptConnectMessage);
-        if (initial) return { ...previous, [channelId]: incoming };
+        const incoming = [...result.messages, ...result.pinnedMessages].map(adaptConnectMessage);
+        if (initial) return { ...previous, [channelId]: [...new Map(incoming.map((message) => [message.id, message])).values()] };
         const earliest = Math.min(...incoming.map((message) => Date.parse(message.createdAt)));
         const retained = (previous[channelId] ?? []).filter((message) => Date.parse(message.createdAt) < earliest);
         return { ...previous, [channelId]: [...retained, ...incoming] };
@@ -146,6 +149,7 @@ export function useConnect(selectedConversationId: string) {
             firstUnreadId: result.firstUnreadId,
             olderCursor: result.nextCursor ?? null,
             newerCursor: result.newerCursor,
+            pinnedCount: result.pinnedCount,
             error: "",
           },
         }));
@@ -160,6 +164,7 @@ export function useConnect(selectedConversationId: string) {
             firstUnreadId: null,
             olderCursor: null,
             newerCursor: null,
+            pinnedCount: 0,
             error: reason instanceof Error ? reason.message : "Unable to load messages.",
           },
         }));
@@ -183,7 +188,7 @@ export function useConnect(selectedConversationId: string) {
       applyReceipts(channelId, result.readReceipts);
       setMessages((previous) => {
         const merged = new Map((previous[channelId] ?? []).map((message) => [message.id, message]));
-        for (const message of result.messages) merged.set(message.id, adaptConnectMessage(message));
+        for (const message of [...result.messages, ...result.pinnedMessages]) merged.set(message.id, adaptConnectMessage(message));
         return { ...previous, [channelId]: [...merged.values()] };
       });
       setHistoryState((previous) => ({
@@ -192,6 +197,7 @@ export function useConnect(selectedConversationId: string) {
           ...previous[channelId],
           paging: false,
           ...(direction === "older" ? { olderCursor: result.nextCursor ?? null } : { newerCursor: result.newerCursor }),
+          pinnedCount: result.pinnedCount,
         },
       }));
     } catch (reason) {
@@ -519,6 +525,32 @@ export function useConnect(selectedConversationId: string) {
     return result;
   }
 
+  async function toggleMessagePin(channelId: string, messageId: string) {
+    const previousMessage = messagesRef.current[channelId]?.find((message) => message.id === messageId);
+    const updatedMessage = adaptConnectMessage(await connectService.toggleMessagePin(organizationId, messageId));
+
+    setMessages((previous) => ({
+      ...previous,
+      [channelId]: [
+        ...(previous[channelId] ?? []).filter((message) => message.id !== updatedMessage.id),
+        updatedMessage,
+      ],
+    }));
+    setHistoryState((previous) => {
+      const state = previous[channelId];
+      if (!state || previousMessage?.isPinned === updatedMessage.isPinned) return previous;
+      return {
+        ...previous,
+        [channelId]: {
+          ...state,
+          pinnedCount: Math.max(0, state.pinnedCount + (updatedMessage.isPinned ? 1 : -1)),
+        },
+      };
+    });
+
+    return updatedMessage;
+  }
+
   async function favorite(itemType: "chat" | "team" | "channel", itemId: string, isFavorite: boolean) {
     const current = generation.current;
     const result = await connectService.setSidebarFavorite(organizationId, { itemType, itemId, isFavorite });
@@ -582,6 +614,7 @@ export function useConnect(selectedConversationId: string) {
     favorite,
     updateSidebarSettings,
     startDirect,
+    toggleMessagePin,
     typing,
     loadMessages,
     loadMoreMessages,

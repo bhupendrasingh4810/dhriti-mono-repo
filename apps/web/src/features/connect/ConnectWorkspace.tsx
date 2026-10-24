@@ -118,7 +118,6 @@ export default function ConnectWorkspace() {
     }));
   const connectFiles: ConnectFile[] = [];
   const connectMeetings: ConnectMeeting[] = [];
-  const connectPinnedItems: { conversationId: string }[] = [];
   const connectReportsToByUserId: Record<string, string> = {};
   const connectMentionFeed: ConnectMentionFeedItem[] = [];
   const [showDetails, setShowDetails] = useState(false);
@@ -261,8 +260,8 @@ export default function ConnectWorkspace() {
   );
 
   const pinnedCount = useMemo(
-    () => connectPinnedItems.filter((item) => item.conversationId === selectedConversation?.id).length,
-    [selectedConversation],
+    () => live.historyState[selectedConversation?.id ?? ""]?.pinnedCount ?? selectedMessages.filter((message) => message.isPinned).length,
+    [live.historyState, selectedConversation, selectedMessages],
   );
 
   const relatedMeetings = useMemo(
@@ -582,7 +581,7 @@ export default function ConnectWorkspace() {
     ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <Link /> }] : []),
     { id: "forward", label: "Forward", icon: <Forward /> },
     { id: "copy-link", label: "Copy Link", icon: <Link /> },
-    { id: "pin", label: "Pin", icon: <Pin /> },
+    { id: "pin", label: activeMenuMessage?.isPinned ? "Unpin message" : "Pin message", icon: <Pin /> },
     { id: "save", label: "Save this Message", icon: <Archive /> },
     { id: "mark-unread", label: "Mark as unread", icon: <Mail /> },
     { id: "translate", label: "Translations", icon: <Languages /> },
@@ -920,7 +919,7 @@ export default function ConnectWorkspace() {
           />
         </div>
 
-        <div className="ml-2 flex min-w-0 flex-1 overflow-hidden rounded-[10px]">
+        <div className="ml-2 flex min-w-0 flex-1 overflow-hidden rounded-lg border border-border bg-surface shadow-sm shadow-brand/15">
           <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
             {!selectedConversation || !currentUser ? (
               <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-text-primary">
@@ -1039,9 +1038,26 @@ export default function ConnectWorkspace() {
                       participants: selectedConversation.participants,
                     }}
                     teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
-                    currentUserId={currentUser.id}
                     usersById={connectUsersById}
                     onOpenDetails={() => setShowDetails(true)}
+                    isChannelAdmin={selectedConversation.adminUserIds?.includes(currentUser.id)}
+                    isMuted={selectedConversation.muted}
+                    onToggleMute={() => {
+                      void connectService
+                        .updateConversationNotifications(live.organizationId, selectedConversation.id, {
+                          muted: !selectedConversation.muted,
+                        })
+                        .then(() => live.refresh())
+                        .catch(live.reportError);
+                    }}
+                    onDeleteChannel={() => setDeleteChannelId(selectedConversation.id)}
+                    onOpenInNewTab={() => {
+                      window.open(
+                        `${window.location.origin}${window.location.pathname}?conversation=${selectedConversation.id}`,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
                     onStartCall={(type) =>
                       startCall({
                         conversationId: selectedConversation.id,
@@ -1052,18 +1068,6 @@ export default function ConnectWorkspace() {
                         scope: selectedConversation.type === "direct" ? "one-to-one" : selectedConversation.type,
                       })
                     }
-                    onAddParticipant={(userId) => {
-                      void connectService
-                        .addMember(live.organizationId, selectedConversation.id, userId)
-                        .then(() => live.refresh())
-                        .catch(live.reportError);
-                    }}
-                    onRemoveParticipant={(userId) => {
-                      void connectService
-                        .removeMember(live.organizationId, selectedConversation.id, userId)
-                        .then(() => live.refresh())
-                        .catch(live.reportError);
-                    }}
                     actions={
                       <button
                         type="button"
@@ -1114,6 +1118,31 @@ export default function ConnectWorkspace() {
                     ConnectConversationMessage | undefined
                 }
                 onOpenDetails={() => setShowDetails(true)}
+                isChannelAdmin={selectedConversation.adminUserIds?.includes(currentUser.id)}
+                isMuted={selectedConversation.muted}
+                onToggleMute={() => {
+                  void connectService
+                    .updateConversationNotifications(live.organizationId, selectedConversation.id, {
+                      muted: !selectedConversation.muted,
+                    })
+                    .then(() => live.refresh())
+                    .catch(live.reportError);
+                }}
+                onDeleteChannel={() => setDeleteChannelId(selectedConversation.id)}
+                onOpenInNewTab={() => {
+                  window.open(
+                    `${window.location.origin}${window.location.pathname}?conversation=${selectedConversation.id}`,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
+                onClearPinnedMessages={() => {
+                  const pinnedMessageIds = selectedMessages.filter((message) => message.isPinned).map((message) => message.id);
+                  void Promise.all(
+                    pinnedMessageIds.map((messageId) => live.toggleMessagePin(selectedConversation.id, messageId)),
+                  )
+                    .catch(live.reportError);
+                }}
                 onStartCall={(type) =>
                   startCall({
                     conversationId: selectedConversation.id,
@@ -1124,18 +1153,6 @@ export default function ConnectWorkspace() {
                     scope: selectedConversation.type === "direct" ? "one-to-one" : selectedConversation.type,
                   })
                 }
-                onAddParticipant={(userId) => {
-                  void connectService
-                    .addMember(live.organizationId, selectedConversation.id, userId)
-                    .then(() => live.refresh())
-                    .catch(live.reportError);
-                }}
-                onRemoveParticipant={(userId) => {
-                  void connectService
-                    .removeMember(live.organizationId, selectedConversation.id, userId)
-                    .then(() => live.refresh())
-                    .catch(live.reportError);
-                }}
                 onAddReaction={(messageId, emoji) => addReactionToMessage(selectedConversation.id, messageId, emoji)}
                 onOpenMessageEmoji={openMessageEmojiMenu}
                 onOpenMessageMenu={openMessageMenu}
@@ -1182,9 +1199,9 @@ export default function ConnectWorkspace() {
             <ConnectChannelDetailsPanel
               open={showDetails}
               title={selectedConversation.name}
-              type={selectedConversation.type}
               teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
               description={selectedConversation.description ?? ""}
+              imageUrl={selectedConversation.avatar}
               memberCount={selectedConversation.participants.length}
               pinnedCount={pinnedCount}
               linkCount={
@@ -1257,6 +1274,10 @@ export default function ConnectWorkspace() {
 
             if (item.id === "delete" && activeMessageId) {
               deleteMessage(activeMessageId);
+            }
+
+            if (item.id === "pin" && activeMessageId) {
+              void live.toggleMessagePin(selectedConversation.id, activeMessageId).catch(live.reportError);
             }
 
             setMessageMenuAnchor(null);

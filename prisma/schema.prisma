@@ -2474,6 +2474,7 @@ model Message {
   createdAt        DateTime  @default(now())
   editedAt         DateTime?
   deletedAt        DateTime?
+  pinnedAt         DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   channel      Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -2487,6 +2488,7 @@ model Message {
   @@index([channelId, createdAt])
   @@index([parentId])
   @@index([organizationId, channelId])
+  @@index([channelId, pinnedAt])
   @@unique([organizationId, channelId, clientMessageId])
   @@map("messages")
 }

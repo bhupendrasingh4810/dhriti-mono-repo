@@ -64,6 +64,8 @@ export interface ListMessagesInput {
 }
 export interface MessagePage extends CursorPage<ApiEntity> {
   messages: ConnectApiMessage[];
+  pinnedMessages: ConnectApiMessage[];
+  pinnedCount: number;
   newerCursor: string | null;
   firstUnreadId: string | null;
   readReceipts: { userId: string; lastReadAt: string | null }[];
@@ -76,6 +78,7 @@ export interface ConnectApiMessage {
   createdAt: string;
   editedAt?: string | null;
   deletedAt?: string | null;
+  pinnedAt?: string | null;
   isDeleted: boolean;
   parentId?: string | null;
   mentions: { userId: string }[];
@@ -365,6 +368,8 @@ export const connectService = {
       "PATCH",
       input,
     ),
+  toggleMessagePin: (organizationId: string, messageId: string) =>
+    tenantRequest<ConnectApiMessage>(organizationId, `${base}/messages/${pathSegment(messageId)}/pin`, { method: "POST" }),
   deleteMessage: (organizationId: string, messageId: string) =>
     tenantRequest<void>(organizationId, `${base}/messages/${pathSegment(messageId)}`, { method: "DELETE" }),
   restoreMessage: (organizationId: string, messageId: string) =>

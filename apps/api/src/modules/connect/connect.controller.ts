@@ -550,6 +550,17 @@ export class ConnectController {
     return this.connect.updateMessage(organization.organizationId, messageId, user.userId, dto);
   }
 
+  @Post("messages/:messageId/pin")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Pin or unpin a message in a channel" })
+  async toggleMessagePin(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("messageId") messageId: string,
+  ) {
+    return this.connect.toggleMessagePin(organization.organizationId, messageId, user.userId);
+  }
+
   @Delete("messages/:messageId")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.delete" })
   @HttpCode(HttpStatus.NO_CONTENT)
