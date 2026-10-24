@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { Archive, ChevronDown, Ellipsis, MessagesSquare } from "lucide-react";
+import { Archive, ChevronDown, Ellipsis, MessagesSquare, UserGroup } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -10,6 +10,7 @@ import {
   ConnectSidebarSectionId,
   ConnectSidebarTeamGroup,
 } from "@/types/connect.types";
+import { getUserInitials } from "@/features/connect/utils/user-initials";
 
 interface ConnectSidebarProps {
   quickViews: ConnectSidebarQuickView[];
@@ -21,6 +22,8 @@ interface ConnectSidebarProps {
   onToggleTeam: (teamId: string) => void;
   onSelectConversation: (conversationId: string) => void;
   onSelectUser?: (userId: string) => void;
+  onOpenUserHover?: (event: MouseEvent<HTMLElement>, userId: string) => void;
+  onCloseUserHover?: () => void;
   onSelectQuickView: (quickViewId: ConnectSidebarQuickView["id"]) => void;
   onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
 }
@@ -116,16 +119,37 @@ function SidebarTrailingSlot({
   );
 }
 
-function ConversationAvatar({ conversation }: { conversation: ConnectSidebarConversation }) {
+function ConversationAvatar({
+  conversation,
+  onOpenUserHover,
+  onCloseUserHover,
+}: {
+  conversation: ConnectSidebarConversation;
+  onOpenUserHover?: (event: MouseEvent<HTMLElement>, userId: string) => void;
+  onCloseUserHover?: () => void;
+}) {
+  if (conversation.type === "group") {
+    return (
+      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/20 text-white">
+        <UserGroup size={15} aria-hidden="true" />
+      </span>
+    );
+  }
+  const hoverHandlers = conversation.userId
+    ? {
+        onMouseEnter: (event: MouseEvent<HTMLElement>) => onOpenUserHover?.(event, conversation.userId!),
+        onMouseLeave: onCloseUserHover,
+      }
+    : {};
   if (!conversation.avatar) {
     return (
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/20 text-[10px] font-bold text-white">
-        {conversation.name.slice(0, 1)}
+      <span {...hoverHandlers} className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/20 text-[10px] font-bold text-white">
+        {getUserInitials(conversation.name)}
       </span>
     );
   }
 
-  return <img src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />;
+  return <img {...hoverHandlers} src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />;
 }
 
 function ChannelAvatar({ avatar, name }: { avatar?: string; name: string }) {
@@ -160,6 +184,8 @@ export default function ConnectSidebar({
   onToggleTeam,
   onSelectConversation,
   onSelectUser,
+  onOpenUserHover,
+  onCloseUserHover,
   onSelectQuickView,
   onOpenSidebarMenu,
 }: ConnectSidebarProps) {
@@ -278,6 +304,8 @@ export default function ConnectSidebar({
               onSelectConversation={onSelectConversation}
               conversationHref={conversationHref}
               onSelectUser={onSelectUser}
+              onOpenUserHover={onOpenUserHover}
+              onCloseUserHover={onCloseUserHover}
               onOpenSidebarMenu={onOpenSidebarMenu}
             />
             {visibleChatCount < chatConversations.length ? (
@@ -327,6 +355,8 @@ function ConversationList({
   onSelectConversation,
   conversationHref,
   onSelectUser,
+  onOpenUserHover,
+  onCloseUserHover,
   onOpenSidebarMenu,
 }: {
   conversations: ConnectSidebarConversation[];
@@ -337,6 +367,8 @@ function ConversationList({
   onSelectConversation: (conversationId: string) => void;
   conversationHref: (conversationId: string) => string;
   onSelectUser?: (userId: string) => void;
+  onOpenUserHover?: (event: MouseEvent<HTMLElement>, userId: string) => void;
+  onCloseUserHover?: () => void;
   onOpenSidebarMenu: (event: MouseEvent<HTMLElement>, context: ConnectSidebarMenuContext) => void;
 }) {
   return (
@@ -361,7 +393,11 @@ function ConversationList({
             {conversation.type === "channel" && !conversation.isSelfSpace ? (
               <ChannelAvatar avatar={conversation.avatar} name={conversation.name} />
             ) : (
-              <ConversationAvatar conversation={conversation} />
+              <ConversationAvatar
+                conversation={conversation}
+                onOpenUserHover={onOpenUserHover}
+                onCloseUserHover={onCloseUserHover}
+              />
             )}
             <span
               className={`truncate text-sm text-white/90 ${(sectionId === "chats" && unread > 0) || selected ? "font-bold" : "font-medium"}`}

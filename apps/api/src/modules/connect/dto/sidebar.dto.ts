@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { ArrayMaxSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateNested } from "class-validator";
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, ValidateNested } from "class-validator";
 
 export class SidebarSectionDto {
   @ApiProperty()
@@ -111,6 +111,23 @@ export class CreateDirectConversationDto {
   @ApiProperty({ format: "uuid" })
   @IsUUID()
   userId!: string;
+}
+
+export class CreateGroupConversationDto {
+  @ApiProperty({ type: [String], format: "uuid" })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(100)
+  @ArrayUnique()
+  @IsUUID(undefined, { each: true })
+  userIds!: string[];
+}
+
+export class LeaveGroupConversationDto {
+  @ApiPropertyOptional({ format: "uuid" })
+  @IsOptional()
+  @IsUUID()
+  newAdminUserId?: string;
 }
 
 export class SearchConnectUsersQueryDto {

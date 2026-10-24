@@ -17,6 +17,7 @@ export interface DialogProps {
   primaryActionDisabled?: boolean;
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   fullWidth?: boolean;
+  hideHeader?: boolean;
 }
 
 const widthClasses: Record<Exclude<DialogProps["maxWidth"], false | undefined>, string> = {
@@ -48,6 +49,7 @@ export function Dialog({
   primaryActionDisabled = false,
   maxWidth = "sm",
   fullWidth = true,
+  hideHeader = false,
 }: DialogProps) {
   const titleId = useId();
 
@@ -94,22 +96,24 @@ export function Dialog({
           maxWidth === false ? "" : widthClasses[maxWidth]
         }`}
       >
-        <header className="flex items-center justify-between p-4">
-          <h2 id={titleId} className="text-lg font-semibold text-text-primary">
-            {title}
-          </h2>
-          {!isSubmitting ? (
-            <button
-              type="button"
-              aria-label="Close dialog"
-              onClick={onClose}
-              className="grid size-8 place-items-center rounded-md text-text-secondary hover:bg-surface-raised"
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
-          ) : null}
-        </header>
-        <div className="border-t border-border p-6">
+        {!hideHeader ? (
+          <header className="flex items-center justify-between p-4">
+            <h2 id={titleId} className="text-lg font-semibold text-text-primary">
+              {title}
+            </h2>
+            {!isSubmitting ? (
+              <button
+                type="button"
+                aria-label="Close dialog"
+                onClick={onClose}
+                className="grid size-8 place-items-center rounded-md text-text-secondary hover:bg-surface-raised"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            ) : null}
+          </header>
+        ) : null}
+        <div className={`${hideHeader ? "" : "border-t border-border "}p-6`}>
           <div className="flex flex-col gap-2">{children}</div>
         </div>
         {(primaryActionLabel || secondaryActionLabel) && (

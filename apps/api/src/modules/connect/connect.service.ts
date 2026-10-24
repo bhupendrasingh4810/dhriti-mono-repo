@@ -267,7 +267,7 @@ export class ConnectService {
         members: { some: { userId } },
       },
       include: {
-        members: { select: { userId: true } },
+        members: { select: { userId: true, leftAt: true } },
         messages: {
           where: { deletedAt: null },
           orderBy: { createdAt: "desc" },
@@ -448,6 +448,45 @@ export class ConnectService {
       },
       include: { members: { select: { userId: true } } },
     });
+  }
+
+  async createGroupConversation(organizationId: string, creatorUserId: string, userIds: string[]) {
+    const memberIds = [...new Set([creatorUserId, ...userIds])];
+    if (memberIds.length < 3) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "A group conversation requires at least three members", HttpStatus.BAD_REQUEST);
+    }
+    const members = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        userId: { in: memberIds },
+        status: "ACTIVE",
+        deletedAt: null,
+      },
+      select: { userId: true, user: { select: { name: true } } },
+    });
+    if (members.length !== memberIds.length) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "All group members must be active organization members", HttpStatus.BAD_REQUEST);
+    }
+    const namesById = new Map(members.map((member) => [member.userId, member.user.name]));
+    const name = memberIds
+      .filter((userId) => userId !== creatorUserId)
+      .map((userId) => namesById.get(userId))
+      .filter((memberName): memberName is string => Boolean(memberName))
+      .join(", ");
+
+    const group = await this.prisma.channel.create({
+      data: {
+        organizationId,
+        name: name || "Group conversation",
+        type: "GROUP",
+        visibility: "PRIVATE",
+        createdById: creatorUserId,
+        members: { create: memberIds.map((userId) => ({ userId, role: userId === creatorUserId ? "ADMIN" : "MEMBER" })) },
+      },
+      include: { members: { select: { userId: true } } },
+    });
+    this.publisher.groupCreated(organizationId, memberIds, group);
+    return group;
   }
 
   // ---------------- Channels ----------------
@@ -761,7 +800,10 @@ export class ConnectService {
   }
 
   async deleteChannel(organizationId: string, channelId: string, userId: string): Promise<void> {
-    await this.requireChannelAdmin(organizationId, channelId, userId);
+    const channel = await this.requireChannelAdmin(organizationId, channelId, userId);
+    const memberIds = channel.type === "GROUP"
+      ? (await this.prisma.channelMember.findMany({ where: { channelId }, select: { userId: true } })).map((member) => member.userId)
+      : [];
     await this.prisma.channel.update({
       where: { id: channelId },
       data: { deletedAt: new Date(), isArchived: true, slug: null },
@@ -773,6 +815,9 @@ export class ConnectService {
       resourceType: "Channel",
       resourceId: channelId,
     });
+    if (channel.type === "GROUP") {
+      this.publisher.groupDeleted(organizationId, memberIds, channelId);
+    }
   }
 
   async upsertChannelMember(organizationId: string, channelId: string, actorUserId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<void> {
@@ -797,21 +842,105 @@ export class ConnectService {
         throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User must be a member of the channel's team", HttpStatus.BAD_REQUEST);
       }
     }
+    const existingMember = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+      select: { id: true },
+    });
     await this.prisma.channelMember.upsert({
       where: { channelId_userId: { channelId, userId } },
       create: { channelId, userId, role },
       update: { role },
     });
+    if (channel.type === "GROUP" && !existingMember) {
+      await this.createGroupMembershipLog(organizationId, channelId, actorUserId, userId, "added");
+    }
   }
 
   async removeMember(organizationId: string, channelId: string, actorUserId: string, userId: string): Promise<void> {
-    await this.requireChannelAdmin(organizationId, channelId, actorUserId);
+    const channel = await this.requireChannelAdmin(organizationId, channelId, actorUserId);
     const membership = await this.prisma.channelMember.findUnique({ where: { channelId_userId: { channelId, userId } }, select: { role: true } });
     if (membership?.role === "ADMIN") {
       const adminCount = await this.prisma.channelMember.count({ where: { channelId, role: "ADMIN" } });
       if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "A channel must have at least one admin", HttpStatus.BAD_REQUEST);}
     }
-    await this.prisma.channelMember.deleteMany({ where: { channelId, userId } });
+    if (channel.type === "GROUP") {
+      await this.prisma.channelMember.update({
+        where: { channelId_userId: { channelId, userId } },
+        data: { leftAt: new Date() },
+      });
+    } else {
+      await this.prisma.channelMember.deleteMany({ where: { channelId, userId } });
+    }
+    if (channel.type === "GROUP") {
+      await this.createGroupMembershipLog(organizationId, channelId, actorUserId, userId, "removed");
+    }
+  }
+
+  async leaveGroupConversation(organizationId: string, channelId: string, userId: string, newAdminUserId?: string): Promise<void> {
+    const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
+    if (channel.type !== "GROUP") {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Only group members can leave a group", HttpStatus.BAD_REQUEST);
+    }
+    const remainingMembers = await this.prisma.channelMember.findMany({
+      where: { channelId, userId: { not: userId }, leftAt: null },
+      orderBy: { createdAt: "asc" },
+      select: { userId: true },
+    });
+    await this.prisma.$transaction(async (transaction) => {
+      if (channel.createdById === userId) {
+        if (!newAdminUserId || !remainingMembers.some((member) => member.userId === newAdminUserId)) {
+          throw new AppError(ErrorCode.VALIDATION_FAILED, "Select an active group participant to become admin", HttpStatus.BAD_REQUEST);
+        }
+        await transaction.channel.update({
+          where: { id: channelId },
+          data: { createdById: newAdminUserId },
+        });
+        await transaction.channelMember.update({
+          where: { channelId_userId: { channelId, userId: newAdminUserId } },
+          data: { role: "ADMIN" },
+        });
+      }
+      await transaction.channelMember.update({
+        where: { channelId_userId: { channelId, userId } },
+        data: { leftAt: new Date() },
+      });
+    });
+    if (channel.createdById === userId && newAdminUserId) {
+      this.publisher.groupAdminAssigned(organizationId, newAdminUserId, channelId);
+    }
+    await this.createGroupMembershipLog(organizationId, channelId, userId, userId, "left");
+  }
+
+  private async createGroupMembershipLog(
+    organizationId: string,
+    channelId: string,
+    actorUserId: string,
+    subjectUserId: string,
+    action: "added" | "removed" | "left",
+  ) {
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [...new Set([actorUserId, subjectUserId])] } },
+      select: { id: true, name: true },
+    });
+    const names = new Map(users.map((user) => [user.id, user.name]));
+    const subjectName = names.get(subjectUserId) ?? "A member";
+    const content =
+      action === "left"
+        ? `${subjectName} left the group`
+        : `${names.get(actorUserId) ?? "An admin"} ${action} ${subjectName}${action === "added" ? " to the group" : " from the group"}`;
+    const message = await this.prisma.message.create({
+      data: { organizationId, channelId, authorId: actorUserId, content, isSystem: true },
+    });
+    const recipients = await this.prisma.channelMember.findMany({
+      where: { channelId },
+      select: { userId: true },
+    });
+    this.publisher.publishToUsers(
+      organizationId,
+      recipients.map((member) => member.userId),
+      "message:created",
+      { channelId, message },
+    );
   }
 
   // ---------------- Messages ----------------
@@ -1091,9 +1220,11 @@ export class ConnectService {
     await this.getChannelForMember(organizationId, channelId, userId, true);
 
     const members = await this.prisma.channelMember.findMany({
-      where: { channelId }, select: { userId: true, lastReadAt: true },
+      where: { channelId }, select: { userId: true, lastReadAt: true, leftAt: true },
     });
-    const lastReadAt = members.find((member) => member.userId === userId)?.lastReadAt;
+    const viewerMembership = members.find((member) => member.userId === userId);
+    const lastReadAt = viewerMembership?.lastReadAt;
+    const historyCutoff = viewerMembership?.leftAt;
     const firstUnread = options.initial === "unread"
       ? await this.prisma.message.findFirst({
           where: { organizationId, channelId, deletedAt: null, authorId: { not: userId }, ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}) },
@@ -1110,7 +1241,7 @@ export class ConnectService {
     const forward = Boolean(options.after || firstUnread);
     const limit = Math.min(options.limit ?? 50, 100);
     const messages = await this.prisma.message.findMany({
-      where: { organizationId, channelId, deletedAt: null },
+      where: { organizationId, channelId, deletedAt: null, ...(historyCutoff ? { createdAt: { lte: historyCutoff } } : {}) },
       orderBy: [{ createdAt: forward ? "asc" : "desc" }, { id: forward ? "asc" : "desc" }],
       take: limit + 1,
       ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : firstUnread ? { cursor: { id: firstUnread.id } } : {}),
@@ -1147,6 +1278,13 @@ export class ConnectService {
     dto: CreateMessageDto,
   ) {
     const channel = await this.getChannelForMember(organizationId, channelId, authorId, true);
+    const membership = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId: authorId } },
+      select: { leftAt: true },
+    });
+    if (channel.type === "GROUP" && membership?.leftAt) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Former group members can only view previous messages", HttpStatus.FORBIDDEN);
+    }
 
     if (dto.parentId) {
       const parent = await this.prisma.message.findFirst({

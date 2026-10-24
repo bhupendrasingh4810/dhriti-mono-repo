@@ -1928,6 +1928,7 @@ model ChannelMember {
   userId     String            @db.Uuid
   role       ConnectMemberRole @default(MEMBER)
   lastReadAt DateTime?
+  leftAt     DateTime?
   createdAt  DateTime          @default(now())
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -2471,6 +2472,7 @@ model Message {
   contentHtml      String?   @db.Text
   isEdited         Boolean   @default(false)
   isDeleted        Boolean   @default(false)
+  isSystem         Boolean   @default(false)
   createdAt        DateTime  @default(now())
   editedAt         DateTime?
   deletedAt        DateTime?

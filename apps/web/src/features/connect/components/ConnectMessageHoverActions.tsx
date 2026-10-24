@@ -56,7 +56,7 @@ export function ConnectMessageHoverActions({
       onMouseLeave={onHoverEnd}
       className={`absolute z-50 flex items-center gap-0.5 rounded-md border border-slate-200 bg-white px-2 py-1 shadow-lg ${
         isRight ? "right-0 flex-row-reverse" : "left-0"
-      } ${placement === "above" ? "top-0 -translate-y-[calc(100%+6px)]" : "top-full translate-y-1.5"}`}
+      } ${placement === "above" ? "bottom-[90%]" : "top-[105%]"}`}
     >
       {quickReactions.map((reaction) => (
         <button

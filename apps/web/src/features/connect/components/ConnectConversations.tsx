@@ -19,6 +19,7 @@ import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { SystemMessage } from "./SystemMessage";
 import { CircleAlert, Download, ExternalLink, Link2, Pin, Share2, X } from "lucide-react";
 import { AttachmentsMessage } from "./AttachmentsMessage";
+import { getUserInitials } from "@/features/connect/utils/user-initials";
 
 type ConnectConversationProps = {
   conversation: {
@@ -29,7 +30,6 @@ type ConnectConversationProps = {
     isFavorite?: boolean;
     participants: string[];
   };
-  teamLabel: string;
   currentUserId: string;
   usersById: Record<string, ConversationUser>;
   messages: ConnectConversationMessage[];
@@ -54,6 +54,11 @@ type ConnectConversationProps = {
   onDeleteChannel?: () => void;
   onOpenInNewTab?: () => void;
   onClearPinnedMessages: () => void;
+  onCreateGroup: (userIds: string[]) => Promise<boolean>;
+  isGroupAdmin?: boolean;
+  onAddGroupMember?: (userId: string) => Promise<boolean>;
+  onRemoveGroupMember?: (userId: string) => Promise<boolean>;
+  onLeaveGroup?: () => Promise<boolean>;
   onAddReaction: (messageId: string, emoji: string) => void;
   onOpenMessageEmoji: (event: MouseEvent<HTMLElement>, messageId: string) => void;
   onOpenMessageMenu: (event: MouseEvent<HTMLElement>, messageId: string) => void;
@@ -70,6 +75,7 @@ type ConnectConversationProps = {
   onCancelEditMessage: () => void;
   onSendGreeting: () => Promise<void>;
   disableHoverActions?: boolean;
+  isReadOnly?: boolean;
   children?: ReactNode;
 };
 
@@ -87,7 +93,6 @@ function formatTime(isoDate: string) {
 
 export function ConnectConversations({
   conversation,
-  teamLabel,
   currentUserId,
   usersById,
   messages,
@@ -112,6 +117,11 @@ export function ConnectConversations({
   onDeleteChannel,
   onOpenInNewTab,
   onClearPinnedMessages,
+  onCreateGroup,
+  isGroupAdmin,
+  onAddGroupMember,
+  onRemoveGroupMember,
+  onLeaveGroup,
   onAddReaction,
   onOpenMessageEmoji,
   onOpenMessageMenu,
@@ -128,6 +138,7 @@ export function ConnectConversations({
   onCancelEditMessage,
   onSendGreeting,
   disableHoverActions = false,
+  isReadOnly = false,
   children,
 }: ConnectConversationProps) {
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
@@ -259,7 +270,7 @@ export function ConnectConversations({
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-white">
       <ConversationHeader
         conversation={conversation}
-        teamLabel={teamLabel}
+        currentUserId={currentUserId}
         usersById={usersById}
         onOpenDetails={onOpenDetails}
         onStartCall={onStartCall}
@@ -268,6 +279,13 @@ export function ConnectConversations({
         onToggleMute={onToggleMute}
         onDeleteChannel={onDeleteChannel}
         onOpenInNewTab={onOpenInNewTab}
+        onOpenUserHover={onOpenUserHover}
+        onCloseUserHover={onCloseUserHover}
+        onCreateGroup={onCreateGroup}
+        isGroupAdmin={isGroupAdmin}
+        onAddGroupMember={onAddGroupMember}
+        onRemoveGroupMember={onRemoveGroupMember}
+        onLeaveGroup={onLeaveGroup}
       />
       {pinnedMessages.length > 0 ? (
         <section className="border-b border-brand/15 bg-brand/5 py-2 pl-[2.3rem] pr-[1.6rem]" aria-label="Pinned messages">
@@ -301,7 +319,7 @@ export function ConnectConversations({
       ) : null}
       <div className="relative flex min-h-0 flex-1 flex-col">
         {messagesLoading || (!positioned && !historyError) ? (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface text-brand">
+          <div className="absolute inset-x-0 top-0 z-10 flex justify-center bg-surface pb-4 pt-3 text-brand">
             <span
               aria-label="Loading messages"
               className="size-8 animate-spin rounded-full border-4 border-brand border-t-transparent"
@@ -323,7 +341,7 @@ export function ConnectConversations({
         ) : null}
         <div
           ref={messageListRef}
-          className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
+          className={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3 pt-8 ${messagesLoading || !positioned || historyError ? "invisible" : ""}`}
           onScroll={onScroll}
         >
           {!messagesLoading && !historyError && sortedMessages.length === 0 ? (
@@ -385,14 +403,14 @@ export function ConnectConversations({
                       type="button"
                       onMouseEnter={(event: MouseEvent<HTMLElement>) => onOpenUserHover(event, message.senderId)}
                       onMouseLeave={onCloseUserHover}
-                      className="h-10 w-10 shrink-0 overflow-hidden rounded-md bg-slate-200"
+                      className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200"
                       aria-label={`View ${sender?.displayName ?? "user"} details`}
                     >
                       {sender?.avatar ? (
                         <img src={sender.avatar} alt="" className="h-full w-full object-cover" />
                       ) : (
                         <span className="grid h-full w-full place-items-center text-xs font-bold text-slate-600">
-                          {(sender?.displayName ?? "U").slice(0, 1)}
+                          {getUserInitials(sender?.displayName ?? "Unknown User")}
                         </span>
                       )}
                     </button>
@@ -505,7 +523,7 @@ export function ConnectConversations({
                     <ConnectMessageHoverActions
                       open={showActions && !isEditingMessage}
                       align={isOwn ? "right" : "left"}
-                      placement={index < 2 ? "below" : "above"}
+                      placement="above"
                       isOwn={isOwn}
                       onQuickReaction={(emoji) => onAddReaction(message.id, emoji)}
                       onOpenEmoji={(event) => {
@@ -556,7 +574,11 @@ export function ConnectConversations({
       />
 
       <ConversationTypingIndicator userIds={typingUserIds} currentUserId={currentUserId} usersById={usersById} />
-      {children}
+      {isReadOnly ? (
+        <div className="border-t border-border bg-surface px-6 py-4 text-center text-sm text-text-secondary">
+          You left this group. You can view messages sent before you left.
+        </div>
+      ) : children}
     </div>
   );
 }

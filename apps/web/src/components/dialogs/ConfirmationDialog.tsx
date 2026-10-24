@@ -11,6 +11,7 @@ type ConfirmationDialogProps = {
   cancelLabel?: string;
   confirmColor?: "primary" | "secondary" | "error" | "success";
   requireDeleteConfirmation?: boolean;
+  confirmationText?: string;
   onCancel: () => void;
   onConfirm: () => void;
 };
@@ -23,11 +24,12 @@ export function ConfirmationDialog({
   cancelLabel = "Cancel",
   confirmColor = "primary",
   requireDeleteConfirmation = false,
+  confirmationText = "DELETE",
   onCancel,
   onConfirm,
 }: ConfirmationDialogProps) {
   const [confirmationValue, setConfirmationValue] = useState("");
-  const canConfirm = !requireDeleteConfirmation || confirmationValue === "DELETE";
+  const canConfirm = !requireDeleteConfirmation || confirmationValue === confirmationText;
 
   function handleCancel() {
     setConfirmationValue("");
@@ -55,7 +57,7 @@ export function ConfirmationDialog({
       <p className="text-text-secondary">{description}</p>
       {requireDeleteConfirmation ? (
         <label className="mt-2 block text-sm text-text-secondary">
-          Type <span className="font-semibold text-text-primary">DELETE</span> to confirm.
+          Type <span className="font-semibold text-text-primary">{confirmationText}</span> to confirm.
           <input
             autoComplete="off"
             value={confirmationValue}

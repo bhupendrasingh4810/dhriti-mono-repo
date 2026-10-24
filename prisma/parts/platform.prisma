@@ -469,6 +469,7 @@ model ChannelMember {
   userId     String            @db.Uuid
   role       ConnectMemberRole @default(MEMBER)
   lastReadAt DateTime?
+  leftAt     DateTime?
   createdAt  DateTime          @default(now())
 
   channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)

@@ -21,6 +21,9 @@ export function MessageOverlays({
   usersById,
   reportsToByUserId,
   viewerTimezone,
+  onMessageUser,
+  onStartUserCall,
+  onOpenUserDetails,
 }: {
   emojiAnchor: HTMLElement | null;
   emojiMessageId: string | null;
@@ -34,6 +37,9 @@ export function MessageOverlays({
   usersById: Record<string, ConnectUser>;
   reportsToByUserId: Record<string, string>;
   viewerTimezone?: string;
+  onMessageUser: (userId: string) => void;
+  onStartUserCall: (userId: string, type: "audio" | "video") => void;
+  onOpenUserDetails: (userId: string) => void;
 }) {
   const mentionedUser = mentionHover ? usersById[mentionHover.userId] : undefined;
   const manager = mentionedUser ? usersById[reportsToByUserId[mentionedUser.id]] : undefined;
@@ -83,6 +89,9 @@ export function MessageOverlays({
             timezone={mentionedUser.timezone}
             viewerTimezone={viewerTimezone}
             reportsTo={manager ? { displayName: manager.displayName, jobTitle: manager.jobTitle } : undefined}
+            onMessage={() => onMessageUser(mentionedUser.id)}
+            onStartCall={(type) => onStartUserCall(mentionedUser.id, type)}
+            onOpenDetails={() => onOpenUserDetails(mentionedUser.id)}
           />
         ) : (
           <div />

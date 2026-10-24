@@ -186,6 +186,7 @@ export type ConnectConversation = {
   pinned: boolean;
   archived: boolean;
   description?: string;
+  isReadOnly?: boolean;
 };
 
 export type ConnectFile = {

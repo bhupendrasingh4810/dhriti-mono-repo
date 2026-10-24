@@ -45,7 +45,7 @@ export function adaptConnectMessage(message: ConnectApiMessage): ConnectMessage 
     conversationType: "channel",
     senderId: message.authorId,
     content: isCallActivity ? message.content.slice(7) : message.content,
-    contentType: isCallActivity ? "system" : "text",
+    contentType: isCallActivity || message.isSystem ? "system" : "text",
     createdAt: message.createdAt,
     editedAt: message.editedAt,
     status: "sent",
@@ -153,6 +153,24 @@ export function useConnect(selectedConversationId: string) {
             error: "",
           },
         }));
+      else
+        setHistoryState((previous) => {
+          const state = previous[channelId];
+          if (!state?.loading) return previous;
+          return {
+            ...previous,
+            [channelId]: {
+              ...state,
+              loading: false,
+              paging: false,
+              firstUnreadId: result.firstUnreadId ?? state.firstUnreadId,
+              olderCursor: result.nextCursor ?? state.olderCursor,
+              newerCursor: result.newerCursor ?? state.newerCursor,
+              pinnedCount: result.pinnedCount,
+              error: "",
+            },
+          };
+        });
     } catch (reason) {
       if (current !== generation.current || requestId !== historyRequests.current[channelId]) return;
       if (initial)
@@ -168,6 +186,20 @@ export function useConnect(selectedConversationId: string) {
             error: reason instanceof Error ? reason.message : "Unable to load messages.",
           },
         }));
+      else
+        setHistoryState((previous) => {
+          const state = previous[channelId];
+          if (!state?.loading) return previous;
+          return {
+            ...previous,
+            [channelId]: {
+              ...state,
+              loading: false,
+              paging: false,
+              error: reason instanceof Error ? reason.message : "Unable to load messages.",
+            },
+          };
+        });
       throw reason;
     }
   }
@@ -331,6 +363,7 @@ export function useConnect(selectedConversationId: string) {
           pinned: false,
           archived: channel.isArchived,
           description: channel.description ?? "",
+          isReadOnly: Boolean(channel.members?.find((member) => member.userId === user?.id)?.leftAt),
         };
       }
       setConversations(next);
@@ -338,7 +371,7 @@ export function useConnect(selectedConversationId: string) {
 
     async function history(channelId: string) {
       try {
-        if (!cancelled && !historyRef.current[channelId]?.loading) await loadMessages(channelId);
+        if (!cancelled) await loadMessages(channelId, true);
       } catch (reason) {
         if (!cancelled) reportError(reason);
       }
@@ -412,6 +445,15 @@ export function useConnect(selectedConversationId: string) {
         setSidebar((previous) => ({ ...previous, settings: payload.settings })),
       );
       socket.on("sidebar:chat-activity", () => {
+        void reload().catch(reportError);
+      });
+      socket.on("group:created", () => {
+        void reload().catch(reportError);
+      });
+      socket.on("group:deleted", () => {
+        void reload().catch(reportError);
+      });
+      socket.on("group:admin-assigned", () => {
         void reload().catch(reportError);
       });
       socket.on("presence:changed", (payload: { userId: string; status: string }) => {

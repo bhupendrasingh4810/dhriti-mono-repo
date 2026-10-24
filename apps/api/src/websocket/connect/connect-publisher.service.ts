@@ -46,6 +46,24 @@ export class ConnectPublisherService {
     }
   }
 
+  groupCreated(organizationId: string, userIds: string[], group: unknown): void {
+    const server = this.serverOrThrow();
+    for (const userId of new Set(userIds)) {
+      server.to(userRoom(organizationId, userId)).emit("group:created", { group });
+    }
+  }
+
+  groupDeleted(organizationId: string, userIds: string[], channelId: string): void {
+    const server = this.serverOrThrow();
+    for (const userId of new Set(userIds)) {
+      server.to(userRoom(organizationId, userId)).emit("group:deleted", { channelId });
+    }
+  }
+
+  groupAdminAssigned(organizationId: string, userId: string, channelId: string): void {
+    this.serverOrThrow().to(userRoom(organizationId, userId)).emit("group:admin-assigned", { channelId });
+  }
+
   channelRead(organizationId: string, channelId: string, userId: string): void {
     this.serverOrThrow().to(channelRoom(organizationId, channelId)).emit("channel:marked-read", { channelId, userId });
   }

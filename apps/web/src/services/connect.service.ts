@@ -56,6 +56,9 @@ export interface CreateMessageInput {
   parentId?: string;
   mentionUserIds?: string[];
 }
+export interface CreateGroupConversationInput {
+  userIds: string[];
+}
 export interface ListMessagesInput {
   cursor?: string;
   limit?: number;
@@ -75,6 +78,7 @@ export interface ConnectApiMessage {
   channelId: string;
   authorId: string;
   content: string;
+  isSystem: boolean;
   createdAt: string;
   editedAt?: string | null;
   deletedAt?: string | null;
@@ -100,7 +104,7 @@ export interface ConnectApiConversation {
   layout: "THREADS" | "POSTS";
   admins?: string[];
   isArchived: boolean;
-  members?: { userId: string }[];
+  members?: { userId: string; leftAt?: string | null }[];
   messages?: { id: string; authorId: string; content: string; createdAt: string }[];
 }
 
@@ -247,6 +251,13 @@ export const connectService = {
       "POST",
       { userId },
     ),
+  createGroupConversation: (organizationId: string, input: CreateGroupConversationInput) =>
+    tenantJsonRequest<ConnectApiConversation, CreateGroupConversationInput>(
+      organizationId,
+      `${base}/conversations/group`,
+      "POST",
+      input,
+    ),
   listChannels: (organizationId: string) => tenantRequest<ConnectApiConversation[]>(organizationId, `${base}/channels`),
   listTeams: (organizationId: string) => tenantRequest<ConnectTeam[]>(organizationId, `${base}/teams`),
   getTeam: (organizationId: string, teamId: string) =>
@@ -286,6 +297,13 @@ export const connectService = {
     tenantRequest<void>(organizationId, `${base}/channels/${pathSegment(channelId)}/members/${pathSegment(userId)}`, {
       method: "DELETE",
     }),
+  leaveGroupConversation: (organizationId: string, channelId: string, newAdminUserId?: string) =>
+    tenantJsonRequest<void, { newAdminUserId?: string }>(
+      organizationId,
+      `${base}/conversations/${pathSegment(channelId)}/leave`,
+      "POST",
+      { newAdminUserId },
+    ),
   listMessages: (organizationId: string, channelId: string, query: ListMessagesInput = {}) =>
     tenantRequest<MessagePage>(organizationId, `${base}/channels/${pathSegment(channelId)}/messages`, { query }),
   markMessagesRead: (organizationId: string, channelId: string, messageId?: string) =>

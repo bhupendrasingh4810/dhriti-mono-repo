@@ -26,7 +26,7 @@ import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/c
 import { CreateConnectTeamDto, UpdateConnectTeamDto, UpsertConnectMemberDto } from "./dto/team.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
 import { CreatePostCommentDto, CreatePostDto, UpdatePostCommentDto, UpdatePostDto, VotePollDto } from "./dto/post.dto";
-import { CreateDirectConversationDto, RecordConnectUserSearchDto, SearchConnectUsersQueryDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
+import { CreateDirectConversationDto, CreateGroupConversationDto, LeaveGroupConversationDto, RecordConnectUserSearchDto, SearchConnectUsersQueryDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
 
 @ApiTags("connect")
@@ -202,6 +202,30 @@ export class ConnectController {
     @Body() dto: CreateDirectConversationDto,
   ) {
     return this.connect.createDirectConversation(organization.organizationId, user.userId, dto.userId);
+  }
+
+  @Post("conversations/group")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Create a group conversation with active organization members" })
+  async createGroupConversation(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: CreateGroupConversationDto,
+  ) {
+    return this.connect.createGroupConversation(organization.organizationId, user.userId, dto.userIds);
+  }
+
+  @Post("conversations/:channelId/leave")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Leave a group conversation" })
+  async leaveGroupConversation(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId", ParseUUIDPipe) channelId: string,
+    @Body() dto: LeaveGroupConversationDto,
+  ): Promise<void> {
+    return this.connect.leaveGroupConversation(organization.organizationId, channelId, user.userId, dto.newAdminUserId);
   }
 
   // ---------------- Channels ----------------

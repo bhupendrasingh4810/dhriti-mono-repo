@@ -41,6 +41,7 @@ import { ConversationHeader } from "@/features/connect/components/ConversationHe
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
+import { Dialog } from "@dhriti/ui/dialog";
 import {
   ConnectConversationMessage,
   ConnectPendingAttachment,
@@ -52,6 +53,8 @@ import ConnectMessageInput from "@/features/connect/components/ConnectMessageInp
 import { ConnectMentionsView } from "@/features/connect/components/ConnectMentionsView";
 import { ConnectChannelDetailsPanel } from "@/features/connect/components/ConnectChannelDetailsPanel";
 import { DeletedMessageToast, MessageOverlays } from "@/features/connect/components/MessageOverlays";
+import { ConnectUserDetailDialog } from "@/features/connect/components/ConnectUserDetailDialog";
+import { getUserInitials } from "@/features/connect/utils/user-initials";
 import type { ConnectMentionsFilter, MentionHoverState, ReactionHoverState } from "@/types/connect.types";
 import { useWorkspaceCall } from "@/features/connect/components/WorkspaceCallProvider";
 import { useConnectSearch, type ConnectSearchUser } from "@/contexts/connect-search-context";
@@ -152,9 +155,12 @@ export default function ConnectWorkspace() {
   const [addTeamMembersTeamId, setAddTeamMembersTeamId] = useState<string | null>(null);
   const [manageTeamId, setManageTeamId] = useState<string | null>(null);
   const [deleteChannelId, setDeleteChannelId] = useState<string | null>(null);
+  const [exitGroupId, setExitGroupId] = useState<string | null>(null);
+  const [newGroupAdminId, setNewGroupAdminId] = useState("");
   const [mentionsFilter, setMentionsFilter] = useState<ConnectMentionsFilter>("unread");
   const [selectedMentionId, setSelectedMentionId] = useState<string | null>(null);
   const [mentionHover, setMentionHover] = useState<MentionHoverState | null>(null);
+  const [detailUserId, setDetailUserId] = useState<string | null>(null);
   const [reactionHover, setReactionHover] = useState<ReactionHoverState | null>(null);
   const reactionHoverCloseTimerRef = useRef<number | null>(null);
 
@@ -184,6 +190,11 @@ export default function ConnectWorkspace() {
   const currentUser = connectUsersById[connectSidebarState.currentUser];
   const selectedConversation = conversationsById[selectedConversationId] ?? connectConversations[0];
   const selectedTeam = selectedConversation?.teamId ? connectTeamsById[selectedConversation.teamId] : null;
+  useEffect(() => {
+    if (!conversationIdFromUrl || live.loading || conversationsById[conversationIdFromUrl]) return;
+    setSelectedConversationId("");
+    router.replace(pathname, { scroll: false });
+  }, [conversationIdFromUrl, conversationsById, live.loading, pathname, router]);
   const { deletedMessage, undoInProgress, deleteMessage, undoDeleteMessage } = useMessageDeletion({
     organizationId: live.organizationId,
     conversationId: selectedConversation?.id ?? "",
@@ -329,6 +340,10 @@ export default function ConnectWorkspace() {
     name: conversation.name,
     type: conversation.type,
     avatar: conversation.avatar,
+    userId:
+      conversation.type === "direct"
+        ? conversation.participants.find((participantId) => participantId !== currentUser.id)
+        : undefined,
     unreadCount: live.unread[conversation.id] ?? conversation.unreadCount,
   }));
 
@@ -503,6 +518,10 @@ export default function ConnectWorkspace() {
         }
       : undefined,
   );
+  if (sidebarMenuContext?.kind === "user" && conversationsById[sidebarMenuContext.id]?.type === "group") {
+    const removeHistoryIndex = sidebarMenuItems.findIndex((item) => item.id === "remove-history");
+    if (removeHistoryIndex !== -1) sidebarMenuItems.splice(removeHistoryIndex, 1);
+  }
   if (sidebarMenuContext?.id && ["user", "channel"].includes(sidebarMenuContext.kind)) {
     const itemId = sidebarMenuContext.id;
     const itemType = sidebarMenuContext.kind === "channel" ? "channel" : "chat";
@@ -514,6 +533,24 @@ export default function ConnectWorkspace() {
       icon: <Pin />,
       onClick: () => {
         void live.favorite(itemType, itemId, !isFavorite).catch(live.reportError);
+        closeSidebarMenus();
+      },
+    });
+  }
+  if (
+    sidebarMenuContext?.kind === "user" &&
+    sidebarMenuContext.id &&
+    conversationsById[sidebarMenuContext.id]?.type === "group" &&
+    conversationsById[sidebarMenuContext.id]?.createdBy === currentUser?.id
+  ) {
+    sidebarMenuItems.push({
+      id: "delete-group",
+      label: "Delete group",
+      icon: <Trash2 />,
+      danger: true,
+      dividerAbove: true,
+      onClick: () => {
+        setDeleteChannelId(sidebarMenuContext.id);
         closeSidebarMenus();
       },
     });
@@ -597,6 +634,93 @@ export default function ConnectWorkspace() {
     router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
     setActiveQuickViewId(null);
     setShowDetails(false);
+  }
+
+  async function createGroupConversation(userIds: string[]) {
+    try {
+      const conversation = await connectService.createGroupConversation(live.organizationId, { userIds });
+      await live.refresh();
+      handleSelectConversation(conversation.id);
+      return true;
+    } catch (reason) {
+      live.reportError(reason);
+      return false;
+    }
+  }
+
+  async function addGroupMember(userId: string) {
+    if (!selectedConversation) return false;
+    try {
+      await connectService.addMember(live.organizationId, selectedConversation.id, userId);
+      await Promise.all([live.refresh(), live.loadMessages(selectedConversation.id, true)]);
+      return true;
+    } catch (reason) {
+      live.reportError(reason);
+      return false;
+    }
+  }
+
+  async function removeGroupMember(userId: string) {
+    if (!selectedConversation) return false;
+    try {
+      await connectService.removeMember(live.organizationId, selectedConversation.id, userId);
+      await Promise.all([live.refresh(), live.loadMessages(selectedConversation.id, true)]);
+      return true;
+    } catch (reason) {
+      live.reportError(reason);
+      return false;
+    }
+  }
+
+  async function leaveGroup(newAdminUserId?: string) {
+    if (!selectedConversation) return false;
+    try {
+      await connectService.leaveGroupConversation(live.organizationId, selectedConversation.id, newAdminUserId);
+      await live.refresh();
+      return true;
+    } catch (reason) {
+      live.reportError(reason);
+      return false;
+    }
+  }
+
+  function requestLeaveGroup() {
+    if (selectedConversation?.type === "group") {
+      setNewGroupAdminId("");
+      setExitGroupId(selectedConversation.id);
+    }
+    return Promise.resolve(false);
+  }
+
+  async function openDirectConversation(userId: string) {
+    const conversationId = await live.startDirect(userId);
+    if (!conversationId) return "";
+    handleSelectConversation(conversationId);
+    return conversationId;
+  }
+
+  function handleMessageUser(userId: string) {
+    setMentionHover(null);
+    void openDirectConversation(userId).catch(live.reportError);
+  }
+
+  function handleStartUserCall(userId: string, type: "audio" | "video") {
+    const user = connectUsersById[userId];
+    if (!currentUser || !user) return;
+    setMentionHover(null);
+    void openDirectConversation(userId)
+      .then((conversationId) => {
+        if (!conversationId) return;
+        startCall({
+          conversationId,
+          conversationName: user.displayName,
+          participantIds: [currentUser.id, userId],
+          callerName: currentUser.displayName,
+          type,
+          scope: "one-to-one",
+        });
+      })
+      .catch(live.reportError);
   }
 
   function handleSelectQuickView(quickViewId: "mentions" | "threads" | "drafts") {
@@ -914,6 +1038,8 @@ export default function ConnectWorkspace() {
                 })
                 .catch(live.reportError);
             }}
+            onOpenUserHover={openMentionHover}
+            onCloseUserHover={scheduleMentionHoverClose}
             onSelectQuickView={handleSelectQuickView}
             onOpenSidebarMenu={openSidebarMenu}
           />
@@ -1037,7 +1163,7 @@ export default function ConnectWorkspace() {
                       isFavorite: selectedConversation.isFavorite,
                       participants: selectedConversation.participants,
                     }}
-                    teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
+                    currentUserId={currentUser.id}
                     usersById={connectUsersById}
                     onOpenDetails={() => setShowDetails(true)}
                     isChannelAdmin={selectedConversation.adminUserIds?.includes(currentUser.id)}
@@ -1058,6 +1184,13 @@ export default function ConnectWorkspace() {
                         "noopener,noreferrer",
                       );
                     }}
+                    onOpenUserHover={openMentionHover}
+                    onCloseUserHover={scheduleMentionHoverClose}
+                    onCreateGroup={createGroupConversation}
+                    isGroupAdmin={selectedConversation.type === "group" && selectedConversation.createdBy === currentUser.id}
+                    onAddGroupMember={addGroupMember}
+                    onRemoveGroupMember={removeGroupMember}
+                    onLeaveGroup={requestLeaveGroup}
                     onStartCall={(type) =>
                       startCall({
                         conversationId: selectedConversation.id,
@@ -1091,7 +1224,6 @@ export default function ConnectWorkspace() {
                   isFavorite: selectedConversation.isFavorite,
                   participants: selectedConversation.participants,
                 }}
-                teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
                 currentUserId={currentUser.id}
                 usersById={connectUsersById}
                 messages={selectedMessages as ConnectConversationMessage[]}
@@ -1143,6 +1275,11 @@ export default function ConnectWorkspace() {
                   )
                     .catch(live.reportError);
                 }}
+                onCreateGroup={createGroupConversation}
+                isGroupAdmin={selectedConversation.type === "group" && selectedConversation.createdBy === currentUser.id}
+                onAddGroupMember={addGroupMember}
+                onRemoveGroupMember={removeGroupMember}
+                onLeaveGroup={requestLeaveGroup}
                 onStartCall={(type) =>
                   startCall({
                     conversationId: selectedConversation.id,
@@ -1169,6 +1306,7 @@ export default function ConnectWorkspace() {
                 onCancelEditMessage={requestCancelEditMessage}
                 onSendGreeting={handleSendGreeting}
                 disableHoverActions={Boolean(mentionHover)}
+                isReadOnly={selectedConversation.isReadOnly}
               >
                 <ConnectMessageInput
                   conversationLabel={getConversationLabel(selectedConversation)}
@@ -1298,10 +1436,10 @@ export default function ConnectWorkspace() {
       />
       <ConfirmationDialog
         open={Boolean(deleteChannelId)}
-        title="Delete channel"
-        description="This removes the channel and its content for all members. This action cannot be undone."
+        title={conversationsById[deleteChannelId ?? ""]?.type === "group" ? "Delete group" : "Delete channel"}
+        description={`This removes the ${conversationsById[deleteChannelId ?? ""]?.type === "group" ? "group" : "channel"} and its content for all members. This action cannot be undone.`}
         cancelLabel="Cancel"
-        confirmLabel="Delete channel"
+        confirmLabel={conversationsById[deleteChannelId ?? ""]?.type === "group" ? "Delete group" : "Delete channel"}
         confirmColor="error"
         requireDeleteConfirmation
         onCancel={() => setDeleteChannelId(null)}
@@ -1310,13 +1448,74 @@ export default function ConnectWorkspace() {
           void connectService
             .deleteChannel(live.organizationId, deleteChannelId)
             .then(() => {
-              if (selectedConversationId === deleteChannelId) setSelectedConversationId("");
+              if (selectedConversationId === deleteChannelId) {
+                setSelectedConversationId("");
+                router.replace(pathname, { scroll: false });
+              }
               return live.refresh();
             })
             .catch(live.reportError)
             .finally(() => setDeleteChannelId(null));
         }}
       />
+      <ConfirmationDialog
+        open={Boolean(exitGroupId) && conversationsById[exitGroupId ?? ""]?.createdBy !== currentUser?.id}
+        title="Exit group"
+        description="You will no longer receive new group messages, but can still view the history from before you exited."
+        cancelLabel="Cancel"
+        confirmLabel="Exit group"
+        confirmColor="error"
+        requireDeleteConfirmation
+        confirmationText="Exit"
+        onCancel={() => setExitGroupId(null)}
+        onConfirm={() => {
+          void leaveGroup().finally(() => setExitGroupId(null));
+        }}
+      />
+      <Dialog
+        open={Boolean(exitGroupId) && conversationsById[exitGroupId ?? ""]?.createdBy === currentUser?.id}
+        onClose={() => setExitGroupId(null)}
+        title="Assign an admin before exiting"
+        secondaryActionLabel="Cancel"
+        primaryActionLabel="Assign and Exit"
+        primaryButtonColor="error"
+        primaryActionDisabled={!newGroupAdminId}
+        onPrimaryAction={() => {
+          void leaveGroup(newGroupAdminId).finally(() => setExitGroupId(null));
+        }}
+        maxWidth="sm"
+      >
+        <p className="text-text-secondary">Choose a participant to manage this group after you exit.</p>
+        <div className="mt-4 max-h-64 space-y-2 overflow-y-auto">
+          {(conversationsById[exitGroupId ?? ""]?.participants ?? [])
+            .filter((userId) => userId !== currentUser?.id)
+            .map((userId) => {
+              const participant = connectUsersById[userId];
+              const selected = newGroupAdminId === userId;
+              return (
+                <button
+                  key={userId}
+                  type="button"
+                  onClick={() => setNewGroupAdminId(userId)}
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 text-left transition-colors ${selected ? "border-brand bg-brand/5" : "border-border bg-surface hover:bg-surface-raised"}`}
+                >
+                  {participant?.avatar ? (
+                    <img src={participant.avatar} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface-raised text-sm font-bold text-brand">
+                      {getUserInitials(participant?.displayName ?? "Unknown user")}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-text-primary">{participant?.displayName ?? "Unknown user"}</span>
+                    <span className="block truncate text-xs text-text-secondary">{participant?.jobTitle ?? "Group participant"}</span>
+                  </span>
+                  <span className={`h-4 w-4 shrink-0 rounded-full border-2 ${selected ? "border-brand bg-brand" : "border-border"}`} aria-hidden="true" />
+                </button>
+              );
+            })}
+        </div>
+      </Dialog>
 
       <DeletedMessageToast visible={Boolean(deletedMessage)} restoring={undoInProgress} onUndo={undoDeleteMessage} />
       <MessageOverlays
@@ -1335,6 +1534,23 @@ export default function ConnectWorkspace() {
         usersById={connectUsersById}
         reportsToByUserId={connectReportsToByUserId}
         viewerTimezone={currentUser?.timezone}
+        onMessageUser={handleMessageUser}
+        onStartUserCall={handleStartUserCall}
+        onOpenUserDetails={(userId) => {
+          setMentionHover(null);
+          setDetailUserId(userId);
+        }}
+      />
+
+      <ConnectUserDetailDialog
+        user={detailUserId ? connectUsersById[detailUserId] ?? null : null}
+        usersById={connectUsersById}
+        reportsToByUserId={connectReportsToByUserId}
+        viewerTimezone={currentUser?.timezone}
+        onClose={() => setDetailUserId(null)}
+        onMessage={handleMessageUser}
+        onStartCall={handleStartUserCall}
+        onSelectUser={setDetailUserId}
       />
 
       <CreateSectionDialog
