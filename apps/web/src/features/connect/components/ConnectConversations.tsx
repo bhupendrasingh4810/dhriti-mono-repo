@@ -24,6 +24,7 @@ type ConnectConversationProps = {
     id: string;
     name: string;
     type: "channel" | "direct" | "group";
+    avatar?: string;
     isFavorite?: boolean;
     participants: string[];
   };

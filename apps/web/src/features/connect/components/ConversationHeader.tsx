@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Ellipsis, Phone, Star, UserMinus, UserPlus, Users, Video } from "lucide-react";
+import { Ellipsis, MessagesSquare, Phone, Star, UserMinus, UserPlus, Users, Video } from "lucide-react";
 import type { CallType, ConversationUser } from "@/types/connect.types";
 
 type ConversationHeaderProps = {
@@ -7,6 +7,7 @@ type ConversationHeaderProps = {
     id: string;
     name: string;
     type: "channel" | "direct" | "group";
+    avatar?: string;
     isFavorite?: boolean;
     participants: string[];
   };
@@ -87,7 +88,17 @@ export function ConversationHeader({
     <>
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="text-xl font-bold text-slate-400">{conversation.type === "channel" ? "#" : "@"}</span>
+          {conversation.type === "channel" ? (
+            conversation.avatar ? (
+              <img src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-lg object-cover" />
+            ) : (
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-surface-raised text-brand">
+                <MessagesSquare size={16} aria-hidden="true" />
+              </span>
+            )
+          ) : (
+            <span className="text-xl font-bold text-slate-400">@</span>
+          )}
           <button
             type="button"
             onClick={onOpenDetails}

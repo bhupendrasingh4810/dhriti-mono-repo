@@ -2426,6 +2426,7 @@ model Channel {
   visibility     ChannelVisibility @default(PUBLIC)
   topic          String?
   description    String?
+  imageUrl       String?           @db.Text
   isArchived     Boolean           @default(false)
   createdById    String            @db.Uuid
   createdAt      DateTime          @default(now())

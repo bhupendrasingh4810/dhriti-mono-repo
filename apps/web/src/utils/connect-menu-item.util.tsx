@@ -77,7 +77,7 @@ export function getMenuItems(
   setSectionViewMode: React.Dispatch<React.SetStateAction<SectionViewModeState>>,
   setCreateSectionOpen: (open: boolean) => void,
   setCreateTeamOpen: (open: boolean) => void,
-  setCreateChannelOpen: (open: boolean) => void,
+  openCreateChannel: (teamId: string) => void,
   pushSystemMessage: (msg: string) => void,
   onSaveSidebarSettings: (settings: {
     favoritesFilter?: "all" | "unread";
@@ -276,7 +276,7 @@ export function getMenuItems(
           id: "add-channel",
           label: "Add channel",
           icon: <Plus size={16} />,
-          onClick: () => setCreateChannelOpen(true),
+          onClick: () => openCreateChannel(sidebarMenuContext.id ?? ""),
         },
         {
           id: "manage-team",

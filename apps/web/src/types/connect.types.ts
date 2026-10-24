@@ -25,6 +25,7 @@ export type ConnectSidebarTeamChannel = {
   id: string;
   name: string;
   slug: string;
+  avatar?: string;
   isPrivate?: boolean;
 };
 

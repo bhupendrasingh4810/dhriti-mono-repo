@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { Archive, ChevronDown, Ellipsis } from "lucide-react";
+import { Archive, ChevronDown, Ellipsis, MessagesSquare } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -126,6 +126,21 @@ function ConversationAvatar({ conversation }: { conversation: ConnectSidebarConv
   }
 
   return <img src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />;
+}
+
+function ChannelAvatar({ avatar, name }: { avatar?: string; name: string }) {
+  if (avatar) {
+    return <img src={avatar} alt="" className="h-7 w-7 shrink-0 rounded-lg object-cover" />;
+  }
+
+  return (
+    <span
+      aria-label={`${name} channel`}
+      className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-white/15 text-white"
+    >
+      <MessagesSquare size={16} aria-hidden="true" />
+    </span>
+  );
 }
 
 function handleRowKeyDown(event: KeyboardEvent<HTMLDivElement>, onSelect: () => void) {
@@ -343,8 +358,8 @@ function ConversationList({
         };
         const conversationLabel = (
           <div className="flex min-w-0 items-center gap-2.5">
-            {conversation.type === "channel" ? (
-              <span className={`text-sm font-bold ${selected ? "text-white" : "text-white/70"}`}>#</span>
+            {conversation.type === "channel" && !conversation.isSelfSpace ? (
+              <ChannelAvatar avatar={conversation.avatar} name={conversation.name} />
             ) : (
               <ConversationAvatar conversation={conversation} />
             )}
@@ -477,10 +492,10 @@ function TeamGroup({
                 <Link
                   href={conversationHref(channel.id)}
                   onClick={select}
-                  className={`min-w-0 flex-1 cursor-pointer py-1 pl-8 text-sm ${selected ? "font-bold text-white" : "font-medium text-white/80"}`}
+                  className={`flex min-w-0 flex-1 items-center gap-2 py-1 pl-8 text-sm ${selected ? "font-bold text-white" : "font-medium text-white/80"}`}
                 >
-                  {channel.isPrivate ? "lock " : "# "}
-                  {channel.slug}
+                  <ChannelAvatar avatar={channel.avatar} name={channel.name} />
+                  <span className="truncate">{channel.isPrivate ? "lock " : ""}{channel.slug}</span>
                 </Link>
                 <SidebarTrailingSlot
                   hovered={hovered}

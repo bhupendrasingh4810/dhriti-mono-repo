@@ -9,6 +9,7 @@ export interface CreateChannelInput {
   teamId?: string;
   topic?: string;
   description?: string;
+  imageUrl?: string;
 }
 export interface CreateConnectTeamInput {
   name: string;
@@ -46,6 +47,7 @@ export interface UpdateChannelInput {
   topic?: string;
   description?: string;
   isArchived?: boolean;
+  imageUrl?: string;
 }
 export interface CreateMessageInput {
   content: string;
@@ -90,6 +92,7 @@ export interface ConnectApiConversation {
   createdById?: string;
   createdAt: string;
   description: string | null;
+  imageUrl: string | null;
   isArchived: boolean;
   members?: { userId: string }[];
   messages?: { id: string; authorId: string; content: string; createdAt: string }[];

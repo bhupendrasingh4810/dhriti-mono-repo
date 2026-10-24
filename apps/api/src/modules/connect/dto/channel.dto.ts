@@ -44,6 +44,13 @@ export class CreateChannelDto {
   @IsString()
   @MaxLength(1000)
   description?: string;
+
+  @ApiPropertyOptional({ description: "A JPEG, PNG, WebP, or GIF data URL up to 2 MiB." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_800_000)
+  @Matches(/^data:image\/(jpeg|png|webp|gif);base64,[a-zA-Z0-9+/]+={0,2}$/)
+  imageUrl?: string;
 }
 
 export class UpdateChannelDto {
@@ -70,6 +77,13 @@ export class UpdateChannelDto {
   @IsOptional()
   @IsBoolean()
   isArchived?: boolean;
+
+  @ApiPropertyOptional({ description: "A JPEG, PNG, WebP, or GIF data URL up to 2 MiB." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2_800_000)
+  @Matches(/^data:image\/(jpeg|png|webp|gif);base64,[a-zA-Z0-9+/]+={0,2}$/)
+  imageUrl?: string;
 }
 
 export class AddChannelMemberDto {

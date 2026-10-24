@@ -309,7 +309,7 @@ export function useConnect(selectedConversationId: string) {
           organizationId,
           type: channel.type.toLowerCase() as ConnectConversation["type"],
           name: channel.type === "DIRECT" ? (peopleById[other ?? ""]?.displayName ?? channel.name) : channel.name,
-          avatar: channel.type === "DIRECT" ? peopleById[other ?? ""]?.avatar : undefined,
+          avatar: channel.type === "DIRECT" ? peopleById[other ?? ""]?.avatar : channel.imageUrl ?? undefined,
           teamId: channel.teamId,
           channelId: channel.id,
           createdBy: channel.createdById ?? "",

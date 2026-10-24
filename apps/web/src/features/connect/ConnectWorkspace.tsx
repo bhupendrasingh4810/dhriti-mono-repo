@@ -146,6 +146,7 @@ export default function ConnectWorkspace() {
   const [quotedMessage, setQuotedMessage] = useState<ConnectMessage | null>(null);
   const [createSectionOpen, setCreateSectionOpen] = useState(false);
   const [createChannelOpen, setCreateChannelOpen] = useState(false);
+  const [createChannelTeamId, setCreateChannelTeamId] = useState<string | null>(null);
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [addTeamMembersTeamId, setAddTeamMembersTeamId] = useState<string | null>(null);
   const [manageTeamId, setManageTeamId] = useState<string | null>(null);
@@ -279,6 +280,7 @@ export default function ConnectWorkspace() {
             id: channel.id,
             name: channel.name,
             slug: channel.slug,
+            avatar: channel.avatar,
             isPrivate: channel.visibility === "private",
           })),
       })),
@@ -465,7 +467,7 @@ export default function ConnectWorkspace() {
     setSectionViewMode,
     setCreateSectionOpen,
     setCreateTeamOpen,
-    setCreateChannelOpen,
+    openCreateChannel,
     pushSystemMessage,
     (settings) => {
       void live
@@ -709,6 +711,16 @@ export default function ConnectWorkspace() {
     setSidebarMenuContext(null);
   }
 
+  function openCreateChannel(teamId: string) {
+    setCreateChannelTeamId(teamId);
+    setCreateChannelOpen(true);
+  }
+
+  function closeCreateChannelDialog() {
+    setCreateChannelOpen(false);
+    setCreateChannelTeamId(null);
+  }
+
   function closeMentionMenus() {
     setMentionSourceMenuAnchor(null);
     setMentionCallMenuAnchor(null);
@@ -856,14 +868,26 @@ export default function ConnectWorkspace() {
           <ConnectSidebar
             key={`${live.organizationId}-${live.user?.id}-${sectionViewMode.chats}`}
             quickViews={sidebarQuickViews}
-            favoriteConversations={favoriteConversations.map((conversation) => ({
-              id: conversation.id,
-              name: conversation.name,
-              type: conversation.type,
-              avatar: conversation.avatar,
-              unreadCount: live.unread[conversation.id] ?? 0,
-              isSelfSpace: conversation.id.startsWith("personal_"),
-            }))}
+            favoriteConversations={favoriteConversations.map((conversation) => {
+              const hasNoOtherParticipants = conversation.participants.every(
+                (participantId) => participantId === currentUser.id,
+              );
+              const isSelfSpace =
+                conversation.id.startsWith("personal_") ||
+                (conversation.type === "channel" &&
+                  conversation.createdBy === currentUser.id &&
+                  !conversation.teamId &&
+                  hasNoOtherParticipants);
+
+              return {
+                id: conversation.id,
+                name: isSelfSpace ? `${currentUser.displayName} (You)` : conversation.name,
+                type: conversation.type,
+                avatar: isSelfSpace ? currentUser.avatar : conversation.avatar,
+                unreadCount: live.unread[conversation.id] ?? 0,
+                isSelfSpace,
+              };
+            })}
             chatConversations={sidebarChatRows}
             teams={sidebarTeams}
             selectedConversationId={selectedConversationId}
@@ -991,6 +1015,7 @@ export default function ConnectWorkspace() {
                   id: selectedConversation.id,
                   name: selectedConversation.name,
                   type: selectedConversation.type,
+                  avatar: selectedConversation.avatar,
                   isFavorite: selectedConversation.isFavorite,
                   participants: selectedConversation.participants,
                 }}
@@ -1211,11 +1236,11 @@ export default function ConnectWorkspace() {
 
       <CreateChannelDialog
         open={createChannelOpen}
-        onClose={() => setCreateChannelOpen(false)}
+        onClose={closeCreateChannelDialog}
         pushSystemMessage={pushSystemMessage}
         closeSidebarMenus={closeSidebarMenus}
         organizationId={live.organizationId}
-        teams={live.teams}
+        teamId={createChannelTeamId ?? ""}
         onCreated={() => live.refresh()}
       />
 
