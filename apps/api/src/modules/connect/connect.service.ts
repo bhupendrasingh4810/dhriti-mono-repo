@@ -844,15 +844,16 @@ export class ConnectService {
     }
     const existingMember = await this.prisma.channelMember.findUnique({
       where: { channelId_userId: { channelId, userId } },
-      select: { id: true },
+      select: { id: true, leftAt: true },
     });
     await this.prisma.channelMember.upsert({
       where: { channelId_userId: { channelId, userId } },
       create: { channelId, userId, role },
-      update: { role },
+      update: { role, leftAt: null },
     });
-    if (channel.type === "GROUP" && !existingMember) {
+    if (channel.type === "GROUP" && (!existingMember || existingMember.leftAt)) {
       await this.createGroupMembershipLog(organizationId, channelId, actorUserId, userId, "added");
+      this.publisher.groupCreated(organizationId, [userId], { id: channelId });
     }
   }
 

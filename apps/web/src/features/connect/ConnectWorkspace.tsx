@@ -191,7 +191,12 @@ export default function ConnectWorkspace() {
   const selectedConversation = conversationsById[selectedConversationId] ?? connectConversations[0];
   const selectedTeam = selectedConversation?.teamId ? connectTeamsById[selectedConversation.teamId] : null;
   useEffect(() => {
-    if (!conversationIdFromUrl || live.loading || conversationsById[conversationIdFromUrl]) return;
+    if (
+      !conversationIdFromUrl ||
+      live.loading ||
+      Object.keys(conversationsById).length === 0 ||
+      conversationsById[conversationIdFromUrl]
+    ) return;
     setSelectedConversationId("");
     router.replace(pathname, { scroll: false });
   }, [conversationIdFromUrl, conversationsById, live.loading, pathname, router]);

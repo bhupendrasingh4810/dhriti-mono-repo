@@ -340,7 +340,9 @@ export function useConnect(selectedConversationId: string) {
       setSidebar(preferences);
       const next: Record<string, ConnectConversation> = {};
       for (const channel of [...channels, ...chats]) {
-        const participants = (channel.members ?? []).map((member) => member.userId);
+        const participants = (channel.members ?? [])
+          .filter((member) => !member.leftAt)
+          .map((member) => member.userId);
         const other = participants.find((id) => id !== user!.id);
         next[channel.id] = {
           id: channel.id,
