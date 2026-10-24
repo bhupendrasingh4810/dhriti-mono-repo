@@ -52,6 +52,7 @@ import { ConnectChannelDetailsPanel } from "@/features/connect/components/Connec
 import { DeletedMessageToast, MessageOverlays } from "@/features/connect/components/MessageOverlays";
 import type { ConnectMentionsFilter, MentionHoverState, ReactionHoverState } from "@/types/connect.types";
 import { useWorkspaceCall } from "@/features/connect/components/WorkspaceCallProvider";
+import { useConnectSearch, type ConnectSearchUser } from "@/contexts/connect-search-context";
 
 const quickViewsConfig = [
   { icon: AtSign, label: "Mentions" },
@@ -75,11 +76,15 @@ function getConversationTypeLabel(conversation: ConnectConversation) {
 
 export default function ConnectWorkspace() {
   const { startCall } = useWorkspaceCall();
+  const { registerUserSelection } = useConnectSearch();
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const conversationIdFromUrl = searchParams.get("conversation");
   const [selectedConversationId, setSelectedConversationId] = useState(() => conversationIdFromUrl ?? "");
+  const [hiddenTransientConversationIds, setHiddenTransientConversationIds] = useState<Set<string>>(() => new Set());
+  const [transientConversationIds, setTransientConversationIds] = useState<Set<string>>(() => new Set());
+  const [searchSelectedConversationIds, setSearchSelectedConversationIds] = useState<string[]>([]);
   const live = useConnect(selectedConversationId);
   const [previousConversations, setPreviousConversations] = useState(live.conversations);
   if (live.conversations !== previousConversations) {
@@ -302,12 +307,18 @@ export default function ConnectWorkspace() {
       .concat(chatConversations)
       .filter((conversation) => conversation.type === "direct" || conversation.type === "group")
       .filter((conversation) => !favoriteChatIds.has(conversation.id))
+      .filter((conversation) => !hiddenTransientConversationIds.has(conversation.id))
       .filter((conversation, index, all) => all.findIndex((item) => item.id === conversation.id) === index);
 
+    const ordered = [...merged].sort((first, second) => {
+      const firstIndex = searchSelectedConversationIds.indexOf(first.id);
+      const secondIndex = searchSelectedConversationIds.indexOf(second.id);
+      return (firstIndex === -1 ? Number.MAX_SAFE_INTEGER : firstIndex) - (secondIndex === -1 ? Number.MAX_SAFE_INTEGER : secondIndex);
+    });
     return sectionViewMode.chats === "unread"
-      ? merged.filter((conversation) => (connectSidebarState.unread[conversation.id] ?? conversation.unreadCount) > 0)
-      : merged;
-  }, [chatConversations, recentConversations, sectionViewMode.chats, live.unread]);
+      ? ordered.filter((conversation) => (connectSidebarState.unread[conversation.id] ?? conversation.unreadCount) > 0)
+      : ordered;
+  }, [chatConversations, hiddenTransientConversationIds, recentConversations, searchSelectedConversationIds, sectionViewMode.chats, live.unread]);
 
   const sidebarChatRows: ConnectSidebarConversation[] = visibleChatConversations.map((conversation) => ({
     id: conversation.id,
@@ -316,30 +327,57 @@ export default function ConnectWorkspace() {
     avatar: conversation.avatar,
     unreadCount: live.unread[conversation.id] ?? conversation.unreadCount,
   }));
-  if (sectionViewMode.chats === "all") {
-    const existingDirectUsers = new Set(
-      chatConversations
-        .filter((conversation) => conversation.type === "direct")
-        .flatMap((conversation) => conversation.participants),
-    );
-    sidebarChatRows.push(
-      ...connectUsers
-        .filter(
-          (person) =>
-            person.organizationId === live.organizationId &&
-            person.id !== live.user?.id &&
-            !existingDirectUsers.has(person.id),
-        )
-        .map((person): ConnectSidebarConversation => ({
-          id: `contact-${person.id}`,
-          userId: person.id,
-          name: person.displayName,
-          type: "direct",
-          avatar: person.avatar,
-          unreadCount: 0,
-        })),
-    );
-  }
+
+  useEffect(() => {
+    return registerUserSelection((user: ConnectSearchUser) => {
+      const previousConversationId = selectedConversationId;
+      const previousMessages = messagesByConversation[previousConversationId] ?? [];
+      const shouldHidePrevious =
+        transientConversationIds.has(previousConversationId) &&
+        previousMessages.length === 0 &&
+        !composerMessage.trim();
+
+      if (shouldHidePrevious) {
+        setHiddenTransientConversationIds((previous) => new Set(previous).add(previousConversationId));
+        setSearchSelectedConversationIds((previous) => previous.filter((id) => id !== previousConversationId));
+        void live
+          .updateSidebarSettings({
+            hiddenConversationIds: [...(live.sidebar.settings.hiddenConversationIds ?? []), previousConversationId],
+          })
+          .catch(live.reportError);
+      }
+
+      const existingConversation = Object.values(conversationsById).find(
+        (conversation) => conversation.type === "direct" && conversation.participants.includes(user.id),
+      );
+
+      void live
+        .startDirect(user.id)
+        .then((conversationId) => {
+          if (!conversationId) return;
+          if (!existingConversation) {
+            setTransientConversationIds((previous) => new Set(previous).add(conversationId));
+          }
+          setHiddenTransientConversationIds((previous) => {
+            const next = new Set(previous);
+            next.delete(conversationId);
+            return next;
+          });
+          setSearchSelectedConversationIds((previous) => [conversationId, ...previous.filter((id) => id !== conversationId)]);
+          handleSelectConversation(conversationId);
+        })
+        .catch(live.reportError);
+    });
+  }, [
+    composerMessage,
+    conversationsById,
+    live.reportError,
+    live.startDirect,
+    messagesByConversation,
+    registerUserSelection,
+    selectedConversationId,
+    transientConversationIds,
+  ]);
 
   const mentionItems = useMemo(() => {
     const base = connectMentionFeed

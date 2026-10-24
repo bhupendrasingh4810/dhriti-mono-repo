@@ -25,7 +25,7 @@ import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import { CreateConnectTeamDto, UpdateConnectTeamDto, UpsertConnectMemberDto } from "./dto/team.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
-import { CreateDirectConversationDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
+import { CreateDirectConversationDto, RecordConnectUserSearchDto, SearchConnectUsersQueryDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
 
 @ApiTags("connect")
@@ -42,6 +42,38 @@ export class ConnectController {
   @ApiOperation({ summary: "List active Connect users in the current organization" })
   async listUsers(@CurrentOrganization() organization: OrganizationContext) {
     return this.connect.listUsers(organization.organizationId);
+  }
+
+  @Get("users/search")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Search active Connect users in the current organization" })
+  async searchUsers(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Query() query: SearchConnectUsersQueryDto,
+  ) {
+    return this.connect.searchUsers(organization.organizationId, user.userId, query.q, query.limit);
+  }
+
+  @Get("users/recent-searches")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "List recently selected Connect user searches" })
+  async recentUserSearches(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+  ) {
+    return this.connect.listRecentUserSearches(organization.organizationId, user.userId);
+  }
+
+  @Post("users/recent-searches")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "Record a selected Connect user search" })
+  async recordUserSearch(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: RecordConnectUserSearchDto,
+  ) {
+    return this.connect.recordUserSearch(organization.organizationId, user.userId, dto.userId);
   }
 
   @Get("users/paged")

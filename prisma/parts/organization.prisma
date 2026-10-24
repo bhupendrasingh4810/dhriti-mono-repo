@@ -73,6 +73,7 @@ model Organization {
   connectSidebarPreferences ConnectSidebarPreference[]
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
+  connectUserSearches ConnectUserSearch[]
   invitations   Invitation[]
   groups        Group[]
   usageEvents   UsageEvent[]

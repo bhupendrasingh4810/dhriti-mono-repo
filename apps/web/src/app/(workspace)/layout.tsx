@@ -4,7 +4,8 @@ import { type ReactNode } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/workspace/sidebar";
 import Header from "@/components/layout/workspace/header";
-import { connectSearchResults, connectUsers } from "@/mocks/connect";
+import { ConnectSearchProvider } from "@/contexts/connect-search-context";
+import { useAuth } from "@/hooks/use-auth";
 import { PageType } from "@/types/app.types";
 
 interface WorkspaceLayoutProps {
@@ -22,40 +23,22 @@ function getActiveApp(pathname: string): PageType {
 
 export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   const { organizationSlug } = useParams();
+  const { user } = useAuth();
 
   const pathname = usePathname();
   const activeApp = getActiveApp(pathname);
-  const headerSearchUsers = connectUsers.map((user) => ({
-    id: user.id,
-    title: user.displayName,
-    description: user.jobTitle,
-  }));
-
-  const headerSearchMessages = connectSearchResults
-    .filter((item) => item.type === "message")
-    .map((item) => ({ id: item.id, title: item.title, description: item.description }));
-
-  const headerSearchFiles = connectSearchResults
-    .filter((item) => item.type === "file")
-    .map((item) => ({ id: item.id, title: item.title, description: item.description }));
-
   return (
-    <main className="flex h-screen flex-col bg-background">
-      <div className="w-full shrink-0">
-        <Header
-          activeView={activeApp}
-          connectSearch={
-            activeApp === "connect"
-              ? { users: headerSearchUsers, messages: headerSearchMessages, files: headerSearchFiles }
-              : undefined
-          }
-        />
-      </div>
+    <ConnectSearchProvider organizationId={user?.organization?.id ?? ""}>
+      <main className="flex h-screen flex-col bg-background">
+        <div className="w-full shrink-0">
+          <Header activeView={activeApp} />
+        </div>
 
-      <div className="flex min-h-0 flex-1">
-        <Sidebar activeView={activeApp} organizationSlug={organizationSlug as string} />
-        <div className="min-w-0 flex-1 overflow-y-auto">{children}</div>
-      </div>
-    </main>
+        <div className="flex min-h-0 flex-1">
+          <Sidebar activeView={activeApp} organizationSlug={organizationSlug as string} />
+          <div className="min-w-0 flex-1 overflow-y-auto">{children}</div>
+        </div>
+      </main>
+    </ConnectSearchProvider>
   );
 }

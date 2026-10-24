@@ -274,6 +274,77 @@ export class ConnectService {
     return memberships.map(({ user }) => user);
   }
 
+  async searchUsers(organizationId: string, actorUserId: string, query: string, requestedLimit?: number) {
+    const limit = Math.min(Math.max(requestedLimit ?? 10, 1), 20);
+    const search = query.trim();
+    if (!search) {
+      return [];
+    }
+
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: {
+        organizationId,
+        userId: { not: actorUserId },
+        status: "ACTIVE",
+        deletedAt: null,
+        user: {
+          deletedAt: null,
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+          ],
+        },
+      },
+      select: {
+        user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+      orderBy: { user: { name: "asc" } },
+      take: limit,
+    });
+
+    return memberships.map(({ user }) => user);
+  }
+
+  async listRecentUserSearches(organizationId: string, actorUserId: string) {
+    const searches = await this.prisma.connectUserSearch.findMany({
+      where: { organizationId, actorUserId, targetUserId: { not: actorUserId }, targetUser: { deletedAt: null } },
+      orderBy: { lastSelectedAt: "desc" },
+      take: 10,
+      select: {
+        targetUser: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    });
+    return searches.map(({ targetUser }) => targetUser);
+  }
+
+  async recordUserSearch(organizationId: string, actorUserId: string, targetUserId: string) {
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: {
+        organizationId,
+        userId: targetUserId,
+        status: "ACTIVE",
+        deletedAt: null,
+        user: { deletedAt: null },
+      },
+      select: { userId: true },
+    });
+    if (!membership) {
+      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);
+    }
+
+    const search = await this.prisma.connectUserSearch.upsert({
+      where: {
+        organizationId_actorUserId_targetUserId: { organizationId, actorUserId, targetUserId },
+      },
+      create: { organizationId, actorUserId, targetUserId },
+      update: { selectionCount: { increment: 1 }, lastSelectedAt: new Date() },
+      select: {
+        targetUser: { select: { id: true, name: true, email: true, avatarUrl: true } },
+      },
+    });
+    return search.targetUser;
+  }
+
   async listUsersPage(organizationId: string, cursor?: string, requestedLimit?: number) {
     const limit = Math.min(Math.max(requestedLimit ?? 12, 1), 50);
     const memberships = await this.prisma.organizationMember.findMany({

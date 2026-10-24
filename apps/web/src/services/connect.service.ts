@@ -105,6 +105,7 @@ export interface ConnectSidebarSettings {
   drafts?: "visible" | "hidden";
   favoritesFilter?: "all" | "unread";
   chatsFilter?: "all" | "unread";
+  hiddenConversationIds?: string[];
 }
 export interface SetConnectFavoriteInput {
   itemType: "chat" | "team" | "channel";
@@ -131,6 +132,17 @@ const base = "/api/organization/connect";
 
 export const connectService = {
   listUsers: (organizationId: string) => tenantRequest<ConnectOrganizationUser[]>(organizationId, `${base}/users`),
+  searchUsers: (organizationId: string, query: string) =>
+    tenantRequest<ConnectOrganizationUser[]>(organizationId, `${base}/users/search`, { query: { q: query, limit: 10 } }),
+  listRecentUserSearches: (organizationId: string) =>
+    tenantRequest<ConnectOrganizationUser[]>(organizationId, `${base}/users/recent-searches`),
+  recordUserSearch: (organizationId: string, userId: string) =>
+    tenantJsonRequest<ConnectOrganizationUser, { userId: string }>(
+      organizationId,
+      `${base}/users/recent-searches`,
+      "POST",
+      { userId },
+    ),
   listUsersPage: (organizationId: string, cursor?: string) =>
     tenantRequest<ConnectOrganizationUsersPage>(organizationId, `${base}/users/paged`, {
       query: { limit: 12, ...(cursor ? { cursor } : {}) },

@@ -21,23 +21,19 @@ import {
 } from "lucide-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectHeaderSearch } from "@/features/connect/components/ConnectHeaderSearch";
-import type { ConnectHeaderSearchItem } from "@/types/connect.types";
+import { useConnectSearch } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 
 interface Props {
   activeView: AppView;
-  connectSearch?: {
-    users: ConnectHeaderSearchItem[];
-    messages: ConnectHeaderSearchItem[];
-    files: ConnectHeaderSearchItem[];
-  };
 }
 
-export default function Header({ activeView, connectSearch }: Props) {
+export default function Header({ activeView }: Props) {
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const { user, logout } = useAuth();
+  const { recentUsers, recentUsersError, selectUser } = useConnectSearch();
   const userName = user?.name ?? "User";
   const userEmail = user?.email ?? "user@dhriti.app";
   const userInitials = userName
@@ -164,9 +160,14 @@ export default function Header({ activeView, connectSearch }: Props) {
       {/* Nav */}
       <nav className="flex items-center gap-1"></nav>
 
-      {activeView === "connect" && connectSearch && (
+      {activeView === "connect" && user?.organization?.id && (
         <div className="absolute left-1/2 z-10 w-full max-w-[680px] -translate-x-1/2 px-4">
-          <ConnectHeaderSearch {...connectSearch} />
+          <ConnectHeaderSearch
+            organizationId={user.organization.id}
+            recentUsers={recentUsers}
+            recentUsersError={recentUsersError}
+            onSelectUser={selectUser}
+          />
         </div>
       )}
 

@@ -1287,6 +1287,7 @@ model Organization {
   connectSidebarPreferences ConnectSidebarPreference[]
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
+  connectUserSearches ConnectUserSearch[]
   invitations   Invitation[]
   groups        Group[]
   usageEvents   UsageEvent[]
@@ -1484,6 +1485,8 @@ model User {
   notifications         Notification[]
   notificationPrefs     NotificationPreference[]
   connectSidebarPreferences ConnectSidebarPreference[]
+  connectUserSearches ConnectUserSearch[] @relation("ConnectUserSearchActor")
+  selectedInConnectUserSearches ConnectUserSearch[] @relation("ConnectUserSearchTarget")
   sentInvitations       Invitation[]
   groupMemberships      GroupMember[]
   organizationTeamMemberships OrganizationTeamMember[]
@@ -2282,6 +2285,25 @@ model SearchHistory {
 
   @@index([userId, createdAt])
   @@map("search_history")
+}
+
+model ConnectUserSearch {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  actorUserId    String   @db.Uuid
+  targetUserId   String   @db.Uuid
+  selectionCount Int      @default(1)
+  lastSelectedAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actorUser    User         @relation("ConnectUserSearchActor", fields: [actorUserId], references: [id], onDelete: Cascade)
+  targetUser   User         @relation("ConnectUserSearchTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, actorUserId, targetUserId])
+  @@index([organizationId, actorUserId, lastSelectedAt])
+  @@map("connect_user_searches")
 }
 
 model Invitation {

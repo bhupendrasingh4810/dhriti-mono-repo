@@ -109,6 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (!shouldLoadCurrentUser(pathname)) {
+      initializedRef.current = false;
       void Promise.resolve().then(() => setLoading(false));
       return;
     }
