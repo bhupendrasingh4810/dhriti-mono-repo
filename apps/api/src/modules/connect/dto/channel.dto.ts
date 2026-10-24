@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from "class-validator";
-import { ChannelType, ChannelVisibility } from "@prisma/client";
+import { ChannelLayout, ChannelType, ChannelVisibility } from "@prisma/client";
 
 export class CreateChannelDto {
   @ApiProperty({ example: "payments" })
@@ -27,6 +27,11 @@ export class CreateChannelDto {
   @IsOptional()
   @IsEnum(ChannelVisibility)
   visibility?: ChannelVisibility;
+
+  @ApiPropertyOptional({ enum: ChannelLayout, default: ChannelLayout.THREADS })
+  @IsOptional()
+  @IsEnum(ChannelLayout)
+  layout?: ChannelLayout;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -66,6 +71,11 @@ export class UpdateChannelDto {
   @IsString()
   @MaxLength(250)
   topic?: string;
+
+  @ApiPropertyOptional({ enum: ChannelLayout })
+  @IsOptional()
+  @IsEnum(ChannelLayout)
+  layout?: ChannelLayout;
 
   @ApiPropertyOptional()
   @IsOptional()

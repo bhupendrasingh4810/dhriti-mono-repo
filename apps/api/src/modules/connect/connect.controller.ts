@@ -25,6 +25,7 @@ import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import { CreateConnectTeamDto, UpdateConnectTeamDto, UpsertConnectMemberDto } from "./dto/team.dto";
 import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
+import { CreatePostCommentDto, CreatePostDto, UpdatePostCommentDto, UpdatePostDto, VotePollDto } from "./dto/post.dto";
 import { CreateDirectConversationDto, RecordConnectUserSearchDto, SearchConnectUsersQueryDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
 
@@ -309,6 +310,18 @@ export class ConnectController {
     return this.connect.updateChannel(organization.organizationId, channelId, user.userId, dto);
   }
 
+  @Delete("channels/:channelId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Delete a channel (channel admin only)" })
+  async deleteChannel(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId") channelId: string,
+  ): Promise<void> {
+    return this.connect.deleteChannel(organization.organizationId, channelId, user.userId);
+  }
+
   @Post("channels/:channelId/members")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -336,6 +349,153 @@ export class ConnectController {
   }
 
   // ---------------- Messages ----------------
+
+  @Get("channels/:channelId/posts")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
+  @ApiOperation({ summary: "List posts in a channel with poll aggregates and the current user's vote" })
+  async listPosts(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId", ParseUUIDPipe) channelId: string,
+  ) {
+    return this.connect.listPosts(organization.organizationId, channelId, user.userId);
+  }
+
+  @Post("channels/:channelId/posts")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Create a channel post, optionally with a poll" })
+  async createPost(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("channelId", ParseUUIDPipe) channelId: string,
+    @Body() dto: CreatePostDto,
+  ) {
+    return this.connect.createPost(organization.organizationId, channelId, user.userId, dto);
+  }
+
+  @Delete("posts/:postId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.delete" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Delete a post (author only)" })
+  async deletePost(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("postId", ParseUUIDPipe) postId: string,
+  ): Promise<void> {
+    return this.connect.deletePost(organization.organizationId, postId, user.userId);
+  }
+
+  @Patch("posts/:postId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Edit a post (author only)" })
+  async updatePost(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("postId", ParseUUIDPipe) postId: string,
+    @Body() dto: UpdatePostDto,
+  ) {
+    return this.connect.updatePost(organization.organizationId, postId, user.userId, dto);
+  }
+
+  @Post("posts/:postId/comments")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Comment on a post" })
+  async createPostComment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("postId", ParseUUIDPipe) postId: string,
+    @Body() dto: CreatePostCommentDto,
+  ) {
+    return this.connect.createPostComment(organization.organizationId, postId, user.userId, dto.content);
+  }
+
+  @Patch("comments/:commentId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Edit a post comment (author only)" })
+  async updatePostComment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("commentId", ParseUUIDPipe) commentId: string,
+    @Body() dto: UpdatePostCommentDto,
+  ) {
+    return this.connect.updatePostComment(organization.organizationId, commentId, user.userId, dto.content);
+  }
+
+  @Post("posts/:postId/reactions")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Add or replace the current user's post reaction" })
+  async addPostReaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("postId", ParseUUIDPipe) postId: string,
+    @Body() dto: AddReactionDto,
+  ): Promise<void> {
+    return this.connect.addPostReaction(organization.organizationId, postId, user.userId, dto.emoji);
+  }
+
+  @Delete("comments/:commentId")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.delete" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Delete a post comment (comment owner or post author)" })
+  async deletePostComment(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("commentId", ParseUUIDPipe) commentId: string,
+  ): Promise<void> {
+    return this.connect.deletePostComment(organization.organizationId, commentId, user.userId);
+  }
+
+  @Post("comments/:commentId/reactions")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Add or replace the current user's comment reaction" })
+  async addPostCommentReaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("commentId", ParseUUIDPipe) commentId: string,
+    @Body() dto: AddReactionDto,
+  ): Promise<void> {
+    return this.connect.addPostCommentReaction(organization.organizationId, commentId, user.userId, dto.emoji);
+  }
+
+  @Delete("comments/:commentId/reactions/:emoji")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Remove the current user's comment reaction" })
+  async removePostCommentReaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("commentId", ParseUUIDPipe) commentId: string,
+    @Param("emoji") emoji: string,
+  ): Promise<void> {
+    return this.connect.removePostCommentReaction(organization.organizationId, commentId, user.userId, emoji);
+  }
+
+  @Delete("posts/:postId/reactions/:emoji")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: "Remove the current user's reaction from a post" })
+  async removePostReaction(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("postId", ParseUUIDPipe) postId: string,
+    @Param("emoji") emoji: string,
+  ): Promise<void> {
+    return this.connect.removePostReaction(organization.organizationId, postId, user.userId, emoji);
+  }
+
+  @Post("polls/:pollId/votes")
+  @RequireAccess({ entitlement: "connect.enabled", permission: "connect.message.create" })
+  @ApiOperation({ summary: "Cast or change the current user's vote on an open poll" })
+  async votePoll(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("pollId", ParseUUIDPipe) pollId: string,
+    @Body() dto: VotePollDto,
+  ) {
+    return this.connect.votePoll(organization.organizationId, pollId, user.userId, dto.optionId);
+  }
 
   @Get("channels/:channelId/messages")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })

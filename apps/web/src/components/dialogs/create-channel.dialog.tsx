@@ -72,7 +72,7 @@ export function CreateChannelDialog({
           .replace(/(^-|-$)/g, ""),
         teamId,
         visibility: channelType === "private" ? "PRIVATE" : "PUBLIC",
-        topic: channelLayout,
+        layout: channelLayout.toUpperCase() as "THREADS" | "POSTS",
         description: channelDescription.trim() || undefined,
         imageUrl: channelImageUrl || undefined,
       });

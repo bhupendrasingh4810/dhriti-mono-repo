@@ -311,10 +311,12 @@ export function useConnect(selectedConversationId: string) {
           name: channel.type === "DIRECT" ? (peopleById[other ?? ""]?.displayName ?? channel.name) : channel.name,
           avatar: channel.type === "DIRECT" ? peopleById[other ?? ""]?.avatar : channel.imageUrl ?? undefined,
           teamId: channel.teamId,
+          layout: channel.layout,
           channelId: channel.id,
           createdBy: channel.createdById ?? "",
           createdAt: channel.createdAt,
           participants,
+          adminUserIds: channel.admins ?? [],
           lastMessageAt: channel.messages?.[0]?.createdAt ?? channel.createdAt,
           unreadCount: 0,
           isFavorite:

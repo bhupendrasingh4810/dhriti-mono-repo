@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Channel, ConnectCallScope, ConnectCallStatus, ConnectCallType, Message, MessageReaction, Team, User, Prisma } from "@prisma/client";
+import type { Channel, ConnectCallScope, ConnectCallStatus, ConnectCallType, Message, MessageReaction, Poll, PollOption, PollVote, Post, PostComment, PostCommentReaction, PostReaction, Team, User, Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
@@ -10,6 +10,7 @@ import { ConnectPublisherService } from "../../websocket/connect/connect-publish
 import type { CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import type { CreateConnectTeamDto, UpdateConnectTeamDto } from "./dto/team.dto";
 import type { CreateMessageDto, UpdateMessageDto } from "./dto/message.dto";
+import type { CreatePollDto, CreatePostDto, UpdatePostDto } from "./dto/post.dto";
 import type { UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 
 type SidebarFavoriteType = "chat" | "team" | "channel";
@@ -28,6 +29,23 @@ export type MessageWithMeta = Message & {
   mentions: Array<{ userId: string }>;
   reactions: Array<Pick<MessageReaction, "userId" | "emoji">>;
   _count: { replies: number };
+  poll: (Poll & {
+    options: Array<PollOption & { _count: { votes: number } }>;
+    votes: Array<Pick<PollVote, "id" | "pollOptionId">>;
+  }) | null;
+};
+
+type PostWithPoll = Post & {
+  author: Pick<User, "id" | "name" | "avatarUrl">;
+  comments: Array<PostComment & {
+    author: Pick<User, "id" | "name" | "avatarUrl">;
+    reactions: Array<Pick<PostCommentReaction, "userId" | "emoji">>;
+  }>;
+  reactions: Array<Pick<PostReaction, "userId" | "emoji">>;
+  poll: (Poll & {
+    options: Array<PollOption & { _count: { votes: number } }>;
+    votes: Array<Pick<PollVote, "id" | "pollOptionId">>;
+  }) | null;
 };
 
 type ChannelWithMembers = Channel & {
@@ -51,6 +69,13 @@ interface IdempotentMessageDelegate {
       parentId: string | null;
       content: string;
       mentions: { create: Array<{ userId: string }> };
+      poll?: {
+        create: {
+          allowsVoteChanges: boolean;
+          closesAt: Date | null;
+          options: { create: Array<{ content: string; position: number }> };
+        };
+      };
     };
     update: Record<string, never>;
     include: object;
@@ -633,6 +658,7 @@ export class ConnectService {
         slug: dto.slug ?? null,
         type: dto.type ?? "CHANNEL",
         visibility: dto.visibility ?? "PUBLIC",
+        layout: dto.layout ?? "THREADS",
         topic: dto.topic ?? null,
         description: dto.description ?? null,
         imageUrl: dto.imageUrl ?? null,
@@ -672,7 +698,8 @@ export class ConnectService {
       where: { channelId_userId: { channelId, userId } },
       select: { id: true },
     });
-    if ((channel.visibility === "PRIVATE" || channel.type !== "CHANNEL" || requireChannelMembership) && !member) {
+    const canAccessPublicChannel = requireChannelMembership && channel.type === "CHANNEL" && channel.visibility === "PUBLIC";
+    if ((channel.visibility === "PRIVATE" || channel.type !== "CHANNEL" || (requireChannelMembership && !canAccessPublicChannel)) && !member) {
       throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this channel", HttpStatus.FORBIDDEN);
     }
 
@@ -723,6 +750,7 @@ export class ConnectService {
       data: {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         ...(dto.topic !== undefined ? { topic: dto.topic } : {}),
+        ...(dto.layout !== undefined ? { layout: dto.layout } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
         ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
         ...(dto.isArchived !== undefined ? { isArchived: dto.isArchived } : {}),
@@ -730,6 +758,21 @@ export class ConnectService {
       include: { members: { select: { userId: true, role: true } } },
     });
     return this.serializeChannel(channel);
+  }
+
+  async deleteChannel(organizationId: string, channelId: string, userId: string): Promise<void> {
+    await this.requireChannelAdmin(organizationId, channelId, userId);
+    await this.prisma.channel.update({
+      where: { id: channelId },
+      data: { deletedAt: new Date(), isArchived: true, slug: null },
+    });
+    await this.audit.record({
+      action: "connect.channel.deleted",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Channel",
+      resourceId: channelId,
+    });
   }
 
   async upsertChannelMember(organizationId: string, channelId: string, actorUserId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<void> {
@@ -773,6 +816,272 @@ export class ConnectService {
 
   // ---------------- Messages ----------------
 
+  async listPosts(organizationId: string, channelId: string, userId: string) {
+    await this.getChannelForMember(organizationId, channelId, userId, true);
+    const membership = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+      select: { lastReadAt: true },
+    });
+    const posts = await this.prisma.post.findMany({
+      where: { organizationId, channelId, deletedAt: null },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      include: this.postInclude(userId),
+    });
+    return posts.map((post) => ({
+      ...this.serializePost(post),
+      isUnread: post.authorId !== userId && (!membership?.lastReadAt || post.createdAt > membership.lastReadAt),
+    }));
+  }
+
+  async createPost(organizationId: string, channelId: string, authorId: string, dto: CreatePostDto) {
+    const channel = await this.getChannelForMember(organizationId, channelId, authorId, true);
+    const closesAt = dto.poll?.closesAt ? new Date(dto.poll.closesAt) : null;
+    if (closesAt && closesAt <= new Date()) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll closing time must be in the future", HttpStatus.BAD_REQUEST);
+    }
+    if (dto.poll) {
+      const optionContent = dto.poll.options.map((option) => option.content.trim().toLocaleLowerCase());
+      if (new Set(optionContent).size !== optionContent.length) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll options must be unique", HttpStatus.BAD_REQUEST);
+      }
+    }
+    const post = await this.prisma.post.create({
+      data: {
+        organizationId, channelId, authorId, title: dto.title?.trim() || null, content: dto.content,
+        contentHtml: dto.contentHtml ?? null, imageUrl: dto.imageUrl ?? null,
+        backgroundImageUrl: dto.backgroundImageUrl ?? null, backgroundColor: dto.backgroundColor ?? null,
+        ...(dto.poll ? {
+          poll: {
+            create: {
+              allowsVoteChanges: dto.poll.allowsVoteChanges ?? false, closesAt,
+              options: { create: dto.poll.options.map((option, position) => ({ content: option.content.trim(), position })) },
+            },
+          },
+        } : {}),
+      },
+      include: this.postInclude(authorId),
+    });
+    await this.audit.record({
+      action: "connect.post.created", organizationId, actorUserId: authorId, resourceType: "Post", resourceId: post.id,
+      metadata: { channelId, hasPoll: Boolean(dto.poll) },
+    });
+    const serialized = this.serializePost(post);
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "post:created", { channelId, post: serialized });
+    return serialized;
+  }
+
+  async deletePost(organizationId: string, postId: string, authorId: string): Promise<void> {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, organizationId, authorId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!post) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Post not found", HttpStatus.NOT_FOUND);
+    }
+
+    await this.prisma.post.update({
+      where: { id: postId },
+      data: { deletedAt: new Date() },
+    });
+    await this.audit.record({
+      action: "connect.post.deleted",
+      organizationId,
+      actorUserId: authorId,
+      resourceType: "Post",
+      resourceId: postId,
+    });
+  }
+
+  async updatePost(organizationId: string, postId: string, authorId: string, dto: UpdatePostDto) {
+    const post = await this.getPost(organizationId, postId);
+    if (post.authorId !== authorId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the author can edit a post", HttpStatus.FORBIDDEN);
+    }
+    await this.getChannelForMember(organizationId, post.channelId, authorId, true);
+    const updated = await this.prisma.post.update({
+      where: { id: postId },
+      data: {
+        ...(dto.title !== undefined ? { title: dto.title?.trim() || null } : {}),
+        ...(dto.content !== undefined ? { content: dto.content.trim() } : {}),
+        ...(dto.contentHtml !== undefined ? { contentHtml: dto.contentHtml } : {}),
+        ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
+        ...(dto.backgroundImageUrl !== undefined ? { backgroundImageUrl: dto.backgroundImageUrl } : {}),
+        ...(dto.backgroundColor !== undefined ? { backgroundColor: dto.backgroundColor } : {}),
+      },
+      include: this.postInclude(authorId),
+    });
+    await this.audit.record({
+      action: "connect.post.updated",
+      organizationId,
+      actorUserId: authorId,
+      resourceType: "Post",
+      resourceId: postId,
+    });
+    return this.serializePost(updated);
+  }
+
+  async createPostComment(organizationId: string, postId: string, authorId: string, content: string) {
+    const post = await this.getPost(organizationId, postId);
+    await this.getChannelForMember(organizationId, post.channelId, authorId, true);
+    const comment = await this.prisma.postComment.create({
+      data: { organizationId, postId, authorId, content: content.trim() },
+      include: {
+        author: { select: { id: true, name: true, avatarUrl: true } },
+        reactions: { select: { userId: true, emoji: true } },
+      },
+    });
+    await this.audit.record({
+      action: "connect.post.comment.created",
+      organizationId,
+      actorUserId: authorId,
+      resourceType: "Post",
+      resourceId: postId,
+      metadata: { commentId: comment.id },
+    });
+    return comment;
+  }
+
+  async addPostReaction(organizationId: string, postId: string, userId: string, emoji: string): Promise<void> {
+    const post = await this.getPost(organizationId, postId);
+    await this.getChannelForMember(organizationId, post.channelId, userId, true);
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.postReaction.deleteMany({ where: { postId, userId } });
+      await transaction.postReaction.create({ data: { postId, userId, emoji } });
+    });
+    await this.audit.record({
+      action: "connect.post.reaction.added",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Post",
+      resourceId: postId,
+      metadata: { emoji },
+    });
+  }
+
+  async deletePostComment(organizationId: string, commentId: string, userId: string): Promise<void> {
+    const comment = await this.getPostComment(organizationId, commentId);
+    await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
+    if (comment.authorId !== userId && comment.post.authorId !== userId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the comment owner or post author can delete this comment", HttpStatus.FORBIDDEN);
+    }
+    await this.prisma.postComment.update({
+      where: { id: commentId },
+      data: { deletedAt: new Date() },
+    });
+    await this.audit.record({
+      action: "connect.post.comment.deleted",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "PostComment",
+      resourceId: commentId,
+      metadata: { postId: comment.postId },
+    });
+  }
+
+  async updatePostComment(organizationId: string, commentId: string, userId: string, content: string) {
+    const comment = await this.getPostComment(organizationId, commentId);
+    if (comment.authorId !== userId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the comment owner can edit this comment", HttpStatus.FORBIDDEN);
+    }
+    await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
+    const updated = await this.prisma.postComment.update({
+      where: { id: commentId },
+      data: { content: content.trim() },
+      include: {
+        author: { select: { id: true, name: true, avatarUrl: true } },
+        reactions: { select: { userId: true, emoji: true } },
+      },
+    });
+    await this.audit.record({
+      action: "connect.post.comment.updated",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "PostComment",
+      resourceId: commentId,
+    });
+    return updated;
+  }
+
+  async addPostCommentReaction(organizationId: string, commentId: string, userId: string, emoji: string): Promise<void> {
+    const comment = await this.getPostComment(organizationId, commentId);
+    await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
+    await this.prisma.$transaction(async (transaction) => {
+      await transaction.postCommentReaction.deleteMany({ where: { commentId, userId } });
+      await transaction.postCommentReaction.create({ data: { commentId, userId, emoji } });
+    });
+  }
+
+  async removePostCommentReaction(organizationId: string, commentId: string, userId: string, emoji: string): Promise<void> {
+    const comment = await this.getPostComment(organizationId, commentId);
+    await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
+    await this.prisma.postCommentReaction.deleteMany({ where: { commentId, userId, emoji } });
+  }
+
+  async removePostReaction(organizationId: string, postId: string, userId: string, emoji: string): Promise<void> {
+    const post = await this.getPost(organizationId, postId);
+    await this.getChannelForMember(organizationId, post.channelId, userId, true);
+    await this.prisma.postReaction.deleteMany({ where: { postId, userId, emoji } });
+    await this.audit.record({
+      action: "connect.post.reaction.removed",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Post",
+      resourceId: postId,
+      metadata: { emoji },
+    });
+  }
+
+  async votePoll(organizationId: string, pollId: string, userId: string, optionId: string) {
+    const poll = await this.prisma.poll.findFirst({
+      where: {
+        id: pollId,
+        OR: [
+          { post: { organizationId, deletedAt: null } },
+          { message: { organizationId, deletedAt: null } },
+        ],
+      },
+      include: { post: { select: { channelId: true } }, message: { select: { channelId: true } } },
+    });
+    if (!poll) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll not found", HttpStatus.NOT_FOUND);}
+    const channelId = poll.post?.channelId ?? poll.message?.channelId;
+    if (!channelId) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll owner not found", HttpStatus.NOT_FOUND);}
+    const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
+    if (poll.closesAt && poll.closesAt <= new Date()) {
+      throw new AppError(ErrorCode.FORBIDDEN, "This poll is closed", HttpStatus.FORBIDDEN);
+    }
+    const option = await this.prisma.pollOption.findFirst({ where: { id: optionId, pollId }, select: { id: true } });
+    if (!option) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll option not found", HttpStatus.BAD_REQUEST);}
+    const existingVote = await this.prisma.pollVote.findUnique({
+      where: { pollId_userId: { pollId, userId } }, select: { id: true, pollOptionId: true },
+    });
+    if (existingVote && existingVote.pollOptionId !== optionId && !poll.allowsVoteChanges) {
+      throw new AppError(ErrorCode.FORBIDDEN, "This poll does not allow vote changes", HttpStatus.FORBIDDEN);
+    }
+    if (!existingVote || existingVote.pollOptionId !== optionId) {
+      await this.prisma.pollVote.upsert({
+        where: { pollId_userId: { pollId, userId } },
+        create: { pollId, pollOptionId: optionId, userId },
+        update: { pollOptionId: optionId },
+      });
+    }
+    const post = poll.postId ? await this.prisma.post.findFirst({
+      where: { id: poll.postId, organizationId, deletedAt: null }, include: this.postInclude(userId),
+    }) : null;
+    const message = poll.messageId ? await this.prisma.message.findFirst({
+      where: { id: poll.messageId, organizationId, deletedAt: null }, include: this.messageInclude(userId),
+    }) : null;
+    if (!post && !message) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll owner not found", HttpStatus.NOT_FOUND);}
+    await this.audit.record({
+      action: "connect.poll.voted", organizationId, actorUserId: userId, resourceType: "Poll", resourceId: pollId,
+      metadata: { postId: post?.id, messageId: message?.id, optionId },
+    });
+    const serialized = post ? this.serializePost(post) : this.serializeMessage(message!);
+    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "poll:vote-changed", {
+      channelId: channel.id, postId: post?.id, messageId: message?.id, poll: serialized.poll,
+    });
+    return serialized;
+  }
+
   async listMessages(
     organizationId: string,
     channelId: string,
@@ -805,13 +1114,13 @@ export class ConnectService {
       orderBy: [{ createdAt: forward ? "asc" : "desc" }, { id: forward ? "asc" : "desc" }],
       take: limit + 1,
       ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : firstUnread ? { cursor: { id: firstUnread.id } } : {}),
-      include: this.messageInclude,
+      include: this.messageInclude(userId),
     });
 
     const hasMore = messages.length > limit;
     const page = hasMore ? messages.slice(0, limit) : messages;
     return {
-      messages: page,
+      messages: page.map((message) => this.serializeMessage(message)),
       nextCursor: forward ? (page[0]?.id ?? null) : hasMore ? (page[page.length - 1]?.id ?? null) : null,
       newerCursor: forward && hasMore ? (page[page.length - 1]?.id ?? null) : null,
       firstUnreadId: firstUnread?.id ?? null,
@@ -824,7 +1133,7 @@ export class ConnectService {
     channelId: string,
     authorId: string,
     dto: CreateMessageDto,
-  ): Promise<MessageWithMeta> {
+  ) {
     const channel = await this.getChannelForMember(organizationId, channelId, authorId, true);
 
     if (dto.parentId) {
@@ -836,6 +1145,7 @@ export class ConnectService {
         throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Parent message not found", HttpStatus.BAD_REQUEST);
       }
     }
+    this.assertValidPoll(dto.poll);
 
     const mentionUserIds = await this.resolveMentions(organizationId, dto.content, dto.mentionUserIds);
 
@@ -856,9 +1166,10 @@ export class ConnectService {
             parentId: dto.parentId ?? null,
             content: dto.content,
             mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
+            ...(dto.poll ? { poll: { create: this.createPollData(dto.poll) } } : {}),
           },
           update: {},
-          include: this.messageInclude,
+          include: this.messageInclude(authorId),
         })
       : await this.prisma.message.create({
           data: {
@@ -868,8 +1179,9 @@ export class ConnectService {
             parentId: dto.parentId ?? null,
             content: dto.content,
             mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
+            ...(dto.poll ? { poll: { create: this.createPollData(dto.poll) } } : {}),
           },
-          include: this.messageInclude,
+          include: this.messageInclude(authorId),
         });
 
     if (message.authorId !== authorId) {
@@ -895,7 +1207,7 @@ export class ConnectService {
         createdAt: message.createdAt,
       });
     }
-    return message;
+    return this.serializeMessage(message);
   }
 
   async recordCallActivity(
@@ -934,7 +1246,7 @@ export class ConnectService {
         authorId: actorUserId,
         content: `[CALL] ${description}`,
       },
-      include: this.messageInclude,
+      include: this.messageInclude(actorUserId),
     });
 
     await this.audit.record({
@@ -1221,7 +1533,7 @@ export class ConnectService {
           create: mentionUserIds.map((mentionedUserId) => ({ userId: mentionedUserId })),
         },
       },
-      include: this.messageInclude,
+      include: this.messageInclude(userId),
     });
     this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", { channelId: channel.id, message: updated });
     return updated;
@@ -1263,7 +1575,7 @@ export class ConnectService {
     const restored = await this.prisma.message.update({
       where: { id: messageId },
       data: { deletedAt: null, isDeleted: false },
-      include: this.messageInclude,
+      include: this.messageInclude(userId),
     });
     await this.audit.record({
       action: "connect.message.restored",
@@ -1337,12 +1649,92 @@ export class ConnectService {
 
   // ---------------- Internals ----------------
 
-  private readonly messageInclude = {
-    author: { select: { id: true, name: true, avatarUrl: true } },
-    mentions: { select: { userId: true } },
-    reactions: { select: { userId: true, emoji: true } },
-    _count: { select: { replies: true } },
-  } as const;
+  private messageInclude(userId: string) {
+    return {
+      author: { select: { id: true, name: true, avatarUrl: true } },
+      mentions: { select: { userId: true } },
+      reactions: { select: { userId: true, emoji: true } },
+      _count: { select: { replies: true } },
+      poll: {
+        include: {
+          options: { orderBy: { position: "asc" as const }, include: { _count: { select: { votes: true } } } },
+          votes: { where: { userId }, select: { id: true, pollOptionId: true } },
+        },
+      },
+    } as const;
+  }
+
+  private postInclude(userId: string) {
+    return {
+      author: { select: { id: true, name: true, avatarUrl: true } },
+      comments: {
+        where: { deletedAt: null },
+        orderBy: { createdAt: "asc" as const },
+        include: {
+          author: { select: { id: true, name: true, avatarUrl: true } },
+          reactions: { select: { userId: true, emoji: true } },
+        },
+      },
+      reactions: { select: { userId: true, emoji: true } },
+      poll: {
+        include: {
+          options: { orderBy: { position: "asc" as const }, include: { _count: { select: { votes: true } } } },
+          votes: { where: { userId }, select: { id: true, pollOptionId: true } },
+        },
+      },
+    } as const;
+  }
+
+  private serializePost(post: PostWithPoll) {
+    const { poll, comments, reactions, ...details } = post;
+    return {
+      ...details,
+      comments,
+      reactions,
+      poll: poll ? {
+        id: poll.id, allowsVoteChanges: poll.allowsVoteChanges, closesAt: poll.closesAt,
+        createdAt: poll.createdAt, updatedAt: poll.updatedAt,
+        options: poll.options.map((option) => ({
+          id: option.id, content: option.content, position: option.position, voteCount: option._count.votes,
+        })),
+        currentVote: poll.votes[0] ?? null,
+      } : null,
+    };
+  }
+
+  private serializeMessage(message: MessageWithMeta) {
+    const { poll, ...details } = message;
+    return {
+      ...details,
+      poll: poll ? {
+        id: poll.id, allowsVoteChanges: poll.allowsVoteChanges, closesAt: poll.closesAt,
+        createdAt: poll.createdAt, updatedAt: poll.updatedAt,
+        options: poll.options.map((option) => ({
+          id: option.id, content: option.content, position: option.position, voteCount: option._count.votes,
+        })),
+        currentVote: poll.votes[0] ?? null,
+      } : null,
+    };
+  }
+
+  private assertValidPoll(poll?: CreatePollDto): void {
+    if (!poll) {return;}
+    if (poll.closesAt && new Date(poll.closesAt) <= new Date()) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll closing time must be in the future", HttpStatus.BAD_REQUEST);
+    }
+    const optionContent = poll.options.map((option) => option.content.trim().toLocaleLowerCase());
+    if (new Set(optionContent).size !== optionContent.length) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll options must be unique", HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private createPollData(poll: CreatePollDto) {
+    return {
+      allowsVoteChanges: poll.allowsVoteChanges ?? false,
+      closesAt: poll.closesAt ? new Date(poll.closesAt) : null,
+      options: { create: poll.options.map((option, position) => ({ content: option.content.trim(), position })) },
+    };
+  }
 
   private async recordRecentChat(organizationId: string, userId: string, channelId: string): Promise<void> {
     await this.mutatePreferences(organizationId, userId, (current) => ({
@@ -1377,6 +1769,27 @@ export class ConnectService {
       throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);
     }
     return message;
+  }
+
+  private async getPost(organizationId: string, postId: string): Promise<Post> {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, organizationId, deletedAt: null },
+    });
+    if (!post) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Post not found", HttpStatus.NOT_FOUND);
+    }
+    return post;
+  }
+
+  private async getPostComment(organizationId: string, commentId: string) {
+    const comment = await this.prisma.postComment.findFirst({
+      where: { id: commentId, organizationId, deletedAt: null },
+      include: { post: { select: { id: true, authorId: true, channelId: true } } },
+    });
+    if (!comment) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Post comment not found", HttpStatus.NOT_FOUND);
+    }
+    return comment;
   }
 
   /**

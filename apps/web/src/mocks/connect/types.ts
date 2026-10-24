@@ -173,10 +173,12 @@ export type ConnectConversation = {
   name: string;
   avatar?: string;
   teamId?: string | null;
+  layout?: "THREADS" | "POSTS";
   channelId?: string | null;
   createdBy: string;
   createdAt: string;
   participants: string[];
+  adminUserIds?: string[];
   lastMessageAt: string;
   unreadCount: number;
   isFavorite: boolean;

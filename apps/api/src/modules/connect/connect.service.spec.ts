@@ -18,10 +18,12 @@ describe("ConnectService message restore", () => {
   let service: ConnectService;
   let prisma: {
     message: { findFirst: jest.Mock; update: jest.Mock };
-    channelMember: { findMany: jest.Mock };
+    channelMember: { findMany: jest.Mock; findUnique: jest.Mock };
     organizationMember: { findMany: jest.Mock };
     team: { findFirst: jest.Mock };
-    channel: { findUnique: jest.Mock; create: jest.Mock };
+    channel: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock };
+    post: { findFirst: jest.Mock; update: jest.Mock };
+    postComment: { create: jest.Mock };
   };
   let publisher: { publishToUsers: jest.Mock };
   let audit: { record: jest.Mock };
@@ -33,12 +35,23 @@ describe("ConnectService message restore", () => {
         findFirst: jest.fn().mockResolvedValue(deletedMessage),
         update: jest.fn().mockResolvedValue({ ...deletedMessage, deletedAt: null, isDeleted: false }),
       },
-      channelMember: { findMany: jest.fn().mockResolvedValue([{ userId: authorId }, { userId: "removed-user" }]) },
+      channelMember: {
+        findMany: jest.fn().mockResolvedValue([{ userId: authorId }, { userId: "removed-user" }]),
+        findUnique: jest.fn().mockResolvedValue({ role: "ADMIN" }),
+      },
       organizationMember: { findMany: jest.fn().mockResolvedValue([{ userId: authorId }]) },
       team: { findFirst: jest.fn().mockResolvedValue({ id: "team-id" }) },
       channel: {
         findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({ id: channelId, organizationId, teamId: "team-id", members: [{ userId: authorId, role: "ADMIN" }] }),
+        update: jest.fn().mockResolvedValue(undefined),
+      },
+      post: {
+        findFirst: jest.fn().mockResolvedValue({ id: "post-id", channelId }),
+        update: jest.fn().mockResolvedValue(undefined),
+      },
+      postComment: {
+        create: jest.fn().mockResolvedValue({ id: "comment-id", content: "Great update", author: { id: authorId } }),
       },
     };
     publisher = { publishToUsers: jest.fn() };
@@ -51,6 +64,39 @@ describe("ConnectService message restore", () => {
       entitlements as unknown as EntitlementService,
     );
     jest.spyOn(service, "getChannelForMember").mockResolvedValue({ id: channelId, teamId: null } as Channel);
+  });
+
+  describe("ConnectService public channel access", () => {
+    it("allows an active organization member to access a public channel without joining it", async () => {
+      const organizationId = "organization-id";
+      const channelId = "channel-id";
+      const userId = "user-id";
+      const prisma = {
+        organizationMember: { findFirst: jest.fn().mockResolvedValue({ id: "membership-id" }) },
+        channel: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: channelId,
+            organizationId,
+            type: "CHANNEL",
+            visibility: "PUBLIC",
+            teamId: null,
+            deletedAt: null,
+          }),
+        },
+        channelMember: { findUnique: jest.fn().mockResolvedValue(null) },
+      };
+      const service = new ConnectService(
+        prisma as unknown as PrismaService,
+        { record: jest.fn() } as unknown as AuditService,
+        { publishToUsers: jest.fn() } as unknown as ConnectPublisherService,
+        { assertWithinLimit: jest.fn() } as unknown as EntitlementService,
+      );
+
+      await expect(service.getChannelForMember(organizationId, channelId, userId, true)).resolves.toMatchObject({
+        id: channelId,
+        visibility: "PUBLIC",
+      });
+    });
   });
 
   it("restores the original message and broadcasts only to eligible members", async () => {
@@ -114,5 +160,49 @@ describe("ConnectService message restore", () => {
     expect(prisma.channel.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ teamId: "team-id" }),
     }));
+  });
+
+  it("releases the slug when deleting a channel so it can be reused", async () => {
+    await service.deleteChannel(organizationId, channelId, authorId);
+
+    expect(prisma.channelMember.findUnique).toHaveBeenCalledWith({
+      where: { channelId_userId: { channelId, userId: authorId } },
+      select: { role: true },
+    });
+    expect(prisma.channel.update).toHaveBeenCalledWith({
+      where: { id: channelId },
+      data: { deletedAt: expect.any(Date), isArchived: true, slug: null },
+    });
+  });
+
+  it("soft deletes a post only after matching its author and organization", async () => {
+    await service.deletePost(organizationId, "post-id", authorId);
+
+    expect(prisma.post.findFirst).toHaveBeenCalledWith({
+      where: { id: "post-id", organizationId, authorId, deletedAt: null },
+      select: { id: true },
+    });
+    expect(prisma.post.update).toHaveBeenCalledWith({
+      where: { id: "post-id" },
+      data: { deletedAt: expect.any(Date) },
+    });
+    expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({
+      action: "connect.post.deleted",
+      resourceType: "Post",
+      resourceId: "post-id",
+    }));
+  });
+
+  it("creates a post comment for an authorized channel member", async () => {
+    await service.createPostComment(organizationId, "post-id", authorId, "  Great update  ");
+
+    expect(service.getChannelForMember).toHaveBeenCalledWith(organizationId, channelId, authorId, true);
+    expect(prisma.postComment.create).toHaveBeenCalledWith({
+      data: { organizationId, postId: "post-id", authorId, content: "Great update" },
+      include: {
+        author: { select: { id: true, name: true, avatarUrl: true } },
+        reactions: { select: { userId: true, emoji: true } },
+      },
+    });
   });
 });

@@ -69,6 +69,11 @@ enum ChannelVisibility {
   PRIVATE
 }
 
+enum ChannelLayout {
+  THREADS
+  POSTS
+}
+
 enum ConnectMemberRole {
   ADMIN
   MEMBER

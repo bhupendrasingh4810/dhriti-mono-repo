@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength } from "class-validator";
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, ValidateNested } from "class-validator";
 import { Type } from "class-transformer";
+import { CreatePollDto } from "./post.dto";
 
 export class CreateMessageDto {
   @ApiPropertyOptional({ description: "Client-generated UUID used to make retries idempotent" })
@@ -23,6 +24,12 @@ export class CreateMessageDto {
   @IsOptional()
   @IsUUID(undefined, { each: true })
   mentionUserIds?: string[];
+
+  @ApiPropertyOptional({ type: CreatePollDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreatePollDto)
+  poll?: CreatePollDto;
 }
 
 export class UpdateMessageDto {

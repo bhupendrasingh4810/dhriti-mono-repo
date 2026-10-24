@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Ellipsis, MessagesSquare, Phone, Star, UserMinus, UserPlus, Users, Video } from "lucide-react";
 import type { CallType, ConversationUser } from "@/types/connect.types";
 
@@ -18,6 +18,7 @@ type ConversationHeaderProps = {
   onStartCall: (type: CallType) => void;
   onAddParticipant: (userId: string) => void;
   onRemoveParticipant: (userId: string) => void;
+  actions?: ReactNode;
 };
 
 export function ConversationHeader({
@@ -29,6 +30,7 @@ export function ConversationHeader({
   onStartCall,
   onAddParticipant,
   onRemoveParticipant,
+  actions,
 }: ConversationHeaderProps) {
   const [participantsAnchor, setParticipantsAnchor] = useState<HTMLElement | null>(null);
   const [participantSearch, setParticipantSearch] = useState("");
@@ -115,6 +117,7 @@ export function ConversationHeader({
         </div>
 
         <div className="flex items-center gap-1">
+          {actions}
           {conversation.type !== "channel" && (
             <button
               type="button"

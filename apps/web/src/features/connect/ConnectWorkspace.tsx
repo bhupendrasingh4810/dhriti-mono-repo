@@ -36,6 +36,8 @@ import { CreateTeamDialog } from "@/components/dialogs/create-team.dialog";
 import { AddTeamMembersDialog, ManageTeamDialog } from "@/components/dialogs/manage-team.dialog";
 import { CreateSectionDialog } from "@/components/dialogs/create-section.dialog";
 import { ConnectConversations } from "@/features/connect/components/ConnectConversations";
+import { ConnectPostsView } from "@/features/connect/components/ConnectPostsView";
+import { ConversationHeader } from "@/features/connect/components/ConversationHeader";
 import { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
@@ -150,6 +152,7 @@ export default function ConnectWorkspace() {
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
   const [addTeamMembersTeamId, setAddTeamMembersTeamId] = useState<string | null>(null);
   const [manageTeamId, setManageTeamId] = useState<string | null>(null);
+  const [deleteChannelId, setDeleteChannelId] = useState<string | null>(null);
   const [mentionsFilter, setMentionsFilter] = useState<ConnectMentionsFilter>("unread");
   const [selectedMentionId, setSelectedMentionId] = useState<string | null>(null);
   const [mentionHover, setMentionHover] = useState<MentionHoverState | null>(null);
@@ -488,6 +491,15 @@ export default function ConnectWorkspace() {
               .leaveTeam(live.organizationId, sidebarMenuContext.id)
               .then(() => live.refresh())
               .catch(live.reportError);
+          },
+        }
+      : undefined,
+    sidebarMenuContext?.kind === "channel" && sidebarMenuContext.id
+      ? {
+          canDelete: Boolean(conversationsById[sidebarMenuContext.id]?.adminUserIds?.includes(live.user?.id ?? "")),
+          onDelete: () => {
+            setDeleteChannelId(sidebarMenuContext.id);
+            closeSidebarMenus();
           },
         }
       : undefined,
@@ -844,6 +856,7 @@ export default function ConnectWorkspace() {
       : null;
 
   const isMentionsView = activeQuickViewId === "mentions";
+  const isPostsLayout = selectedConversation?.layout === "POSTS";
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
@@ -1007,6 +1020,61 @@ export default function ConnectWorkspace() {
                     />
                   ) : null
                 }
+              />
+            ) : isPostsLayout ? (
+              <ConnectPostsView
+                organizationId={live.organizationId}
+                channelId={selectedConversation.id}
+                channelName={selectedConversation.name}
+                currentUserId={currentUser.id}
+                usersById={connectUsersById}
+                renderHeader={(onCreatePost) => (
+                  <ConversationHeader
+                    conversation={{
+                      id: selectedConversation.id,
+                      name: selectedConversation.name,
+                      type: selectedConversation.type,
+                      avatar: selectedConversation.avatar,
+                      isFavorite: selectedConversation.isFavorite,
+                      participants: selectedConversation.participants,
+                    }}
+                    teamLabel={selectedTeam?.name ?? getConversationTypeLabel(selectedConversation)}
+                    currentUserId={currentUser.id}
+                    usersById={connectUsersById}
+                    onOpenDetails={() => setShowDetails(true)}
+                    onStartCall={(type) =>
+                      startCall({
+                        conversationId: selectedConversation.id,
+                        conversationName: selectedConversation.name,
+                        participantIds: selectedConversation.participants,
+                        callerName: currentUser.displayName,
+                        type,
+                        scope: selectedConversation.type === "direct" ? "one-to-one" : selectedConversation.type,
+                      })
+                    }
+                    onAddParticipant={(userId) => {
+                      void connectService
+                        .addMember(live.organizationId, selectedConversation.id, userId)
+                        .then(() => live.refresh())
+                        .catch(live.reportError);
+                    }}
+                    onRemoveParticipant={(userId) => {
+                      void connectService
+                        .removeMember(live.organizationId, selectedConversation.id, userId)
+                        .then(() => live.refresh())
+                        .catch(live.reportError);
+                    }}
+                    actions={
+                      <button
+                        type="button"
+                        onClick={onCreatePost}
+                        className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-brand-dark"
+                      >
+                        Create post
+                      </button>
+                    }
+                  />
+                )}
               />
             ) : (
               <ConnectConversations
@@ -1206,6 +1274,27 @@ export default function ConnectWorkspace() {
         confirmColor="error"
         onCancel={keepEditingMessage}
         onConfirm={discardEditMessage}
+      />
+      <ConfirmationDialog
+        open={Boolean(deleteChannelId)}
+        title="Delete channel"
+        description="This removes the channel and its content for all members. This action cannot be undone."
+        cancelLabel="Cancel"
+        confirmLabel="Delete channel"
+        confirmColor="error"
+        requireDeleteConfirmation
+        onCancel={() => setDeleteChannelId(null)}
+        onConfirm={() => {
+          if (!deleteChannelId) return;
+          void connectService
+            .deleteChannel(live.organizationId, deleteChannelId)
+            .then(() => {
+              if (selectedConversationId === deleteChannelId) setSelectedConversationId("");
+              return live.refresh();
+            })
+            .catch(live.reportError)
+            .finally(() => setDeleteChannelId(null));
+        }}
       />
 
       <DeletedMessageToast visible={Boolean(deletedMessage)} restoring={undoInProgress} onUndo={undoDeleteMessage} />

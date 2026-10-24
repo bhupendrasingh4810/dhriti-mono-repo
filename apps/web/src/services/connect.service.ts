@@ -10,6 +10,7 @@ export interface CreateChannelInput {
   topic?: string;
   description?: string;
   imageUrl?: string;
+  layout?: "THREADS" | "POSTS";
 }
 export interface CreateConnectTeamInput {
   name: string;
@@ -93,9 +94,78 @@ export interface ConnectApiConversation {
   createdAt: string;
   description: string | null;
   imageUrl: string | null;
+  layout: "THREADS" | "POSTS";
+  admins?: string[];
   isArchived: boolean;
   members?: { userId: string }[];
   messages?: { id: string; authorId: string; content: string; createdAt: string }[];
+}
+
+export interface ConnectPostPollOption {
+  id: string;
+  content: string;
+  position: number;
+  voteCount: number;
+}
+
+export interface ConnectPostPoll {
+  id: string;
+  allowsVoteChanges: boolean;
+  closesAt: string | null;
+  options: ConnectPostPollOption[];
+  currentVote: { id: string; pollOptionId: string } | null;
+}
+
+export interface ConnectPost {
+  id: string;
+  authorId: string;
+  title: string | null;
+  content: string;
+  contentHtml: string | null;
+  imageUrl: string | null;
+  backgroundImageUrl: string | null;
+  backgroundColor: string | null;
+  createdAt: string;
+  poll: ConnectPostPoll | null;
+  isUnread?: boolean;
+  comments: ConnectPostComment[];
+  reactions: ConnectPostReaction[];
+}
+
+export interface ConnectPostComment {
+  id: string;
+  authorId: string;
+  content: string;
+  createdAt: string;
+  author: { id: string; name: string; avatarUrl: string | null };
+  reactions: ConnectPostReaction[];
+}
+
+export interface ConnectPostReaction {
+  userId: string;
+  emoji: string;
+}
+
+export interface CreateConnectPostInput {
+  title?: string;
+  content: string;
+  contentHtml?: string;
+  imageUrl?: string | null;
+  backgroundImageUrl?: string | null;
+  backgroundColor?: string;
+  poll?: {
+    options: Array<{ content: string }>;
+    allowsVoteChanges: boolean;
+    closesAt: string;
+  };
+}
+export interface UpdateConnectPostInput {
+  title?: string | null;
+  content?: string;
+  contentHtml?: string;
+  imageUrl?: string | null;
+  backgroundImageUrl?: string | null;
+  backgroundColor?: string;
 }
 export interface ConnectSidebarState {
   favorites: { chats: string[]; teams: string[]; channels: string[] };
@@ -200,6 +270,8 @@ export const connectService = {
       "PATCH",
       input,
     ),
+  deleteChannel: (organizationId: string, channelId: string) =>
+    tenantRequest<void>(organizationId, `${base}/channels/${pathSegment(channelId)}`, { method: "DELETE" }),
   addMember: (organizationId: string, channelId: string, userId: string) =>
     tenantJsonRequest<void, { userId: string }>(
       organizationId,
@@ -231,6 +303,50 @@ export const connectService = {
       "PUT",
       input,
     ),
+  listPosts: (organizationId: string, channelId: string) =>
+    tenantRequest<ConnectPost[]>(organizationId, `${base}/channels/${pathSegment(channelId)}/posts`),
+  createPost: (organizationId: string, channelId: string, input: CreateConnectPostInput) =>
+    tenantJsonRequest<ConnectPost, CreateConnectPostInput>(organizationId, `${base}/channels/${pathSegment(channelId)}/posts`, "POST", input),
+  deletePost: (organizationId: string, postId: string) =>
+    tenantRequest<void>(organizationId, `${base}/posts/${pathSegment(postId)}`, { method: "DELETE" }),
+  updatePost: (organizationId: string, postId: string, input: UpdateConnectPostInput) =>
+    tenantJsonRequest<ConnectPost, UpdateConnectPostInput>(
+      organizationId,
+      `${base}/posts/${pathSegment(postId)}`,
+      "PATCH",
+      input,
+    ),
+  createPostComment: (organizationId: string, postId: string, content: string) =>
+    tenantJsonRequest<ConnectPostComment, { content: string }>(
+      organizationId,
+      `${base}/posts/${pathSegment(postId)}/comments`,
+      "POST",
+      { content },
+    ),
+  addPostReaction: (organizationId: string, postId: string, emoji: string) =>
+    tenantJsonRequest<void, { emoji: string }>(organizationId, `${base}/posts/${pathSegment(postId)}/reactions`, "POST", {
+      emoji,
+    }),
+  removePostReaction: (organizationId: string, postId: string, emoji: string) =>
+    tenantRequest<void>(organizationId, `${base}/posts/${pathSegment(postId)}/reactions/${pathSegment(emoji)}`, {
+      method: "DELETE",
+    }),
+  deletePostComment: (organizationId: string, commentId: string) =>
+    tenantRequest<void>(organizationId, `${base}/comments/${pathSegment(commentId)}`, { method: "DELETE" }),
+  updatePostComment: (organizationId: string, commentId: string, content: string) =>
+    tenantJsonRequest<ConnectPostComment, { content: string }>(organizationId, `${base}/comments/${pathSegment(commentId)}`, "PATCH", {
+      content,
+    }),
+  addPostCommentReaction: (organizationId: string, commentId: string, emoji: string) =>
+    tenantJsonRequest<void, { emoji: string }>(organizationId, `${base}/comments/${pathSegment(commentId)}/reactions`, "POST", {
+      emoji,
+    }),
+  removePostCommentReaction: (organizationId: string, commentId: string, emoji: string) =>
+    tenantRequest<void>(organizationId, `${base}/comments/${pathSegment(commentId)}/reactions/${pathSegment(emoji)}`, {
+      method: "DELETE",
+    }),
+  voteOnPoll: (organizationId: string, pollId: string, optionId: string) =>
+    tenantJsonRequest<ConnectPost, { optionId: string }>(organizationId, `${base}/polls/${pathSegment(pollId)}/votes`, "POST", { optionId }),
   removeConversationHistory: (organizationId: string, channelId: string) =>
     tenantRequest<void>(organizationId, `${base}/conversations/${pathSegment(channelId)}/history`, {
       method: "DELETE",

@@ -58,6 +58,10 @@ export interface TeamMenuActions {
   onManageTeam: () => void;
   onLeaveTeam: () => void;
 }
+export interface ChannelMenuActions {
+  canDelete: boolean;
+  onDelete: () => void;
+}
 
 // 🧬 Shared action sub-menus used across multiple context variants
 const getMoveSectionChildren = (setCreateSectionOpen: (open: boolean) => void, includeFavorites = true) => [
@@ -87,6 +91,7 @@ export function getMenuItems(
     drafts?: "visible" | "hidden";
   }) => void,
   teamActions?: TeamMenuActions,
+  channelActions?: ChannelMenuActions,
 ): ConnectCascadingMenuItem[] {
   if (!sidebarMenuContext?.kind) return [];
 
@@ -264,6 +269,18 @@ export function getMenuItems(
           icon: <Link size={16} />,
           onClick: () => void navigator.clipboard.writeText(conversationUrl(sidebarMenuContext.id)),
         },
+        ...(channelActions?.canDelete
+          ? [
+              {
+                id: "delete-channel",
+                label: "Delete channel",
+                icon: <Trash2 size={16} />,
+                dividerAbove: true,
+                danger: true,
+                onClick: channelActions.onDelete,
+              },
+            ]
+          : []),
         // { id: "workflows", label: "Work flows", icon: <Settings size={16} /> },
         // { id: "go-team", label: "Go to team", icon: <ChevronRight size={16} /> },
       ];

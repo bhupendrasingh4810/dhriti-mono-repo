@@ -10,6 +10,7 @@ model Channel {
   slug           String?
   type           ChannelType       @default(CHANNEL)
   visibility     ChannelVisibility @default(PUBLIC)
+  layout         ChannelLayout     @default(THREADS)
   topic          String?
   description    String?
   imageUrl       String?           @db.Text
@@ -24,6 +25,7 @@ model Channel {
   createdBy    User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
   members      ChannelMember[]
   messages     Message[]
+  posts        Post[]
   calls        ConnectCall[]
 
   @@unique([organizationId, slug])
@@ -54,12 +56,140 @@ model Message {
   replies      Message[]    @relation("ThreadReplies")
   mentions     MessageMention[]
   reactions    MessageReaction[]
+  poll         Poll?
 
   @@index([channelId, createdAt])
   @@index([parentId])
   @@index([organizationId, channelId])
   @@unique([organizationId, channelId, clientMessageId])
   @@map("messages")
+}
+
+model Post {
+  id                 String   @id @default(uuid()) @db.Uuid
+  organizationId     String   @db.Uuid
+  channelId          String   @db.Uuid
+  authorId           String   @db.Uuid
+  title              String?
+  content            String   @db.Text
+  contentHtml        String?  @db.Text
+  imageUrl           String?  @db.Text
+  backgroundImageUrl String?  @db.Text
+  backgroundColor    String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channel      Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  poll         Poll?
+  comments     PostComment[]
+  reactions    PostReaction[]
+
+  @@index([channelId, createdAt])
+  @@index([organizationId, channelId])
+  @@map("posts")
+}
+
+model PostComment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  postId         String   @db.Uuid
+  authorId       String   @db.Uuid
+  content        String   @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  post         Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author       User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  reactions    PostCommentReaction[]
+
+  @@index([postId, createdAt])
+  @@index([organizationId, postId])
+  @@map("post_comments")
+}
+
+model PostReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  postId    String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now())
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@map("post_reactions")
+}
+
+model PostCommentReaction {
+  id        String   @id @default(uuid()) @db.Uuid
+  commentId String   @db.Uuid
+  userId    String   @db.Uuid
+  emoji     String
+  createdAt DateTime @default(now())
+
+  comment PostComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@map("post_comment_reactions")
+}
+
+model Poll {
+  id                String   @id @default(uuid()) @db.Uuid
+  postId            String?  @unique @db.Uuid
+  messageId         String?  @unique @db.Uuid
+  allowsVoteChanges Boolean  @default(false)
+  closesAt          DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  post    Post?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  message Message?     @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  options PollOption[]
+  votes   PollVote[]
+
+  @@index([closesAt])
+  @@map("polls")
+}
+
+model PollOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  pollId    String   @db.Uuid
+  content   String
+  position  Int
+  createdAt DateTime @default(now())
+
+  poll  Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes PollVote[]
+
+  @@unique([pollId, position])
+  @@index([pollId])
+  @@map("poll_options")
+}
+
+model PollVote {
+  id           String   @id @default(uuid()) @db.Uuid
+  pollId       String   @db.Uuid
+  pollOptionId String   @db.Uuid
+  userId       String   @db.Uuid
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [pollOptionId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([pollId, userId])
+  @@index([pollOptionId])
+  @@map("poll_votes")
 }
 
 // ==================== Flow ====================

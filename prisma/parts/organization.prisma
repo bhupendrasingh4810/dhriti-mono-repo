@@ -49,6 +49,8 @@ model Organization {
   files     StoredFile[]
   channels  Channel[]
   messages  Message[]
+  posts     Post[]
+  postComments PostComment[]
   projects  Project[]
   issues    Issue[]
   atlasSpaces   AtlasSpace[]

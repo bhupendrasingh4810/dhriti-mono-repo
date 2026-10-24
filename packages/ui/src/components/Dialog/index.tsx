@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, type ReactNode } from "react";
+import { X } from "lucide-react";
 
 export interface DialogProps {
   open: boolean;
@@ -13,6 +14,7 @@ export interface DialogProps {
   primaryButtonColor?: "primary" | "secondary" | "error" | "success";
   secondaryActionLabel?: string;
   isSubmitting?: boolean;
+  primaryActionDisabled?: boolean;
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   fullWidth?: boolean;
 }
@@ -43,6 +45,7 @@ export function Dialog({
   primaryButtonColor = "primary",
   secondaryActionLabel = "Cancel",
   isSubmitting = false,
+  primaryActionDisabled = false,
   maxWidth = "sm",
   fullWidth = true,
 }: DialogProps) {
@@ -76,7 +79,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-text-primary/40 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 p-4"
       onMouseDown={(event) => {
         if (event.currentTarget === event.target && !isSubmitting) {
           onClose();
@@ -87,7 +90,7 @@ export function Dialog({
         aria-labelledby={titleId}
         aria-modal="true"
         role="dialog"
-        className={`rounded-lg bg-surface shadow-xl ${fullWidth ? "w-full" : "w-auto"} ${
+        className={`rounded-lg border border-border bg-surface shadow-2xl ${fullWidth ? "w-full" : "w-auto"} ${
           maxWidth === false ? "" : widthClasses[maxWidth]
         }`}
       >
@@ -100,9 +103,9 @@ export function Dialog({
               type="button"
               aria-label="Close dialog"
               onClick={onClose}
-              className="rounded-md p-1 text-lg leading-none text-text-secondary hover:bg-surface-raised"
+              className="grid size-8 place-items-center rounded-md text-text-secondary hover:bg-surface-raised"
             >
-              <span aria-hidden="true">x</span>
+              <X size={18} aria-hidden="true" />
             </button>
           ) : null}
         </header>
@@ -123,7 +126,7 @@ export function Dialog({
             {primaryActionLabel ? (
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || primaryActionDisabled}
                 onClick={onPrimaryAction}
                 className={`inline-flex min-w-25 items-center justify-center rounded-md px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60 ${primaryClassName}`}
               >
