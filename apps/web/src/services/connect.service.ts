@@ -37,6 +37,7 @@ export interface ConnectTeamDetails {
     id: string;
     name: string;
     avatarUrl: string | null;
+    presence: "online" | "away" | "dnd" | "in-meeting" | "sharing" | "offline";
     jobTitle: string | null;
     location: string | null;
     role: "ADMIN" | "MEMBER";
@@ -202,6 +203,7 @@ export interface ConnectOrganizationUser {
   name: string;
   email: string;
   avatarUrl: string | null;
+  presence: "online" | "away" | "dnd" | "in-meeting" | "sharing" | "offline";
 }
 export interface ConnectOrganizationUsersPage {
   users: ConnectOrganizationUser[];

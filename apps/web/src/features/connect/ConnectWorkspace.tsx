@@ -349,6 +349,10 @@ export default function ConnectWorkspace() {
       conversation.type === "direct"
         ? conversation.participants.find((participantId) => participantId !== currentUser.id)
         : undefined,
+    presence:
+      conversation.type === "direct"
+        ? connectUsersById[conversation.participants.find((participantId) => participantId !== currentUser.id) ?? ""]?.presence
+        : undefined,
     unreadCount: live.unread[conversation.id] ?? conversation.unreadCount,
   }));
 

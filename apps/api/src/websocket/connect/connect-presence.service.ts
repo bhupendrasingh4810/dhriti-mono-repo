@@ -49,6 +49,11 @@ export class ConnectPresenceService {
     );
   }
 
+  async getStatus(organizationId: string, userId: string): Promise<PresenceStatus> {
+    const status = await this.redis.raw.get(this.statusKey(organizationId, userId));
+    return this.isPresenceStatus(status) ? status : "offline";
+  }
+
   async setTyping(organizationId: string, channelId: string, userId: string, isTyping: boolean): Promise<void> {
     const key = `connect:typing:${organizationId}:${channelId}:${userId}`;
     if (!isTyping) {
@@ -67,6 +72,6 @@ export class ConnectPresenceService {
   }
 
   private isPresenceStatus(value: string | null): value is PresenceStatus {
-    return value === "online" || value === "away" || value === "dnd" || value === "in-meeting" || value === "offline";
+    return value === "online" || value === "away" || value === "dnd" || value === "in-meeting" || value === "sharing" || value === "offline";
   }
 }

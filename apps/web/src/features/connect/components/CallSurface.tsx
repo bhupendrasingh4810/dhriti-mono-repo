@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { DhritiWebSdk } from "@dhriti/web-sdk";
 import { connectSidebarState, connectUsers, connectUsersById } from "@/mocks/connect";
+import { useConnectPresence } from "@/contexts/connect-presence-context";
 import type { ActiveCall, CallLayout, CallPanel, SessionType } from "@/types/connect.types";
 import { CallSidePanel } from "./CallSidePanel";
 import { CallAction, DeviceSelect, ParticipantAvatar, RemoteVideoTarget } from "./CallUi";
@@ -67,6 +68,7 @@ export function CallSurface({
   onJoin,
   onHoldChange,
 }: CallSurfaceProps) {
+  const { setPresence } = useConnectPresence();
   const [phase, setPhase] = useState<"lobby" | "call">("lobby");
   const [muted, setMuted] = useState(false);
   const [cameraOn, setCameraOn] = useState(call.type === "video");
@@ -188,8 +190,9 @@ export function CallSurface({
       screenRef.current.getTracks().forEach((track) => track.stop());
       screenRef.current = null;
       setScreen(null);
+      setPresence("in-meeting");
     }
-  }, [cameraOn, muted, onHold, stream]);
+  }, [cameraOn, muted, onHold, setPresence, stream]);
 
   useEffect(() => {
     if (phase !== "call" || !rtcRef.current) return;
@@ -279,6 +282,7 @@ export function CallSurface({
       screenRef.current.getTracks().forEach((track) => track.stop());
       screenRef.current = null;
       setScreen(null);
+      setPresence("in-meeting");
       return;
     }
 
@@ -286,9 +290,11 @@ export function CallSurface({
       const nextScreen = await navigator.mediaDevices.getDisplayMedia({ video: true });
       screenRef.current = nextScreen;
       setScreen(nextScreen);
+      setPresence("sharing");
       nextScreen.getVideoTracks()[0]?.addEventListener("ended", () => {
         screenRef.current = null;
         setScreen(null);
+        setPresence("in-meeting");
       });
     } catch {
       setError("Screen sharing could not be started.");

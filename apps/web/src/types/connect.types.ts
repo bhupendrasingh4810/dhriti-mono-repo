@@ -18,6 +18,7 @@ export type ConnectSidebarConversation = {
   type: "channel" | "direct" | "group";
   avatar?: string;
   unreadCount?: number;
+  presence?: ConversationUser["presence"];
   isSelfSpace?: boolean;
 };
 
@@ -50,6 +51,7 @@ export type ConversationUser = {
   avatar: string;
   jobTitle: string;
   location?: string;
+  presence?: "online" | "away" | "busy" | "dnd" | "do_not_disturb" | "in-meeting" | "sharing" | "offline";
 };
 
 export type ConversationAttachment = {

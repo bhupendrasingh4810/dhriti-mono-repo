@@ -31,7 +31,8 @@ describe("ConnectGateway", () => {
     leaveSharedCall: jest.Mock;
     recordCallActivity: jest.Mock;
   };
-  let publisher: { callStatus: jest.Mock; callInvitation: jest.Mock; callAvailable: jest.Mock };
+  let presence: { setStatus: jest.Mock };
+  let publisher: { callStatus: jest.Mock; callInvitation: jest.Mock; callAvailable: jest.Mock; presenceChanged: jest.Mock };
   let socket: Socket;
   let gateway: ConnectGateway;
 
@@ -45,7 +46,13 @@ describe("ConnectGateway", () => {
       leaveSharedCall: jest.fn().mockResolvedValue({ ended: false }),
       recordCallActivity: jest.fn().mockResolvedValue(undefined),
     };
-    publisher = { callStatus: jest.fn(), callInvitation: jest.fn(), callAvailable: jest.fn() };
+    presence = { setStatus: jest.fn().mockResolvedValue(undefined) };
+    publisher = {
+      callStatus: jest.fn(),
+      callInvitation: jest.fn(),
+      callAvailable: jest.fn(),
+      presenceChanged: jest.fn(),
+    };
     socket = {
       id: "socket-id",
       join: jest.fn().mockResolvedValue(undefined),
@@ -56,7 +63,7 @@ describe("ConnectGateway", () => {
       { getPrincipal: jest.fn().mockReturnValue(principal) } as unknown as WsAuthService,
       connect as unknown as ConnectService,
       {} as ConnectAdapterLifecycleService,
-      {} as ConnectPresenceService,
+      presence as unknown as ConnectPresenceService,
       publisher as unknown as ConnectPublisherService,
       { assertAllowed: jest.fn().mockResolvedValue(undefined) } as unknown as ConnectRateLimitService,
       { wsConnected: jest.fn(), wsDisconnected: jest.fn(), wsMessage: jest.fn() } as unknown as MetricsService,
@@ -85,10 +92,59 @@ describe("ConnectGateway", () => {
       message: "Not a channel member",
       status: HttpStatus.FORBIDDEN,
     });
+
     expect(result).toEqual({
       ok: false,
       error: { code: ErrorCode.FORBIDDEN, message: "Not a channel member", status: HttpStatus.FORBIDDEN },
     });
+  });
+
+  it("publishes a presence transition for the authenticated user", async () => {
+    const result = await gateway.setPresence(socket, { status: "away" });
+
+    expect(presence.setStatus).toHaveBeenCalledWith(principal.organizationId, principal.userId, "away");
+    expect(publisher.presenceChanged).toHaveBeenCalledWith(principal.organizationId, principal.userId, "away");
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("marks all call participants as in-meeting when a call is initiated", async () => {
+    const result = await gateway.inviteCall(socket, {
+      channelId,
+      callId: "call-id",
+      type: "audio",
+      conversationName: "",
+    });
+
+    expect(presence.setStatus).toHaveBeenCalledWith(principal.organizationId, principal.userId, "in-meeting");
+    expect(presence.setStatus).toHaveBeenCalledWith(principal.organizationId, "recipient-id", "in-meeting");
+    expect(publisher.presenceChanged).toHaveBeenCalledWith(principal.organizationId, principal.userId, "in-meeting");
+    expect(publisher.presenceChanged).toHaveBeenCalledWith(principal.organizationId, "recipient-id", "in-meeting");
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("restores all call participants to online when a call is declined", async () => {
+    const result = await gateway.respondToCall(socket, {
+      channelId,
+      callId: "call-id",
+      action: "reject",
+    });
+
+    expect(presence.setStatus).toHaveBeenCalledWith(principal.organizationId, principal.userId, "online");
+    expect(presence.setStatus).toHaveBeenCalledWith(principal.organizationId, "recipient-id", "online");
+    expect(publisher.presenceChanged).toHaveBeenCalledWith(principal.organizationId, principal.userId, "online");
+    expect(publisher.presenceChanged).toHaveBeenCalledWith(principal.organizationId, "recipient-id", "online");
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("keeps call participants in-meeting when a call is accepted", async () => {
+    const result = await gateway.respondToCall(socket, {
+      channelId,
+      callId: "call-id",
+      action: "accept",
+    });
+
+    expect(presence.setStatus).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
   });
 
   it("records a timed-out call as missed instead of declined", async () => {

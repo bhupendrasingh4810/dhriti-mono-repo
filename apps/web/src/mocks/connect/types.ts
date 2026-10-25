@@ -1,4 +1,4 @@
-export type PresenceState = "online" | "away" | "busy" | "do_not_disturb" | "offline";
+export type PresenceState = "online" | "away" | "busy" | "do_not_disturb" | "in-meeting" | "sharing" | "offline";
 
 export type AvailabilityState =
   "available" | "busy" | "in_a_meeting" | "on_a_call" | "presenting" | "away" | "offline" | "do_not_disturb";

@@ -26,7 +26,7 @@ export class SendMessageEventDto extends ChannelRoomEventDto {
 }
 
 export class PresenceSetEventDto {
-  @IsIn(["online", "away", "dnd", "in-meeting", "offline"])
+  @IsIn(["online", "away", "dnd", "in-meeting", "sharing", "offline"])
   status!: PresenceStatus;
 }
 
@@ -81,4 +81,4 @@ export class CallResponseEventDto extends ChannelRoomEventDto {
   durationSeconds?: number;
 }
 
-export type PresenceStatus = "online" | "away" | "dnd" | "in-meeting" | "offline";
+export type PresenceStatus = "online" | "away" | "dnd" | "in-meeting" | "sharing" | "offline";

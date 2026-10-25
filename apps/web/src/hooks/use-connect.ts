@@ -30,7 +30,6 @@ type HistoryState = {
   pinnedCount: number;
   error: string;
 };
-
 export function adaptConnectMessage(message: ConnectApiMessage): ConnectMessage {
   const isCallActivity = message.content.startsWith("[CALL] ");
   const grouped = new Map<string, Set<string>>();
@@ -327,8 +326,8 @@ export function useConnect(selectedConversationId: string) {
           jobTitle: "",
           department: "",
           role: "member",
-          status: "offline",
-          presence: "offline",
+          status: person.presence === "online" ? "available" : person.presence === "away" ? "away" : person.presence === "offline" ? "offline" : "busy",
+          presence: person.presence === "online" ? "online" : person.presence === "away" ? "away" : person.presence === "offline" ? "offline" : person.presence === "dnd" ? "do_not_disturb" : "busy",
           location: "",
           timezone: "",
           lastSeen: null,
@@ -459,14 +458,24 @@ export function useConnect(selectedConversationId: string) {
         void reload().catch(reportError);
       });
       socket.on("presence:changed", (payload: { userId: string; status: string }) => {
+        const presence =
+          payload.status === "online" ||
+          payload.status === "away" ||
+          payload.status === "offline" ||
+          payload.status === "sharing" ||
+          payload.status === "in-meeting"
+            ? payload.status
+            : payload.status === "dnd" || payload.status === "busy"
+              ? "do_not_disturb"
+              : "offline";
         const status =
-          payload.status === "online"
+          presence === "online"
             ? "available"
-            : payload.status === "busy"
-              ? "busy"
-              : payload.status === "away"
-                ? "away"
-                : "offline";
+            : presence === "away"
+              ? "away"
+              : presence === "offline"
+                ? "offline"
+                : "busy";
         setUsers((previous) =>
           previous[payload.userId]
             ? {
@@ -474,7 +483,7 @@ export function useConnect(selectedConversationId: string) {
                 [payload.userId]: {
                   ...previous[payload.userId],
                   status,
-                  presence: status === "available" ? "online" : status,
+                  presence,
                 },
               }
             : previous,

@@ -220,6 +220,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
         type,
         participantIds: memberIds,
       });
+      await this.setUsersPresence(organizationId, memberIds, "in-meeting");
       const recipients = memberIds.filter((userId) => userId !== principal.userId);
       if (scope === "group" || scope === "channel") {
         this.publisher.callAvailable(organizationId, recipients, invitation);
@@ -252,6 +253,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       if (payload.action === "leave") {
         const result = await this.connect.leaveSharedCall(organizationId, payload.channelId, principal.userId, payload.callId);
         this.publisher.callStatus(organizationId, memberIds, result.ended ? "call:ended" : "call:left", { ...payload, userId: principal.userId });
+        await this.setUsersPresence(organizationId, result.ended ? memberIds : [principal.userId], "online");
         return { ok: true };
       }
       const type = await this.connect.updateCallRecord(organizationId, payload.channelId, principal.userId, {
@@ -260,6 +262,9 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
             durationSeconds: payload.durationSeconds,
           });
       this.publisher.callStatus(organizationId, memberIds, event, { ...payload, userId: principal.userId });
+      if (payload.action !== "accept") {
+        await this.setUsersPresence(organizationId, memberIds, "online");
+      }
       await this.connect.recordCallActivity(organizationId, payload.channelId, principal.userId, {
         callId: payload.callId,
         action: payload.action === "accept" ? "accepted" : payload.action === "reject" ? "declined" : payload.action === "miss" || payload.action === "cancel" ? "missed" : "ended",
@@ -277,6 +282,13 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
       throw new AppError(ErrorCode.ORGANIZATION_REQUIRED, "An active organization is required", HttpStatus.BAD_REQUEST);
     }
     return principal.organizationId;
+  }
+
+  private async setUsersPresence(organizationId: string, userIds: string[], status: "online" | "in-meeting"): Promise<void> {
+    for (const userId of new Set(userIds)) {
+      await this.presence.setStatus(organizationId, userId, status);
+      this.publisher.presenceChanged(organizationId, userId, status);
+    }
   }
 
   private safePrincipal(socket: Socket): WsPrincipal | null {

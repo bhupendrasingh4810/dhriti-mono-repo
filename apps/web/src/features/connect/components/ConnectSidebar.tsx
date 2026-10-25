@@ -11,6 +11,7 @@ import {
   ConnectSidebarTeamGroup,
 } from "@/types/connect.types";
 import { getUserInitials } from "@/features/connect/utils/user-initials";
+import { ConnectPresenceIndicator } from "@/features/connect/components/ConnectPresenceIndicator";
 
 interface ConnectSidebarProps {
   quickViews: ConnectSidebarQuickView[];
@@ -143,13 +144,13 @@ function ConversationAvatar({
     : {};
   if (!conversation.avatar) {
     return (
-      <span {...hoverHandlers} className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/20 text-[10px] font-bold text-white">
-        {getUserInitials(conversation.name)}
+      <span {...hoverHandlers} className="relative grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/20 text-[10px] font-bold text-white">
+        {getUserInitials(conversation.name)}{conversation.presence ? <ConnectPresenceIndicator presence={conversation.presence} /> : null}
       </span>
     );
   }
 
-  return <img {...hoverHandlers} src={conversation.avatar} alt="" className="h-7 w-7 shrink-0 rounded-full object-cover" />;
+  return <span {...hoverHandlers} className="relative h-7 w-7 shrink-0"><img src={conversation.avatar} alt="" className="h-7 w-7 rounded-full object-cover" />{conversation.presence ? <ConnectPresenceIndicator presence={conversation.presence} /> : null}</span>;
 }
 
 function ChannelAvatar({ avatar, name }: { avatar?: string; name: string }) {

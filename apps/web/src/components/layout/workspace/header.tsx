@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { ConnectHeaderSearch } from "@/features/connect/components/ConnectHeaderSearch";
+import { ConnectPresenceIndicator } from "@/features/connect/components/ConnectPresenceIndicator";
+import { useConnectPresence } from "@/contexts/connect-presence-context";
 import { useConnectSearch } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
@@ -33,6 +35,7 @@ export default function Header({ activeView }: Props) {
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const { user, logout } = useAuth();
+  const { presence } = useConnectPresence();
   const { recentUsers, recentUsersError, selectUser } = useConnectSearch();
   const userName = user?.name ?? "User";
   const userEmail = user?.email ?? "user@dhriti.app";
@@ -206,8 +209,9 @@ export default function Header({ activeView }: Props) {
           aria-expanded={Boolean(userAnchor)}
           className="ml-1 flex items-center gap-2 rounded-lg p-1 transition-all hover:bg-slate-50"
         >
-          <div className="w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
+          <div className="relative w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
             <span className="text-white text-xs font-bold">{userInitials}</span>
+            {user ? <ConnectPresenceIndicator presence={presence} /> : null}
           </div>
           <ChevronDown size={12} strokeWidth={2.5} color="#94a3b8" />
         </button>

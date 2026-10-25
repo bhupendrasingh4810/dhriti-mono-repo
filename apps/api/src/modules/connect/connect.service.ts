@@ -7,6 +7,7 @@ import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
 import { EntitlementService } from "../authorization/services/entitlement.service";
 import { ConnectPublisherService } from "../../websocket/connect/connect-publisher.service";
+import { ConnectPresenceService } from "../../websocket/connect/connect-presence.service";
 import type { CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import type { CreateConnectTeamDto, UpdateConnectTeamDto } from "./dto/team.dto";
 import type { CreateMessageDto, UpdateMessageDto } from "./dto/message.dto";
@@ -89,6 +90,7 @@ export class ConnectService {
     private readonly audit: AuditService,
     private readonly publisher: ConnectPublisherService,
     private readonly entitlements: EntitlementService,
+    private readonly presence?: ConnectPresenceService,
   ) {}
 
   async getUserDisplayName(userId: string): Promise<string> {
@@ -296,7 +298,10 @@ export class ConnectService {
       },
       orderBy: { createdAt: "asc" },
     });
-    return memberships.map(({ user }) => user);
+    return Promise.all(memberships.map(async ({ user }) => ({
+      ...user,
+      presence: this.presence ? await this.presence.getStatus(organizationId, user.id) : "offline",
+    })));
   }
 
   async searchUsers(organizationId: string, actorUserId: string, query: string, requestedLimit?: number) {
