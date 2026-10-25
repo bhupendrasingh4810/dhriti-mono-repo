@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, PhoneCall, Plus } from "lucide-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
+import { PulseSchedulingDialog, type PulseSchedulingDialogKind } from "./PulseSchedulingDialog";
 
 type PulseCalendarToolbarProps = {
   workingWeek: Date[];
@@ -14,6 +15,8 @@ type PulseCalendarToolbarProps = {
 
 export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onNextWeek }: PulseCalendarToolbarProps) {
   const [connectMenuAnchor, setConnectMenuAnchor] = useState<HTMLButtonElement | null>(null);
+  const [newMenuAnchor, setNewMenuAnchor] = useState<HTMLButtonElement | null>(null);
+  const [schedulingDialog, setSchedulingDialog] = useState<PulseSchedulingDialogKind | null>(null);
   const firstDay = workingWeek[0];
   const lastDay = workingWeek.at(-1);
   const dateRange = firstDay && lastDay ? formatDateRange(firstDay, lastDay) : "";
@@ -41,6 +44,20 @@ export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onN
           content: <JoinMeetingForm />,
         },
       ],
+    },
+  ];
+  const newMenuItems: ConnectCascadingMenuItem[] = [
+    {
+      id: "create-meeting",
+      label: "Create meeting",
+      icon: <PhoneCall aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onClick: () => setSchedulingDialog("meeting"),
+    },
+    {
+      id: "create-event",
+      label: "Create event",
+      icon: <Plus aria-hidden="true" size={16} strokeWidth={1.75} />,
+      onClick: () => setSchedulingDialog("event"),
     },
   ];
 
@@ -71,9 +88,16 @@ export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onN
           Connect now
           <ChevronDown aria-hidden="true" size={16} strokeWidth={1.75} />
         </button>
-        <button type="button" className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark">
+        <button
+          type="button"
+          onClick={(event) => setNewMenuAnchor((current) => current ? null : event.currentTarget)}
+          aria-expanded={Boolean(newMenuAnchor)}
+          aria-haspopup="menu"
+          className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
+        >
           <Plus aria-hidden="true" />
           New
+          <ChevronDown aria-hidden="true" size={16} strokeWidth={1.75} />
         </button>
         {/* <button type="button" aria-label="More actions" className="cursor-pointer rounded-md p-1.5 text-text-secondary hover:bg-surface-raised">
           <MoreVertical aria-hidden="true" />
@@ -86,6 +110,19 @@ export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onN
         items={connectMenuItems}
         minWidth={280}
       />
+      <ConnectCascadingMenu
+        anchorEl={newMenuAnchor}
+        open={Boolean(newMenuAnchor)}
+        onClose={() => setNewMenuAnchor(null)}
+        items={newMenuItems}
+      />
+      {schedulingDialog ? (
+        <PulseSchedulingDialog
+          kind={schedulingDialog}
+          initialDate={workingWeek[0] ?? new Date()}
+          onClose={() => setSchedulingDialog(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -98,6 +135,7 @@ function StartMeetingForm() {
         <input
           name="meetingName"
           type="text"
+          placeholder="Enter meeting name"
           className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand"
         />
       </label>
@@ -109,22 +147,51 @@ function StartMeetingForm() {
 }
 
 function JoinMeetingForm() {
+  const [meetingId, setMeetingId] = useState("");
+  const [meetingIdError, setMeetingIdError] = useState("");
+
   return (
-    <form className="space-y-3 p-3" onSubmit={(event) => event.preventDefault()}>
+    <form
+      noValidate
+      className="space-y-3 p-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+
+        if (!meetingId.trim()) {
+          setMeetingIdError("Meeting ID is required.");
+          return;
+        }
+
+        setMeetingIdError("");
+      }}
+    >
       <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-        Meeting ID
+        <span>
+          Meeting ID <span aria-hidden="true" className="text-error">*</span>
+        </span>
         <input
           name="meetingId"
-          required
           type="text"
-          className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand"
+          placeholder="Enter meeting ID"
+          value={meetingId}
+          onChange={(event) => {
+            setMeetingId(event.target.value);
+            if (meetingIdError) setMeetingIdError("");
+          }}
+          aria-describedby={meetingIdError ? "meeting-id-error" : undefined}
+          aria-invalid={Boolean(meetingIdError)}
+          className={`rounded-md border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none ${
+            meetingIdError ? "border-error focus:border-error" : "border-border focus:border-brand"
+          }`}
         />
+        {meetingIdError ? <span id="meeting-id-error" className="text-xs font-normal text-error">{meetingIdError}</span> : null}
       </label>
       <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-        Meeting Password <span className="font-normal text-text-secondary">(optional)</span>
+        Meeting Password
         <input
           name="meetingPassword"
           type="password"
+          placeholder="Enter meeting password"
           className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand"
         />
       </label>

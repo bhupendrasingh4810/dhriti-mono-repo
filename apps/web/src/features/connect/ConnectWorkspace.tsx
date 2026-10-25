@@ -79,39 +79,102 @@ function getConversationTypeLabel(conversation: ConnectConversation) {
   return "Direct";
 }
 
+function ConnectSkeletonBlock({
+  className,
+  tone = "light",
+}: {
+  className: string;
+  tone?: "brand" | "light";
+}) {
+  const background =
+    tone === "brand"
+      ? "linear-gradient(90deg, var(--app-color-on-brand-hover) 0%, var(--app-color-on-brand-border) 50%, var(--app-color-on-brand-hover) 100%)"
+      : "linear-gradient(90deg, var(--app-color-surface-raised) 0%, var(--app-color-border) 50%, var(--app-color-surface-raised) 100%)";
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`${className} shrink-0`}
+      style={{ background, backgroundSize: "200% 100%", animation: "shimmer 1.6s infinite" }}
+    />
+  );
+}
+
 function ConnectWorkspaceLoadingShell() {
   return (
     <div aria-busy="true" aria-label="Loading Connect" className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside className="mr-2 hidden w-[312px] shrink-0 flex-col rounded-[20px] bg-brand p-4 lg:flex">
-          <div className="h-5 w-20 rounded bg-white/20" />
-          <div className="mt-8 space-y-3">
-            <div className="h-4 w-24 rounded bg-white/20" />
-            <div className="h-8 rounded bg-white/10" />
-            <div className="h-8 rounded bg-white/10" />
-            <div className="h-8 rounded bg-white/10" />
+          <div className="flex items-center justify-between">
+            <ConnectSkeletonBlock className="h-4 w-18 rounded-md" tone="brand" />
+            <ConnectSkeletonBlock className="size-5 rounded-full" tone="brand" />
           </div>
-          <div className="mt-8 space-y-3">
-            <div className="h-4 w-16 rounded bg-white/20" />
-            <div className="h-8 rounded bg-white/10" />
-            <div className="h-8 rounded bg-white/10" />
-          </div>
+          <ConnectSidebarSkeletonSection headingWidth="w-22" rowWidths={["w-28", "w-24", "w-20"]} />
+          <ConnectSidebarSkeletonSection headingWidth="w-18" rowWidths={["w-32", "w-26"]} />
+          <ConnectSidebarSkeletonSection headingWidth="w-16" rowWidths={["w-36", "w-28", "w-32", "w-24"]} />
+          <ConnectSidebarSkeletonSection headingWidth="w-28" rowWidths={["w-30", "w-20"]} />
         </aside>
         <section className="ml-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm shadow-brand/15">
-          <div className="h-16 shrink-0 border-b border-border p-5">
-            <div className="h-5 w-44 rounded bg-surface-raised" />
+          <div className="flex h-16 shrink-0 items-center justify-between border-b border-border px-5">
+            <div className="flex items-center gap-3">
+              <ConnectSkeletonBlock className="size-8 rounded-full" />
+              <ConnectSkeletonBlock className="h-4 w-28 rounded-md" />
+            </div>
+            <div className="flex gap-3">
+              <ConnectSkeletonBlock className="size-5 rounded-full" />
+              <ConnectSkeletonBlock className="size-5 rounded-full" />
+              <ConnectSkeletonBlock className="size-5 rounded-full" />
+            </div>
           </div>
-          <div className="flex flex-1 flex-col justify-end gap-3 p-6">
-            <div className="h-12 w-2/5 rounded-lg bg-surface-raised" />
-            <div className="ml-auto h-12 w-1/3 rounded-lg bg-brand-muted" />
-            <div className="h-12 w-1/2 rounded-lg bg-surface-raised" />
+          <div className="flex flex-1 flex-col gap-5 overflow-hidden p-6">
+            {[["w-34", "w-48"], ["w-42", "w-24"], ["w-28", "w-36"], ["w-38", "w-20"], ["w-30", "w-44"]].map(
+              ([nameWidth, messageWidth], index) => (
+                <div key={index} className="flex items-start gap-3">
+                  <ConnectSkeletonBlock className="size-9 rounded-full" />
+                  <div className="space-y-2">
+                    <ConnectSkeletonBlock className={`h-3 ${nameWidth} rounded`} />
+                    <ConnectSkeletonBlock className={`h-10 ${messageWidth} rounded-lg`} />
+                  </div>
+                </div>
+              ),
+            )}
           </div>
           <div className="border-t border-border p-4">
-            <div className="h-12 rounded-lg bg-surface-raised" />
+            <ConnectSkeletonBlock className="h-24 w-full rounded-xl" />
+            <div className="mt-3 flex items-center justify-between">
+              <div className="flex gap-3">
+                <ConnectSkeletonBlock className="size-5 rounded-full" />
+                <ConnectSkeletonBlock className="size-5 rounded-full" />
+                <ConnectSkeletonBlock className="size-5 rounded-full" />
+              </div>
+              <ConnectSkeletonBlock className="h-8 w-16 rounded-md" />
+            </div>
           </div>
         </section>
       </div>
     </div>
+  );
+}
+
+function ConnectSidebarSkeletonSection({
+  headingWidth,
+  rowWidths,
+}: {
+  headingWidth: string;
+  rowWidths: string[];
+}) {
+  return (
+    <section className="mt-7">
+      <ConnectSkeletonBlock className={`h-3 ${headingWidth} rounded`} tone="brand" />
+      <div className="mt-3 space-y-2">
+        {rowWidths.map((width, index) => (
+          <div key={`${width}-${index}`} className="flex items-center gap-3">
+            <ConnectSkeletonBlock className="size-7 rounded-full" tone="brand" />
+            <ConnectSkeletonBlock className={`h-3 ${width} rounded`} tone="brand" />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
