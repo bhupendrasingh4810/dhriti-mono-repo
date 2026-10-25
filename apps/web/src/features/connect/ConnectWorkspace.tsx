@@ -79,6 +79,42 @@ function getConversationTypeLabel(conversation: ConnectConversation) {
   return "Direct";
 }
 
+function ConnectWorkspaceLoadingShell() {
+  return (
+    <div aria-busy="true" aria-label="Loading Connect" className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <aside className="mr-2 hidden w-[312px] shrink-0 flex-col rounded-[20px] bg-brand p-4 lg:flex">
+          <div className="h-5 w-20 rounded bg-white/20" />
+          <div className="mt-8 space-y-3">
+            <div className="h-4 w-24 rounded bg-white/20" />
+            <div className="h-8 rounded bg-white/10" />
+            <div className="h-8 rounded bg-white/10" />
+            <div className="h-8 rounded bg-white/10" />
+          </div>
+          <div className="mt-8 space-y-3">
+            <div className="h-4 w-16 rounded bg-white/20" />
+            <div className="h-8 rounded bg-white/10" />
+            <div className="h-8 rounded bg-white/10" />
+          </div>
+        </aside>
+        <section className="ml-2 flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface shadow-sm shadow-brand/15">
+          <div className="h-16 shrink-0 border-b border-border p-5">
+            <div className="h-5 w-44 rounded bg-surface-raised" />
+          </div>
+          <div className="flex flex-1 flex-col justify-end gap-3 p-6">
+            <div className="h-12 w-2/5 rounded-lg bg-surface-raised" />
+            <div className="ml-auto h-12 w-1/3 rounded-lg bg-brand-muted" />
+            <div className="h-12 w-1/2 rounded-lg bg-surface-raised" />
+          </div>
+          <div className="border-t border-border p-4">
+            <div className="h-12 rounded-lg bg-surface-raised" />
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 export default function ConnectWorkspace() {
   const { startCall } = useWorkspaceCall();
   const { registerUserSelection } = useConnectSearch();
@@ -962,15 +998,7 @@ export default function ConnectWorkspace() {
   }
 
   if (live.loading || !live.user)
-    return (
-      <div className="flex h-full w-full items-center justify-center text-brand">
-        <span
-          aria-label="Loading Connect"
-          className="size-8 animate-spin rounded-full border-4 border-brand border-t-transparent"
-          role="status"
-        />
-      </div>
-    );
+    return <ConnectWorkspaceLoadingShell />;
 
   const quotedPreview = quotedMessage
     ? {

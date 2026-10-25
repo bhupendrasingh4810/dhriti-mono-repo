@@ -13,4 +13,4 @@ export const PageName = {
 // Types
 export type PageType = "home" | "connect" | "flow" | "atlas" | "pulse" | "nexus";
 
-export type AppView = "home" | "connect" | "flow" | "atlas" | "pulse" | "nexus" | "cadence" | "control";
+export type AppView = "home" | "notes" | "connect" | "flow" | "atlas" | "pulse" | "nexus" | "cadence" | "hrms" | "control";

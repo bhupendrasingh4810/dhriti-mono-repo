@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CalendarDays, FileText, LayoutDashboard, ListChecks, MessageCircle, Shield, Star } from "lucide-react";
+import { CalendarDays, FileText, LayoutDashboard, ListChecks, MessageCircle, NotebookPen, Shield, Star, UsersRound } from "lucide-react";
 import Link from "next/link";
 import type { AppView } from "@/types/app.types";
 import { useAuth } from "@/hooks/use-auth";
@@ -19,6 +19,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Home",
     href: "home",
     icon: <LayoutDashboard size={22} strokeWidth={1.75} />,
+  },
+  {
+    id: "notes",
+    label: "Notes",
+    href: "notes",
+    icon: <NotebookPen size={22} strokeWidth={1.75} />,
   },
   {
     id: "connect",
@@ -51,6 +57,12 @@ const NAV_ITEMS: NavItem[] = [
     label: "Cadence",
     href: "cadence",
     icon: <Star size={22} strokeWidth={1.75} />,
+  },
+  {
+    id: "hrms",
+    label: "HRMS",
+    href: "hrms",
+    icon: <UsersRound size={22} strokeWidth={1.75} />,
   },
   {
     id: "control",

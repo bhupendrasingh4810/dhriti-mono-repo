@@ -19,6 +19,11 @@
   --color-text-primary: var(--app-color-text-primary);
   --color-text-secondary: var(--app-color-text-secondary);
   --color-text-muted: var(--app-color-text-muted);
+  --color-text-inverse: var(--app-color-text-inverse);
+  --color-on-brand-muted: var(--app-color-on-brand-muted);
+  --color-on-brand-border: var(--app-color-on-brand-border);
+  --color-on-brand-hover: var(--app-color-on-brand-hover);
+  --color-text-on-brand-muted: var(--app-color-text-on-brand-muted);
 
   --color-border: var(--app-color-border);
   --color-border-strong: var(--app-color-border-strong);
@@ -50,6 +55,11 @@
   --app-color-text-primary: #0f172a;
   --app-color-text-secondary: #475569;
   --app-color-text-muted: #94a3b8;
+  --app-color-text-inverse: #ffffff;
+  --app-color-on-brand-muted: rgb(255 255 255 / 0.7);
+  --app-color-on-brand-border: rgb(255 255 255 / 0.2);
+  --app-color-on-brand-hover: rgb(255 255 255 / 0.1);
+  --app-color-text-on-brand-muted: #0f172a;
   --app-color-border: #e2e8f0;
   --app-color-border-strong: #cbd5e1;
 }

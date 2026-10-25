@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 export type ConnectCascadingMenuItem = {
   id: string;
   label: string;
+  content?: ReactNode;
   description?: string;
   descriptionLayout?: "inline" | "stacked";
   icon?: ReactNode;

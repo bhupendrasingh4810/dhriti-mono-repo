@@ -1,5 +1,5 @@
 import type { AppView } from "@/types/app.types";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   Bell,
@@ -33,7 +33,9 @@ interface Props {
 
 export default function Header({ activeView }: Props) {
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
+  const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null);
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
+  const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user, logout } = useAuth();
   const { presence } = useConnectPresence();
   const { recentUsers, recentUsersError, selectUser } = useConnectSearch();
@@ -45,6 +47,26 @@ export default function Header({ activeView }: Props) {
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  function clearMenuCloseTimer() {
+    if (!menuCloseTimer.current) return;
+    clearTimeout(menuCloseTimer.current);
+    menuCloseTimer.current = null;
+  }
+
+  function closeMenus() {
+    clearMenuCloseTimer();
+    setSettingsAnchor(null);
+    setNotificationAnchor(null);
+    setUserAnchor(null);
+  }
+
+  function scheduleMenuClose() {
+    clearMenuCloseTimer();
+    menuCloseTimer.current = setTimeout(closeMenus, 150);
+  }
+
+  useEffect(() => () => clearMenuCloseTimer(), []);
 
   const settingsItems: ConnectCascadingMenuItem[] = [
     {
@@ -145,6 +167,16 @@ export default function Header({ activeView }: Props) {
       onClick: () => void logout(),
     },
   ];
+  const notificationItems: ConnectCascadingMenuItem[] = [
+    {
+      id: "notifications-empty",
+      label: "No new notifications",
+      description: "You are all caught up.",
+      descriptionLayout: "stacked",
+      icon: <Bell aria-hidden="true" size={16} strokeWidth={1.75} />,
+      closeOnClick: false,
+    },
+  ];
 
   return (
     <header
@@ -178,17 +210,43 @@ export default function Header({ activeView }: Props) {
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
-        <button className="relative w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all">
+        <button
+          type="button"
+          onMouseEnter={(event) => {
+            clearMenuCloseTimer();
+            setNotificationAnchor(event.currentTarget);
+            setSettingsAnchor(null);
+            setUserAnchor(null);
+          }}
+          onMouseLeave={scheduleMenuClose}
+          onClick={(event) => {
+            setNotificationAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
+            setSettingsAnchor(null);
+            setUserAnchor(null);
+          }}
+          aria-label="Open notifications"
+          aria-haspopup="menu"
+          aria-expanded={Boolean(notificationAnchor)}
+          className="relative w-9 h-9 cursor-pointer rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all"
+        >
           <Bell size={20} strokeWidth={1.75} />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#036c5f]" />
         </button>
-        <button className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all">
+        <button className="w-9 h-9 cursor-pointer rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all">
           <CircleHelp size={20} strokeWidth={1.75} />
         </button>
         <button
           type="button"
+          onMouseEnter={(event) => {
+            clearMenuCloseTimer();
+            setSettingsAnchor(event.currentTarget);
+            setNotificationAnchor(null);
+            setUserAnchor(null);
+          }}
+          onMouseLeave={scheduleMenuClose}
           onClick={(event) => {
             setSettingsAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
+            setNotificationAnchor(null);
             setUserAnchor(null);
           }}
           aria-label="Open settings"
@@ -200,37 +258,64 @@ export default function Header({ activeView }: Props) {
         </button>
         <button
           type="button"
+          onMouseEnter={(event) => {
+            clearMenuCloseTimer();
+            setUserAnchor(event.currentTarget);
+            setSettingsAnchor(null);
+            setNotificationAnchor(null);
+          }}
+          onMouseLeave={scheduleMenuClose}
           onClick={(event) => {
             setUserAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
             setSettingsAnchor(null);
+            setNotificationAnchor(null);
           }}
           aria-label="Open user menu"
           aria-haspopup="menu"
           aria-expanded={Boolean(userAnchor)}
-          className="ml-1 flex items-center gap-2 rounded-lg p-1 transition-all hover:bg-slate-50"
+          className="ml-1 flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-all hover:bg-slate-50"
         >
           <div className="relative w-8 h-8 rounded-full bg-[#036c5f] flex items-center justify-center">
             <span className="text-white text-xs font-bold">{userInitials}</span>
             {user ? <ConnectPresenceIndicator presence={presence} /> : null}
           </div>
-          <ChevronDown size={12} strokeWidth={2.5} color="#94a3b8" />
+          <ChevronDown
+            size={12}
+            strokeWidth={2.5}
+            className={`text-slate-400 transition-transform ${userAnchor ? "rotate-180" : ""}`}
+          />
         </button>
       </div>
       <ConnectCascadingMenu
+        anchorEl={notificationAnchor}
+        open={Boolean(notificationAnchor)}
+        onClose={closeMenus}
+        items={notificationItems}
+        heading="Notifications"
+        minWidth={240}
+        openToLeft
+        onMouseEnter={clearMenuCloseTimer}
+        onMouseLeave={scheduleMenuClose}
+      />
+      <ConnectCascadingMenu
         anchorEl={settingsAnchor}
         open={Boolean(settingsAnchor)}
-        onClose={() => setSettingsAnchor(null)}
+        onClose={closeMenus}
         items={settingsItems}
         minWidth={720}
         columns={3}
+        onMouseEnter={clearMenuCloseTimer}
+        onMouseLeave={scheduleMenuClose}
       />
       <ConnectCascadingMenu
         anchorEl={userAnchor}
         open={Boolean(userAnchor)}
-        onClose={() => setUserAnchor(null)}
+        onClose={closeMenus}
         items={userItems}
         minWidth={192}
         openToLeft
+        onMouseEnter={clearMenuCloseTimer}
+        onMouseLeave={scheduleMenuClose}
       />
     </header>
   );

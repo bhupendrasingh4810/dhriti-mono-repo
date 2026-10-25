@@ -15,6 +15,8 @@ type ConnectCascadingMenuProps = {
   maxDepth?: number;
   columns?: 1 | 2 | 3;
   openToLeft?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 };
 
 const MENU_GAP = 4;
@@ -30,6 +32,8 @@ export function ConnectCascadingMenu({
   maxDepth = 4,
   columns = 1,
   openToLeft = false,
+  onMouseEnter,
+  onMouseLeave,
 }: ConnectCascadingMenuProps) {
   const [submenuStates, setSubmenuStates] = useState<SubmenuState[]>([]);
   const safeMaxDepth = Math.min(Math.max(maxDepth, 1), 4);
@@ -157,7 +161,13 @@ export function ConnectCascadingMenu({
 
   return createPortal(
     <>
-      <MenuSurface level={0} style={rootMenuStyle()} onEscape={() => closeFromLevel(0)}>
+      <MenuSurface
+        level={0}
+        style={rootMenuStyle()}
+        onEscape={() => closeFromLevel(0)}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
+      >
         {heading ? (
           <p className="px-3.5 pb-1.5 pt-3 text-xs font-semibold uppercase tracking-wide text-slate-400">{heading}</p>
         ) : null}
@@ -177,6 +187,8 @@ export function ConnectCascadingMenu({
             level={level}
             style={submenuStyle(submenuState)}
             onEscape={() => closeFromLevel(level)}
+            onMouseEnter={onMouseEnter}
+            onMouseLeave={onMouseLeave}
           >
             <MenuItems items={levelItems} level={level} />
           </MenuSurface>
@@ -241,6 +253,10 @@ export function ConnectCascadingMenu({
     );
 
     function renderMenuItem(item: ConnectCascadingMenuItem) {
+      if (item.content) {
+        return <div key={item.id}>{item.content}</div>;
+      }
+
       const hasChildren = Boolean(item.children?.length) && level < safeMaxDepth - 1;
       const selectedSubmenu = submenuStates[level];
 
@@ -313,11 +329,15 @@ function MenuSurface({
   level,
   style,
   onEscape,
+  onMouseEnter,
+  onMouseLeave,
 }: {
   children: ReactNode;
   level: number;
   style: CSSProperties;
   onEscape: () => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState<number | null>(null);
@@ -344,6 +364,8 @@ function MenuSurface({
       ref={surfaceRef}
       data-connect-cascading-menu
       role="presentation"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           event.stopPropagation();
