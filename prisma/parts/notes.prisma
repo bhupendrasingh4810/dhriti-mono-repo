@@ -1,0 +1,51 @@
+model NoteFolder {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  ownerId        String   @db.Uuid
+  name           String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User         @relation("NoteFolderOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  notes        Note[]
+
+  @@index([organizationId, ownerId])
+  @@map("note_folders")
+}
+
+model Note {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  ownerId        String   @db.Uuid
+  folderId       String?  @db.Uuid
+  title          String
+  content        String   @default("") @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner        User             @relation("NoteOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  folder       NoteFolder?      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  permissions  NotePermission[]
+
+  @@index([organizationId, ownerId, folderId])
+  @@map("notes")
+}
+
+model NotePermission {
+  id        String   @id @default(uuid()) @db.Uuid
+  noteId    String   @db.Uuid
+  userId    String   @db.Uuid
+  canEdit   Boolean  @default(false)
+  canDelete Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation("NotePermissionUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@index([userId])
+  @@map("note_permissions")
+}

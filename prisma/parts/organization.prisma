@@ -81,6 +81,8 @@ model Organization {
   usageEvents   UsageEvent[]
   holidayCalendars HolidayCalendar[]
   healthInsurancePlans HealthInsurance[]
+  noteFolders NoteFolder[]
+  noteRecords  Note[]
 
   @@index([primaryEmail])
   @@index([billingGstin])

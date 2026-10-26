@@ -15,6 +15,7 @@ type ConnectCascadingMenuProps = {
   maxDepth?: number;
   columns?: 1 | 2 | 3;
   openToLeft?: boolean;
+  anchorAlignment?: "end" | "start";
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
 };
@@ -32,6 +33,7 @@ export function ConnectCascadingMenu({
   maxDepth = 4,
   columns = 1,
   openToLeft = false,
+  anchorAlignment = "end",
   onMouseEnter,
   onMouseLeave,
 }: ConnectCascadingMenuProps) {
@@ -137,7 +139,11 @@ export function ConnectCascadingMenu({
     const rect = anchorEl?.getBoundingClientRect();
     if (!rect) return { visibility: "hidden" };
 
-    const left = openToLeft ? rect.left - minWidth - MENU_GAP : rect.right - minWidth;
+    const left = openToLeft
+      ? rect.left - minWidth - MENU_GAP
+      : anchorAlignment === "start"
+        ? rect.right + MENU_GAP
+        : rect.right - minWidth;
 
     return {
       left: Math.max(VIEWPORT_GUTTER, Math.min(left, window.innerWidth - minWidth - VIEWPORT_GUTTER)),

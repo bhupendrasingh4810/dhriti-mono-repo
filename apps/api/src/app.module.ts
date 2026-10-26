@@ -31,6 +31,7 @@ import { MetricsInterceptor } from "./common/metrics/metrics.interceptor";
 import { AuthorizationModule } from "./modules/authorization/authorization.module";
 import { HrmsModule } from "./modules/hrms/hrms.module";
 import { JobsModule } from "./jobs/jobs.module";
+import { NotesModule } from "./modules/notes/notes.module";
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { JobsModule } from "./jobs/jobs.module";
     AuthorizationModule,
     HrmsModule,
     JobsModule,
+    NotesModule,
     MetricsModule,
     NotificationModule,
     AuditModule,
