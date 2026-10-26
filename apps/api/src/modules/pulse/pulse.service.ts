@@ -5,8 +5,9 @@ import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
-import type { CreateCalendarDto, UpdateCalendarDto } from "./dto/calendar.dto";
+import { ConnectService } from "../connect/connect.service";
 import type { CreateEventDto, ListEventsQueryDto, UpdateEventDto } from "./dto/event.dto";
+import type { CreateCalendarDto, UpdateCalendarDto } from "./dto/calendar.dto";
 
 export type EventWithAttendees = CalendarEvent & {
   attendees: Array<EventAttendee & { user: Pick<User, "id" | "name" | "email" | "avatarUrl"> }>;
@@ -24,6 +25,7 @@ export class PulseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly connect: ConnectService,
   ) {}
 
   // ---------------- Calendars ----------------
@@ -127,8 +129,61 @@ export class PulseService {
     creatorUserId: string,
     dto: CreateEventDto,
   ): Promise<EventWithAttendees> {
+    if (dto.kind === "MEETING") {
+      return this.createMeeting(organizationId, calendarId, creatorUserId, dto);
+    }
+    return this.createEventRecord(organizationId, calendarId, creatorUserId, dto, "EVENT");
+  }
+
+  async createMeeting(
+    organizationId: string,
+    calendarId: string,
+    creatorUserId: string,
+    dto: CreateEventDto,
+  ): Promise<EventWithAttendees> {
+    const attendeeUserIds = [...new Set((dto.attendeeUserIds ?? []).filter((id) => id !== creatorUserId))];
+    if (attendeeUserIds.length === 0) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "A scheduled meeting requires at least one attendee",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const event = await this.createEventRecord(
+      organizationId,
+      calendarId,
+      creatorUserId,
+      { ...dto, attendeeUserIds },
+      "MEETING",
+    );
+    const conversation = await this.connect.createMeetingConversation(organizationId, creatorUserId, attendeeUserIds);
+    const meeting = await this.prisma.calendarEvent.update({
+      where: { id: event.id },
+      data: { connectChannelId: conversation.id },
+      include: this.eventInclude,
+    });
+    await this.audit.record({
+      action: "pulse.meeting.channel_created",
+      organizationId,
+      actorUserId: creatorUserId,
+      resourceType: "CalendarEvent",
+      resourceId: meeting.id,
+      metadata: { connectChannelId: conversation.id },
+    });
+    return meeting;
+  }
+
+  private async createEventRecord(
+    organizationId: string,
+    calendarId: string,
+    creatorUserId: string,
+    dto: CreateEventDto,
+    kind: "EVENT" | "MEETING",
+  ): Promise<EventWithAttendees> {
     await this.getCalendar(organizationId, calendarId);
     this.assertValidRange(dto.startsAt, dto.endsAt);
+    this.assertWeeklyRecurrence(dto.recurrenceRule);
 
     if (dto.attendeeUserIds?.length) {
       await this.assertOrgMembers(organizationId, dto.attendeeUserIds);
@@ -154,6 +209,11 @@ export class PulseService {
         description: dto.description ?? null,
         location: dto.location ?? null,
         meetingUrl: dto.meetingUrl ?? null,
+        kind,
+        availability: dto.availability ?? "BUSY",
+        privacy: dto.privacy ?? "DEFAULT",
+        reminderMinutes: dto.reminderMinutes ?? null,
+        isOnlineMeeting: dto.isOnlineMeeting ?? false,
         startsAt: new Date(dto.startsAt),
         endsAt: new Date(dto.endsAt),
         isAllDay: dto.isAllDay ?? false,
@@ -172,7 +232,7 @@ export class PulseService {
       actorUserId: creatorUserId,
       resourceType: "CalendarEvent",
       resourceId: event.id,
-      metadata: { calendarId, attendeeCount: dto.attendeeUserIds?.length ?? 0 },
+      metadata: { calendarId, kind, attendeeCount: dto.attendeeUserIds?.length ?? 0 },
     });
     return event;
   }
@@ -204,6 +264,7 @@ export class PulseService {
     if (endsAt <= startsAt) {
       throw new AppError(ErrorCode.INVALID_RANGE, "Event end must be after its start", HttpStatus.BAD_REQUEST);
     }
+    this.assertWeeklyRecurrence(dto.recurrenceRule);
 
     const updated = await this.prisma.calendarEvent.update({
       where: { id: eventId },
@@ -213,6 +274,11 @@ export class PulseService {
         ...(dto.location !== undefined ? { location: dto.location } : {}),
         ...(dto.meetingUrl !== undefined ? { meetingUrl: dto.meetingUrl } : {}),
         ...(dto.isAllDay !== undefined ? { isAllDay: dto.isAllDay } : {}),
+        ...(dto.recurrenceRule !== undefined ? { recurrenceRule: dto.recurrenceRule } : {}),
+        ...(dto.availability !== undefined ? { availability: dto.availability } : {}),
+        ...(dto.privacy !== undefined ? { privacy: dto.privacy } : {}),
+        ...(dto.reminderMinutes !== undefined ? { reminderMinutes: dto.reminderMinutes } : {}),
+        ...(dto.isOnlineMeeting !== undefined ? { isOnlineMeeting: dto.isOnlineMeeting } : {}),
         startsAt,
         endsAt,
       },
@@ -234,6 +300,7 @@ export class PulseService {
     if (existing.createdById !== userId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the organizer can delete this event", HttpStatus.FORBIDDEN);
     }
+
     await this.prisma.calendarEvent.update({
       where: { id: eventId },
       data: { deletedAt: new Date() },
@@ -248,9 +315,36 @@ export class PulseService {
     });
   }
 
+  async cancelEvent(organizationId: string, eventId: string, userId: string): Promise<EventWithAttendees> {
+    const existing = await this.getEvent(organizationId, eventId);
+    if (existing.createdById !== userId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only the organizer can cancel this event", HttpStatus.FORBIDDEN);
+    }
+
+    const cancelled = await this.prisma.calendarEvent.update({
+      where: { id: eventId },
+      data: { cancelledAt: existing.cancelledAt ?? new Date() },
+      include: this.eventInclude,
+    });
+    await this.audit.record({
+      action: "pulse.event.cancelled",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "CalendarEvent",
+      resourceId: eventId,
+    });
+    return cancelled;
+  }
+
   // ---------------- RSVP ----------------
 
-  async rsvp(organizationId: string, eventId: string, userId: string, status: RsvpStatus): Promise<EventAttendee> {
+  async rsvp(
+    organizationId: string,
+    eventId: string,
+    userId: string,
+    status: RsvpStatus,
+    declineReason?: string,
+  ): Promise<EventAttendee> {
     await this.getEvent(organizationId, eventId);
     const attendee = await this.prisma.eventAttendee.findUnique({
       where: { eventId_userId: { eventId, userId } },
@@ -261,7 +355,10 @@ export class PulseService {
 
     return this.prisma.eventAttendee.update({
       where: { eventId_userId: { eventId, userId } },
-      data: { status },
+      data: {
+        status,
+        declineReason: status === "DECLINED" ? declineReason?.trim() || null : null,
+      },
     });
   }
 
@@ -320,6 +417,54 @@ export class PulseService {
     }));
   }
 
+  async getSchedule(organizationId: string, query: ListEventsQueryDto) {
+    const from = new Date(query.from);
+    const to = new Date(query.to);
+    this.assertRange(from, to);
+
+    const [events, calendars, members, leaves] = await Promise.all([
+      this.listEvents(organizationId, query),
+      this.prisma.holidayCalendar.findMany({
+        where: { organizationId },
+        select: { id: true, name: true, holidays: true },
+      }),
+      this.prisma.organizationMember.findMany({
+        where: { organizationId, status: "ACTIVE", deletedAt: null, user: { deletedAt: null } },
+        select: { user: { select: { id: true, name: true, avatarUrl: true, hrmsProfile: { select: { dateOfBirth: true } } } } },
+      }),
+      this.prisma.hrmsLeaveRequest.findMany({
+        where: {
+          organizationId,
+          status: "APPROVED",
+          startDate: { lte: to },
+          endDate: { gte: from },
+        },
+        select: {
+          id: true,
+          startDate: true,
+          endDate: true,
+          totalDays: true,
+          leaveType: true,
+          employee: { select: { user: { select: { id: true, name: true, avatarUrl: true } } } },
+        },
+      }),
+    ]);
+
+    return {
+      events,
+      holidays: calendars.flatMap((calendar) => this.parseHolidays(calendar.holidays, calendar.id, calendar.name, from, to)),
+      birthdays: members.flatMap(({ user }) => this.birthdayOccurrences(user, from, to)),
+      leaves: leaves.map((leave) => ({
+        id: leave.id,
+        startDate: leave.startDate,
+        endDate: leave.endDate,
+        totalDays: leave.totalDays,
+        leaveType: leave.leaveType,
+        user: leave.employee.user,
+      })),
+    };
+  }
+
   // ---------------- Internals ----------------
 
   private readonly eventInclude = {
@@ -342,6 +487,65 @@ export class PulseService {
     if (new Date(endsAt) <= new Date(startsAt)) {
       throw new AppError(ErrorCode.INVALID_RANGE, "Event end must be after its start", HttpStatus.BAD_REQUEST);
     }
+  }
+
+  private assertRange(from: Date, to: Date): void {
+    if (Number.isNaN(from.valueOf()) || Number.isNaN(to.valueOf()) || to <= from) {
+      throw new AppError(ErrorCode.INVALID_RANGE, "`to` must be after `from`", HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private assertWeeklyRecurrence(recurrenceRule?: string): void {
+    if (recurrenceRule && !/(^|;)FREQ=WEEKLY(;|$)/i.test(recurrenceRule.trim())) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Only weekly recurrence is supported", HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private parseHolidays(value: Prisma.JsonValue, calendarId: string, calendarName: string, from: Date, to: Date) {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    return value.flatMap((entry, index) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        return [];
+      }
+      const record = entry as Record<string, unknown>;
+      const start = this.parseHolidayDate(record.date ?? record.startDate);
+      const end = this.parseHolidayDate(record.endDate ?? record.date ?? record.startDate);
+      const title = typeof record.name === "string" ? record.name : typeof record.title === "string" ? record.title : null;
+      if (!start || !end || !title || end < start || start >= to || end < from) {
+        return [];
+      }
+      return [{ id: `${calendarId}:${index}`, title, startDate: start, endDate: end, isAllDay: true, calendarId, calendarName }];
+    });
+  }
+
+  private parseHolidayDate(value: unknown): Date | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+    const date = new Date(value);
+    return Number.isNaN(date.valueOf()) ? null : date;
+  }
+
+  private birthdayOccurrences(
+    user: { id: string; name: string; avatarUrl: string | null; hrmsProfile: { dateOfBirth: Date | null } | null },
+    from: Date,
+    to: Date,
+  ) {
+    const birthDate = user.hrmsProfile?.dateOfBirth;
+    if (!birthDate) {
+      return [];
+    }
+    const occurrences = [];
+    for (let year = from.getUTCFullYear(); year <= to.getUTCFullYear(); year += 1) {
+      const date = new Date(Date.UTC(year, birthDate.getUTCMonth(), birthDate.getUTCDate()));
+      if (date.getUTCMonth() !== birthDate.getUTCMonth() || date < from || date >= to) {
+        continue;
+      }
+      occurrences.push({ id: `birthday:${user.id}:${year}`, title: `${user.name}'s birthday`, date, isAllDay: true, user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl } });
+    }
+    return occurrences;
   }
 
   private async assertOrgMembers(organizationId: string, userIds: string[]): Promise<void> {

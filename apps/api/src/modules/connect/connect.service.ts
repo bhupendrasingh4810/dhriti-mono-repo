@@ -456,9 +456,32 @@ export class ConnectService {
   }
 
   async createGroupConversation(organizationId: string, creatorUserId: string, userIds: string[]) {
+    return this.createPrivateGroupConversation(organizationId, creatorUserId, userIds, 3);
+  }
+
+  /**
+   * A meeting may have one invitee, so unlike the user-created group endpoint
+   * it deliberately permits the organizer plus one attendee.
+   */
+  async createMeetingConversation(organizationId: string, creatorUserId: string, userIds: string[]) {
+    return this.createPrivateGroupConversation(organizationId, creatorUserId, userIds, 2);
+  }
+
+  private async createPrivateGroupConversation(
+    organizationId: string,
+    creatorUserId: string,
+    userIds: string[],
+    minimumMembers: number,
+  ) {
     const memberIds = [...new Set([creatorUserId, ...userIds])];
-    if (memberIds.length < 3) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "A group conversation requires at least three members", HttpStatus.BAD_REQUEST);
+    if (memberIds.length < minimumMembers) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        minimumMembers === 2
+          ? "A meeting conversation requires at least one attendee"
+          : "A group conversation requires at least three members",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const members = await this.prisma.organizationMember.findMany({
       where: {

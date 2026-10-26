@@ -364,6 +364,21 @@ enum RsvpStatus {
   TENTATIVE
 }
 
+enum CalendarEventKind {
+  EVENT
+  MEETING
+}
+
+enum EventAvailability {
+  FREE
+  BUSY
+}
+
+enum EventPrivacy {
+  DEFAULT
+  PRIVATE
+}
+
 enum NexusTaskStatus {
   PENDING
   RUNNING
@@ -2454,6 +2469,7 @@ model Channel {
   messages     Message[]
   posts        Post[]
   calls        ConnectCall[]
+  calendarEvents CalendarEvent[]
 
   @@unique([organizationId, slug])
   @@index([organizationId])
@@ -2823,6 +2839,12 @@ model CalendarEvent {
   description    String?   @db.Text
   location       String?
   meetingUrl     String?
+  kind           CalendarEventKind @default(EVENT)
+  availability   EventAvailability @default(BUSY)
+  privacy        EventPrivacy      @default(DEFAULT)
+  reminderMinutes Int?
+  isOnlineMeeting Boolean          @default(false)
+  connectChannelId String?         @unique @db.Uuid
   startsAt       DateTime
   endsAt         DateTime
   isAllDay       Boolean   @default(false)
@@ -2830,14 +2852,17 @@ model CalendarEvent {
   createdById    String    @db.Uuid
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+  cancelledAt    DateTime?
   deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   calendar     Calendar     @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  connectChannel Channel?   @relation(fields: [connectChannelId], references: [id], onDelete: SetNull)
   attendees    EventAttendee[]
 
   @@index([calendarId, startsAt])
   @@index([organizationId, startsAt])
+  @@index([organizationId, kind, startsAt])
   @@map("calendar_events")
 }
 
@@ -2846,6 +2871,7 @@ model EventAttendee {
   eventId   String     @db.Uuid
   userId    String     @db.Uuid
   status    RsvpStatus @default(PENDING)
+  declineReason String? @db.Text
   isOrganizer Boolean  @default(false)
   createdAt DateTime   @default(now())
 

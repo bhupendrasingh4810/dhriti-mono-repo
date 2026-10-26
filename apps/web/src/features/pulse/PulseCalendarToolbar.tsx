@@ -11,9 +11,10 @@ type PulseCalendarToolbarProps = {
   onToday: () => void;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
+  onScheduleCreated: () => void;
 };
 
-export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onNextWeek }: PulseCalendarToolbarProps) {
+export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onNextWeek, onScheduleCreated }: PulseCalendarToolbarProps) {
   const [connectMenuAnchor, setConnectMenuAnchor] = useState<HTMLButtonElement | null>(null);
   const [newMenuAnchor, setNewMenuAnchor] = useState<HTMLButtonElement | null>(null);
   const [schedulingDialog, setSchedulingDialog] = useState<PulseSchedulingDialogKind | null>(null);
@@ -90,7 +91,7 @@ export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onN
         </button>
         <button
           type="button"
-          onClick={(event) => setNewMenuAnchor((current) => current ? null : event.currentTarget)}
+          onClick={(event) => setNewMenuAnchor(event.currentTarget)}
           aria-expanded={Boolean(newMenuAnchor)}
           aria-haspopup="menu"
           className="inline-flex cursor-pointer items-center gap-1 rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-dark"
@@ -120,7 +121,11 @@ export function PulseCalendarToolbar({ workingWeek, onToday, onPreviousWeek, onN
         <PulseSchedulingDialog
           kind={schedulingDialog}
           initialDate={workingWeek[0] ?? new Date()}
-          onClose={() => setSchedulingDialog(null)}
+          onClose={() => {
+            setSchedulingDialog(null);
+            setNewMenuAnchor(null);
+          }}
+          onCreated={onScheduleCreated}
         />
       ) : null}
     </div>

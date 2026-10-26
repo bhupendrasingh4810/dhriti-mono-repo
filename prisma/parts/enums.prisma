@@ -133,6 +133,21 @@ enum RsvpStatus {
   TENTATIVE
 }
 
+enum CalendarEventKind {
+  EVENT
+  MEETING
+}
+
+enum EventAvailability {
+  FREE
+  BUSY
+}
+
+enum EventPrivacy {
+  DEFAULT
+  PRIVATE
+}
+
 enum NexusTaskStatus {
   PENDING
   RUNNING

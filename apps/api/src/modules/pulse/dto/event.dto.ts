@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   IsBoolean,
+  IsInt,
+  ArrayMinSize,
   IsDateString,
   IsEnum,
   IsOptional,
@@ -8,9 +10,11 @@ import {
   IsUUID,
   IsUrl,
   MaxLength,
+  Max,
+  Min,
   MinLength,
 } from "class-validator";
-import { RsvpStatus } from "@prisma/client";
+import { CalendarEventKind, EventAvailability, EventPrivacy, RsvpStatus } from "@prisma/client";
 
 export class CreateEventDto {
   @ApiProperty({ example: "Sprint Review" })
@@ -55,6 +59,33 @@ export class CreateEventDto {
   @IsString()
   @MaxLength(500)
   recurrenceRule?: string;
+
+  @ApiPropertyOptional({ enum: CalendarEventKind, default: CalendarEventKind.EVENT })
+  @IsOptional()
+  @IsEnum(CalendarEventKind)
+  kind?: CalendarEventKind;
+
+  @ApiPropertyOptional({ enum: EventAvailability, default: EventAvailability.BUSY })
+  @IsOptional()
+  @IsEnum(EventAvailability)
+  availability?: EventAvailability;
+
+  @ApiPropertyOptional({ enum: EventPrivacy, default: EventPrivacy.DEFAULT })
+  @IsOptional()
+  @IsEnum(EventPrivacy)
+  privacy?: EventPrivacy;
+
+  @ApiPropertyOptional({ description: "Minutes before the event to remind the organizer" })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10080)
+  reminderMinutes?: number;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isOnlineMeeting?: boolean;
 
   @ApiPropertyOptional({ type: [String], description: "Attendee user ids" })
   @IsOptional()
@@ -102,6 +133,47 @@ export class UpdateEventDto {
   @IsOptional()
   @IsBoolean()
   isAllDay?: boolean;
+
+  @ApiPropertyOptional({ description: "Weekly RFC 5545 RRULE only" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  recurrenceRule?: string;
+
+  @ApiPropertyOptional({ enum: EventAvailability })
+  @IsOptional()
+  @IsEnum(EventAvailability)
+  availability?: EventAvailability;
+
+  @ApiPropertyOptional({ enum: EventPrivacy })
+  @IsOptional()
+  @IsEnum(EventPrivacy)
+  privacy?: EventPrivacy;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(10080)
+  reminderMinutes?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isOnlineMeeting?: boolean;
+}
+
+export class CreateEventRequestDto extends CreateEventDto {
+  @ApiProperty({ format: "uuid" })
+  @IsUUID()
+  calendarId!: string;
+}
+
+export class CreateMeetingDto extends CreateEventRequestDto {
+  @ApiProperty({ type: [String], description: "One or more attendee user ids" })
+  @IsUUID(undefined, { each: true })
+  @ArrayMinSize(1)
+  declare attendeeUserIds: string[];
 }
 
 export class ListEventsQueryDto {
@@ -123,6 +195,12 @@ export class RsvpDto {
   @ApiProperty({ enum: RsvpStatus })
   @IsEnum(RsvpStatus)
   status!: RsvpStatus;
+
+  @ApiPropertyOptional({ description: "Optional reason supplied when declining an invitation" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  declineReason?: string;
 }
 
 export class AddAttendeeDto {

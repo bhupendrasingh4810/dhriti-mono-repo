@@ -21,7 +21,15 @@ import { TenantGuard } from "../../common/guards/tenant.guard";
 
 import { PulseService, type SchedulingConflict } from "./pulse.service";
 import { CreateCalendarDto, UpdateCalendarDto } from "./dto/calendar.dto";
-import { AddAttendeeDto, CreateEventDto, ListEventsQueryDto, RsvpDto, UpdateEventDto } from "./dto/event.dto";
+import {
+  AddAttendeeDto,
+  CreateEventDto,
+  CreateEventRequestDto,
+  CreateMeetingDto,
+  ListEventsQueryDto,
+  RsvpDto,
+  UpdateEventDto,
+} from "./dto/event.dto";
 
 @ApiTags("pulse")
 @ApiBearerAuth()
@@ -83,6 +91,35 @@ export class PulseController {
     return this.pulse.listEvents(organization.organizationId, query);
   }
 
+  @Get("schedule")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
+  @ApiOperation({ summary: "List Pulse events with organization holidays, birthdays, and approved leaves" })
+  async getSchedule(@CurrentOrganization() organization: OrganizationContext, @Query() query: ListEventsQueryDto) {
+    return this.pulse.getSchedule(organization.organizationId, query);
+  }
+
+  @Post("events")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.create" })
+  @ApiOperation({ summary: "Create a persisted Pulse event" })
+  async createEventForCalendar(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: CreateEventRequestDto,
+  ) {
+    return this.pulse.createEvent(organization.organizationId, dto.calendarId, user.userId, dto);
+  }
+
+  @Post("meetings")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.create" })
+  @ApiOperation({ summary: "Create a meeting and its private Connect conversation" })
+  async createMeeting(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: CreateMeetingDto,
+  ) {
+    return this.pulse.createMeeting(organization.organizationId, dto.calendarId, user.userId, dto);
+  }
+
   @Post("calendars/:calendarId/events")
   @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.create" })
   @ApiOperation({ summary: "Create an event; creator becomes organizer (accepted), others pending" })
@@ -126,6 +163,17 @@ export class PulseController {
     return this.pulse.deleteEvent(organization.organizationId, eventId, user.userId);
   }
 
+  @Post("events/:eventId/cancel")
+  @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.update" })
+  @ApiOperation({ summary: "Cancel an event or meeting; cancelled items remain visible in the schedule" })
+  async cancelEvent(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("eventId") eventId: string,
+  ) {
+    return this.pulse.cancelEvent(organization.organizationId, eventId, user.userId);
+  }
+
   // ---------------- RSVP & attendees ----------------
 
   @Post("events/:eventId/rsvp")
@@ -137,7 +185,7 @@ export class PulseController {
     @Param("eventId") eventId: string,
     @Body() dto: RsvpDto,
   ) {
-    return this.pulse.rsvp(organization.organizationId, eventId, user.userId, dto.status);
+    return this.pulse.rsvp(organization.organizationId, eventId, user.userId, dto.status, dto.declineReason);
   }
 
   @Post("events/:eventId/attendees")
