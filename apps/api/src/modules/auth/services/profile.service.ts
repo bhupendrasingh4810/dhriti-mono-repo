@@ -1,5 +1,12 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { User, UserAuth, UserProfile } from "@prisma/client";
+import {
+  Prisma,
+  type HrmsEmployee,
+  type User,
+  type UserAuth,
+  type UserProfile,
+  type UserHRMSProfile,
+} from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
@@ -8,9 +15,13 @@ import { ErrorCode } from "../../../common/errors/error-codes";
 import type { UpdateProfileDto, UserProfileResponse } from "../dto/profile.dto";
 import type { OrganizationResponse } from "../dto/auth-response.dto";
 
-type UserWithRelations = User & { auth: UserAuth | null; profile: UserProfile | null };
+type UserWithRelations = User & {
+  auth: UserAuth | null;
+  profile: UserProfile | null;
+  hrmsProfile: UserHRMSProfile | null;
+};
 
-const withAuthAndProfile = { auth: true, profile: true } as const;
+const withAuthAndProfile = { auth: true, profile: true, hrmsProfile: true } as const;
 
 @Injectable()
 export class ProfileService {
@@ -25,7 +36,12 @@ export class ProfileService {
   async getProfile(userId: string): Promise<UserProfileResponse> {
     const user = await this.requireUser(userId);
     const organization = await this.resolveDefaultOrganization(userId);
-    return this.toProfile(user, organization);
+    const employee = organization
+      ? await this.prisma.hrmsEmployee.findFirst({
+          where: { userId, organizationId: organization.id, deletedAt: null },
+        })
+      : null;
+    return this.toProfile(user, organization, employee);
   }
 
   /**
@@ -36,30 +52,94 @@ export class ProfileService {
    * @throws AppError if the user does not exist.
    */
   async updateProfile(userId: string, dto: UpdateProfileDto): Promise<UserProfileResponse> {
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
-        ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
-      },
-    });
-    if (dto.timezone !== undefined || dto.locale !== undefined) {
-      await this.prisma.userProfile.upsert({
-        where: { userId },
-        create: {
-          userId,
-          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
-          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
-        },
-        update: {
-          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
-          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
-        },
-      });
+    const currentUser = await this.requireUser(userId);
+    if (dto.dateOfBirth && dto.dateOfBirth > new Date().toISOString().slice(0, 10)) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Date of birth cannot be in the future", HttpStatus.BAD_REQUEST);
     }
-    const user = await this.requireUser(userId);
-    const organization = await this.resolveDefaultOrganization(userId);
-    return this.toProfile(user, organization);
+    const changingPhone = dto.isdCode !== undefined || dto.mobileNumber !== undefined;
+    if (
+      changingPhone &&
+      !(
+        (dto.isdCode === null && dto.mobileNumber === null) ||
+        (dto.isdCode && dto.mobileNumber && `${dto.isdCode}${dto.mobileNumber}`.length <= 16)
+      )
+    ) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Provide both ISD code and mobile number (at most 15 digits), or clear both",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const profileData = {
+      ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
+      ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
+      ...(dto.prefix !== undefined ? { prefix: dto.prefix?.trim() || null } : {}),
+      ...(dto.workEmail !== undefined ? { workEmail: dto.workEmail } : {}),
+      ...(dto.alternateEmail !== undefined ? { alternateEmail: dto.alternateEmail } : {}),
+      ...(changingPhone
+        ? {
+            isdCode: dto.isdCode,
+            phoneNumber: dto.isdCode && dto.mobileNumber ? `${dto.isdCode}${dto.mobileNumber}` : null,
+          }
+        : {}),
+    };
+    const phoneNumberChanged = changingPhone && profileData.phoneNumber !== (currentUser.profile?.phoneNumber ?? null);
+    const personalData = {
+      ...(dto.dateOfBirth !== undefined
+        ? {
+            dateOfBirth: dto.dateOfBirth ? new Date(`${dto.dateOfBirth}T00:00:00.000Z`) : null,
+            ...(dto.dateOfBirth !== (currentUser.hrmsProfile?.dateOfBirth?.toISOString().slice(0, 10) ?? null)
+              ? { dateOfBirthVerified: false }
+              : {}),
+          }
+        : {}),
+      ...(dto.gender !== undefined ? { gender: dto.gender?.trim() || null } : {}),
+      ...(dto.bloodGroup !== undefined ? { bloodGroup: dto.bloodGroup } : {}),
+      ...(dto.nationality !== undefined ? { nationality: dto.nationality?.trim() || null } : {}),
+    };
+    try {
+      await this.prisma.$transaction(async (transaction) => {
+        if (dto.name !== undefined || dto.avatarUrl !== undefined) {
+          await transaction.user.update({
+            where: { id: userId },
+            data: {
+              ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
+              ...(dto.avatarUrl !== undefined ? { avatarUrl: dto.avatarUrl } : {}),
+            },
+          });
+        }
+        if (Object.keys(profileData).length) {
+          await transaction.userProfile.upsert({
+            where: { userId },
+            create: { userId, ...profileData },
+            update: profileData,
+          });
+        }
+        if (phoneNumberChanged) {
+          await transaction.userAuth.updateMany({
+            where: { userId },
+            data: { phoneVerifiedAt: null },
+          });
+        }
+        if (Object.keys(personalData).length) {
+          await transaction.userHRMSProfile.upsert({
+            where: { userId },
+            create: { userId, ...personalData },
+            update: personalData,
+          });
+        }
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new AppError(
+          ErrorCode.VALIDATION_FAILED,
+          "This mobile number is already registered",
+          HttpStatus.CONFLICT,
+        );
+      }
+      throw error;
+    }
+    return this.getProfile(userId);
   }
 
   // ------------------------------------------------------------------
@@ -103,7 +183,11 @@ export class ProfileService {
    * @param organization The organization associated with the user, or null if none.
    * @returns The user profile response.
    */
-  private toProfile(user: UserWithRelations, organization: OrganizationResponse | null): UserProfileResponse {
+  private toProfile(
+    user: UserWithRelations,
+    organization: OrganizationResponse | null,
+    employee: HrmsEmployee | null,
+  ): UserProfileResponse {
     return {
       id: user.id,
       email: user.email,
@@ -119,6 +203,26 @@ export class ProfileService {
       lastLoginAt: user.auth?.lastLoginAt ? user.auth.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
       isPlatformUser: user.isPlatformUser,
+      prefix: user.profile?.prefix ?? null,
+      workEmail: user.profile?.workEmail ?? null,
+      alternateEmail: user.profile?.alternateEmail ?? null,
+      isdCode: user.profile?.isdCode ?? null,
+      mobileNumber: user.profile?.phoneNumber
+        ? user.profile.isdCode && user.profile.phoneNumber.startsWith(user.profile.isdCode)
+          ? user.profile.phoneNumber.slice(user.profile.isdCode.length)
+          : user.profile.phoneNumber
+        : null,
+      dateOfBirth: user.hrmsProfile?.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+      gender: user.hrmsProfile?.gender ?? null,
+      bloodGroup: user.hrmsProfile?.bloodGroup ?? null,
+      nationality: user.hrmsProfile?.nationality ?? null,
+      employeeCode: employee?.employeeNumber ?? null,
+      biometricId: employee?.biometricId ?? null,
+      dateOfJoining: employee?.startDate?.toISOString().slice(0, 10) ?? null,
+      retirementDate: employee?.retirementDate?.toISOString().slice(0, 10) ?? null,
+      dateOfResignation: employee?.resignationDate?.toISOString().slice(0, 10) ?? null,
+      employmentType: employee?.employmentType ?? null,
+      employmentStatus: employee?.status ?? null,
     };
   }
 }

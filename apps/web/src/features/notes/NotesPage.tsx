@@ -13,6 +13,7 @@ import { NotesConfirmDialog } from "./components/NotesConfirmDialog";
 import { NotesShareDialog } from "./components/NotesShareDialog";
 import { NotesFolderItem } from "./components/NotesFolderItem";
 import { NotesCard, NotesCardActions } from "./components/NotesCard";
+import { NotesFolderListSkeleton, NotesGridSkeleton } from "./components/NotesSkeleton";
 
 type Selection = { folder: NoteFolder | null; label: string };
 
@@ -22,6 +23,7 @@ export default function NotesPage() {
   const [tree, setTree] = useState<NotesTree | null>(null);
   const [selection, setSelection] = useState<Selection>({ folder: null, label: "All notes" });
   const [notes, setNotes] = useState<Note[]>([]);
+  const [loadedNotesKey, setLoadedNotesKey] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [editorNote, setEditorNote] = useState<Note | null>(null);
   const [editorMode, setEditorMode] = useState<"view" | "edit">("view");
@@ -51,14 +53,31 @@ export default function NotesPage() {
     void loadTree();
   }, [organizationId]);
 
+  const notesKey = `${organizationId ?? ""}:${selection.folder?.id ?? "all"}`;
+
   useEffect(() => {
     if (!organizationId) return;
+    let active = true;
+    const key = notesKey;
     void notesService
       .listNotes(organizationId, selection.folder?.id)
-      .then(setNotes)
-      .catch((reason) => setError(reason instanceof Error ? reason.message : "Unable to load notes."));
-  }, [organizationId, selection.folder?.id]);
+      .then((nextNotes) => {
+        if (active) setNotes(nextNotes);
+      })
+      .catch((reason) => {
+        if (active) setError(reason instanceof Error ? reason.message : "Unable to load notes.");
+      })
+      .finally(() => {
+        if (active) setLoadedNotesKey(key);
+      });
+    return () => {
+      active = false;
+    };
+  }, [organizationId, selection.folder?.id, notesKey]);
 
+  const notesLoading = loadedNotesKey !== notesKey;
+  const treeLoading = tree === null && !error;
+  const showEmptyState = notes.length === 0 && !error && !notesLoading;
   const canCreateNote = Boolean(selection.folder || selection.label === "All notes");
   async function createFolder() {
     if (!folderName.trim() || !organizationId) return;
@@ -144,6 +163,7 @@ export default function NotesPage() {
             </button>
           </div>
           <div className="mt-2 space-y-1">
+            {treeLoading ? <NotesFolderListSkeleton /> : null}
             {tree?.folders.map((folder) => (
               <NotesFolderItem
                 key={folder.id}
@@ -181,29 +201,31 @@ export default function NotesPage() {
         ) : null}
         <div
           className={
-            notes.length === 0 && !error
+            showEmptyState
               ? "flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-5"
               : "grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 overflow-y-auto p-5"
           }
         >
-          {notes.map((note) => (
-            <NotesCard
-              key={note.id}
-              note={note}
-              onView={() => {
-                setEditorMode("view");
-                setEditorNote(note);
-              }}
-              onMenuOpen={(event) => {
-                setMenuNote(note);
-                setNoteMenuAnchor(event.currentTarget);
-              }}
-              onDragStart={() => setDraggedNoteId(note.id)}
-              onDragEnd={() => setDraggedNoteId(null)}
-              menuOpen={menuNote?.id === note.id}
-            />
-          ))}
-          {notes.length === 0 && !error ? <NotesEmptyState /> : null}
+          {notesLoading && !error ? <NotesGridSkeleton /> : null}
+          {!notesLoading &&
+            notes.map((note) => (
+              <NotesCard
+                key={note.id}
+                note={note}
+                onView={() => {
+                  setEditorMode("view");
+                  setEditorNote(note);
+                }}
+                onMenuOpen={(event) => {
+                  setMenuNote(note);
+                  setNoteMenuAnchor(event.currentTarget);
+                }}
+                onDragStart={() => setDraggedNoteId(note.id)}
+                onDragEnd={() => setDraggedNoteId(null)}
+                menuOpen={menuNote?.id === note.id}
+              />
+            ))}
+          {showEmptyState ? <NotesEmptyState /> : null}
         </div>
       </section>
       <ConnectCascadingMenu

@@ -15,24 +15,10 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 
 import { getCurrentUser, logout as logoutSession } from "@/services/auth.service";
-
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  isPlatformUser: boolean;
-  organization: Organization | null;
-}
+import type { AuthUserResponse } from "@/types/response";
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUserResponse | null;
   loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -74,7 +60,7 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUserResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 

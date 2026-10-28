@@ -79,4 +79,101 @@ describe("HrmsEmployeeService", () => {
       expect.objectContaining({ action: "hrms.employee.created", organizationId: "org-a", actorUserId: "actor-a" }),
     );
   });
+
+  it("records biometric and lifecycle dates on employee creation", async () => {
+    const prisma = makePrisma();
+    prisma.organizationMember.findFirst.mockResolvedValue({ id: "member-a" });
+    prisma.hrmsEmployee.create.mockResolvedValue({ id: "employee-a" });
+    const service = new HrmsEmployeeService(prisma as never, makeAudit() as never);
+    await service.create("org-a", "actor-a", {
+      userId: "user-a",
+      employeeNumber: "EMP-42",
+      status: "ACTIVE",
+      employmentType: "FULL_TIME",
+      startDate: "2026-01-01",
+      biometricId: " BIO-42 ",
+      retirementDate: "2055-06-30",
+      resignationDate: "2026-10-28",
+    });
+    expect(prisma.hrmsEmployee.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          employeeNumber: "EMP-42",
+          biometricId: "BIO-42",
+          retirementDate: new Date("2055-06-30T00:00:00Z"),
+          resignationDate: new Date("2026-10-28T00:00:00Z"),
+        }),
+      }),
+    );
+  });
+
+  it("updates and clears HR-managed fields and audits the operation", async () => {
+    const prisma = makePrisma();
+    const audit = makeAudit();
+    prisma.hrmsEmployee.findFirst.mockResolvedValue({
+      id: "employee-a",
+      startDate: new Date("2026-01-01T00:00:00Z"),
+      retirementDate: new Date("2055-06-30T00:00:00Z"),
+      resignationDate: null,
+    });
+    prisma.hrmsEmployee.update.mockResolvedValue({ id: "employee-a" });
+    const service = new HrmsEmployeeService(prisma as never, audit as never);
+    await service.update("org-a", "employee-a", "actor-a", {
+      employeeNumber: " EMP-43 ",
+      biometricId: null,
+      retirementDate: null,
+      resignationDate: "2026-10-28",
+    });
+    expect(prisma.hrmsEmployee.update).toHaveBeenCalledWith({
+      where: { id: "employee-a" },
+      data: {
+        employeeNumber: "EMP-43",
+        biometricId: null,
+        retirementDate: null,
+        resignationDate: new Date("2026-10-28T00:00:00Z"),
+      },
+    });
+    expect(audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "hrms.employee.updated",
+        organizationId: "org-a",
+        actorUserId: "actor-a",
+      }),
+    );
+  });
+
+  it.each([{ retirementDate: "2025-01-01" }, { resignationDate: "2025-01-01" }])(
+    "rejects lifecycle dates before joining: %j",
+    async (input) => {
+      const prisma = makePrisma();
+      prisma.hrmsEmployee.findFirst.mockResolvedValue({
+        id: "employee-a",
+        startDate: new Date("2026-01-01T00:00:00Z"),
+        retirementDate: null,
+        resignationDate: null,
+      });
+      const service = new HrmsEmployeeService(prisma as never, makeAudit() as never);
+      await expect(service.update("org-a", "employee-a", "actor-a", input)).rejects.toMatchObject({
+        code: ErrorCode.VALIDATION_FAILED,
+        status: 400,
+      });
+      expect(prisma.hrmsEmployee.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it("checks existing lifecycle dates when the joining date is moved", async () => {
+    const prisma = makePrisma();
+    prisma.hrmsEmployee.findFirst.mockResolvedValue({
+      id: "employee-a",
+      startDate: new Date("2026-01-01T00:00:00Z"),
+      retirementDate: null,
+      resignationDate: new Date("2026-06-01T00:00:00Z"),
+    });
+    const service = new HrmsEmployeeService(prisma as never, makeAudit() as never);
+    await expect(service.update("org-a", "employee-a", "actor-a", { startDate: "2026-07-01" })).rejects.toMatchObject({
+      code: ErrorCode.VALIDATION_FAILED,
+      status: 400,
+    });
+    expect(prisma.hrmsEmployee.update).not.toHaveBeenCalled();
+  });
 });

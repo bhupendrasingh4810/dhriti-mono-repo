@@ -1,4 +1,5 @@
 import { ApiRequestError, apiRequest } from "@/services/http.service";
+import type { UpdatePersonalProfileInput } from "@dhriti/types";
 
 import type {
   RegisterInput,
@@ -14,6 +15,7 @@ import type {
   CurrentUserResponse,
   AuthUserResponse,
   AuthTokensResponse,
+  UserProfileResponse,
 } from "@/types/response";
 
 export async function login(input: Pick<RegisterInput, "email" | "password">): Promise<LoginResponse> {
@@ -154,5 +156,21 @@ export async function uploadProfilePhoto(file: File): Promise<AuthUserResponse> 
       body: formData,
     },
     "Unable to upload profile photo.",
+  );
+}
+
+export async function getUserProfile(): Promise<UserProfileResponse> {
+  return apiRequest<UserProfileResponse>("/api/auth/profile", { cache: "no-store" }, "Unable to load your profile.");
+}
+
+export async function updateUserProfile(input: UpdatePersonalProfileInput): Promise<UserProfileResponse> {
+  return apiRequest<UserProfileResponse>(
+    "/api/auth/profile",
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    "Unable to save your profile.",
   );
 }

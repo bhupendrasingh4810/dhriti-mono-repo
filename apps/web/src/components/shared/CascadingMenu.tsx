@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import type { ConnectCascadingMenuItem, SubmenuState } from "@/types/menu.types";
 
 type ConnectCascadingMenuProps = {
@@ -120,7 +121,7 @@ export function ConnectCascadingMenu({
     });
   }
 
-  function handleItemClick(level: number, item: ConnectCascadingMenuItem, event: MouseEvent<HTMLButtonElement>) {
+  function handleItemClick(level: number, item: ConnectCascadingMenuItem, event: MouseEvent<HTMLElement>) {
     const itemElement = event.currentTarget;
     const hasChildren = Boolean(item.children?.length) && level < safeMaxDepth - 1;
 
@@ -285,7 +286,18 @@ export function ConnectCascadingMenu({
               {item.sectionTitle}
             </p>
           ) : null}
-          <button
+          {item.href && !hasChildren ? (
+            <Link
+              href={item.href}
+              role="menuitem"
+              onClick={(event) => handleItemClick(level, item, event)}
+              className="flex w-full min-w-0 cursor-pointer items-center gap-2 px-3.5 py-2.5 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+            >
+              <span className={`flex shrink-0 items-center justify-center ${item.descriptionLayout === "stacked" ? "h-8 w-8" : "w-5"} ${item.selected ? "text-emerald-600" : "text-slate-500"}`}>{item.selected ? <CheckIcon /> : item.icon}</span>
+              <span className={`flex min-w-0 flex-1 ${item.descriptionLayout === "stacked" ? "flex-col items-start gap-0.5" : "items-center gap-2"}`}><span className={`min-w-0 truncate text-sm ${item.danger ? "text-red-600" : "text-slate-900"} ${item.selected ? "font-bold" : "font-medium"}`}>{item.label}</span>{item.description ? <span className="min-w-0 truncate text-xs text-slate-500">{item.description}</span> : null}</span>
+              {item.endAdornment}
+            </Link>
+          ) : <button
             type="button"
             role="menuitem"
             aria-haspopup={hasChildren ? "menu" : undefined}
@@ -312,7 +324,7 @@ export function ConnectCascadingMenu({
             </span>
             {item.endAdornment ??
               (hasChildren ? selectedSubmenu?.openLeft ? <ChevronLeftIcon /> : <ChevronRightIcon /> : null)}
-          </button>
+          </button>}
         </div>
       );
     }

@@ -12,6 +12,7 @@ export type ConnectCascadingMenuItem = {
   sectionTitle?: string;
   dividerAbove?: boolean;
   endAdornment?: ReactNode;
+  href?: string;
 
   /**
     

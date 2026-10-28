@@ -61,7 +61,9 @@ export class ProfileController {
 
   @Patch("me")
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Update profile: name, avatar, timezone, locale" })
+  @ApiOperation({
+    summary: "Update personal details, contact information and regional preferences (employment fields are HR-managed)",
+  })
   async updateMe(@CurrentUser() user: AuthenticatedUser, @Body() dto: UpdateProfileDto): Promise<UserProfileResponse> {
     return this.profileService.updateProfile(user.userId, dto);
   }

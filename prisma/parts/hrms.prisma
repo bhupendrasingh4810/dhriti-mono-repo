@@ -7,6 +7,9 @@ model HrmsEmployee {
   employmentType String?
   startDate      DateTime?
   endDate        DateTime?
+  biometricId    String?  @map("biometric_id") @db.VarChar(64)
+  retirementDate DateTime? @map("retirement_date") @db.Date
+  resignationDate DateTime? @map("resignation_date") @db.Date
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   deletedAt      DateTime?

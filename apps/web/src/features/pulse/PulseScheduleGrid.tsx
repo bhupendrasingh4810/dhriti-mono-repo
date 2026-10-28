@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { pulseService, type PulseEventDetail, type PulseSchedule, type PulseScheduleEvent } from "@/services/pulse.service";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { PulseSchedulingDialog } from "./PulseSchedulingDialog";
+import { PulseAllDaySkeleton, PulseEventDetailsSkeleton, PulseTimedEventsSkeleton } from "./PulseScheduleSkeleton";
 
 type PulseScheduleGridProps = {
   nowLinePosition: number;
@@ -19,6 +20,7 @@ type PulseScheduleGridProps = {
   showBirthdays: boolean;
   showHolidays: boolean;
   schedule: PulseSchedule | null;
+  loading: boolean;
   onScheduleChanged: () => void;
 };
 
@@ -32,6 +34,7 @@ export function PulseScheduleGrid({
   showBirthdays,
   showHolidays,
   schedule,
+  loading,
   onScheduleChanged,
 }: PulseScheduleGridProps) {
   const { user } = useAuth();
@@ -71,7 +74,9 @@ export function PulseScheduleGrid({
     label: "Event details",
     content: selectedEvent
       ? <EventDetails event={selectedEvent} currentUserId={user?.id ?? ""} onChange={setSelectedEvent} onEdit={() => { setEventToEdit(selectedEvent); closeEventDetails(); }} onScheduleChanged={onScheduleChanged} />
-      : <p role="alert" className="p-4 text-sm text-error">{detailError || "Loading event details..."}</p>,
+      : detailError
+        ? <p role="alert" className="p-4 text-sm text-error">{detailError}</p>
+        : <PulseEventDetailsSkeleton />,
   }];
   return (
     <div className="relative min-h-0 flex-1 overflow-auto">
@@ -100,13 +105,14 @@ export function PulseScheduleGrid({
         </div>
         {workingWeek.map((date, index) => {
           const dateKey = getDateKey(date);
-          const holidays = showHolidays ? (schedule?.holidays ?? []).filter((holiday) => isOnDate(holiday.startDate, dateKey)) : [];
-          const birthdayEntries = showBirthdays ? (schedule?.birthdays ?? []).filter((birthday) => isOnDate(birthday.date, dateKey)) : [];
-          const leaves = (schedule?.leaves ?? []).filter((leave) => isOnDate(leave.startDate, dateKey));
-          const allDayEvents = calendarEvents.filter((event) => event.isAllDay && isOnDate(event.startsAt, dateKey));
+          const holidays = showHolidays && !loading ? (schedule?.holidays ?? []).filter((holiday) => isOnDate(holiday.startDate, dateKey)) : [];
+          const birthdayEntries = showBirthdays && !loading ? (schedule?.birthdays ?? []).filter((birthday) => isOnDate(birthday.date, dateKey)) : [];
+          const leaves = loading ? [] : (schedule?.leaves ?? []).filter((leave) => isOnDate(leave.startDate, dateKey));
+          const allDayEvents = loading ? [] : calendarEvents.filter((event) => event.isAllDay && isOnDate(event.startsAt, dateKey));
 
           return (
             <div key={`all-day-${date.toISOString()}`} className={`border-b border-border p-0.75 ${index < workingWeek.length - 1 ? "border-r" : ""}`}>
+              {loading ? <PulseAllDaySkeleton dayIndex={index} /> : null}
               {holidays.map((holiday) => (
                 <p key={holiday.id} className="border border-warning bg-warning/10 px-1 py-0.65 text-[11px] font-bold text-warning">
                   {holiday.title}
@@ -147,7 +153,10 @@ export function PulseScheduleGrid({
           </div>
         ))}
 
-        {timedEvents.map(({ event, day, startsAt, endsAt, column, columnCount }) => {
+        {loading ? (
+          <PulseTimedEventsSkeleton dayCount={workingWeek.length} slotCount={timeSlots.length} headerOffset={56 + 44} hourHeight={80} />
+        ) : null}
+        {(loading ? [] : timedEvents).map(({ event, day, startsAt, endsAt, column, columnCount }) => {
           const top = 56 + 44 + ((startsAt.getHours() + startsAt.getMinutes() / 60) - workingDayStartHour) * 80;
           const durationHours = (endsAt.valueOf() - startsAt.valueOf()) / 3_600_000;
           const columnOffset = day * columnCount + column;

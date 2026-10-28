@@ -142,6 +142,10 @@ model UserProfile {
   
   // Personal
   phoneNumber           String?     @unique
+  prefix                String?     @db.VarChar(20)
+  workEmail             String?     @map("work_email") @db.VarChar(254)
+  alternateEmail        String?     @map("alternate_email") @db.VarChar(254)
+  isdCode               String?     @map("isd_code") @db.VarChar(5)
   firstName             String?     @map("first_name")
   lastName              String?     @map("last_name")
   avatarThumbnailUrl    String?     @map("avatar_thumbnail_url")
@@ -187,6 +191,7 @@ model UserHRMSProfile {
   
   // Personal Details
   dateOfBirth           DateTime?   @map("date_of_birth")
+  bloodGroup            String?     @map("blood_group") @db.VarChar(3)
   dateOfBirthVerified   Boolean     @default(false) @map("dob_verified")
   gender                String?     @map("gender")
   pronouns              String?     @map("pronouns")

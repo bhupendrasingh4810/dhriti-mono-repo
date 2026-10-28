@@ -25,6 +25,7 @@ export default function PulseCalendar() {
   const [schedule, setSchedule] = useState<PulseSchedule | null>(null);
   const [scheduleError, setScheduleError] = useState("");
   const [scheduleVersion, setScheduleVersion] = useState(0);
+  const [loadedScheduleKey, setLoadedScheduleKey] = useState<string | null>(null);
   const workingDays = useMemo(() => getWorkingDays(pulseOrganizationPolicy.workingDays), []);
   const timeSlots = getTimeSlots(pulseOrganizationPolicy.workingHours);
   const workingWeek = useMemo(
@@ -37,6 +38,8 @@ export default function PulseCalendar() {
 
     return Math.min(Math.max((hours - startHour) * 80, 0), (endHour - startHour) * 80);
   }, [currentTime]);
+  const scheduleKey = `${organizationId ?? ""}:${workingWeek[0]?.toDateString() ?? ""}`;
+  const scheduleLoading = loadedScheduleKey !== scheduleKey;
   const currentDayIndex = workingWeek.findIndex((date) => isSameCalendarDay(date, currentTime));
 
   useEffect(() => {
@@ -62,18 +65,20 @@ export default function PulseCalendar() {
         if (!cancelled) {
           setSchedule(result);
           setScheduleError("");
+          setLoadedScheduleKey(scheduleKey);
         }
       })
       .catch((error: unknown) => {
         if (!cancelled) {
           setScheduleError(error instanceof Error ? error.message : "Unable to load the schedule.");
+          setLoadedScheduleKey(scheduleKey);
         }
       });
 
     return () => {
       cancelled = true;
     };
-  }, [organizationId, scheduleVersion, workingWeek]);
+  }, [organizationId, scheduleKey, scheduleVersion, workingWeek]);
 
   function shiftWeek(amount: number) {
     setSelectedDate((current) => {
@@ -118,6 +123,7 @@ export default function PulseCalendar() {
             showBirthdays={visibleCalendars.includes("Birthdays")}
             showHolidays={visibleCalendars.includes("Holidays")}
             schedule={schedule}
+            loading={scheduleLoading}
             onScheduleChanged={() => setScheduleVersion((version) => version + 1)}
           />
         </section>
