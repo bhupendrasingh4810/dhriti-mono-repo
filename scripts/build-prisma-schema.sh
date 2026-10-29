@@ -35,7 +35,7 @@ datasource db {
 EOF
 
   # Append all parts in a stable, readable order.
-  for part in address blog connect content enums hrms nexus notes notification organization platform webhook work-os; do
+  for part in address blog connect content enums hrms nexus notes notification organization platform settings webhook work-os; do
     file="$PARTS_DIR/$part.prisma"
     if [ ! -f "$file" ]; then
       echo "❌ Missing schema part: $file" >&2

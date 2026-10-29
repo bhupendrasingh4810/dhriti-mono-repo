@@ -15,6 +15,7 @@ import { PulseCalendarToolbar } from "./PulseCalendarToolbar";
 import { PulseScheduleGrid } from "./PulseScheduleGrid";
 import { useAuth } from "@/hooks/use-auth";
 import { pulseService, type PulseSchedule } from "@/services/pulse.service";
+import { useAppSettingsState } from "@/features/settings/use-app-settings";
 
 export default function PulseCalendar() {
   const { user } = useAuth();
@@ -26,18 +27,21 @@ export default function PulseCalendar() {
   const [scheduleError, setScheduleError] = useState("");
   const [scheduleVersion, setScheduleVersion] = useState(0);
   const [loadedScheduleKey, setLoadedScheduleKey] = useState<string | null>(null);
-  const workingDays = useMemo(() => getWorkingDays(pulseOrganizationPolicy.workingDays), []);
-  const timeSlots = getTimeSlots(pulseOrganizationPolicy.workingHours);
-  const workingWeek = useMemo(
-    () => getWorkingWeek(selectedDate, workingDays),
-    [selectedDate, workingDays],
+  const pulseSettingsState = useAppSettingsState("pulse");
+  const pulsePolicy = pulseSettingsState.data;
+  const configuredWorkingDays = pulsePolicy?.workingDays;
+  const workingDays = useMemo(
+    () => (configuredWorkingDays?.length ? configuredWorkingDays : getWorkingDays(pulseOrganizationPolicy.workingDays)),
+    [configuredWorkingDays],
   );
+  const startHour = pulsePolicy?.workingHoursStart ?? pulseOrganizationPolicy.workingHours.startHour;
+  const endHour = pulsePolicy?.workingHoursEnd ?? pulseOrganizationPolicy.workingHours.endHour;
+  const timeSlots = getTimeSlots({ startHour, endHour });
+  const workingWeek = useMemo(() => getWorkingWeek(selectedDate, workingDays), [selectedDate, workingDays]);
   const nowLinePosition = useMemo(() => {
     const hours = currentTime.getHours() + currentTime.getMinutes() / 60;
-    const { startHour, endHour } = pulseOrganizationPolicy.workingHours;
-
     return Math.min(Math.max((hours - startHour) * 80, 0), (endHour - startHour) * 80);
-  }, [currentTime]);
+  }, [currentTime, endHour, startHour]);
   const scheduleKey = `${organizationId ?? ""}:${workingWeek[0]?.toDateString() ?? ""}`;
   const scheduleLoading = loadedScheduleKey !== scheduleKey;
   const currentDayIndex = workingWeek.findIndex((date) => isSameCalendarDay(date, currentTime));
@@ -60,7 +64,8 @@ export default function PulseCalendar() {
     to.setHours(0, 0, 0, 0);
     let cancelled = false;
 
-    void pulseService.getSchedule(organizationId, { from: from.toISOString(), to: to.toISOString() })
+    void pulseService
+      .getSchedule(organizationId, { from: from.toISOString(), to: to.toISOString() })
       .then((result) => {
         if (!cancelled) {
           setSchedule(result);
@@ -112,13 +117,25 @@ export default function PulseCalendar() {
             onNextWeek={() => shiftWeek(1)}
             onScheduleCreated={() => setScheduleVersion((version) => version + 1)}
           />
-          {scheduleError ? <p role="alert" className="border-b border-error/30 bg-error/10 px-5 py-2 text-sm text-error">{scheduleError}</p> : null}
+          {pulseSettingsState.error ? (
+            <p role="alert" className="border-b border-error/30 bg-error/10 px-5 py-2 text-sm text-error">
+              Pulse settings could not be loaded.{" "}
+              <button type="button" className="underline" onClick={pulseSettingsState.retry}>
+                Retry
+              </button>
+            </p>
+          ) : null}
+          {scheduleError ? (
+            <p role="alert" className="border-b border-error/30 bg-error/10 px-5 py-2 text-sm text-error">
+              {scheduleError}
+            </p>
+          ) : null}
           <PulseScheduleGrid
             nowLinePosition={nowLinePosition}
             workingWeek={workingWeek}
             currentDayIndex={currentDayIndex}
             timeSlots={timeSlots}
-            workingDayStartHour={pulseOrganizationPolicy.workingHours.startHour}
+            workingDayStartHour={startHour}
             showCalendarEvents={visibleCalendars.includes("Calendar")}
             showBirthdays={visibleCalendars.includes("Birthdays")}
             showHolidays={visibleCalendars.includes("Holidays")}

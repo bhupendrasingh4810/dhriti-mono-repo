@@ -9,6 +9,7 @@ const meta = {
     open: true,
     title: "Archive conversation?",
     children: "Archived conversations remain available in the archive.",
+    onClose: () => undefined,
     primaryActionLabel: "Archive",
     secondaryActionLabel: "Cancel",
   },
@@ -40,5 +41,29 @@ export const LongContent: Story = {
     children:
       "Choose how workspace activity is delivered. Changes apply to all new activity, while existing notification settings remain available in each conversation.",
     primaryActionLabel: "Save preferences",
+  },
+};
+
+export const DisabledAction: Story = {
+  args: {
+    primaryActionLabel: "Confirm",
+    primaryActionDisabled: true,
+  },
+};
+
+export const RetentionConfirmation: Story = {
+  args: {
+    title: "Confirm retention change",
+    primaryButtonColor: "error",
+    primaryActionLabel: "Confirm and save",
+    children:
+      "Shortening or enabling message or recording retention may permanently delete older data. Changes have a 24-hour grace period before they take effect. Retention cleanup runs only when the server-side feature flag is enabled.",
+  },
+};
+
+export const NarrowViewport: Story = {
+  args: {
+    maxWidth: "xs",
+    fullWidth: true,
   },
 };

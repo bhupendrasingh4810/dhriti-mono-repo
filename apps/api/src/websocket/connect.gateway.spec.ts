@@ -32,7 +32,12 @@ describe("ConnectGateway", () => {
     recordCallActivity: jest.Mock;
   };
   let presence: { setStatus: jest.Mock };
-  let publisher: { callStatus: jest.Mock; callInvitation: jest.Mock; callAvailable: jest.Mock; presenceChanged: jest.Mock };
+  let publisher: {
+    callStatus: jest.Mock;
+    callInvitation: jest.Mock;
+    callAvailable: jest.Mock;
+    presenceChanged: jest.Mock;
+  };
   let socket: Socket;
   let gateway: ConnectGateway;
 
@@ -74,7 +79,12 @@ describe("ConnectGateway", () => {
   it("authorizes before joining an organization-scoped channel room", async () => {
     const result = await gateway.joinChannel(socket, { channelId });
 
-    expect(connect.getChannelForMember).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, true);
+    expect(connect.getChannelForMember).toHaveBeenCalledWith(
+      principal.organizationId,
+      channelId,
+      principal.userId,
+      true,
+    );
     expect(socket.join).toHaveBeenCalledWith(`connect:org:${principal.organizationId}:channel:${channelId}`);
     expect(result).toEqual({ ok: true });
   });
@@ -160,18 +170,16 @@ describe("ConnectGateway", () => {
       "call:cancelled",
       { channelId, callId: "missed-call-id", action: "miss", userId: principal.userId },
     );
-    expect(connect.recordCallActivity).toHaveBeenCalledWith(
-      principal.organizationId,
-      channelId,
-      principal.userId,
-      { callId: "missed-call-id", action: "missed", durationSeconds: undefined },
-    );
-    expect(connect.updateCallRecord).toHaveBeenCalledWith(
-      principal.organizationId,
-      channelId,
-      principal.userId,
-      { callId: "missed-call-id", action: "miss", durationSeconds: undefined },
-    );
+    expect(connect.recordCallActivity).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, {
+      callId: "missed-call-id",
+      action: "missed",
+      durationSeconds: undefined,
+    });
+    expect(connect.updateCallRecord).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, {
+      callId: "missed-call-id",
+      action: "miss",
+      durationSeconds: undefined,
+    });
     expect(result).toEqual({ ok: true });
   });
 
@@ -184,12 +192,12 @@ describe("ConnectGateway", () => {
       action: "miss",
     });
 
-    expect(connect.recordCallActivity).toHaveBeenCalledWith(
-      principal.organizationId,
-      channelId,
-      principal.userId,
-      { callId: "missed-video-call-id", action: "missed", type: "video", durationSeconds: undefined },
-    );
+    expect(connect.recordCallActivity).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, {
+      callId: "missed-video-call-id",
+      action: "missed",
+      type: "video",
+      durationSeconds: undefined,
+    });
   });
 
   it("publishes a shared-call departure without ending the call while participants remain", async () => {
@@ -252,17 +260,12 @@ describe("ConnectGateway", () => {
         participantIds: [principal.userId, "recipient-id"],
       }),
     );
-    expect(connect.createCallRecord).toHaveBeenCalledWith(
-      principal.organizationId,
-      channelId,
-      principal.userId,
-      {
-        callId: "call-id",
-        scope: "one-to-one",
-        type: "audio",
-        participantIds: [principal.userId, "recipient-id"],
-      },
-    );
+    expect(connect.createCallRecord).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, {
+      callId: "call-id",
+      scope: "one-to-one",
+      type: "audio",
+      participantIds: [principal.userId, "recipient-id"],
+    });
     expect(result).toEqual({ ok: true });
   });
 });

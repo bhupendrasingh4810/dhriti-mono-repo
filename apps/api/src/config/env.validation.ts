@@ -48,6 +48,10 @@ export const envSchema = z
     CONNECT_SOCKET_TYPING_TTL_SECONDS: z.coerce.number().int().positive().default(6),
     CONNECT_SOCKET_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().positive().default(60),
     CONNECT_SOCKET_RATE_LIMIT_MAX_EVENTS: z.coerce.number().int().positive().default(120),
+    CONNECT_RETENTION_ENABLED: z
+      .enum(["true", "false"])
+      .transform((value) => value === "true")
+      .default("false"),
     ENTITLEMENT_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(60),
     WEBHOOK_DELIVERY_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(10),
     WEBHOOK_DELIVERY_MAX_ATTEMPTS: z.coerce.number().int().positive().default(3),

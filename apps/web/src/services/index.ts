@@ -1,4 +1,5 @@
 export * from "./admin.service";
+export * from "./app-settings.service";
 export * from "./atlas.service";
 export * from "./auth.service";
 export * from "./cadence.service";

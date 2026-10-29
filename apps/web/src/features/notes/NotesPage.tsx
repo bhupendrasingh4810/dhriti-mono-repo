@@ -1,10 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileText, FolderPlus, Plus } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FileText, FolderPlus, Inbox, Plus } from "lucide-react";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { useAuth } from "@/hooks/use-auth";
-import { notesService, type Note, type NoteFolder, type NotesTree } from "@/services/notes.service";
+import {
+  notesService,
+  type Note,
+  type NoteFolder,
+  type NotesTree,
+  type NoteAccessRequest,
+  type NoteAccessRole,
+} from "@/services/notes.service";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { NotesEmptyState } from "./components/NotesEmptyState";
 import { NotesEditorDialog } from "./components/NotesEditorDialog";
@@ -14,8 +21,11 @@ import { NotesShareDialog } from "./components/NotesShareDialog";
 import { NotesFolderItem } from "./components/NotesFolderItem";
 import { NotesCard, NotesCardActions } from "./components/NotesCard";
 import { NotesFolderListSkeleton, NotesGridSkeleton } from "./components/NotesSkeleton";
+import { canDeleteNote } from "./note-access";
+import { reorderNotes } from "./note-order";
+import { countIncomingRequests, NotesRequestsPanel } from "./components/NotesRequestsPanel";
 
-type Selection = { folder: NoteFolder | null; label: string };
+type Selection = { folder: NoteFolder | null; label: string; requests?: boolean };
 
 export default function NotesPage() {
   const { user } = useAuth();
@@ -27,6 +37,7 @@ export default function NotesPage() {
   const [error, setError] = useState("");
   const [editorNote, setEditorNote] = useState<Note | null>(null);
   const [editorMode, setEditorMode] = useState<"view" | "edit">("view");
+  const [requestedRole, setRequestedRole] = useState<NoteAccessRole | undefined>();
   const [creatingNote, setCreatingNote] = useState(false);
   const [draggedNoteId, setDraggedNoteId] = useState<string | null>(null);
   const [folderMenuAnchor, setFolderMenuAnchor] = useState<HTMLButtonElement | null>(null);
@@ -37,8 +48,39 @@ export default function NotesPage() {
   const [shareNote, setShareNote] = useState<Note | null>(null);
   const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
   const [deletingNote, setDeletingNote] = useState(false);
+  const [reordering, setReordering] = useState(false);
+  const [requestCount, setRequestCount] = useState<{ key: string; count: number } | null>(null);
+  const [requestCountError, setRequestCountError] = useState("");
+  const requestUserId = user?.id;
+  const requestCountKey = `${organizationId ?? ""}:${requestUserId ?? ""}`;
+  const onRequestsLoaded = useCallback(
+    (requests: NoteAccessRequest[]) => {
+      if (!requestUserId) return;
+      setRequestCount({ key: requestCountKey, count: countIncomingRequests(requests, requestUserId) });
+      setRequestCountError("");
+    },
+    [requestCountKey, requestUserId],
+  );
+  useEffect(() => {
+    if (!organizationId || selection.requests) return;
+    let active = true;
+    void notesService
+      .listRequests(organizationId)
+      .then((requests) => {
+        if (active) onRequestsLoaded(requests);
+      })
+      .catch((reason) => {
+        if (active)
+          setRequestCountError(reason instanceof Error ? reason.message : "Unable to load incoming request count.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [organizationId, selection.requests, onRequestsLoaded]);
+  const orderSaving = useRef(false);
+  const activeView = useRef("");
 
-  const loadTree = async () => {
+  const loadTree = useCallback(async () => {
     if (!organizationId) return;
     try {
       const nextTree = await notesService.getTree(organizationId);
@@ -47,16 +89,78 @@ export default function NotesPage() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Unable to load Notes.");
     }
-  };
-
-  useEffect(() => {
-    void loadTree();
   }, [organizationId]);
 
-  const notesKey = `${organizationId ?? ""}:${selection.folder?.id ?? "all"}`;
+  useEffect(() => {
+    void Promise.resolve().then(loadTree);
+  }, [loadTree]);
+
+  const notesKey = `${organizationId ?? ""}:${selection.requests ? "requests" : (selection.folder?.id ?? "all")}`;
+  useEffect(() => {
+    activeView.current = notesKey;
+  }, [notesKey]);
+
+  async function reorderNote(sourceId: string, targetId: string) {
+    if (!organizationId || orderSaving.current || notesLoading) return;
+    const ordered = reorderNotes(notes, sourceId, targetId);
+    if (ordered === notes) return;
+    const previous = notes;
+    const view = notesKey;
+    orderSaving.current = true;
+    setReordering(true);
+    setError("");
+    setNotes(ordered);
+    setDraggedNoteId(null);
+    try {
+      await notesService.saveOrder(
+        organizationId,
+        ordered.map((note) => note.id),
+        selection.folder?.id,
+      );
+    } catch (reason) {
+      if (activeView.current === view) {
+        const previousPositions = new Map(previous.map((note, index) => [note.id, index]));
+        setNotes((current) =>
+          [...current].sort(
+            (left, right) =>
+              (previousPositions.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
+              (previousPositions.get(right.id) ?? Number.MAX_SAFE_INTEGER),
+          ),
+        );
+        setError(reason instanceof Error ? reason.message : "Unable to save note order.");
+      }
+    } finally {
+      orderSaving.current = false;
+      setReordering(false);
+    }
+  }
+
+  function removeInaccessibleNote(noteId: string) {
+    setEditorNote(null);
+    setCreatingNote(false);
+    setNotes((current) => current.filter((note) => note.id !== noteId));
+    setTree((current) =>
+      current
+        ? {
+            ...current,
+            homeNotes: current.homeNotes.filter((note) => note.id !== noteId),
+            sharedNotes: current.sharedNotes.filter((note) => note.id !== noteId),
+            folders: current.folders.map((folder) => ({
+              ...folder,
+              notes: folder.notes?.filter((note) => note.id !== noteId),
+            })),
+          }
+        : null,
+    );
+    setMenuNote(null);
+    setNoteMenuAnchor(null);
+    setError(
+      "This note is no longer available for editing. Your changes were not saved, and the note was removed from this list.",
+    );
+  }
 
   useEffect(() => {
-    if (!organizationId) return;
+    if (!organizationId || selection.requests) return;
     let active = true;
     const key = notesKey;
     void notesService
@@ -73,12 +177,12 @@ export default function NotesPage() {
     return () => {
       active = false;
     };
-  }, [organizationId, selection.folder?.id, notesKey]);
+  }, [organizationId, selection.folder?.id, selection.requests, notesKey]);
 
   const notesLoading = loadedNotesKey !== notesKey;
   const treeLoading = tree === null && !error;
   const showEmptyState = notes.length === 0 && !error && !notesLoading;
-  const canCreateNote = Boolean(selection.folder || selection.label === "All notes");
+  const canCreateNote = !selection.requests && Boolean(selection.folder || selection.label === "All notes");
   async function createFolder() {
     if (!folderName.trim() || !organizationId) return;
     setCreatingFolder(true);
@@ -118,6 +222,10 @@ export default function NotesPage() {
 
   async function deleteNote() {
     if (!organizationId || !noteToDelete) return;
+    if (!canDeleteNote(noteToDelete, user?.id)) {
+      setError("You do not have permission to delete this note.");
+      return;
+    }
     setDeletingNote(true);
     try {
       await notesService.deleteNote(organizationId, noteToDelete.id);
@@ -147,10 +255,30 @@ export default function NotesPage() {
               event.preventDefault();
               if (draggedNoteId) void moveNote(draggedNoteId, null);
             }}
-            className={`flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium ${selection.folder === null ? "bg-surface text-brand" : "hover:bg-brand-dark"}`}
+            className={`flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium ${selection.folder === null && !selection.requests ? "bg-surface text-brand" : "hover:bg-brand-dark"}`}
           >
             <FileText size={16} /> All notes
           </button>
+          <button
+            type="button"
+            onClick={() => setSelection({ folder: null, label: "Requests", requests: true })}
+            className={`mt-2 flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium ${selection.requests ? "bg-surface text-brand" : "hover:bg-brand-dark"}`}
+          >
+            <Inbox size={16} /> Requests
+            {requestCount?.key === requestCountKey ? (
+              <span
+                className="ml-auto rounded-full bg-brand-muted px-2 py-0.5 text-xs font-semibold text-brand"
+                aria-label={`${requestCount.count} pending incoming requests`}
+              >
+                {requestCount.count}
+              </span>
+            ) : null}
+          </button>
+          {requestCountError ? (
+            <p role="alert" className="px-3 py-2 text-xs text-text-inverse">
+              {requestCountError}
+            </p>
+          ) : null}
           <div className="mt-4 flex items-center justify-between px-3 text-xs font-semibold uppercase tracking-wide text-text-inverse">
             <span>Folders</span>
             <button
@@ -183,6 +311,11 @@ export default function NotesPage() {
           <div>
             <p className="text-sm text-text-secondary">Notes</p>
             <h2 className="text-xl font-bold">{selection.label}</h2>
+            {!selection.requests ? (
+              <p className="text-xs text-text-secondary" role="status">
+                {reordering ? "Saving your note order..." : "Drag notes to reorder, or use the arrow buttons."}
+              </p>
+            ) : null}
           </div>
           {canCreateNote ? (
             <button
@@ -199,34 +332,53 @@ export default function NotesPage() {
             {error}
           </p>
         ) : null}
-        <div
-          className={
-            showEmptyState
-              ? "flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-5"
-              : "grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 overflow-y-auto p-5"
-          }
-        >
-          {notesLoading && !error ? <NotesGridSkeleton /> : null}
-          {!notesLoading &&
-            notes.map((note) => (
-              <NotesCard
-                key={note.id}
-                note={note}
-                onView={() => {
-                  setEditorMode("view");
-                  setEditorNote(note);
-                }}
-                onMenuOpen={(event) => {
-                  setMenuNote(note);
-                  setNoteMenuAnchor(event.currentTarget);
-                }}
-                onDragStart={() => setDraggedNoteId(note.id)}
-                onDragEnd={() => setDraggedNoteId(null)}
-                menuOpen={menuNote?.id === note.id}
-              />
-            ))}
-          {showEmptyState ? <NotesEmptyState /> : null}
-        </div>
+        {selection.requests && organizationId && user ? (
+          <NotesRequestsPanel
+            key={organizationId}
+            organizationId={organizationId}
+            userId={user.id}
+            onChanged={loadTree}
+            onRequestsLoaded={onRequestsLoaded}
+          />
+        ) : (
+          <div
+            className={
+              showEmptyState
+                ? "flex min-h-0 flex-1 items-center justify-center overflow-y-auto p-5"
+                : "grid min-h-0 flex-1 auto-rows-min grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4 overflow-y-auto p-5"
+            }
+          >
+            {notesLoading && !error ? <NotesGridSkeleton /> : null}
+            {!notesLoading &&
+              notes.map((note, index) => (
+                <NotesCard
+                  key={note.id}
+                  note={note}
+                  onView={() => {
+                    setRequestedRole(undefined);
+                    setEditorMode("view");
+                    setEditorNote(note);
+                  }}
+                  onMenuOpen={(event) => {
+                    setMenuNote(note);
+                    setNoteMenuAnchor(event.currentTarget);
+                  }}
+                  onDragStart={() => setDraggedNoteId(note.id)}
+                  onDragEnd={() => setDraggedNoteId(null)}
+                  reordering={reordering}
+                  onDropNote={() => {
+                    if (draggedNoteId) void reorderNote(draggedNoteId, note.id);
+                  }}
+                  onMoveUp={index > 0 ? () => void reorderNote(note.id, notes[index - 1].id) : undefined}
+                  onMoveDown={
+                    index < notes.length - 1 ? () => void reorderNote(note.id, notes[index + 1].id) : undefined
+                  }
+                  menuOpen={menuNote?.id === note.id}
+                />
+              ))}
+            {showEmptyState ? <NotesEmptyState /> : null}
+          </div>
+        )}
       </section>
       <ConnectCascadingMenu
         anchorEl={folderMenuAnchor}
@@ -269,7 +421,10 @@ export default function NotesPage() {
                   label: "Note actions",
                   content: (
                     <NotesCardActions
+                      note={menuNote}
+                      userId={user?.id}
                       onEdit={() => {
+                        setRequestedRole(undefined);
                         setEditorMode("edit");
                         setEditorNote(menuNote);
                         setNoteMenuAnchor(null);
@@ -282,6 +437,13 @@ export default function NotesPage() {
                         setNoteToDelete(menuNote);
                         setNoteMenuAnchor(null);
                       }}
+                      onRequestAccess={(role) => {
+                        setRequestedRole(role);
+                        setEditorMode("view");
+                        setEditorNote(menuNote);
+                        setNoteMenuAnchor(null);
+                        setMenuNote(null);
+                      }}
                     />
                   ),
                 },
@@ -293,8 +455,10 @@ export default function NotesPage() {
       {editorNote || creatingNote ? (
         <NotesEditorDialog
           note={editorNote}
+          initialRequestedRole={requestedRole}
           folderId={selection.folder?.id ?? null}
           viewOnly={Boolean(editorNote && editorMode === "view")}
+          onAccessLost={removeInaccessibleNote}
           onClose={() => {
             setEditorNote(null);
             setCreatingNote(false);
@@ -309,6 +473,7 @@ export default function NotesPage() {
       ) : null}
       {shareNote ? (
         <NotesShareDialog
+          key={shareNote.id}
           note={shareNote}
           organizationId={organizationId ?? ""}
           onClose={() => setShareNote(null)}

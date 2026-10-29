@@ -27,20 +27,8 @@ import { CallSidePanel } from "./CallSidePanel";
 import { CallAction, DeviceSelect, ParticipantAvatar, RemoteVideoTarget } from "./CallUi";
 import { IncomingCallCard, useRingtone } from "./IncomingCallCard";
 import { OutgoingCallSurface } from "./OutgoingCallSurface";
-const CALL_BACKGROUNDS = [
-  {
-    name: "Bright office",
-    url: "https://images.unsplash.com/photo-1497215728101-856f4ea42174?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200",
-  },
-  {
-    name: "Meeting room",
-    url: "https://images.unsplash.com/photo-1706074740295-d7a79c079562?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200",
-  },
-  {
-    name: "Window office",
-    url: "https://images.unsplash.com/photo-1698653223247-09aaf01166fc?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=80&w=1200",
-  },
-];
+import { CALL_BACKGROUNDS } from "../call-backgrounds";
+import { useAppSettings, useConnectUserSettings } from "@/features/settings/use-app-settings";
 
 interface CallSurfaceProps {
   call: ActiveCall;
@@ -78,13 +66,29 @@ export function CallSurface({
   const [elapsed, setElapsed] = useState(0);
   const [joinedAt, setJoinedAt] = useState<number | null>(null);
   const [sessionType, setSessionType] = useState<SessionType>("call");
-  const [background, setBackground] = useState("None");
+  const [backgroundChoice, setBackground] = useState<string | null>(null);
   const [customBackground, setCustomBackground] = useState("");
   const [devicesOpen, setDevicesOpen] = useState(true);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [microphoneId, setMicrophoneId] = useState("");
-  const [speakerId, setSpeakerId] = useState("");
-  const [cameraId, setCameraId] = useState("");
+  const [microphoneChoice, setMicrophoneId] = useState<string | null>(null);
+  const [speakerChoice, setSpeakerId] = useState<string | null>(null);
+  const [cameraChoice, setCameraId] = useState<string | null>(null);
+  const connectPolicy = useAppSettings("connect");
+  const userPreferences = useConnectUserSettings();
+  const captionsAllowed = connectPolicy?.captionsEnabled ?? true;
+  const transcriptionAllowed = connectPolicy?.transcriptionEnabled ?? true;
+  const recordingAllowed = connectPolicy?.recordingEnabled ?? true;
+  const customBackgroundsAllowed = connectPolicy?.customBackgroundsEnabled ?? true;
+  const microphoneId = microphoneChoice ?? userPreferences?.preferredMicrophoneId ?? "";
+  const speakerId = speakerChoice ?? userPreferences?.preferredSpeakerId ?? "";
+  const cameraId = cameraChoice ?? userPreferences?.preferredCameraId ?? "";
+  const preferredBackground = userPreferences?.preferredBackground;
+  const background =
+    backgroundChoice ??
+    (preferredBackground &&
+    (preferredBackground === "Blur" || CALL_BACKGROUNDS.some((item) => item.name === preferredBackground))
+      ? preferredBackground
+      : "None");
   const [permissions, setPermissions] = useState({ mic: "Checking", camera: "Checking" });
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unavailable">(
     "default",
@@ -819,7 +823,7 @@ export function CallSurface({
                     <h3 className="text-sm font-semibold">Background and effects</h3>
                     <p className="mt-1 text-xs text-text-secondary">Your selection is kept for this call.</p>
                   </div>
-                  <label className="cursor-pointer rounded-md border border-border-strong px-3 py-2 text-xs font-semibold hover:bg-surface-raised">
+                  {customBackgroundsAllowed ? <label className="cursor-pointer rounded-md border border-border-strong px-3 py-2 text-xs font-semibold hover:bg-surface-raised">
                     Upload image
                     <input
                       type="file"
@@ -833,14 +837,14 @@ export function CallSurface({
                         setBackground("Custom");
                       }}
                     />
-                  </label>
+                  </label> : null}
                 </div>
                 <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
                   {[
                     "None",
                     "Blur",
                     ...CALL_BACKGROUNDS.map((item) => item.name),
-                    ...(customBackground ? ["Custom"] : []),
+                    ...(customBackground && customBackgroundsAllowed ? ["Custom"] : []),
                   ].map((item) => {
                     const image =
                       item === "Custom" ? customBackground : CALL_BACKGROUNDS.find((entry) => entry.name === item)?.url;
@@ -1153,27 +1157,27 @@ export function CallSurface({
                 >
                   Settings
                 </button>
-                <button
+                {captionsAllowed ? <button
                   type="button"
                   onClick={() => setCaptions((value) => !value)}
                   className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary"
                 >
                   {captions ? "Turn captions off" : "Live captions"}
-                </button>
-                <button
+                </button> : null}
+                {transcriptionAllowed ? <button
                   type="button"
                   onClick={() => setTranscription((value) => !value)}
                   className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary"
                 >
                   {transcription ? "Stop transcription" : "Transcription"}
-                </button>
-                <button
+                </button> : null}
+                {recordingAllowed ? <button
                   type="button"
                   onClick={() => setRecordConfirmOpen(true)}
                   className="rounded px-2 py-1 text-text-secondary hover:bg-surface-raised hover:text-text-primary"
                 >
                   {call.callerId === viewerId ? "Request recording" : "Consent to recording"}
-                </button>
+                </button> : null}
                 <button
                   type="button"
                   onClick={() => onHoldChange(!onHold)}

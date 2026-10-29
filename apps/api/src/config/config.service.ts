@@ -47,6 +47,10 @@ export class ApiConfigService {
     return this.config.get("REDIS_URL", { infer: true });
   }
 
+  get connectRetentionEnabled(): boolean {
+    return this.config.get("CONNECT_RETENTION_ENABLED", { infer: true });
+  }
+
   get jwtAccessSecret(): string {
     return this.config.get("JWT_ACCESS_SECRET", { infer: true });
   }

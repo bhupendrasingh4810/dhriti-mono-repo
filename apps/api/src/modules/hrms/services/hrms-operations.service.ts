@@ -17,12 +17,15 @@ import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { PrismaService } from "../../../database/prisma.service";
 import { AuditService } from "../../audit/audit.service";
+import { AppSettingsService } from "../../settings/app-settings.service";
+import { resolveAppSettings, settingsPolicyError } from "../../settings/settings.defaults";
 
 @Injectable()
 export class HrmsOperationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly settings: AppSettingsService,
   ) {}
 
   listLeave(organizationId: string) {
@@ -46,6 +49,16 @@ export class HrmsOperationsService {
   ) {
     await this.requireActiveEmployee(organizationId, input.employeeId);
     this.assertDateRange(input.startDate, input.endDate);
+    const policy = await resolveAppSettings(this.settings, "hrms", organizationId);
+    if (!policy.allowHalfDayLeave && !Number.isInteger(input.totalDays)) {
+      throw settingsPolicyError("Half-day leave is not allowed in this organization", HttpStatus.BAD_REQUEST);
+    }
+    if (policy.maxLeaveRequestDays !== null && input.totalDays > policy.maxLeaveRequestDays) {
+      throw settingsPolicyError(
+        `Leave requests are limited to ${policy.maxLeaveRequestDays} days`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     const record = await this.prisma.hrmsLeaveRequest.create({
       data: {
         organizationId,
@@ -181,7 +194,9 @@ export class HrmsOperationsService {
           grossSalary: input.grossSalary,
           totalDeductions: input.totalDeductions,
           netPay: input.netPay,
-          currency: input.currency?.trim().toUpperCase() ?? "USD",
+          currency:
+            input.currency?.trim().toUpperCase() ??
+            (await resolveAppSettings(this.settings, "hrms", organizationId)).defaultPayrollCurrency,
           notes: this.clean(input.notes),
         },
       })
@@ -235,6 +250,17 @@ export class HrmsOperationsService {
     if (input.startDate && input.endDate) {
       this.assertDateRange(input.startDate, input.endDate);
     }
+    const { maxTrainingParticipants } = await resolveAppSettings(this.settings, "hrms", organizationId);
+    if (
+      maxTrainingParticipants !== null &&
+      input.maxParticipants !== undefined &&
+      input.maxParticipants > maxTrainingParticipants
+    ) {
+      throw settingsPolicyError(
+        `Trainings are limited to ${maxTrainingParticipants} participants`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     const record = await this.prisma.hrmsTraining.create({
       data: {
         organizationId,
@@ -244,7 +270,7 @@ export class HrmsOperationsService {
         startDate: input.startDate ? new Date(input.startDate) : null,
         endDate: input.endDate ? new Date(input.endDate) : null,
         status: input.status,
-        maxParticipants: input.maxParticipants,
+        maxParticipants: input.maxParticipants ?? maxTrainingParticipants ?? undefined,
       },
     });
     return this.auditRecord("hrms.training.created", organizationId, actorUserId, record.id).then(() => record);

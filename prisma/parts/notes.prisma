@@ -1,3 +1,19 @@
+model NoteViewOrder {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  userId         String   @db.Uuid
+  scope          String
+  noteIds        String[] @db.Uuid
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, scope])
+  @@index([userId])
+  @@map("note_view_orders")
+}
+
 model NoteFolder {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @db.Uuid
@@ -21,6 +37,7 @@ model Note {
   folderId       String?  @db.Uuid
   title          String
   content        String   @default("") @db.Text
+  isPublic       Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -28,6 +45,7 @@ model Note {
   owner        User             @relation("NoteOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   folder       NoteFolder?      @relation(fields: [folderId], references: [id], onDelete: Cascade)
   permissions  NotePermission[]
+  accessRequests NoteAccessRequest[]
 
   @@index([organizationId, ownerId, folderId])
   @@map("notes")
@@ -39,6 +57,7 @@ model NotePermission {
   userId    String   @db.Uuid
   canEdit   Boolean  @default(false)
   canDelete Boolean  @default(false)
+  isOwner   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -48,4 +67,23 @@ model NotePermission {
   @@unique([noteId, userId])
   @@index([userId])
   @@map("note_permissions")
+}
+
+model NoteAccessRequest {
+  id            String   @id @default(uuid()) @db.Uuid
+  noteId        String   @db.Uuid
+  userId        String   @db.Uuid
+  requestedRole String
+  grantedRole   String?
+  status        String   @default("PENDING")
+  reviewedById  String?  @db.Uuid
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation("NoteAccessRequester", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId])
+  @@index([userId, status])
+  @@map("note_access_requests")
 }

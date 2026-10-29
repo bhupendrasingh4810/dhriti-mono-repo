@@ -6,6 +6,8 @@ import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
 import { AiProviderService, type ChatMessage } from "./ai-provider.service";
+import { AppSettingsService } from "../settings/app-settings.service";
+import { resolveAppSettings } from "../settings/settings.defaults";
 
 export interface ExtractedTask {
   title: string;
@@ -22,6 +24,7 @@ export class NexusService {
     private readonly prisma: PrismaService,
     private readonly ai: AiProviderService,
     private readonly audit: AuditService,
+    private readonly settings: AppSettingsService,
   ) {}
 
   // ---------------- Summarization ----------------
@@ -32,10 +35,11 @@ export class NexusService {
     channelId: string,
     messageLimit = 50,
   ): Promise<NexusTask> {
+    const { summarizationMessageLimit } = await resolveAppSettings(this.settings, "nexus", organizationId);
     const messages = await this.prisma.message.findMany({
       where: { organizationId, channelId, deletedAt: null },
       orderBy: { createdAt: "desc" },
-      take: Math.min(messageLimit, 200),
+      take: Math.min(messageLimit, summarizationMessageLimit),
       include: { author: { select: { name: true } } },
     });
 
@@ -133,10 +137,11 @@ export class NexusService {
           },
         });
 
+    const { conversationHistoryLimit } = await resolveAppSettings(this.settings, "nexus", organizationId);
     const history = await this.prisma.nexusMessage.findMany({
       where: { conversationId: conversation.id },
       orderBy: { createdAt: "asc" },
-      take: 40,
+      take: conversationHistoryLimit,
     });
 
     const messages: ChatMessage[] = [
@@ -172,18 +177,20 @@ export class NexusService {
   }
 
   async listConversations(organizationId: string, userId: string): Promise<NexusConversation[]> {
+    const { conversationListSize } = await resolveAppSettings(this.settings, "nexus", organizationId);
     return this.prisma.nexusConversation.findMany({
       where: { organizationId, userId },
       orderBy: { updatedAt: "desc" },
-      take: 50,
+      take: conversationListSize,
     });
   }
 
   async listTasks(organizationId: string, userId: string): Promise<NexusTask[]> {
+    const { taskListSize } = await resolveAppSettings(this.settings, "nexus", organizationId);
     return this.prisma.nexusTask.findMany({
       where: { organizationId, requestedById: userId },
       orderBy: { createdAt: "desc" },
-      take: 50,
+      take: taskListSize,
     });
   }
 

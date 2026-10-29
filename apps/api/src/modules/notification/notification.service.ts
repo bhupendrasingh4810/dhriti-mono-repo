@@ -11,6 +11,13 @@ export interface NotificationPage {
   unreadCount: number;
 }
 
+export interface NotificationDeliveryOptions {
+  /** Email delivery when the user has no saved preference for the type. Defaults to true. */
+  emailByDefault?: boolean;
+  /** Skip email regardless of preference, e.g. during the recipient's quiet hours. */
+  suppressEmail?: boolean;
+}
+
 @Injectable()
 export class NotificationService {
   constructor(
@@ -20,7 +27,11 @@ export class NotificationService {
 
   // ---------------- In-app notifications ----------------
 
-  async create(organizationId: string, dto: CreateNotificationDto): Promise<Notification> {
+  async create(
+    organizationId: string,
+    dto: CreateNotificationDto,
+    options: NotificationDeliveryOptions = {},
+  ): Promise<Notification> {
     const preference = await this.prisma.notificationPreference.findUnique({
       where: {
         userId_organizationId_type: {
@@ -34,7 +45,7 @@ export class NotificationService {
     // Respect per-type channel preferences (in-app default on).
     if (preference && !preference.inApp) {
       // Skip in-app delivery; still send email if enabled.
-      if (preference.email) {
+      if (preference.email && !options.suppressEmail) {
         await this.sendEmail(organizationId, dto);
       }
       // Return a non-persisted placeholder shape for the caller.
@@ -64,7 +75,8 @@ export class NotificationService {
       },
     });
 
-    if (preference?.email !== false) {
+    const emailEnabled = preference ? preference.email : (options.emailByDefault ?? true);
+    if (emailEnabled && !options.suppressEmail) {
       await this.sendEmail(organizationId, dto);
     }
     return notification;

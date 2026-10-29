@@ -1,0 +1,239 @@
+// ==================== Application settings ====================
+// One row per organization per app. Column defaults mirror the behaviour that
+// was previously hardcoded, so a missing row behaves exactly like before.
+
+enum ConnectPinPolicy {
+  EVERYONE
+  CHANNEL_ADMINS
+}
+
+enum ConnectRecordingPolicy {
+  CALL_INITIATOR
+  ANY_PARTICIPANT
+}
+
+enum ConnectSendShortcut {
+  ENTER
+  MOD_ENTER
+}
+
+model ConnectOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  // General
+  directMessagesEnabled Boolean  @default(true)
+  groupChatsEnabled     Boolean  @default(true)
+  maxGroupChatMembers   Int      @default(100)
+  defaultChannelIds     String[] @default([]) @db.Uuid
+
+  // Channels
+  defaultChannelVisibility ChannelVisibility @default(PUBLIC)
+  defaultChannelLayout     ChannelLayout     @default(THREADS)
+  channelNamePrefixes      String[]          @default([])
+
+  // Messaging and moderation
+  messageEditingEnabled       Boolean          @default(true)
+  messageEditWindowMinutes    Int?
+  messageDeletionEnabled      Boolean          @default(true)
+  messageDeleteWindowMinutes  Int?
+  messageRestoreWindowMinutes Int?
+  adminsCanDeleteAnyMessage   Boolean          @default(true)
+  pinPolicy                   ConnectPinPolicy @default(EVERYONE)
+  maxMessageLength            Int              @default(10000)
+  allowedReactions            String[]         @default([])
+  pollsEnabled                Boolean          @default(true)
+
+  // Files and media
+  maxImageSizeKb    Int      @default(2048)
+  allowedImageTypes String[] @default(["image/jpeg", "image/png", "image/webp", "image/gif"])
+
+  // Calls and meetings
+  callsEnabled             Boolean                @default(true)
+  videoCallsEnabled        Boolean                @default(true)
+  callRingTimeoutSeconds   Int                    @default(30)
+  recordingEnabled         Boolean                @default(true)
+  recordingPolicy          ConnectRecordingPolicy @default(CALL_INITIATOR)
+  recordingRequiresConsent Boolean                @default(true)
+  recordingRetentionDays   Int?
+  retentionEnabledAt       DateTime?
+  captionsEnabled          Boolean                @default(true)
+  transcriptionEnabled     Boolean                @default(true)
+  customBackgroundsEnabled Boolean                @default(true)
+
+  // Presence and realtime
+  typingIndicatorsEnabled Boolean @default(true)
+
+  // Data and compliance
+  messageRetentionDays Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("connect_organization_settings")
+}
+
+model ConnectUserSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  userId         String @db.Uuid
+
+  manualStatus          String?   @db.VarChar(20)
+  manualStatusExpiresAt DateTime?
+
+  quietHoursEnabled Boolean @default(false)
+  quietHoursStart   String  @default("22:00") @db.VarChar(5)
+  quietHoursEnd     String  @default("08:00") @db.VarChar(5)
+  quietHoursDays    Int[]   @default([1, 2, 3, 4, 5, 6, 7])
+
+  sendShortcut                ConnectSendShortcut @default(ENTER)
+  desktopNotificationsEnabled Boolean             @default(true)
+  soundsEnabled               Boolean             @default(true)
+  callRingtoneEnabled         Boolean             @default(true)
+
+  preferredMicrophoneId String? @db.VarChar(255)
+  preferredCameraId     String? @db.VarChar(255)
+  preferredSpeakerId    String? @db.VarChar(255)
+  preferredBackground   String? @db.VarChar(64)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([manualStatusExpiresAt])
+  @@map("connect_user_settings")
+}
+
+model FlowOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  defaultIssueStatus        IssueStatus   @default(BACKLOG)
+  defaultIssuePriority      IssuePriority @default(NONE)
+  issueListPageSize         Int           @default(100)
+  maxIssueEstimate          Int           @default(1000)
+  maxIssueDescriptionLength Int           @default(20000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("flow_organization_settings")
+}
+
+model AtlasOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  pagesPublishedByDefault   Boolean @default(false)
+  maxPageHierarchyDepth     Int     @default(100)
+  maxPageContentLength      Int     @default(100000)
+  maxSpaceDescriptionLength Int     @default(1000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("atlas_organization_settings")
+}
+
+model NexusOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  conversationHistoryLimit  Int @default(40)
+  summarizationMessageLimit Int @default(200)
+  conversationListSize      Int @default(50)
+  taskListSize              Int @default(50)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("nexus_organization_settings")
+}
+
+model CadenceOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  anonymousFeedbackByDefault Boolean @default(true)
+  allowVoteChanges           Boolean @default(true)
+  maxCardContentLength       Int     @default(2000)
+  sessionListSize            Int     @default(100)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("cadence_organization_settings")
+}
+
+model PulseOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  // ISO weekdays: 1 = Monday ... 7 = Sunday.
+  workingDays               Int[]             @default([1, 2, 3, 4])
+  workingHoursStart         Int               @default(9)
+  workingHoursEnd           Int               @default(18)
+  defaultEventAvailability  EventAvailability @default(BUSY)
+  defaultEventPrivacy       EventPrivacy      @default(DEFAULT)
+  defaultReminderMinutes    Int?
+  onlineMeetingsEnabled     Boolean           @default(true)
+  maxMeetingAttendees       Int?
+  maxEventDurationMinutes   Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("pulse_organization_settings")
+}
+
+model NotesOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  sharingEnabled        Boolean @default(true)
+  defaultShareCanEdit   Boolean @default(false)
+  defaultShareCanDelete Boolean @default(false)
+  maxSharedUsersPerNote Int?
+  maxNoteContentLength  Int     @default(100000)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("notes_organization_settings")
+}
+
+model HrmsOrganizationSettings {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @unique @db.Uuid
+
+  maxLeaveRequestDays     Int?
+  allowHalfDayLeave       Boolean          @default(true)
+  defaultAttendanceStatus AttendanceStatus @default(PRESENT)
+  defaultPayrollCurrency  String           @default("USD") @db.VarChar(3)
+  maxTrainingParticipants Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("hrms_organization_settings")
+}

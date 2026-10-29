@@ -49,6 +49,10 @@ export class ConnectPresenceService {
     );
   }
 
+  async isConnected(organizationId: string, userId: string): Promise<boolean> {
+    return (await this.redis.raw.scard(this.socketKey(organizationId, userId))) > 0;
+  }
+
   async getStatus(organizationId: string, userId: string): Promise<PresenceStatus> {
     const status = await this.redis.raw.get(this.statusKey(organizationId, userId));
     return this.isPresenceStatus(status) ? status : "offline";
@@ -72,6 +76,13 @@ export class ConnectPresenceService {
   }
 
   private isPresenceStatus(value: string | null): value is PresenceStatus {
-    return value === "online" || value === "away" || value === "dnd" || value === "in-meeting" || value === "sharing" || value === "offline";
+    return (
+      value === "online" ||
+      value === "away" ||
+      value === "dnd" ||
+      value === "in-meeting" ||
+      value === "sharing" ||
+      value === "offline"
+    );
   }
 }

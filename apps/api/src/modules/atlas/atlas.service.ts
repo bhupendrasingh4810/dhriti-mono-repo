@@ -7,6 +7,8 @@ import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
 import type { CreateSpaceDto, UpdateSpaceDto } from "./dto/space.dto";
 import type { CreateCommentDto, CreatePageDto, UpdatePageDto } from "./dto/page.dto";
+import { AppSettingsService } from "../settings/app-settings.service";
+import { resolveAppSettings, settingsPolicyError } from "../settings/settings.defaults";
 
 export type PageWithMeta = AtlasPage & {
   author: Pick<User, "id" | "name" | "avatarUrl">;
@@ -22,7 +24,48 @@ export class AtlasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly settings: AppSettingsService,
   ) {}
+
+  private async policy(organizationId: string) {
+    return resolveAppSettings(this.settings, "atlas", organizationId);
+  }
+
+  private assertSpaceDescription(description: string | null | undefined, maxLength: number) {
+    if (description && description.length > maxLength) {
+      throw settingsPolicyError(`Space descriptions are limited to ${maxLength} characters`, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private assertPageContent(content: string | undefined, maxLength: number) {
+    if (content && content.length > maxLength) {
+      throw settingsPolicyError(`Pages are limited to ${maxLength} characters`, HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  /** Number of levels from the root to `pageId` (a root page has depth 1). */
+  private async pageDepth(organizationId: string, pageId: string): Promise<number> {
+    let current: string | null = pageId;
+    let depth = 0;
+    while (current && depth <= 100) {
+      const node: { parentId: string | null } | null = await this.prisma.atlasPage.findFirst({
+        where: { id: current, organizationId, deletedAt: null },
+        select: { parentId: true },
+      });
+      if (!node) {
+        break;
+      }
+      depth += 1;
+      current = node.parentId;
+    }
+    return depth;
+  }
+
+  private async assertParentDepth(organizationId: string, parentId: string, maxDepth: number) {
+    if ((await this.pageDepth(organizationId, parentId)) + 1 > maxDepth) {
+      throw settingsPolicyError(`Pages can be nested at most ${maxDepth} levels deep`, HttpStatus.BAD_REQUEST);
+    }
+  }
 
   // ---------------- Spaces ----------------
 
@@ -36,6 +79,7 @@ export class AtlasService {
   }
 
   async createSpace(organizationId: string, userId: string, dto: CreateSpaceDto): Promise<AtlasSpace> {
+    this.assertSpaceDescription(dto.description, (await this.policy(organizationId)).maxSpaceDescriptionLength);
     const keyTaken = await this.prisma.atlasSpace.findUnique({
       where: { organizationId_key: { organizationId, key: dto.key } },
       select: { id: true },
@@ -77,6 +121,7 @@ export class AtlasService {
 
   async updateSpace(organizationId: string, spaceId: string, userId: string, dto: UpdateSpaceDto): Promise<AtlasSpace> {
     await this.getSpace(organizationId, spaceId);
+    this.assertSpaceDescription(dto.description, (await this.policy(organizationId)).maxSpaceDescriptionLength);
     const updated = await this.prisma.atlasSpace.update({
       where: { id: spaceId },
       data: {
@@ -135,9 +180,12 @@ export class AtlasService {
 
   async createPage(organizationId: string, spaceId: string, userId: string, dto: CreatePageDto): Promise<PageWithMeta> {
     await this.getSpace(organizationId, spaceId);
+    const policy = await this.policy(organizationId);
+    this.assertPageContent(dto.content, policy.maxPageContentLength);
 
     if (dto.parentId) {
       await this.getPageInSpace(organizationId, spaceId, dto.parentId);
+      await this.assertParentDepth(organizationId, dto.parentId, policy.maxPageHierarchyDepth);
     }
 
     const page = await this.prisma.atlasPage.create({
@@ -148,7 +196,7 @@ export class AtlasService {
         title: dto.title.trim(),
         content: dto.content ?? "",
         position: dto.position ?? 0,
-        isPublished: dto.isPublished ?? false,
+        isPublished: dto.isPublished ?? policy.pagesPublishedByDefault,
         createdById: userId,
       },
       include: this.pageInclude,
@@ -177,6 +225,8 @@ export class AtlasService {
 
   async updatePage(organizationId: string, pageId: string, userId: string, dto: UpdatePageDto): Promise<PageWithMeta> {
     const existing = await this.getPage(organizationId, pageId);
+    const policy = await this.policy(organizationId);
+    this.assertPageContent(dto.content, policy.maxPageContentLength);
 
     if (dto.parentId && dto.parentId === pageId) {
       throw new AppError(ErrorCode.PAGE_CYCLE, "A page cannot be its own parent", HttpStatus.BAD_REQUEST);
@@ -185,6 +235,9 @@ export class AtlasService {
       const parent = await this.getPageInSpace(organizationId, existing.spaceId, dto.parentId);
       if (await this.isDescendant(organizationId, pageId, parent.id)) {
         throw new AppError(ErrorCode.PAGE_CYCLE, "Cannot move a page under its own descendant", HttpStatus.BAD_REQUEST);
+      }
+      if (dto.parentId !== existing.parentId) {
+        await this.assertParentDepth(organizationId, parent.id, policy.maxPageHierarchyDepth);
       }
     }
 

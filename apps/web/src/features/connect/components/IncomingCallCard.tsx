@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { Headset, MoreHorizontal, Phone, PhoneOff, Video, X } from "lucide-react";
 import { connectSidebarState, connectUsersById } from "@/mocks/connect";
 import type { ActiveCall } from "@/types/connect.types";
+import { useConnectUserSettings } from "@/features/settings/use-app-settings";
 
 type IncomingCallCardProps = {
   call: ActiveCall;
@@ -14,8 +15,11 @@ type IncomingCallCardProps = {
 };
 
 export function useRingtone(ringing: boolean, volume = 0.99) {
+  const userPreferences = useConnectUserSettings();
+  const ringtoneEnabled = userPreferences?.callRingtoneEnabled ?? true;
+
   useEffect(() => {
-    if (!ringing || typeof window === "undefined") return;
+    if (!ringing || !ringtoneEnabled || typeof window === "undefined") return;
 
     const audio = new Audio("/media/caller_tune.mp3");
     audio.loop = true;
@@ -28,7 +32,7 @@ export function useRingtone(ringing: boolean, volume = 0.99) {
       audio.pause();
       audio.currentTime = 0;
     };
-  }, [ringing, volume]);
+  }, [ringing, ringtoneEnabled, volume]);
 }
 
 export function IncomingCallCard({ call, onAccept, onDecline, onAcceptVideo, onMoreOptions }: IncomingCallCardProps) {

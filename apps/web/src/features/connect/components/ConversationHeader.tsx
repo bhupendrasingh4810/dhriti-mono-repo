@@ -3,6 +3,7 @@ import { BellOff, Copy, Ellipsis, ExternalLink, Info, LogOut, MessagesSquare, Ph
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import type { CallType, ConversationUser } from "@/types/connect.types";
 import { getUserInitials } from "@/features/connect/utils/user-initials";
+import { useAppSettings } from "@/features/settings/use-app-settings";
 
 type ConversationHeaderProps = {
   conversation: {
@@ -52,6 +53,9 @@ export function ConversationHeader({
   onLeaveGroup,
   actions,
 }: ConversationHeaderProps) {
+  const connectPolicy = useAppSettings("connect");
+  const callsEnabled = connectPolicy?.callsEnabled ?? true;
+  const videoCallsEnabled = connectPolicy?.videoCallsEnabled ?? true;
   const [participantsAnchor, setParticipantsAnchor] = useState<HTMLElement | null>(null);
   const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
   const [groupCreatorOpen, setGroupCreatorOpen] = useState(false);
@@ -178,7 +182,7 @@ export function ConversationHeader({
             <Users className="h-[18px] w-[18px]" />
             {conversation.participants.length}
           </button>
-          <button
+          {callsEnabled && videoCallsEnabled ? <button
             type="button"
             onClick={() => onStartCall("video")}
             aria-label="Start video call"
@@ -186,8 +190,8 @@ export function ConversationHeader({
             className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100"
           >
             <Video className="h-[22px] w-[22px]" />
-          </button>
-          <button
+          </button> : null}
+          {callsEnabled ? <button
             type="button"
             onClick={() => onStartCall("audio")}
             aria-label="Start audio call"
@@ -195,7 +199,7 @@ export function ConversationHeader({
             className="grid h-9 w-9 place-items-center rounded-md text-slate-500 hover:bg-slate-100"
           >
             <Phone className="h-[22px] w-[22px]" />
-          </button>
+          </button> : null}
           {conversation.type === "channel" ? <button
             type="button"
             onClick={(event) => setMoreAnchor(event.currentTarget)}

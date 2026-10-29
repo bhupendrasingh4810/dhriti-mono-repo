@@ -23,6 +23,9 @@ import {
   ListNotesQueryDto,
   UpdateNoteDto,
   UpdateNoteFolderDto,
+  UpdateNoteOrderDto,
+  CreateNoteAccessRequestDto,
+  ReviewNoteAccessRequestDto,
 } from "./dto/notes.dto";
 import { NotesService } from "./notes.service";
 
@@ -40,7 +43,7 @@ export class NotesController {
   }
 
   @Get()
-  @ApiOperation({ summary: "List notes in an owned/shared folder, or home notes when folderId is omitted" })
+  @ApiOperation({ summary: "List all accessible notes, optionally filtered by folderId" })
   list(
     @CurrentUser() user: AuthenticatedUser,
     @CurrentOrganization() organization: OrganizationContext,
@@ -88,6 +91,16 @@ export class NotesController {
     return this.notes.deleteFolder(organization.organizationId, user.userId, folderId, dto);
   }
 
+  @Patch("order")
+  @ApiOperation({ summary: "Save the current user's note ordering for All notes or one folder" })
+  saveOrder(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: UpdateNoteOrderDto,
+  ) {
+    return this.notes.saveOrder(organization.organizationId, user.userId, dto);
+  }
+
   @Post()
   createNote(
     @CurrentUser() user: AuthenticatedUser,
@@ -95,6 +108,31 @@ export class NotesController {
     @Body() dto: CreateNoteDto,
   ) {
     return this.notes.createNote(organization.organizationId, user.userId, dto);
+  }
+
+  @Get("requests")
+  listRequests(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
+    return this.notes.listRequests(organization.organizationId, user.userId);
+  }
+
+  @Post(":noteId/requests")
+  requestAccess(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("noteId") noteId: string,
+    @Body() dto: CreateNoteAccessRequestDto,
+  ) {
+    return this.notes.requestAccess(organization.organizationId, user.userId, noteId, dto);
+  }
+
+  @Patch("requests/:requestId")
+  reviewRequest(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("requestId") requestId: string,
+    @Body() dto: ReviewNoteAccessRequestDto,
+  ) {
+    return this.notes.reviewRequest(organization.organizationId, user.userId, requestId, dto);
   }
 
   @Get(":noteId")

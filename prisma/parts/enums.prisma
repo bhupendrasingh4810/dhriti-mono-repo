@@ -401,6 +401,9 @@ enum NotificationType {
   MEETING_REMINDER
   COMMENT
   SYSTEM
+  MESSAGE
+  DIRECT_MESSAGE
+  CALL
 }
 
 enum AppUsageType {

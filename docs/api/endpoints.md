@@ -19,6 +19,119 @@ The Connect Socket.IO namespace is `/connect`. Its documented events are in [Rea
 
 TODO Confirm with team: which endpoint families are supported for third-party integrations.
 
+## App settings
+
+Each workspace app has its own organization settings model, stored one row per
+organization and created with defaults on first read.
+
+| Method  | Route                                    | Access                                       |
+| ------- | ---------------------------------------- | -------------------------------------------- |
+| `GET`   | `/organization/settings/apps/:app`       | Any organization member                      |
+| `PATCH` | `/organization/settings/apps/:app`       | `organization.settings.manage`               |
+| `GET`   | `/organization/settings/apps/connect/me` | Current user (personal Connect prefs)        |
+| `PATCH` | `/organization/settings/apps/connect/me` | Current user                                 |
+| `GET`   | `/organization/settings/apps/access`     | Current member's effective manage capability |
+
+`:app` is one of `connect`, `flow`, `atlas`, `nexus`, `cadence`, `pulse`, `notes`, `hrms`.
+PATCH bodies are partial; unknown keys are rejected. Every organization-settings
+change is written to the audit log, including old and new values in the same
+database transaction. Partial updates acquire a per-organization/app transaction
+lock before validating the merged row. Pulse working hours/days also have database
+constraints. Server policy reads are uncached, so different API instances enforce
+the current persisted policy immediately.
+
+Settings are enforced server-side in each app's service, for example Connect
+message length, edit/delete windows, DMs/group chats, pin policy, allowed
+reactions, image type/size, polls, calls and recording; Pulse working hours,
+event duration and meeting attendees; Notes length and sharing; HRMS leave,
+payroll currency and training limits. Connect `messageRetentionDays` and
+`recordingRetentionDays` purge older data only when the default-off deployment
+flag `CONNECT_RETENTION_ENABLED=true` is set. Changing an active retention limit
+sets a new 24-hour grace period (`retentionEnabledAt`, server-managed). Existing
+policies without an activation timestamp remain inactive until explicitly changed.
+The settings UI requires confirmation when enabling or shortening a retention
+limit. The job purges tenant-scoped batches of at most 1,000 records, including
+already soft-deleted posts, formatted message text, comments and associated polls.
+It preserves existing deletion timestamps. Each batch rechecks the policy under
+the same transaction lock used by settings saves, so disabling or changing
+retention takes effect between batches. Recording batches process one item at a
+time and delete managed, tenant-prefixed storage objects before clearing pointers.
+Unknown/external recording URLs are preserved and logged for operator action:
+there is currently no recording upload/storage writer in this repository.
+Redis lease renewal and release verify ownership.
+Personal Connect quiet hours suppress email notifications only. Expired
+manual presence preferences are refreshed for connected users by a bounded
+background scan every five seconds.
+
+Captions, transcription, custom background upload and client ring timeout are
+client presentation preferences/controls, not server-enforced media restrictions.
+There is no server captions/transcription/background media pipeline to enforce
+them against. Calls, video calls, recording permission and message pinning remain
+server-authorized. Hiding a client control must not be interpreted as a compliance
+or media-content guarantee.
+
+Run settings persistence/concurrency tests against a migrated local database:
+`cd apps/api && SETTINGS_DATABASE_TESTS=true node --env-file=.env node_modules/jest/bin/jest.js --runInBand --runTestsByPath src/modules/settings/app-settings.persistence.spec.ts`.
+
+## Notes discovery and sharing
+
+`GET /organization/notes` lists all notes in the current organization that the
+caller owns, has an explicit sharing permission for, or that are public, including notes in the
+owner's folders. An optional `folderId` filters the same accessible set; it does
+not grant access to other notes in that folder. Omitting `folderId` no longer
+limits the result to notes without a folder.
+
+`GET /organization/notes/tree` returns owned `folders`, owned `homeNotes`, and
+`sharedNotes` from every folder. Shared-note entries include their owner and the
+caller's permission. Sharing does not transfer ownership or change the note's
+folder.
+
+Note permission responses include each recipient's `user` identity (`id`, `name`,
+`avatarUrl`). The original owner and co-owners can replace `permissions` through
+the note PATCH endpoint. Each entry has independent `canEdit` and `canDelete`
+flags, plus `isOwner` for co-ownership. Co-owners have full read, edit, share,
+visibility-management, request-review and delete access even without separate
+Edit/Delete flags. An empty array revokes all recipients and co-owners without
+removing the original owner's full access; the original owner cannot be revoked.
+
+Note POST/PATCH accepts `isPublic` (default `false` on creation). Public means
+viewable by authenticated members of the same organization, not anonymous or
+cross-organization access. Public visibility alone grants no edit/delete rights.
+Only owners can change visibility. Turning a note private rejects its pending
+requests; existing explicit sharing permissions remain. Organization
+`sharingEnabled` policy gates publishing and permission grants, and approval
+also respects `maxSharedUsersPerNote`.
+
+Access requests:
+
+- `POST /organization/notes/:noteId/requests` accepts
+  `{ requestedRole: "EDIT" | "OWNER" }`. Only public notes support requests.
+  `OWNER` adds a co-owner; it does not transfer or remove the original owner.
+  Already-satisfied roles and duplicate pending requests are rejected.
+- `GET /organization/notes/requests` returns the caller's outgoing requests and
+  incoming requests for notes they own or co-own. Other users' requests remain
+  private. A requester can no longer see requests for notes they cannot read.
+- `PATCH /organization/notes/requests/:requestId` accepts
+  `{ status: "APPROVED" | "REJECTED", grantedRole?: "EDIT" | "OWNER" }`.
+  Only current owners can review a pending request. Approval defaults to the
+  requested role, but owners can override it. Edit grants do not remove existing
+  delete/co-owner rights. Rejected requests may be resubmitted.
+
+Note updates/deletes and request creation/review use a per-note transaction lock
+and recheck authorization after locking. Approval grants permission and records
+the decision atomically; simultaneous decisions cannot process a request twice.
+
+`PATCH /organization/notes/order` accepts `{ noteIds: string[], folderId?: string }`
+and saves the current user's personal order, separately per organization and
+view. Omit `folderId` for All notes. IDs must be unique, accessible to the caller,
+and in the requested folder when one is specified (maximum 10,000). The list
+endpoint applies that order after filtering access; stale/deleted/revoked IDs
+never make a note visible. Unlisted accessible notes follow in updated-date
+order. An empty array restores the default order for that view.
+
+Run the sharing/discovery persistence tests against a local migrated database:
+`cd apps/api && NOTES_DATABASE_TESTS=true node --env-file=.env node_modules/jest/bin/jest.js --runInBand --runTestsByPath src/modules/notes/notes.persistence.spec.ts src/modules/notes/notes-public.persistence.spec.ts`.
+
 ## Personal and employment profiles
 
 `GET /auth/me` returns the authenticated user's personal/contact details and their

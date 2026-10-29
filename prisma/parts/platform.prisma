@@ -38,6 +38,7 @@ model User {
   notifications         Notification[]
   notificationPrefs     NotificationPreference[]
   connectSidebarPreferences ConnectSidebarPreference[]
+  connectUserSettings ConnectUserSettings[]
   connectUserSearches ConnectUserSearch[] @relation("ConnectUserSearchActor")
   selectedInConnectUserSearches ConnectUserSearch[] @relation("ConnectUserSearchTarget")
   sentInvitations       Invitation[]
@@ -50,6 +51,8 @@ model User {
   noteFolders   NoteFolder[] @relation("NoteFolderOwner")
   notes         Note[] @relation("NoteOwner")
   notePermissions NotePermission[] @relation("NotePermissionUser")
+  noteAccessRequests NoteAccessRequest[] @relation("NoteAccessRequester")
+  noteViewOrders NoteViewOrder[]
   
   // Extensions
   auth                  UserAuth?

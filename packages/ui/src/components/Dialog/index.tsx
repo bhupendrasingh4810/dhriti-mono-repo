@@ -29,10 +29,10 @@ const widthClasses: Record<Exclude<DialogProps["maxWidth"], false | undefined>, 
 };
 
 const primaryColorClasses: Record<NonNullable<DialogProps["primaryButtonColor"]>, string> = {
-  primary: "bg-brand text-white hover:bg-brand-dark",
-  secondary: "bg-text-secondary text-white hover:bg-text-primary",
-  error: "bg-error text-white hover:opacity-90",
-  success: "bg-success text-white hover:opacity-90",
+  primary: "bg-brand text-text-inverse hover:bg-brand-dark",
+  secondary: "bg-text-secondary text-text-inverse hover:bg-text-primary",
+  error: "bg-error text-text-inverse hover:opacity-90",
+  success: "bg-success text-text-inverse hover:opacity-90",
 };
 
 export function Dialog({
@@ -81,7 +81,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-slate-950/35 p-4"
+      className="fixed inset-0 z-50 grid place-items-center bg-text-primary/40 p-4"
       onMouseDown={(event) => {
         if (event.currentTarget === event.target && !isSubmitting) {
           onClose();

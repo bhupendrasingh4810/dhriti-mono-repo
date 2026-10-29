@@ -57,6 +57,12 @@ import { ConnectUserDetailDialog } from "@/features/connect/components/ConnectUs
 import { getUserInitials } from "@/features/connect/utils/user-initials";
 import type { ConnectMentionsFilter, MentionHoverState, ReactionHoverState } from "@/types/connect.types";
 import { useWorkspaceCall } from "@/features/connect/components/WorkspaceCallProvider";
+import {
+  useAppSettingsState,
+  useConnectUserSettingsState,
+  useSettingsAccess,
+} from "@/features/settings/use-app-settings";
+import { canDeleteOwnMessage, canEditOwnMessage } from "@/features/connect/utils/message-policy";
 import { useConnectSearch, type ConnectSearchUser } from "@/contexts/connect-search-context";
 
 const quickViewsConfig = [
@@ -287,7 +293,16 @@ export default function ConnectWorkspace() {
   }, []);
 
   const currentUser = connectUsersById[connectSidebarState.currentUser];
+  const connectSettingsState = useAppSettingsState("connect");
+  const connectUserSettingsState = useConnectUserSettingsState();
+  const connectPolicy = connectSettingsState.data;
+  const settingsAccess = useSettingsAccess();
   const selectedConversation = conversationsById[selectedConversationId] ?? connectConversations[0];
+  const canPinInConversation =
+    selectedConversation?.type !== "channel" ||
+    connectPolicy?.pinPolicy === "EVERYONE" ||
+    Boolean(currentUser && selectedConversation.adminUserIds?.includes(currentUser.id)) ||
+    settingsAccess.canManage === true;
   const selectedTeam = selectedConversation?.teamId ? connectTeamsById[selectedConversation.teamId] : null;
   useEffect(() => {
     if (
@@ -720,17 +735,23 @@ export default function ConnectWorkspace() {
   const activeMenuMessage = activeMessageId
     ? selectedMessages.find((message) => message.id === activeMessageId)
     : undefined;
-  const canEditActiveMessage = Boolean(activeMenuMessage && activeMenuMessage.senderId === currentUser?.id);
+  const isOwnActiveMessage = Boolean(activeMenuMessage && activeMenuMessage.senderId === currentUser?.id);
+  const canEditActiveMessage =
+    isOwnActiveMessage && canEditOwnMessage(connectPolicy, activeMenuMessage?.createdAt ?? "");
+  const canDeleteActiveMessage =
+    isOwnActiveMessage && canDeleteOwnMessage(connectPolicy, activeMenuMessage?.createdAt ?? "");
 
   const messageMenuItems: ConnectCascadingMenuItem[] = [
     ...(canEditActiveMessage ? [{ id: "edit", label: "Edit Message", icon: <Link /> }] : []),
     { id: "forward", label: "Forward", icon: <Forward /> },
     { id: "copy-link", label: "Copy Link", icon: <Link /> },
-    { id: "pin", label: activeMenuMessage?.isPinned ? "Unpin message" : "Pin message", icon: <Pin /> },
+    ...(canPinInConversation
+      ? [{ id: "pin", label: activeMenuMessage?.isPinned ? "Unpin message" : "Pin message", icon: <Pin /> }]
+      : []),
     { id: "save", label: "Save this Message", icon: <Archive /> },
     { id: "mark-unread", label: "Mark as unread", icon: <Mail /> },
     { id: "translate", label: "Translations", icon: <Languages /> },
-    ...(canEditActiveMessage ? [{ id: "delete", label: "Delete Message", icon: <Trash2 />, danger: true }] : []),
+    ...(canDeleteActiveMessage ? [{ id: "delete", label: "Delete Message", icon: <Trash2 />, danger: true }] : []),
     { id: "report", label: "Report this Message", icon: <Flag />, danger: true },
     { id: "more", label: "More actions", icon: <List /> },
   ];
@@ -1091,6 +1112,23 @@ export default function ConnectWorkspace() {
           </button>
         </div>
       ) : null}
+      {connectSettingsState.error || connectUserSettingsState.error ? (
+        <div role="alert" className="mb-2 flex items-center justify-between rounded-md border border-error/20 bg-surface p-2 text-sm text-error">
+          <span>
+            Connect settings could not be loaded: {connectSettingsState.error ?? connectUserSettingsState.error}
+          </span>
+          <button
+            type="button"
+            className="shrink-0 underline"
+            onClick={() => {
+              connectSettingsState.retry();
+              connectUserSettingsState.retry();
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      ) : null}
       {/* <div role="status" className="mb-2 text-xs text-text-secondary">{live.connected ? "Connected" : "Reconnecting"}{(live.typingUsers[selectedConversationId] ?? []).length ? ` · ${(live.typingUsers[selectedConversationId] ?? []).map((id) => connectUsersById[id]?.displayName ?? "Member").join(", ")} typing` : ""}</div> */}
       {/* <div className="mb-2 flex items-center gap-2">
         <button type="button" className="grid h-9 w-9 place-items-center rounded border border-border bg-surface" aria-label="New conversation" title="New conversation" onClick={() => setContactPickerOpen((open) => !open)}><UserPlus size={16} /></button>
@@ -1350,6 +1388,7 @@ export default function ConnectWorkspace() {
                     ConnectConversationMessage | undefined
                 }
                 onOpenDetails={() => setShowDetails(true)}
+                canPinMessages={canPinInConversation}
                 isChannelAdmin={selectedConversation.adminUserIds?.includes(currentUser.id)}
                 isMuted={selectedConversation.muted}
                 onToggleMute={() => {

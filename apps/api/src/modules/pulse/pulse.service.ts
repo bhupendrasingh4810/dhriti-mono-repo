@@ -8,6 +8,8 @@ import { AuditService } from "../audit/audit.service";
 import { ConnectService } from "../connect/connect.service";
 import type { CreateEventDto, ListEventsQueryDto, UpdateEventDto } from "./dto/event.dto";
 import type { CreateCalendarDto, UpdateCalendarDto } from "./dto/calendar.dto";
+import { AppSettingsService } from "../settings/app-settings.service";
+import { resolveAppSettings, settingsPolicyError } from "../settings/settings.defaults";
 
 export type EventWithAttendees = CalendarEvent & {
   attendees: Array<EventAttendee & { user: Pick<User, "id" | "name" | "email" | "avatarUrl"> }>;
@@ -26,7 +28,26 @@ export class PulseService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly connect: ConnectService,
+    private readonly settings: AppSettingsService,
   ) {}
+
+  private async assertEventPolicy(
+    organizationId: string,
+    event: { startsAt: Date; endsAt: Date; isAllDay: boolean; isOnlineMeeting?: boolean },
+  ) {
+    const policy = await resolveAppSettings(this.settings, "pulse", organizationId);
+    if (event.isOnlineMeeting && !policy.onlineMeetingsEnabled) {
+      throw settingsPolicyError("Online meetings are turned off for this organization");
+    }
+    const minutes = (event.endsAt.getTime() - event.startsAt.getTime()) / 60_000;
+    if (!event.isAllDay && policy.maxEventDurationMinutes !== null && minutes > policy.maxEventDurationMinutes) {
+      throw settingsPolicyError(
+        `Events are limited to ${policy.maxEventDurationMinutes} minutes`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return policy;
+  }
 
   // ---------------- Calendars ----------------
 
@@ -149,6 +170,10 @@ export class PulseService {
         HttpStatus.BAD_REQUEST,
       );
     }
+    const { maxMeetingAttendees } = await resolveAppSettings(this.settings, "pulse", organizationId);
+    if (maxMeetingAttendees !== null && attendeeUserIds.length > maxMeetingAttendees) {
+      throw settingsPolicyError(`Meetings are limited to ${maxMeetingAttendees} attendees`, HttpStatus.BAD_REQUEST);
+    }
 
     const event = await this.createEventRecord(
       organizationId,
@@ -184,6 +209,12 @@ export class PulseService {
     await this.getCalendar(organizationId, calendarId);
     this.assertValidRange(dto.startsAt, dto.endsAt);
     this.assertWeeklyRecurrence(dto.recurrenceRule);
+    const policy = await this.assertEventPolicy(organizationId, {
+      startsAt: new Date(dto.startsAt),
+      endsAt: new Date(dto.endsAt),
+      isAllDay: dto.isAllDay ?? false,
+      isOnlineMeeting: dto.isOnlineMeeting,
+    });
 
     if (dto.attendeeUserIds?.length) {
       await this.assertOrgMembers(organizationId, dto.attendeeUserIds);
@@ -193,12 +224,10 @@ export class PulseService {
       { userId: creatorUserId, isOrganizer: true, status: "ACCEPTED" },
       ...(dto.attendeeUserIds ?? [])
         .filter((id) => id !== creatorUserId)
-        .map(
-          (id): Prisma.EventAttendeeUncheckedCreateWithoutEventInput => ({
-            userId: id,
-            status: "PENDING",
-          }),
-        ),
+        .map((id): Prisma.EventAttendeeUncheckedCreateWithoutEventInput => ({
+          userId: id,
+          status: "PENDING",
+        })),
     ];
 
     const event = await this.prisma.calendarEvent.create({
@@ -210,9 +239,9 @@ export class PulseService {
         location: dto.location ?? null,
         meetingUrl: dto.meetingUrl ?? null,
         kind,
-        availability: dto.availability ?? "BUSY",
-        privacy: dto.privacy ?? "DEFAULT",
-        reminderMinutes: dto.reminderMinutes ?? null,
+        availability: dto.availability ?? policy.defaultEventAvailability,
+        privacy: dto.privacy ?? policy.defaultEventPrivacy,
+        reminderMinutes: dto.reminderMinutes ?? policy.defaultReminderMinutes,
         isOnlineMeeting: dto.isOnlineMeeting ?? false,
         startsAt: new Date(dto.startsAt),
         endsAt: new Date(dto.endsAt),
@@ -265,6 +294,12 @@ export class PulseService {
       throw new AppError(ErrorCode.INVALID_RANGE, "Event end must be after its start", HttpStatus.BAD_REQUEST);
     }
     this.assertWeeklyRecurrence(dto.recurrenceRule);
+    await this.assertEventPolicy(organizationId, {
+      startsAt,
+      endsAt,
+      isAllDay: dto.isAllDay ?? existing.isAllDay,
+      isOnlineMeeting: dto.isOnlineMeeting === true && !existing.isOnlineMeeting,
+    });
 
     const updated = await this.prisma.calendarEvent.update({
       where: { id: eventId },
@@ -430,7 +465,9 @@ export class PulseService {
       }),
       this.prisma.organizationMember.findMany({
         where: { organizationId, status: "ACTIVE", deletedAt: null, user: { deletedAt: null } },
-        select: { user: { select: { id: true, name: true, avatarUrl: true, hrmsProfile: { select: { dateOfBirth: true } } } } },
+        select: {
+          user: { select: { id: true, name: true, avatarUrl: true, hrmsProfile: { select: { dateOfBirth: true } } } },
+        },
       }),
       this.prisma.hrmsLeaveRequest.findMany({
         where: {
@@ -452,7 +489,9 @@ export class PulseService {
 
     return {
       events,
-      holidays: calendars.flatMap((calendar) => this.parseHolidays(calendar.holidays, calendar.id, calendar.name, from, to)),
+      holidays: calendars.flatMap((calendar) =>
+        this.parseHolidays(calendar.holidays, calendar.id, calendar.name, from, to),
+      ),
       birthdays: members.flatMap(({ user }) => this.birthdayOccurrences(user, from, to)),
       leaves: leaves.map((leave) => ({
         id: leave.id,
@@ -512,11 +551,22 @@ export class PulseService {
       const record = entry as Record<string, unknown>;
       const start = this.parseHolidayDate(record.date ?? record.startDate);
       const end = this.parseHolidayDate(record.endDate ?? record.date ?? record.startDate);
-      const title = typeof record.name === "string" ? record.name : typeof record.title === "string" ? record.title : null;
+      const title =
+        typeof record.name === "string" ? record.name : typeof record.title === "string" ? record.title : null;
       if (!start || !end || !title || end < start || start >= to || end < from) {
         return [];
       }
-      return [{ id: `${calendarId}:${index}`, title, startDate: start, endDate: end, isAllDay: true, calendarId, calendarName }];
+      return [
+        {
+          id: `${calendarId}:${index}`,
+          title,
+          startDate: start,
+          endDate: end,
+          isAllDay: true,
+          calendarId,
+          calendarName,
+        },
+      ];
     });
   }
 
@@ -543,7 +593,13 @@ export class PulseService {
       if (date.getUTCMonth() !== birthDate.getUTCMonth() || date < from || date >= to) {
         continue;
       }
-      occurrences.push({ id: `birthday:${user.id}:${year}`, title: `${user.name}'s birthday`, date, isAllDay: true, user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl } });
+      occurrences.push({
+        id: `birthday:${user.id}:${year}`,
+        title: `${user.name}'s birthday`,
+        date,
+        isAllDay: true,
+        user: { id: user.id, name: user.name, avatarUrl: user.avatarUrl },
+      });
     }
     return occurrences;
   }

@@ -5,12 +5,15 @@ import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { PrismaService } from "../../../database/prisma.service";
 import { AuditService } from "../../audit/audit.service";
+import { AppSettingsService } from "../../settings/app-settings.service";
+import { resolveAppSettings } from "../../settings/settings.defaults";
 
 @Injectable()
 export class HrmsAttendanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly settings: AppSettingsService,
   ) {}
 
   async list(organizationId: string, employeeId: string, from?: string, to?: string) {
@@ -50,7 +53,8 @@ export class HrmsAttendanceService {
         date,
         checkIn: input.checkIn ? new Date(input.checkIn) : null,
         checkOut: input.checkOut ? new Date(input.checkOut) : null,
-        status: input.status ?? "PRESENT",
+        status:
+          input.status ?? (await resolveAppSettings(this.settings, "hrms", organizationId)).defaultAttendanceStatus,
         workHours: input.workHours ?? null,
         notes: input.notes?.trim() ?? null,
       },

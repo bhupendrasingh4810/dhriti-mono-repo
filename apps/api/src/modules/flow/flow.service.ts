@@ -6,6 +6,8 @@ import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
 import { EntitlementService } from "../authorization/services/entitlement.service";
+import { AppSettingsService } from "../settings/app-settings.service";
+import { resolveAppSettings, settingsPolicyError } from "../settings/settings.defaults";
 import type { CreateProjectDto, UpdateProjectDto } from "./dto/project.dto";
 import type { CreateIssueDto, ListIssuesQueryDto, MoveIssueDto, UpdateIssueDto } from "./dto/issue.dto";
 import type { CreateSprintDto, UpdateSprintDto } from "./dto/sprint.dto";
@@ -17,7 +19,25 @@ export class FlowService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementService,
+    private readonly settings: AppSettingsService,
   ) {}
+
+  private async assertIssuePolicy(
+    organizationId: string,
+    dto: { description?: string | null; estimate?: number | null },
+  ) {
+    const policy = await resolveAppSettings(this.settings, "flow", organizationId);
+    if (dto.description && dto.description.length > policy.maxIssueDescriptionLength) {
+      throw settingsPolicyError(
+        `Issue descriptions are limited to ${policy.maxIssueDescriptionLength} characters`,
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    if (dto.estimate !== undefined && dto.estimate !== null && dto.estimate > policy.maxIssueEstimate) {
+      throw settingsPolicyError(`Issue estimates are limited to ${policy.maxIssueEstimate}`, HttpStatus.BAD_REQUEST);
+    }
+    return policy;
+  }
 
   // ---------------- Projects ----------------
 
@@ -149,6 +169,7 @@ export class FlowService {
 
   async listIssues(organizationId: string, projectId: string, query: ListIssuesQueryDto): Promise<Issue[]> {
     await this.getProject(organizationId, projectId);
+    const { issueListPageSize } = await resolveAppSettings(this.settings, "flow", organizationId);
     return this.prisma.issue.findMany({
       where: {
         organizationId,
@@ -160,7 +181,7 @@ export class FlowService {
         ...(query.sprintId ? { sprintId: query.sprintId } : {}),
       },
       orderBy: [{ position: "asc" }, { createdAt: "desc" }],
-      take: Math.min(query.limit ?? 100, 200),
+      take: Math.min(query.limit ?? issueListPageSize, 200),
     });
   }
 
@@ -171,6 +192,7 @@ export class FlowService {
     dto: CreateIssueDto,
   ): Promise<Issue> {
     const project = await this.getProject(organizationId, projectId);
+    const policy = await this.assertIssuePolicy(organizationId, dto);
 
     if (dto.assigneeId) {
       await this.assertOrgMember(organizationId, dto.assigneeId);
@@ -193,8 +215,8 @@ export class FlowService {
           number: next.issueCounter,
           title: dto.title.trim(),
           description: dto.description ?? null,
-          status: dto.status ?? "BACKLOG",
-          priority: dto.priority ?? "NONE",
+          status: dto.status ?? policy.defaultIssueStatus,
+          priority: dto.priority ?? policy.defaultIssuePriority,
           assigneeId: dto.assigneeId ?? null,
           reporterId,
           sprintId: dto.sprintId ?? null,
@@ -227,6 +249,7 @@ export class FlowService {
 
   async updateIssue(organizationId: string, issueId: string, userId: string, dto: UpdateIssueDto): Promise<Issue> {
     const existing = await this.getIssue(organizationId, issueId);
+    await this.assertIssuePolicy(organizationId, dto);
 
     if (dto.assigneeId) {
       await this.assertOrgMember(organizationId, dto.assigneeId);

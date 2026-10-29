@@ -72,7 +72,12 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     try {
       const principal = await this.wsAuth.authenticate(socket);
       if (principal.organizationId) {
-        const status = await this.presence.connected(principal.organizationId, principal.userId, socket.id);
+        let status = await this.presence.connected(principal.organizationId, principal.userId, socket.id);
+        const preferred = await this.connect.preferredPresence(principal.organizationId, principal.userId);
+        if (preferred && status === "online" && preferred !== status) {
+          await this.presence.setStatus(principal.organizationId, principal.userId, preferred);
+          status = preferred;
+        }
         await socket.join(organizationRoom(principal.organizationId));
         await socket.join(userRoom(principal.organizationId, principal.userId));
         this.publisher.presenceChanged(principal.organizationId, principal.userId, status);
@@ -132,6 +137,9 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   async typing(@ConnectedSocket() socket: Socket, @MessageBody() payload: TypingEventDto): Promise<SocketAck> {
     return this.execute(socket, "typing", async (principal, organizationId) => {
       await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId, true);
+      if (!(await this.connect.getPolicy(organizationId)).typingIndicatorsEnabled) {
+        return { ok: true };
+      }
       await this.presence.setTyping(organizationId, payload.channelId, principal.userId, payload.isTyping);
       this.publisher.typingChanged(organizationId, payload.channelId, socket.id, principal.userId, payload.isTyping);
       return { ok: true };
@@ -183,28 +191,27 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   // ---------------- Calls ----------------
 
   @SubscribeMessage("call:invite")
-  async inviteCall(
-    @ConnectedSocket() socket: Socket,
-    @MessageBody() payload: CallInviteEventDto,
-  ): Promise<SocketAck> {
+  async inviteCall(@ConnectedSocket() socket: Socket, @MessageBody() payload: CallInviteEventDto): Promise<SocketAck> {
     return this.execute(socket, "call:invite", async (principal, organizationId) => {
       const channel = await this.connect.getChannelForMember(organizationId, payload.channelId, principal.userId, true);
       const memberIds = await this.connect.getChannelMemberIds(organizationId, payload.channelId, principal.userId);
-      const callerName = payload.callerName?.trim()
-        || (await this.connect.getUserDisplayName(principal.userId)).trim()
-        || principal.email
-        || "Someone";
+      const callerName =
+        payload.callerName?.trim() ||
+        (await this.connect.getUserDisplayName(principal.userId)).trim() ||
+        principal.email ||
+        "Someone";
       const type = payload.type ?? payload.kind;
       if (!type) {
         throw new AppError(ErrorCode.VALIDATION_FAILED, "A call type is required", HttpStatus.BAD_REQUEST);
       }
-      const scope = payload.scope === "meeting"
-        ? "meeting"
-        : channel.type === "DIRECT"
-          ? "one-to-one"
-          : channel.type === "GROUP"
-            ? "group"
-            : "channel";
+      const scope =
+        payload.scope === "meeting"
+          ? "meeting"
+          : channel.type === "DIRECT"
+            ? "one-to-one"
+            : channel.type === "GROUP"
+              ? "group"
+              : "channel";
       const invitation = {
         ...payload,
         type,
@@ -243,31 +250,47 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
   ): Promise<SocketAck> {
     return this.execute(socket, "call:respond", async (principal, organizationId) => {
       const memberIds = await this.connect.getChannelMemberIds(organizationId, payload.channelId, principal.userId);
-      const event = payload.action === "accept"
-        ? "call:accepted"
-        : payload.action === "reject"
-          ? "call:rejected"
-          : payload.action === "miss" || payload.action === "cancel"
-            ? "call:cancelled"
-            : "call:ended";
+      const event =
+        payload.action === "accept"
+          ? "call:accepted"
+          : payload.action === "reject"
+            ? "call:rejected"
+            : payload.action === "miss" || payload.action === "cancel"
+              ? "call:cancelled"
+              : "call:ended";
       if (payload.action === "leave") {
-        const result = await this.connect.leaveSharedCall(organizationId, payload.channelId, principal.userId, payload.callId);
-        this.publisher.callStatus(organizationId, memberIds, result.ended ? "call:ended" : "call:left", { ...payload, userId: principal.userId });
+        const result = await this.connect.leaveSharedCall(
+          organizationId,
+          payload.channelId,
+          principal.userId,
+          payload.callId,
+        );
+        this.publisher.callStatus(organizationId, memberIds, result.ended ? "call:ended" : "call:left", {
+          ...payload,
+          userId: principal.userId,
+        });
         await this.setUsersPresence(organizationId, result.ended ? memberIds : [principal.userId], "online");
         return { ok: true };
       }
       const type = await this.connect.updateCallRecord(organizationId, payload.channelId, principal.userId, {
-            callId: payload.callId,
-            action: payload.action,
-            durationSeconds: payload.durationSeconds,
-          });
+        callId: payload.callId,
+        action: payload.action,
+        durationSeconds: payload.durationSeconds,
+      });
       this.publisher.callStatus(organizationId, memberIds, event, { ...payload, userId: principal.userId });
       if (payload.action !== "accept") {
         await this.setUsersPresence(organizationId, memberIds, "online");
       }
       await this.connect.recordCallActivity(organizationId, payload.channelId, principal.userId, {
         callId: payload.callId,
-        action: payload.action === "accept" ? "accepted" : payload.action === "reject" ? "declined" : payload.action === "miss" || payload.action === "cancel" ? "missed" : "ended",
+        action:
+          payload.action === "accept"
+            ? "accepted"
+            : payload.action === "reject"
+              ? "declined"
+              : payload.action === "miss" || payload.action === "cancel"
+                ? "missed"
+                : "ended",
         ...(type ? { type } : {}),
         durationSeconds: payload.action === "end" ? payload.durationSeconds : undefined,
       });
@@ -284,7 +307,11 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     return principal.organizationId;
   }
 
-  private async setUsersPresence(organizationId: string, userIds: string[], status: "online" | "in-meeting"): Promise<void> {
+  private async setUsersPresence(
+    organizationId: string,
+    userIds: string[],
+    status: "online" | "in-meeting",
+  ): Promise<void> {
     for (const userId of new Set(userIds)) {
       await this.presence.setStatus(organizationId, userId, status);
       this.publisher.presenceChanged(organizationId, userId, status);

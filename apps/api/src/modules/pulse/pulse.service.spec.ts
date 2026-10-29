@@ -2,6 +2,7 @@ import type { PrismaService } from "../../database/prisma.service";
 import type { AuditService } from "../audit/audit.service";
 import type { ConnectService } from "../connect/connect.service";
 import { PulseService } from "./pulse.service";
+import { DEFAULT_APP_SETTINGS } from "../settings/settings.defaults";
 
 describe("PulseService meetings and schedule metadata", () => {
   const organizationId = "organization-id";
@@ -32,6 +33,7 @@ describe("PulseService meetings and schedule metadata", () => {
       prisma as unknown as PrismaService,
       audit as unknown as AuditService,
       connect as unknown as ConnectService,
+      { get: jest.fn().mockResolvedValue(DEFAULT_APP_SETTINGS.pulse) } as never,
     );
   });
 
@@ -44,24 +46,34 @@ describe("PulseService meetings and schedule metadata", () => {
     });
 
     expect(connect.createMeetingConversation).toHaveBeenCalledWith(organizationId, organizerId, [attendeeId]);
-    expect(prisma.calendarEvent.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "event-id" },
-      data: { connectChannelId: "channel-id" },
-    }));
+    expect(prisma.calendarEvent.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "event-id" },
+        data: { connectChannelId: "channel-id" },
+      }),
+    );
   });
 
   it("accepts only weekly recurrence rules", async () => {
-    await expect(service.createEvent(organizationId, calendarId, organizerId, {
-      title: "Daily stand-up",
-      startsAt: "2026-10-26T09:00:00.000Z",
-      endsAt: "2026-10-26T09:30:00.000Z",
-      recurrenceRule: "FREQ=DAILY",
-    })).rejects.toThrow("Only weekly recurrence is supported");
+    await expect(
+      service.createEvent(organizationId, calendarId, organizerId, {
+        title: "Daily stand-up",
+        startsAt: "2026-10-26T09:00:00.000Z",
+        endsAt: "2026-10-26T09:30:00.000Z",
+        recurrenceRule: "FREQ=DAILY",
+      }),
+    ).rejects.toThrow("Only weekly recurrence is supported");
   });
 
   it("parses common holiday formats and skips malformed entries", () => {
     const parseHolidays = service as unknown as {
-      parseHolidays: (value: unknown, calendarId: string, calendarName: string, from: Date, to: Date) => Array<{ title: string }>;
+      parseHolidays: (
+        value: unknown,
+        calendarId: string,
+        calendarName: string,
+        from: Date,
+        to: Date,
+      ) => Array<{ title: string }>;
     };
     const holidays = parseHolidays.parseHolidays(
       [

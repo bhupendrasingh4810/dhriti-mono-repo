@@ -3,6 +3,7 @@
 import { connectSidebarState, connectUsers, connectUsersById } from "@/mocks/connect";
 import type { CallChatMessage, CallPanel } from "@/types/connect.types";
 import { DeviceSelect, ParticipantAvatar } from "./CallUi";
+import { useAppSettings } from "@/features/settings/use-app-settings";
 
 interface CallSidePanelProps {
   panel: Exclude<CallPanel, null>;
@@ -57,6 +58,9 @@ export function CallSidePanel({
   setTranscription,
   transcription,
 }: CallSidePanelProps) {
+  const connectPolicy = useAppSettings("connect");
+  const captionsAllowed = connectPolicy?.captionsEnabled ?? true;
+  const transcriptionAllowed = connectPolicy?.transcriptionEnabled ?? true;
   const titles: Record<Exclude<CallPanel, null>, string> = {
     people: "People",
     chat: "Call chat",
@@ -190,12 +194,12 @@ export function CallSidePanel({
               onChange={setCameraId}
             />
             <div className="border-t border-border pt-4">
-              <SettingToggle label="Live captions" checked={captions} onChange={() => setCaptions((value) => !value)} />
-              <SettingToggle
+              {captionsAllowed ? <SettingToggle label="Live captions" checked={captions} onChange={() => setCaptions((value) => !value)} /> : null}
+              {transcriptionAllowed ? <SettingToggle
                 label="Transcription"
                 checked={transcription}
                 onChange={() => setTranscription((value) => !value)}
-              />
+              /> : null}
             </div>
           </div>
         ) : null}
@@ -216,26 +220,26 @@ export function CallSidePanel({
         ) : null}
         {panel === "apps" ? (
           <div className="space-y-2">
-            <SettingToggle label="Live captions" checked={captions} onChange={() => setCaptions((value) => !value)} />
-            <SettingToggle
+            {captionsAllowed ? <SettingToggle label="Live captions" checked={captions} onChange={() => setCaptions((value) => !value)} /> : null}
+            {transcriptionAllowed ? <SettingToggle
               label="Transcription"
               checked={transcription}
               onChange={() => setTranscription((value) => !value)}
-            />
-            <button
+            /> : null}
+            {captionsAllowed ? <button
               type="button"
               onClick={() => setCaptions((value) => !value)}
               className="w-full rounded-md border border-border p-3 text-left text-sm hover:bg-surface-raised"
             >
               Captions<span className="mt-1 block text-xs text-text-secondary">Show live text during this call.</span>
-            </button>
-            <button
+            </button> : null}
+            {transcriptionAllowed ? <button
               type="button"
               onClick={() => setTranscription((value) => !value)}
               className="w-full rounded-md border border-border p-3 text-left text-sm hover:bg-surface-raised"
             >
               Transcription<span className="mt-1 block text-xs text-text-secondary">Toggle call transcription.</span>
-            </button>
+            </button> : null}
             <button
               type="button"
               onClick={() => alert("Whiteboard is not connected in this workspace yet.")}

@@ -32,6 +32,7 @@ import { AuthorizationModule } from "./modules/authorization/authorization.modul
 import { HrmsModule } from "./modules/hrms/hrms.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { NotesModule } from "./modules/notes/notes.module";
+import { SettingsModule } from "./modules/settings/settings.module";
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { NotesModule } from "./modules/notes/notes.module";
     HrmsModule,
     JobsModule,
     NotesModule,
+    SettingsModule,
     MetricsModule,
     NotificationModule,
     AuditModule,

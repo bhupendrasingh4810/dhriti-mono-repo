@@ -73,6 +73,15 @@ model Organization {
   notifications Notification[]
   notificationPreferences NotificationPreference[]
   connectSidebarPreferences ConnectSidebarPreference[]
+  connectSettings           ConnectOrganizationSettings?
+  connectUserSettings       ConnectUserSettings[]
+  flowSettings              FlowOrganizationSettings?
+  atlasSettings             AtlasOrganizationSettings?
+  nexusSettings             NexusOrganizationSettings?
+  cadenceSettings           CadenceOrganizationSettings?
+  pulseSettings             PulseOrganizationSettings?
+  notesSettings             NotesOrganizationSettings?
+  hrmsSettings              HrmsOrganizationSettings?
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
   connectUserSearches ConnectUserSearch[]
@@ -83,6 +92,7 @@ model Organization {
   healthInsurancePlans HealthInsurance[]
   noteFolders NoteFolder[]
   noteRecords  Note[]
+  noteViewOrders NoteViewOrder[]
 
   @@index([primaryEmail])
   @@index([billingGstin])

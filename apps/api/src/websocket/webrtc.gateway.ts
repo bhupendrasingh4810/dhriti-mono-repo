@@ -170,7 +170,10 @@ export class WebRtcGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   /** Broadcast mute/video/screen-share state to the call room. */
   @SubscribeMessage("call:media-state")
-  async mediaState(@ConnectedSocket() socket: Socket, @MessageBody() payload: MediaStatePayload): Promise<{ ok: true }> {
+  async mediaState(
+    @ConnectedSocket() socket: Socket,
+    @MessageBody() payload: MediaStatePayload,
+  ): Promise<{ ok: true }> {
     const principal = await this.authorizeChannelMember(socket, payload.channelId);
     this.requireActiveParticipant(payload.channelId, socket.id);
     socket.to(callRoom(payload.channelId)).emit("call:media-state", {

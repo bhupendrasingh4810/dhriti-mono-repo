@@ -1,5 +1,22 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Channel, ConnectCallScope, ConnectCallStatus, ConnectCallType, Message, MessageReaction, Poll, PollOption, PollVote, Post, PostComment, PostCommentReaction, PostReaction, Team, User, Prisma } from "@prisma/client";
+import type {
+  Channel,
+  ConnectCallScope,
+  ConnectCallStatus,
+  ConnectCallType,
+  Message,
+  MessageReaction,
+  Poll,
+  PollOption,
+  PollVote,
+  Post,
+  PostComment,
+  PostCommentReaction,
+  PostReaction,
+  Team,
+  User,
+  Prisma,
+} from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
 import { AppError } from "../../common/errors/app-error";
@@ -13,12 +30,17 @@ import type { CreateConnectTeamDto, UpdateConnectTeamDto } from "./dto/team.dto"
 import type { CreateMessageDto, UpdateMessageDto } from "./dto/message.dto";
 import type { CreatePollDto, CreatePostDto, UpdatePostDto } from "./dto/post.dto";
 import type { UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
+import { PermissionService } from "../authorization/services/permission.service";
+import { NotificationService } from "../notification/notification.service";
+import { AppSettingsService } from "../settings/app-settings.service";
+import { type ConnectPolicy } from "../settings/settings.defaults";
+import type { ConnectManualStatus } from "../settings/dto/app-settings.dto";
 
 type SidebarFavoriteType = "chat" | "team" | "channel";
 type SidebarFavorites = { chats: string[]; teams: string[]; channels: string[] };
 
 function toSidebarPreferences(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
 function toStringList(value: unknown): string[] {
@@ -30,23 +52,29 @@ export type MessageWithMeta = Message & {
   mentions: Array<{ userId: string }>;
   reactions: Array<Pick<MessageReaction, "userId" | "emoji">>;
   _count: { replies: number };
-  poll: (Poll & {
-    options: Array<PollOption & { _count: { votes: number } }>;
-    votes: Array<Pick<PollVote, "id" | "pollOptionId">>;
-  }) | null;
+  poll:
+    | (Poll & {
+        options: Array<PollOption & { _count: { votes: number } }>;
+        votes: Array<Pick<PollVote, "id" | "pollOptionId">>;
+      })
+    | null;
 };
 
 type PostWithPoll = Post & {
   author: Pick<User, "id" | "name" | "avatarUrl">;
-  comments: Array<PostComment & {
-    author: Pick<User, "id" | "name" | "avatarUrl">;
-    reactions: Array<Pick<PostCommentReaction, "userId" | "emoji">>;
-  }>;
+  comments: Array<
+    PostComment & {
+      author: Pick<User, "id" | "name" | "avatarUrl">;
+      reactions: Array<Pick<PostCommentReaction, "userId" | "emoji">>;
+    }
+  >;
   reactions: Array<Pick<PostReaction, "userId" | "emoji">>;
-  poll: (Poll & {
-    options: Array<PollOption & { _count: { votes: number } }>;
-    votes: Array<Pick<PollVote, "id" | "pollOptionId">>;
-  }) | null;
+  poll:
+    | (Poll & {
+        options: Array<PollOption & { _count: { votes: number } }>;
+        votes: Array<Pick<PollVote, "id" | "pollOptionId">>;
+      })
+    | null;
 };
 
 type ChannelWithMembers = Channel & {
@@ -90,8 +118,16 @@ export class ConnectService {
     private readonly audit: AuditService,
     private readonly publisher: ConnectPublisherService,
     private readonly entitlements: EntitlementService,
-    private readonly presence?: ConnectPresenceService,
+    private readonly presence: ConnectPresenceService,
+    private readonly settings: AppSettingsService,
+    private readonly notifications?: NotificationService,
+    private readonly permissions?: PermissionService,
   ) {}
+
+  /** Reads the current organization policy. */
+  async getPolicy(organizationId: string): Promise<ConnectPolicy> {
+    return this.settings.get("connect", organizationId);
+  }
 
   async getUserDisplayName(userId: string): Promise<string> {
     const user = await this.prisma.user.findFirst({
@@ -104,6 +140,7 @@ export class ConnectService {
 
   async getSidebar(organizationId: string, userId: string) {
     await this.assertOrganizationMember(organizationId, userId);
+    await this.joinDefaultChannels(organizationId, userId);
     const record = await this.prisma.connectSidebarPreference.findUnique({
       where: { organizationId_userId: { organizationId, userId } },
       select: { preferences: true },
@@ -134,12 +171,18 @@ export class ConnectService {
         where: { id: input.itemId, organizationId, deletedAt: null },
         select: { id: true },
       });
-      if (!team) {throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);}
+      if (!team) {
+        throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+      }
     } else {
       const channel = await this.getChannelForMember(organizationId, input.itemId, userId);
       const expectedTypes = input.itemType === "chat" ? ["DIRECT", "GROUP"] : ["CHANNEL"];
       if (!expectedTypes.includes(channel.type)) {
-        throw new AppError(ErrorCode.VALIDATION_FAILED, "Item type does not match the Connect resource", HttpStatus.BAD_REQUEST);
+        throw new AppError(
+          ErrorCode.VALIDATION_FAILED,
+          "Item type does not match the Connect resource",
+          HttpStatus.BAD_REQUEST,
+        );
       }
     }
 
@@ -147,8 +190,11 @@ export class ConnectService {
       const currentFavorites = toSidebarPreferences(current.favorites);
       const key = input.itemType === "chat" ? "chats" : input.itemType === "team" ? "teams" : "channels";
       const items = new Set(toStringList(currentFavorites[key]));
-      if (input.isFavorite) {items.add(input.itemId);}
-      else {items.delete(input.itemId);}
+      if (input.isFavorite) {
+        items.add(input.itemId);
+      } else {
+        items.delete(input.itemId);
+      }
 
       const favorites: SidebarFavorites = {
         chats: toStringList(currentFavorites.chats),
@@ -156,9 +202,10 @@ export class ConnectService {
         channels: toStringList(currentFavorites.channels),
       };
       favorites[key] = [...items];
-      const recentChats = input.itemType === "chat" && input.isFavorite
-        ? toStringList(current.recentChats).filter((id) => id !== input.itemId)
-        : toStringList(current.recentChats);
+      const recentChats =
+        input.itemType === "chat" && input.isFavorite
+          ? toStringList(current.recentChats).filter((id) => id !== input.itemId)
+          : toStringList(current.recentChats);
       return { ...current, favorites, recentChats };
     });
 
@@ -194,7 +241,11 @@ export class ConnectService {
   async removeConversationHistory(organizationId: string, channelId: string, userId: string): Promise<void> {
     const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
     if (channel.type !== "DIRECT") {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Only direct conversations can be removed from history", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Only direct conversations can be removed from history",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     await this.mutatePreferences(organizationId, userId, (current) => {
       const settings = toSidebarPreferences(current.settings);
@@ -226,7 +277,9 @@ export class ConnectService {
         where: { teamId, userId, team: { organizationId, deletedAt: null } },
         select: { id: true },
       });
-      if (!membership) {throw new AppError(ErrorCode.FORBIDDEN, "Team is not accessible", HttpStatus.FORBIDDEN);}
+      if (!membership) {
+        throw new AppError(ErrorCode.FORBIDDEN, "Team is not accessible", HttpStatus.FORBIDDEN);
+      }
     }
     const patch = Object.fromEntries(Object.entries(settings).filter(([, value]) => value !== undefined));
     const updated = await this.mutatePreferences(organizationId, userId, (current) => ({
@@ -237,19 +290,32 @@ export class ConnectService {
     return this.getSidebar(organizationId, userId);
   }
 
-  async setPersonalMessage(organizationId: string, userId: string, messageId: string, kind: "saved" | "followed", enabled: boolean) {
+  async setPersonalMessage(
+    organizationId: string,
+    userId: string,
+    messageId: string,
+    kind: "saved" | "followed",
+    enabled: boolean,
+  ) {
     const message = await this.getMessage(organizationId, messageId);
     await this.getChannelForMember(organizationId, message.channelId, userId, true);
     const key = kind === "saved" ? "savedMessageIds" : "followedThreadIds";
-    const targetId = kind === "followed" ? message.parentId ?? message.id : message.id;
+    const targetId = kind === "followed" ? (message.parentId ?? message.id) : message.id;
     const updated = await this.mutatePreferences(organizationId, userId, (current) => {
       const ids = new Set(toStringList(current[key]));
-      if (enabled) {ids.add(targetId);}
-      else {ids.delete(targetId);}
-      if (ids.size > 500) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Personal message limit reached", HttpStatus.BAD_REQUEST);}
+      if (enabled) {
+        ids.add(targetId);
+      } else {
+        ids.delete(targetId);
+      }
+      if (ids.size > 500) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Personal message limit reached", HttpStatus.BAD_REQUEST);
+      }
       return { ...current, [key]: [...ids] };
     });
-    this.publisher.publishToUsers(organizationId, [userId], "sidebar:personal-messages-changed", { [key]: updated[key] });
+    this.publisher.publishToUsers(organizationId, [userId], "sidebar:personal-messages-changed", {
+      [key]: updated[key],
+    });
     return this.getSidebar(organizationId, userId);
   }
 
@@ -259,7 +325,9 @@ export class ConnectService {
       where: { organizationId_userId: { organizationId, userId } },
       select: { preferences: true },
     });
-    const hiddenConversationIds = toStringList(toSidebarPreferences(toSidebarPreferences(preferences?.preferences).settings).hiddenConversationIds);
+    const hiddenConversationIds = toStringList(
+      toSidebarPreferences(toSidebarPreferences(preferences?.preferences).settings).hiddenConversationIds,
+    );
     const conversations = await this.prisma.channel.findMany({
       where: {
         organizationId,
@@ -279,9 +347,10 @@ export class ConnectService {
       },
     });
 
-    return conversations.sort((left, right) =>
-      (right.messages[0]?.createdAt.getTime() ?? right.createdAt.getTime())
-        - (left.messages[0]?.createdAt.getTime() ?? left.createdAt.getTime()),
+    return conversations.sort(
+      (left, right) =>
+        (right.messages[0]?.createdAt.getTime() ?? right.createdAt.getTime()) -
+        (left.messages[0]?.createdAt.getTime() ?? left.createdAt.getTime()),
     );
   }
 
@@ -298,10 +367,12 @@ export class ConnectService {
       },
       orderBy: { createdAt: "asc" },
     });
-    return Promise.all(memberships.map(async ({ user }) => ({
-      ...user,
-      presence: this.presence ? await this.presence.getStatus(organizationId, user.id) : "offline",
-    })));
+    return Promise.all(
+      memberships.map(async ({ user }) => ({
+        ...user,
+        presence: this.presence ? await this.presence.getStatus(organizationId, user.id) : "offline",
+      })),
+    );
   }
 
   async searchUsers(organizationId: string, actorUserId: string, query: string, requestedLimit?: number) {
@@ -359,7 +430,11 @@ export class ConnectService {
       select: { userId: true },
     });
     if (!membership) {
-      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User is not an active organization member", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.MEMBER_NOT_FOUND,
+        "User is not an active organization member",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const search = await this.prisma.connectUserSearch.upsert({
@@ -396,13 +471,20 @@ export class ConnectService {
 
     return {
       users: page.map(({ user }) => user),
-      nextCursor: memberships.length > limit ? page[page.length - 1]?.id ?? null : null,
+      nextCursor: memberships.length > limit ? (page[page.length - 1]?.id ?? null) : null,
     };
   }
 
   async createDirectConversation(organizationId: string, creatorUserId: string, otherUserId: string) {
+    if (!(await this.getPolicy(organizationId)).directMessagesEnabled) {
+      throw policyError("Direct messages are turned off for this organization");
+    }
     if (creatorUserId === otherUserId) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "A direct conversation requires another user", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "A direct conversation requires another user",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const members = await this.prisma.organizationMember.findMany({
@@ -415,7 +497,11 @@ export class ConnectService {
       select: { userId: true },
     });
     if (members.length !== 2) {
-      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "Both users must be active organization members", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.MEMBER_NOT_FOUND,
+        "Both users must be active organization members",
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const candidates = await this.prisma.channel.findMany({
@@ -423,10 +509,7 @@ export class ConnectService {
         organizationId,
         type: "DIRECT",
         deletedAt: null,
-        AND: [
-          { members: { some: { userId: creatorUserId } } },
-          { members: { some: { userId: otherUserId } } },
-        ],
+        AND: [{ members: { some: { userId: creatorUserId } } }, { members: { some: { userId: otherUserId } } }],
       },
       include: { members: { select: { userId: true } } },
     });
@@ -436,7 +519,10 @@ export class ConnectService {
         const settings = toSidebarPreferences(current.settings);
         return {
           ...current,
-          settings: { ...settings, hiddenConversationIds: toStringList(settings.hiddenConversationIds).filter((id) => id !== existing.id) },
+          settings: {
+            ...settings,
+            hiddenConversationIds: toStringList(settings.hiddenConversationIds).filter((id) => id !== existing.id),
+          },
         };
       });
       return existing;
@@ -456,6 +542,13 @@ export class ConnectService {
   }
 
   async createGroupConversation(organizationId: string, creatorUserId: string, userIds: string[]) {
+    const policy = await this.getPolicy(organizationId);
+    if (!policy.groupChatsEnabled) {
+      throw policyError("Group chats are turned off for this organization");
+    }
+    if (new Set([creatorUserId, ...userIds]).size > policy.maxGroupChatMembers) {
+      throw policyError(`Group chats are limited to ${policy.maxGroupChatMembers} members`);
+    }
     return this.createPrivateGroupConversation(organizationId, creatorUserId, userIds, 3);
   }
 
@@ -493,7 +586,11 @@ export class ConnectService {
       select: { userId: true, user: { select: { name: true } } },
     });
     if (members.length !== memberIds.length) {
-      throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "All group members must be active organization members", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.MEMBER_NOT_FOUND,
+        "All group members must be active organization members",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const namesById = new Map(members.map((member) => [member.userId, member.user.name]));
     const name = memberIds
@@ -509,7 +606,9 @@ export class ConnectService {
         type: "GROUP",
         visibility: "PRIVATE",
         createdById: creatorUserId,
-        members: { create: memberIds.map((userId) => ({ userId, role: userId === creatorUserId ? "ADMIN" : "MEMBER" })) },
+        members: {
+          create: memberIds.map((userId) => ({ userId, role: userId === creatorUserId ? "ADMIN" : "MEMBER" })),
+        },
       },
       include: { members: { select: { userId: true } } },
     });
@@ -567,7 +666,9 @@ export class ConnectService {
         },
       },
     });
-    if (!team) {throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);}
+    if (!team) {
+      throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.NOT_FOUND);
+    }
 
     return {
       id: team.id,
@@ -593,7 +694,9 @@ export class ConnectService {
       where: { organizationId_slug: { organizationId, slug: dto.slug } },
       select: { id: true },
     });
-    if (slugTaken) {throw new AppError(ErrorCode.TEAM_SLUG_TAKEN, "A team with this slug already exists", HttpStatus.CONFLICT);}
+    if (slugTaken) {
+      throw new AppError(ErrorCode.TEAM_SLUG_TAKEN, "A team with this slug already exists", HttpStatus.CONFLICT);
+    }
 
     const teamCount = await this.prisma.team.count({ where: { organizationId, deletedAt: null } });
     await this.entitlements.assertWithinLimit(organizationId, "max_teams", teamCount + 1);
@@ -609,7 +712,13 @@ export class ConnectService {
       },
       include: { members: { select: { userId: true, role: true } } },
     });
-    await this.audit.record({ action: "connect.team.created", organizationId, actorUserId: creatorUserId, resourceType: "Team", resourceId: team.id });
+    await this.audit.record({
+      action: "connect.team.created",
+      organizationId,
+      actorUserId: creatorUserId,
+      resourceType: "Team",
+      resourceId: team.id,
+    });
     return this.serializeTeam(team);
   }
 
@@ -632,7 +741,13 @@ export class ConnectService {
     await this.prisma.team.update({ where: { id: teamId }, data: { deletedAt: new Date() } });
   }
 
-  async upsertTeamMember(organizationId: string, teamId: string, actorUserId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<void> {
+  async upsertTeamMember(
+    organizationId: string,
+    teamId: string,
+    actorUserId: string,
+    userId: string,
+    role: "ADMIN" | "MEMBER",
+  ): Promise<void> {
     await this.requireTeamAdmin(organizationId, teamId, actorUserId);
     await this.assertOrganizationMember(organizationId, userId);
     await this.prisma.teamMember.upsert({
@@ -644,10 +759,15 @@ export class ConnectService {
 
   async removeTeamMember(organizationId: string, teamId: string, actorUserId: string, userId: string): Promise<void> {
     await this.requireTeamAdmin(organizationId, teamId, actorUserId);
-    const membership = await this.prisma.teamMember.findUnique({ where: { teamId_userId: { teamId, userId } }, select: { role: true } });
+    const membership = await this.prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId } },
+      select: { role: true },
+    });
     if (membership?.role === "ADMIN") {
       const adminCount = await this.prisma.teamMember.count({ where: { teamId, role: "ADMIN" } });
-      if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "A team must have at least one admin", HttpStatus.BAD_REQUEST);}
+      if (adminCount === 1) {
+        throw new AppError(ErrorCode.FORBIDDEN, "A team must have at least one admin", HttpStatus.BAD_REQUEST);
+      }
     }
     await this.prisma.teamMember.deleteMany({ where: { teamId, userId } });
   }
@@ -657,10 +777,14 @@ export class ConnectService {
       where: { teamId, userId, team: { organizationId, deletedAt: null } },
       select: { role: true },
     });
-    if (!membership) {throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this team", HttpStatus.FORBIDDEN);}
+    if (!membership) {
+      throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this team", HttpStatus.FORBIDDEN);
+    }
     if (membership.role === "ADMIN") {
       const adminCount = await this.prisma.teamMember.count({ where: { teamId, role: "ADMIN" } });
-      if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "Assign another team admin before leaving", HttpStatus.BAD_REQUEST);}
+      if (adminCount === 1) {
+        throw new AppError(ErrorCode.FORBIDDEN, "Assign another team admin before leaving", HttpStatus.BAD_REQUEST);
+      }
     }
     await this.prisma.teamMember.delete({ where: { teamId_userId: { teamId, userId } } });
   }
@@ -678,13 +802,15 @@ export class ConnectService {
         deletedAt: null,
         isArchived: false,
         OR: [{ visibility: "PUBLIC" }, { members: { some: { userId } } }],
-        AND: [{
-          OR: [
-            { teamId: null },
-            { teamId: { in: teamMemberships.map(({ teamId }) => teamId) } },
-            { team: { is: { visibility: "PUBLIC", deletedAt: null } } },
-          ],
-        }],
+        AND: [
+          {
+            OR: [
+              { teamId: null },
+              { teamId: { in: teamMemberships.map(({ teamId }) => teamId) } },
+              { team: { is: { visibility: "PUBLIC", deletedAt: null } } },
+            ],
+          },
+        ],
       },
       orderBy: { createdAt: "asc" },
       include: { members: { select: { userId: true, role: true } } },
@@ -693,6 +819,10 @@ export class ConnectService {
   }
 
   async createChannel(organizationId: string, creatorUserId: string, dto: CreateChannelDto) {
+    const policy = await this.getPolicy(organizationId);
+    if ((dto.type ?? "CHANNEL") === "CHANNEL") {
+      assertChannelNamePrefix(dto.name, policy.channelNamePrefixes);
+    }
     if (dto.teamId) {
       const team = await this.prisma.team.findFirst({
         where: { id: dto.teamId, organizationId, deletedAt: null },
@@ -724,8 +854,8 @@ export class ConnectService {
         name: dto.name.trim(),
         slug: dto.slug ?? null,
         type: dto.type ?? "CHANNEL",
-        visibility: dto.visibility ?? "PUBLIC",
-        layout: dto.layout ?? "THREADS",
+        visibility: dto.visibility ?? policy.defaultChannelVisibility,
+        layout: dto.layout ?? policy.defaultChannelLayout,
         topic: dto.topic ?? null,
         description: dto.description ?? null,
         imageUrl: dto.imageUrl ?? null,
@@ -765,8 +895,14 @@ export class ConnectService {
       where: { channelId_userId: { channelId, userId } },
       select: { id: true },
     });
-    const canAccessPublicChannel = requireChannelMembership && channel.type === "CHANNEL" && channel.visibility === "PUBLIC";
-    if ((channel.visibility === "PRIVATE" || channel.type !== "CHANNEL" || (requireChannelMembership && !canAccessPublicChannel)) && !member) {
+    const canAccessPublicChannel =
+      requireChannelMembership && channel.type === "CHANNEL" && channel.visibility === "PUBLIC";
+    if (
+      (channel.visibility === "PRIVATE" ||
+        channel.type !== "CHANNEL" ||
+        (requireChannelMembership && !canAccessPublicChannel)) &&
+      !member
+    ) {
       throw new AppError(ErrorCode.FORBIDDEN, "You are not a member of this channel", HttpStatus.FORBIDDEN);
     }
 
@@ -805,13 +941,11 @@ export class ConnectService {
     });
   }
 
-  async updateChannel(
-    organizationId: string,
-    channelId: string,
-    userId: string,
-    dto: UpdateChannelDto,
-  ) {
-    await this.getChannelForMember(organizationId, channelId, userId);
+  async updateChannel(organizationId: string, channelId: string, userId: string, dto: UpdateChannelDto) {
+    const existing = await this.getChannelForMember(organizationId, channelId, userId);
+    if (dto.name !== undefined && existing.type === "CHANNEL") {
+      assertChannelNamePrefix(dto.name, (await this.getPolicy(organizationId)).channelNamePrefixes);
+    }
     const channel = await this.prisma.channel.update({
       where: { id: channelId },
       data: {
@@ -829,9 +963,12 @@ export class ConnectService {
 
   async deleteChannel(organizationId: string, channelId: string, userId: string): Promise<void> {
     const channel = await this.requireChannelAdmin(organizationId, channelId, userId);
-    const memberIds = channel.type === "GROUP"
-      ? (await this.prisma.channelMember.findMany({ where: { channelId }, select: { userId: true } })).map((member) => member.userId)
-      : [];
+    const memberIds =
+      channel.type === "GROUP"
+        ? (await this.prisma.channelMember.findMany({ where: { channelId }, select: { userId: true } })).map(
+            (member) => member.userId,
+          )
+        : [];
     await this.prisma.channel.update({
       where: { id: channelId },
       data: { deletedAt: new Date(), isArchived: true, slug: null },
@@ -848,8 +985,23 @@ export class ConnectService {
     }
   }
 
-  async upsertChannelMember(organizationId: string, channelId: string, actorUserId: string, userId: string, role: "ADMIN" | "MEMBER"): Promise<void> {
+  async upsertChannelMember(
+    organizationId: string,
+    channelId: string,
+    actorUserId: string,
+    userId: string,
+    role: "ADMIN" | "MEMBER",
+  ): Promise<void> {
     const channel = await this.requireChannelAdmin(organizationId, channelId, actorUserId);
+    if (channel.type === "GROUP") {
+      const { maxGroupChatMembers } = await this.getPolicy(organizationId);
+      const activeMembers = await this.prisma.channelMember.count({
+        where: { channelId, leftAt: null, userId: { not: userId } },
+      });
+      if (activeMembers >= maxGroupChatMembers) {
+        throw policyError(`Group chats are limited to ${maxGroupChatMembers} members`);
+      }
+    }
     const membership = await this.prisma.organizationMember.findFirst({
       where: { organizationId, userId, status: "ACTIVE", deletedAt: null },
       select: { id: true },
@@ -867,7 +1019,11 @@ export class ConnectService {
         select: { id: true },
       });
       if (!teamMember) {
-        throw new AppError(ErrorCode.MEMBER_NOT_FOUND, "User must be a member of the channel's team", HttpStatus.BAD_REQUEST);
+        throw new AppError(
+          ErrorCode.MEMBER_NOT_FOUND,
+          "User must be a member of the channel's team",
+          HttpStatus.BAD_REQUEST,
+        );
       }
     }
     const existingMember = await this.prisma.channelMember.findUnique({
@@ -887,10 +1043,15 @@ export class ConnectService {
 
   async removeMember(organizationId: string, channelId: string, actorUserId: string, userId: string): Promise<void> {
     const channel = await this.requireChannelAdmin(organizationId, channelId, actorUserId);
-    const membership = await this.prisma.channelMember.findUnique({ where: { channelId_userId: { channelId, userId } }, select: { role: true } });
+    const membership = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+      select: { role: true },
+    });
     if (membership?.role === "ADMIN") {
       const adminCount = await this.prisma.channelMember.count({ where: { channelId, role: "ADMIN" } });
-      if (adminCount === 1) {throw new AppError(ErrorCode.FORBIDDEN, "A channel must have at least one admin", HttpStatus.BAD_REQUEST);}
+      if (adminCount === 1) {
+        throw new AppError(ErrorCode.FORBIDDEN, "A channel must have at least one admin", HttpStatus.BAD_REQUEST);
+      }
     }
     if (channel.type === "GROUP") {
       await this.prisma.channelMember.update({
@@ -905,7 +1066,12 @@ export class ConnectService {
     }
   }
 
-  async leaveGroupConversation(organizationId: string, channelId: string, userId: string, newAdminUserId?: string): Promise<void> {
+  async leaveGroupConversation(
+    organizationId: string,
+    channelId: string,
+    userId: string,
+    newAdminUserId?: string,
+  ): Promise<void> {
     const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
     if (channel.type !== "GROUP") {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "Only group members can leave a group", HttpStatus.BAD_REQUEST);
@@ -918,7 +1084,11 @@ export class ConnectService {
     await this.prisma.$transaction(async (transaction) => {
       if (channel.createdById === userId) {
         if (!newAdminUserId || !remainingMembers.some((member) => member.userId === newAdminUserId)) {
-          throw new AppError(ErrorCode.VALIDATION_FAILED, "Select an active group participant to become admin", HttpStatus.BAD_REQUEST);
+          throw new AppError(
+            ErrorCode.VALIDATION_FAILED,
+            "Select an active group participant to become admin",
+            HttpStatus.BAD_REQUEST,
+          );
         }
         await transaction.channel.update({
           where: { id: channelId },
@@ -993,9 +1163,19 @@ export class ConnectService {
 
   async createPost(organizationId: string, channelId: string, authorId: string, dto: CreatePostDto) {
     const channel = await this.getChannelForMember(organizationId, channelId, authorId, true);
+    const policy = await this.getPolicy(organizationId);
+    if (dto.poll && !policy.pollsEnabled) {
+      throw policyError("Polls are turned off for this organization");
+    }
+    assertImagePolicy(dto.imageUrl, policy);
+    assertImagePolicy(dto.backgroundImageUrl, policy);
     const closesAt = dto.poll?.closesAt ? new Date(dto.poll.closesAt) : null;
     if (closesAt && closesAt <= new Date()) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll closing time must be in the future", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Poll closing time must be in the future",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     if (dto.poll) {
       const optionContent = dto.poll.options.map((option) => option.content.trim().toLocaleLowerCase());
@@ -1005,26 +1185,46 @@ export class ConnectService {
     }
     const post = await this.prisma.post.create({
       data: {
-        organizationId, channelId, authorId, title: dto.title?.trim() || null, content: dto.content,
-        contentHtml: dto.contentHtml ?? null, imageUrl: dto.imageUrl ?? null,
-        backgroundImageUrl: dto.backgroundImageUrl ?? null, backgroundColor: dto.backgroundColor ?? null,
-        ...(dto.poll ? {
-          poll: {
-            create: {
-              allowsVoteChanges: dto.poll.allowsVoteChanges ?? false, closesAt,
-              options: { create: dto.poll.options.map((option, position) => ({ content: option.content.trim(), position })) },
-            },
-          },
-        } : {}),
+        organizationId,
+        channelId,
+        authorId,
+        title: dto.title?.trim() || null,
+        content: dto.content,
+        contentHtml: dto.contentHtml ?? null,
+        imageUrl: dto.imageUrl ?? null,
+        backgroundImageUrl: dto.backgroundImageUrl ?? null,
+        backgroundColor: dto.backgroundColor ?? null,
+        ...(dto.poll
+          ? {
+              poll: {
+                create: {
+                  allowsVoteChanges: dto.poll.allowsVoteChanges ?? false,
+                  closesAt,
+                  options: {
+                    create: dto.poll.options.map((option, position) => ({ content: option.content.trim(), position })),
+                  },
+                },
+              },
+            }
+          : {}),
       },
       include: this.postInclude(authorId),
     });
     await this.audit.record({
-      action: "connect.post.created", organizationId, actorUserId: authorId, resourceType: "Post", resourceId: post.id,
+      action: "connect.post.created",
+      organizationId,
+      actorUserId: authorId,
+      resourceType: "Post",
+      resourceId: post.id,
       metadata: { channelId, hasPoll: Boolean(dto.poll) },
     });
     const serialized = this.serializePost(post);
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "post:created", { channelId, post: serialized });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "post:created",
+      { channelId, post: serialized },
+    );
     return serialized;
   }
 
@@ -1056,6 +1256,9 @@ export class ConnectService {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the author can edit a post", HttpStatus.FORBIDDEN);
     }
     await this.getChannelForMember(organizationId, post.channelId, authorId, true);
+    const policy = await this.getPolicy(organizationId);
+    assertImagePolicy(dto.imageUrl ?? undefined, policy);
+    assertImagePolicy(dto.backgroundImageUrl ?? undefined, policy);
     const updated = await this.prisma.post.update({
       where: { id: postId },
       data: {
@@ -1100,6 +1303,7 @@ export class ConnectService {
   }
 
   async addPostReaction(organizationId: string, postId: string, userId: string, emoji: string): Promise<void> {
+    assertAllowedReaction(emoji, (await this.getPolicy(organizationId)).allowedReactions);
     const post = await this.getPost(organizationId, postId);
     await this.getChannelForMember(organizationId, post.channelId, userId, true);
     await this.prisma.$transaction(async (transaction) => {
@@ -1120,7 +1324,11 @@ export class ConnectService {
     const comment = await this.getPostComment(organizationId, commentId);
     await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
     if (comment.authorId !== userId && comment.post.authorId !== userId) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Only the comment owner or post author can delete this comment", HttpStatus.FORBIDDEN);
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Only the comment owner or post author can delete this comment",
+        HttpStatus.FORBIDDEN,
+      );
     }
     await this.prisma.postComment.update({
       where: { id: commentId },
@@ -1160,7 +1368,13 @@ export class ConnectService {
     return updated;
   }
 
-  async addPostCommentReaction(organizationId: string, commentId: string, userId: string, emoji: string): Promise<void> {
+  async addPostCommentReaction(
+    organizationId: string,
+    commentId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<void> {
+    assertAllowedReaction(emoji, (await this.getPolicy(organizationId)).allowedReactions);
     const comment = await this.getPostComment(organizationId, commentId);
     await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
     await this.prisma.$transaction(async (transaction) => {
@@ -1169,7 +1383,12 @@ export class ConnectService {
     });
   }
 
-  async removePostCommentReaction(organizationId: string, commentId: string, userId: string, emoji: string): Promise<void> {
+  async removePostCommentReaction(
+    organizationId: string,
+    commentId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<void> {
     const comment = await this.getPostComment(organizationId, commentId);
     await this.getChannelForMember(organizationId, comment.post.channelId, userId, true);
     await this.prisma.postCommentReaction.deleteMany({ where: { commentId, userId, emoji } });
@@ -1193,24 +1412,28 @@ export class ConnectService {
     const poll = await this.prisma.poll.findFirst({
       where: {
         id: pollId,
-        OR: [
-          { post: { organizationId, deletedAt: null } },
-          { message: { organizationId, deletedAt: null } },
-        ],
+        OR: [{ post: { organizationId, deletedAt: null } }, { message: { organizationId, deletedAt: null } }],
       },
       include: { post: { select: { channelId: true } }, message: { select: { channelId: true } } },
     });
-    if (!poll) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll not found", HttpStatus.NOT_FOUND);}
+    if (!poll) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll not found", HttpStatus.NOT_FOUND);
+    }
     const channelId = poll.post?.channelId ?? poll.message?.channelId;
-    if (!channelId) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll owner not found", HttpStatus.NOT_FOUND);}
+    if (!channelId) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll owner not found", HttpStatus.NOT_FOUND);
+    }
     const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
     if (poll.closesAt && poll.closesAt <= new Date()) {
       throw new AppError(ErrorCode.FORBIDDEN, "This poll is closed", HttpStatus.FORBIDDEN);
     }
     const option = await this.prisma.pollOption.findFirst({ where: { id: optionId, pollId }, select: { id: true } });
-    if (!option) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll option not found", HttpStatus.BAD_REQUEST);}
+    if (!option) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll option not found", HttpStatus.BAD_REQUEST);
+    }
     const existingVote = await this.prisma.pollVote.findUnique({
-      where: { pollId_userId: { pollId, userId } }, select: { id: true, pollOptionId: true },
+      where: { pollId_userId: { pollId, userId } },
+      select: { id: true, pollOptionId: true },
     });
     if (existingVote && existingVote.pollOptionId !== optionId && !poll.allowsVoteChanges) {
       throw new AppError(ErrorCode.FORBIDDEN, "This poll does not allow vote changes", HttpStatus.FORBIDDEN);
@@ -1222,21 +1445,41 @@ export class ConnectService {
         update: { pollOptionId: optionId },
       });
     }
-    const post = poll.postId ? await this.prisma.post.findFirst({
-      where: { id: poll.postId, organizationId, deletedAt: null }, include: this.postInclude(userId),
-    }) : null;
-    const message = poll.messageId ? await this.prisma.message.findFirst({
-      where: { id: poll.messageId, organizationId, deletedAt: null }, include: this.messageInclude(userId),
-    }) : null;
-    if (!post && !message) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll owner not found", HttpStatus.NOT_FOUND);}
+    const post = poll.postId
+      ? await this.prisma.post.findFirst({
+          where: { id: poll.postId, organizationId, deletedAt: null },
+          include: this.postInclude(userId),
+        })
+      : null;
+    const message = poll.messageId
+      ? await this.prisma.message.findFirst({
+          where: { id: poll.messageId, organizationId, deletedAt: null },
+          include: this.messageInclude(userId),
+        })
+      : null;
+    if (!post && !message) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll owner not found", HttpStatus.NOT_FOUND);
+    }
     await this.audit.record({
-      action: "connect.poll.voted", organizationId, actorUserId: userId, resourceType: "Poll", resourceId: pollId,
+      action: "connect.poll.voted",
+      organizationId,
+      actorUserId: userId,
+      resourceType: "Poll",
+      resourceId: pollId,
       metadata: { postId: post?.id, messageId: message?.id, optionId },
     });
     const serialized = post ? this.serializePost(post) : this.serializeMessage(message!);
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "poll:vote-changed", {
-      channelId: channel.id, postId: post?.id, messageId: message?.id, poll: serialized.poll,
-    });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "poll:vote-changed",
+      {
+        channelId: channel.id,
+        postId: post?.id,
+        messageId: message?.id,
+        poll: serialized.poll,
+      },
+    );
     return serialized;
   }
 
@@ -1249,28 +1492,46 @@ export class ConnectService {
     await this.getChannelForMember(organizationId, channelId, userId, true);
 
     const members = await this.prisma.channelMember.findMany({
-      where: { channelId }, select: { userId: true, lastReadAt: true, leftAt: true },
+      where: { channelId },
+      select: { userId: true, lastReadAt: true, leftAt: true },
     });
     const viewerMembership = members.find((member) => member.userId === userId);
     const lastReadAt = viewerMembership?.lastReadAt;
     const historyCutoff = viewerMembership?.leftAt;
-    const firstUnread = options.initial === "unread"
-      ? await this.prisma.message.findFirst({
-          where: { organizationId, channelId, deletedAt: null, authorId: { not: userId }, ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}) },
-          orderBy: [{ createdAt: "asc" }, { id: "asc" }], select: { id: true },
-        })
-      : null;
+    const firstUnread =
+      options.initial === "unread"
+        ? await this.prisma.message.findFirst({
+            where: {
+              organizationId,
+              channelId,
+              deletedAt: null,
+              authorId: { not: userId },
+              ...(lastReadAt ? { createdAt: { gt: lastReadAt } } : {}),
+            },
+            orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+            select: { id: true },
+          })
+        : null;
     const cursorId = options.after ?? options.cursor;
     if (cursorId) {
       const cursorMessage = await this.getMessage(organizationId, cursorId);
       if (cursorMessage.channelId !== channelId) {
-        throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message cursor not found in this channel", HttpStatus.NOT_FOUND);
+        throw new AppError(
+          ErrorCode.MESSAGE_NOT_FOUND,
+          "Message cursor not found in this channel",
+          HttpStatus.NOT_FOUND,
+        );
       }
     }
     const forward = Boolean(options.after || firstUnread);
     const limit = Math.min(options.limit ?? 50, 100);
     const messages = await this.prisma.message.findMany({
-      where: { organizationId, channelId, deletedAt: null, ...(historyCutoff ? { createdAt: { lte: historyCutoff } } : {}) },
+      where: {
+        organizationId,
+        channelId,
+        deletedAt: null,
+        ...(historyCutoff ? { createdAt: { lte: historyCutoff } } : {}),
+      },
       orderBy: [{ createdAt: forward ? "asc" : "desc" }, { id: forward ? "asc" : "desc" }],
       take: limit + 1,
       ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : firstUnread ? { cursor: { id: firstUnread.id } } : {}),
@@ -1300,19 +1561,26 @@ export class ConnectService {
     };
   }
 
-  async createMessage(
-    organizationId: string,
-    channelId: string,
-    authorId: string,
-    dto: CreateMessageDto,
-  ) {
+  async createMessage(organizationId: string, channelId: string, authorId: string, dto: CreateMessageDto) {
     const channel = await this.getChannelForMember(organizationId, channelId, authorId, true);
     const membership = await this.prisma.channelMember.findUnique({
       where: { channelId_userId: { channelId, userId: authorId } },
       select: { leftAt: true },
     });
     if (channel.type === "GROUP" && membership?.leftAt) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Former group members can only view previous messages", HttpStatus.FORBIDDEN);
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Former group members can only view previous messages",
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    const policy = await this.getPolicy(organizationId);
+    if (channel.type === "DIRECT" && !policy.directMessagesEnabled) {
+      throw policyError("Direct messages are turned off for this organization");
+    }
+    assertMessageLength(dto.content, policy.maxMessageLength);
+    if (dto.poll && !policy.pollsEnabled) {
+      throw policyError("Polls are turned off for this organization");
     }
 
     if (dto.parentId) {
@@ -1327,6 +1595,18 @@ export class ConnectService {
     this.assertValidPoll(dto.poll);
 
     const mentionUserIds = await this.resolveMentions(organizationId, dto.content, dto.mentionUserIds);
+    const alreadySent = dto.clientMessageId
+      ? await this.prisma.message.findUnique({
+          where: {
+            organizationId_channelId_clientMessageId: {
+              organizationId,
+              channelId,
+              clientMessageId: dto.clientMessageId,
+            },
+          },
+          select: { id: true },
+        })
+      : null;
 
     const message = dto.clientMessageId
       ? await (this.prisma.message as unknown as IdempotentMessageDelegate).upsert({
@@ -1386,6 +1666,9 @@ export class ConnectService {
         createdAt: message.createdAt,
       });
     }
+    if (!alreadySent) {
+      void this.notifyNewMessage(organizationId, channel, authorId, dto.content, mentionUserIds, recipientUserIds);
+    }
     return this.serializeMessage(message);
   }
 
@@ -1406,18 +1689,20 @@ export class ConnectService {
       select: { name: true },
     });
     const type = details.type ?? "audio";
-    const duration = details.durationSeconds === undefined
-      ? ""
-      : ` · ${Math.floor(details.durationSeconds / 60)}:${String(details.durationSeconds % 60).padStart(2, "0")}`;
-    const description = details.action === "initiated"
-      ? `${actor?.name ?? "Someone"} started a ${type} call`
-      : details.action === "accepted"
-        ? `${actor?.name ?? "Someone"} accepted the call`
-        : details.action === "declined"
-          ? `${actor?.name ?? "Someone"} declined the call`
-          : details.action === "missed"
-            ? `Missed ${type} call`
-            : `${actor?.name ?? "Someone"} ended the call${duration}`;
+    const duration =
+      details.durationSeconds === undefined
+        ? ""
+        : ` · ${Math.floor(details.durationSeconds / 60)}:${String(details.durationSeconds % 60).padStart(2, "0")}`;
+    const description =
+      details.action === "initiated"
+        ? `${actor?.name ?? "Someone"} started a ${type} call`
+        : details.action === "accepted"
+          ? `${actor?.name ?? "Someone"} accepted the call`
+          : details.action === "declined"
+            ? `${actor?.name ?? "Someone"} declined the call`
+            : details.action === "missed"
+              ? `Missed ${type} call`
+              : `${actor?.name ?? "Someone"} ended the call${duration}`;
     const message = await this.prisma.message.create({
       data: {
         organizationId,
@@ -1448,6 +1733,9 @@ export class ConnectService {
         createdAt: message.createdAt,
       });
     }
+    if (details.action === "missed") {
+      void this.notifyMissedCall(organizationId, channel.id, actorUserId, type, recipientUserIds);
+    }
     return message;
   }
 
@@ -1463,6 +1751,13 @@ export class ConnectService {
     },
   ): Promise<void> {
     await this.getChannelForMember(organizationId, channelId, initiatorUserId, true);
+    const policy = await this.getPolicy(organizationId);
+    if (!policy.callsEnabled) {
+      throw policyError("Calls are turned off for this organization");
+    }
+    if (details.type === "video" && !policy.videoCallsEnabled) {
+      throw policyError("Video calls are turned off for this organization");
+    }
     const scopeByName: Record<typeof details.scope, ConnectCallScope> = {
       "one-to-one": "ONE_TO_ONE",
       group: "GROUP",
@@ -1505,12 +1800,18 @@ export class ConnectService {
       cancel: "CANCELLED",
       end: "ENDED",
     };
-    const terminal = details.action === "reject" || details.action === "miss" || details.action === "cancel" || details.action === "end";
+    const terminal =
+      details.action === "reject" ||
+      details.action === "miss" ||
+      details.action === "cancel" ||
+      details.action === "end";
     const call = await this.prisma.connectCall.findFirst({
       where: { id: details.callId, organizationId, channelId },
       select: { id: true, type: true },
     });
-    if (!call) {return undefined;}
+    if (!call) {
+      return undefined;
+    }
 
     await this.prisma.connectCall.update({
       where: { id: call.id },
@@ -1523,18 +1824,32 @@ export class ConnectService {
     await this.prisma.connectCallParticipant.upsert({
       where: { callId_userId: { callId: details.callId, userId } },
       create: { callId: details.callId, userId, joinedAt: details.action === "accept" ? new Date() : undefined },
-      update: details.action === "accept" ? { joinedAt: new Date(), leftAt: null } : terminal ? { leftAt: new Date() } : {},
+      update:
+        details.action === "accept" ? { joinedAt: new Date(), leftAt: null } : terminal ? { leftAt: new Date() } : {},
     });
     return call.type === "VIDEO" ? "video" : "audio";
   }
 
-  async leaveSharedCall(organizationId: string, channelId: string, userId: string, callId: string): Promise<{ ended: boolean }> {
+  async leaveSharedCall(
+    organizationId: string,
+    channelId: string,
+    userId: string,
+    callId: string,
+  ): Promise<{ ended: boolean }> {
     await this.getChannelForMember(organizationId, channelId, userId, true);
     const call = await this.prisma.connectCall.findFirst({
-      where: { id: callId, organizationId, channelId, scope: { in: ["GROUP", "CHANNEL", "MEETING"] }, status: { in: ["RINGING", "ACTIVE"] } },
+      where: {
+        id: callId,
+        organizationId,
+        channelId,
+        scope: { in: ["GROUP", "CHANNEL", "MEETING"] },
+        status: { in: ["RINGING", "ACTIVE"] },
+      },
       select: { id: true, startedAt: true },
     });
-    if (!call) {return { ended: false };}
+    if (!call) {
+      return { ended: false };
+    }
 
     await this.prisma.connectCallParticipant.updateMany({
       where: { callId, userId, joinedAt: { not: null }, leftAt: null },
@@ -1585,19 +1900,42 @@ export class ConnectService {
   }
 
   async requestCallRecording(organizationId: string, userId: string, callId: string) {
+    const policy = await this.getPolicy(organizationId);
+    if (!policy.recordingEnabled) {
+      throw policyError("Call recording is turned off for this organization");
+    }
     const call = await this.prisma.connectCall.findFirst({
-      where: { id: callId, organizationId, status: "ACTIVE", initiatedById: userId },
+      where: {
+        id: callId,
+        organizationId,
+        status: "ACTIVE",
+        ...(policy.recordingPolicy === "CALL_INITIATOR"
+          ? { initiatedById: userId }
+          : { OR: [{ initiatedById: userId }, { participants: { some: { userId } } }] }),
+      },
       include: { participants: { select: { userId: true } } },
     });
     if (!call) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Only the call initiator can request recording for an active call", HttpStatus.FORBIDDEN);
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        policy.recordingPolicy === "CALL_INITIATOR"
+          ? "Only the call initiator can request recording for an active call"
+          : "Only call participants can request recording for an active call",
+        HttpStatus.FORBIDDEN,
+      );
     }
     await this.getChannelForMember(organizationId, call.channelId, userId, true);
-    const consents = Object.fromEntries(call.participants.map(({ userId: participantId }) => [participantId, participantId === userId]));
+    const consents = Object.fromEntries(
+      call.participants.map(({ userId: participantId }) => [
+        participantId,
+        !policy.recordingRequiresConsent || participantId === userId,
+      ]),
+    );
+    const status = policy.recordingRequiresConsent ? "PENDING_CONSENT" : "READY";
     const recording = await this.prisma.connectCallRecording.upsert({
       where: { callId },
-      create: { callId, organizationId, requestedById: userId, participantConsents: consents },
-      update: { participantConsents: consents, status: "PENDING_CONSENT" },
+      create: { callId, organizationId, requestedById: userId, participantConsents: consents, status },
+      update: { participantConsents: consents, status },
     });
     await this.audit.record({
       action: "connect.call.recording.requested",
@@ -1616,13 +1954,18 @@ export class ConnectService {
       include: { participants: { select: { userId: true } }, recording: true },
     });
     if (!call?.recording) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Recording consent has not been requested", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Recording consent has not been requested",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     await this.getChannelForMember(organizationId, call.channelId, userId, true);
     const existing = call.recording.participantConsents;
-    const consents = existing && typeof existing === "object" && !Array.isArray(existing)
-      ? Object.fromEntries(Object.entries(existing).map(([participantId, value]) => [participantId, value === true]))
-      : {};
+    const consents =
+      existing && typeof existing === "object" && !Array.isArray(existing)
+        ? Object.fromEntries(Object.entries(existing).map(([participantId, value]) => [participantId, value === true]))
+        : {};
     consents[userId] = consent;
     const ready = call.participants.every(({ userId: participantId }) => consents[participantId] === true);
     const recording = await this.prisma.connectCallRecording.update({
@@ -1649,12 +1992,15 @@ export class ConnectService {
       throw new AppError(ErrorCode.FORBIDDEN, "Call access is not available", HttpStatus.FORBIDDEN);
     }
     await this.getChannelForMember(organizationId, call.channelId, userId, true);
-    if (!call.recording) {return null;}
+    if (!call.recording) {
+      return null;
+    }
 
     const source = call.recording.participantConsents;
-    const consents = source && typeof source === "object" && !Array.isArray(source)
-      ? Object.fromEntries(Object.entries(source).map(([participantId, value]) => [participantId, value === true]))
-      : {};
+    const consents =
+      source && typeof source === "object" && !Array.isArray(source)
+        ? Object.fromEntries(Object.entries(source).map(([participantId, value]) => [participantId, value === true]))
+        : {};
     return {
       status: call.recording.status,
       participants: call.participants.map(({ userId: participantId }) => participantId),
@@ -1663,18 +2009,22 @@ export class ConnectService {
   }
 
   private async getRecipientUserIds(organizationId: string, channel: Channel): Promise<string[]> {
-    const channelMembers = await this.prisma.channelMember.findMany({ where: { channelId: channel.id }, select: { userId: true } });
-    const organizationMembers = channelMembers.length > 0
-      ? await this.prisma.organizationMember.findMany({
-          where: {
-            organizationId,
-            userId: { in: channelMembers.map(({ userId }) => userId) },
-            status: "ACTIVE",
-            deletedAt: null,
-          },
-          select: { userId: true },
-        })
-      : [];
+    const channelMembers = await this.prisma.channelMember.findMany({
+      where: { channelId: channel.id },
+      select: { userId: true },
+    });
+    const organizationMembers =
+      channelMembers.length > 0
+        ? await this.prisma.organizationMember.findMany({
+            where: {
+              organizationId,
+              userId: { in: channelMembers.map(({ userId }) => userId) },
+              status: "ACTIVE",
+              deletedAt: null,
+            },
+            select: { userId: true },
+          })
+        : [];
     const eligibleMembers = channel.teamId
       ? await this.prisma.teamMember.findMany({
           where: {
@@ -1697,6 +2047,12 @@ export class ConnectService {
     if (message.authorId !== userId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the author can edit a message", HttpStatus.FORBIDDEN);
     }
+    const policy = await this.getPolicy(organizationId);
+    if (!policy.messageEditingEnabled) {
+      throw policyError("Message editing is turned off for this organization");
+    }
+    assertWithinWindow(message.createdAt, policy.messageEditWindowMinutes, "edited");
+    assertMessageLength(dto.content, policy.maxMessageLength);
 
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
@@ -1715,13 +2071,25 @@ export class ConnectService {
       },
       include: this.messageInclude(userId),
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", { channelId: channel.id, message: updated });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "message:updated",
+      { channelId: channel.id, message: updated },
+    );
     return updated;
   }
 
   async toggleMessagePin(organizationId: string, messageId: string, userId: string) {
     const message = await this.getMessage(organizationId, messageId);
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
+    if (
+      channel.type === "CHANNEL" &&
+      (await this.getPolicy(organizationId)).pinPolicy === "CHANNEL_ADMINS" &&
+      !(await this.isConnectModerator(organizationId, channel.id, userId))
+    ) {
+      throw policyError("Only channel admins can pin messages in this organization");
+    }
     const updated = await this.prisma.message.update({
       where: { id: message.id },
       data: { pinnedAt: message.pinnedAt ? null : new Date() },
@@ -1736,33 +2104,56 @@ export class ConnectService {
       resourceId: message.id,
       metadata: { channelId: channel.id },
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", {
-      channelId: channel.id,
-      message: serialized,
-    });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "message:updated",
+      {
+        channelId: channel.id,
+        message: serialized,
+      },
+    );
     return serialized;
   }
 
   async deleteMessage(organizationId: string, messageId: string, userId: string): Promise<void> {
     const message = await this.getMessage(organizationId, messageId);
-    if (message.authorId !== userId) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Only the author can delete a message", HttpStatus.FORBIDDEN);
+    const policy = await this.getPolicy(organizationId);
+    const isAuthor = message.authorId === userId;
+    if (!isAuthor) {
+      if (
+        !policy.adminsCanDeleteAnyMessage ||
+        !(await this.isConnectModerator(organizationId, message.channelId, userId))
+      ) {
+        throw new AppError(ErrorCode.FORBIDDEN, "Only the author can delete a message", HttpStatus.FORBIDDEN);
+      }
+    } else {
+      if (!policy.messageDeletionEnabled) {
+        throw policyError("Message deletion is turned off for this organization");
+      }
+      assertWithinWindow(message.createdAt, policy.messageDeleteWindowMinutes, "deleted");
     }
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
     await this.prisma.message.update({
       where: { id: messageId },
-      data: { deletedAt: new Date(), isDeleted: true },
+      data: { deletedAt: new Date(), isDeleted: true, deletedById: userId },
     });
 
     await this.audit.record({
-      action: "connect.message.deleted",
+      action: isAuthor ? "connect.message.deleted" : "connect.message.moderated",
       organizationId,
       actorUserId: userId,
       resourceType: "Message",
       resourceId: messageId,
+      ...(isAuthor ? {} : { metadata: { channelId: channel.id, authorId: message.authorId } }),
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:deleted", { channelId: channel.id, messageId, isDeleted: true });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "message:deleted",
+      { channelId: channel.id, messageId, isDeleted: true },
+    );
   }
 
   async restoreMessage(organizationId: string, messageId: string, userId: string): Promise<MessageWithMeta> {
@@ -1775,10 +2166,27 @@ export class ConnectService {
     if (message.authorId !== userId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the author can restore a message", HttpStatus.FORBIDDEN);
     }
+    if (message.isDeleted && !message.deletedById && message.content === "") {
+      throw new AppError(
+        ErrorCode.FORBIDDEN,
+        "Messages removed by the retention policy cannot be restored",
+        HttpStatus.FORBIDDEN,
+      );
+    }
+    if (message.deletedById && message.deletedById !== userId) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Messages removed by an admin cannot be restored", HttpStatus.FORBIDDEN);
+    }
+    if (message.deletedAt) {
+      assertWithinWindow(
+        message.deletedAt,
+        (await this.getPolicy(organizationId)).messageRestoreWindowMinutes,
+        "restored",
+      );
+    }
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
     const restored = await this.prisma.message.update({
       where: { id: messageId },
-      data: { deletedAt: null, isDeleted: false },
+      data: { deletedAt: null, isDeleted: false, deletedById: null },
       include: this.messageInclude(userId),
     });
     await this.audit.record({
@@ -1788,13 +2196,19 @@ export class ConnectService {
       resourceType: "Message",
       resourceId: messageId,
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:updated", { channelId: channel.id, message: restored });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "message:updated",
+      { channelId: channel.id, message: restored },
+    );
     return restored;
   }
 
   // ---------------- Reactions ----------------
 
   async addReaction(organizationId: string, messageId: string, userId: string, emoji: string): Promise<void> {
+    assertAllowedReaction(emoji, (await this.getPolicy(organizationId)).allowedReactions);
     const message = await this.getMessage(organizationId, messageId);
     const channel = await this.getChannelForMember(organizationId, message.channelId, userId, true);
 
@@ -1810,7 +2224,12 @@ export class ConnectService {
       resourceId: messageId,
       metadata: { emoji },
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:reaction-changed", { channelId: channel.id, messageId, userId, emoji, added: true });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "message:reaction-changed",
+      { channelId: channel.id, messageId, userId, emoji, added: true },
+    );
   }
 
   async removeReaction(organizationId: string, messageId: string, userId: string, emoji: string): Promise<void> {
@@ -1825,17 +2244,25 @@ export class ConnectService {
       resourceId: messageId,
       metadata: { emoji },
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "message:reaction-changed", { channelId: channel.id, messageId, userId, emoji, added: false });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "message:reaction-changed",
+      { channelId: channel.id, messageId, userId, emoji, added: false },
+    );
   }
 
   async markChannelRead(organizationId: string, channelId: string, userId: string, messageId?: string) {
     const channel = await this.getChannelForMember(organizationId, channelId, userId, true);
     const message = await this.prisma.message.findFirst({
       where: { organizationId, channelId, deletedAt: null, ...(messageId ? { id: messageId } : {}) },
-      orderBy: [{ createdAt: "desc" }, { id: "desc" }], select: { createdAt: true },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      select: { createdAt: true },
     });
     if (!message) {
-      if (messageId) {throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);}
+      if (messageId) {
+        throw new AppError(ErrorCode.MESSAGE_NOT_FOUND, "Message not found", HttpStatus.NOT_FOUND);
+      }
       return null;
     }
     await this.prisma.channelMember.updateMany({
@@ -1843,11 +2270,19 @@ export class ConnectService {
       data: { lastReadAt: message.createdAt },
     });
     const member = await this.prisma.channelMember.findUnique({
-      where: { channelId_userId: { channelId, userId } }, select: { lastReadAt: true },
+      where: { channelId_userId: { channelId, userId } },
+      select: { lastReadAt: true },
     });
-    this.publisher.publishToUsers(organizationId, await this.getRecipientUserIds(organizationId, channel), "channel:marked-read", {
-      channelId, userId, lastReadAt: member?.lastReadAt ?? null,
-    });
+    this.publisher.publishToUsers(
+      organizationId,
+      await this.getRecipientUserIds(organizationId, channel),
+      "channel:marked-read",
+      {
+        channelId,
+        userId,
+        lastReadAt: member?.lastReadAt ?? null,
+      },
+    );
     return member?.lastReadAt ?? null;
   }
 
@@ -1895,14 +2330,22 @@ export class ConnectService {
       ...details,
       comments,
       reactions,
-      poll: poll ? {
-        id: poll.id, allowsVoteChanges: poll.allowsVoteChanges, closesAt: poll.closesAt,
-        createdAt: poll.createdAt, updatedAt: poll.updatedAt,
-        options: poll.options.map((option) => ({
-          id: option.id, content: option.content, position: option.position, voteCount: option._count.votes,
-        })),
-        currentVote: poll.votes[0] ?? null,
-      } : null,
+      poll: poll
+        ? {
+            id: poll.id,
+            allowsVoteChanges: poll.allowsVoteChanges,
+            closesAt: poll.closesAt,
+            createdAt: poll.createdAt,
+            updatedAt: poll.updatedAt,
+            options: poll.options.map((option) => ({
+              id: option.id,
+              content: option.content,
+              position: option.position,
+              voteCount: option._count.votes,
+            })),
+            currentVote: poll.votes[0] ?? null,
+          }
+        : null,
     };
   }
 
@@ -1910,21 +2353,35 @@ export class ConnectService {
     const { poll, ...details } = message;
     return {
       ...details,
-      poll: poll ? {
-        id: poll.id, allowsVoteChanges: poll.allowsVoteChanges, closesAt: poll.closesAt,
-        createdAt: poll.createdAt, updatedAt: poll.updatedAt,
-        options: poll.options.map((option) => ({
-          id: option.id, content: option.content, position: option.position, voteCount: option._count.votes,
-        })),
-        currentVote: poll.votes[0] ?? null,
-      } : null,
+      poll: poll
+        ? {
+            id: poll.id,
+            allowsVoteChanges: poll.allowsVoteChanges,
+            closesAt: poll.closesAt,
+            createdAt: poll.createdAt,
+            updatedAt: poll.updatedAt,
+            options: poll.options.map((option) => ({
+              id: option.id,
+              content: option.content,
+              position: option.position,
+              voteCount: option._count.votes,
+            })),
+            currentVote: poll.votes[0] ?? null,
+          }
+        : null,
     };
   }
 
   private assertValidPoll(poll?: CreatePollDto): void {
-    if (!poll) {return;}
+    if (!poll) {
+      return;
+    }
     if (poll.closesAt && new Date(poll.closesAt) <= new Date()) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Poll closing time must be in the future", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Poll closing time must be in the future",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const optionContent = poll.options.map((option) => option.content.trim().toLocaleLowerCase());
     if (new Set(optionContent).size !== optionContent.length) {
@@ -1949,7 +2406,11 @@ export class ConnectService {
     }));
   }
 
-  private async mutatePreferences(organizationId: string, userId: string, mutate: (current: Record<string, unknown>) => Record<string, unknown>) {
+  private async mutatePreferences(
+    organizationId: string,
+    userId: string,
+    mutate: (current: Record<string, unknown>) => Record<string, unknown>,
+  ) {
     return this.prisma.$transaction(async (transaction) => {
       await transaction.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`connect-sidebar:${organizationId}:${userId}`}, 0))`;
       const record = await transaction.connectSidebarPreference.findUnique({
@@ -2066,12 +2527,209 @@ export class ConnectService {
     };
   }
 
+  /** The user's saved manual status, if one is set and not expired. */
+  async preferredPresence(organizationId: string, userId: string): Promise<ConnectManualStatus | null> {
+    const preferences = await this.settings.getConnectUser(organizationId, userId);
+    return this.settings.effectiveManualStatus(preferences) as ConnectManualStatus | null;
+  }
+
+  /** Re-applies the saved status to a connected user, e.g. after they change it in settings. */
+  async applyPresencePreference(organizationId: string, userId: string): Promise<void> {
+    if (!this.presence || !(await this.presence.isConnected(organizationId, userId))) {
+      return;
+    }
+    const current = await this.presence.getStatus(organizationId, userId);
+    const preferred = await this.preferredPresence(organizationId, userId);
+    const next = preferred ?? (current === "in-meeting" || current === "sharing" ? current : "online");
+    if (next === current) {
+      return;
+    }
+    await this.presence.setStatus(organizationId, userId, next);
+    this.publisher.presenceChanged(organizationId, userId, next);
+  }
+
+  /** Channel admins, and anyone who can manage organization settings, may moderate Connect content. */
+  private async isConnectModerator(organizationId: string, channelId: string, userId: string): Promise<boolean> {
+    const membership = await this.prisma.channelMember.findUnique({
+      where: { channelId_userId: { channelId, userId } },
+      select: { role: true },
+    });
+    if (membership?.role === "ADMIN") {
+      return true;
+    }
+    return this.permissions
+      ? this.permissions.hasPermission({ userId, organizationId, permissionKey: "organization.settings.manage" })
+      : false;
+  }
+
+  /** Auto-joins the member to the organization's default channels once, so leaving one is respected. */
+  private async joinDefaultChannels(organizationId: string, userId: string): Promise<void> {
+    const { defaultChannelIds } = await this.getPolicy(organizationId);
+    if (defaultChannelIds.length === 0) {
+      return;
+    }
+    const record = await this.prisma.connectSidebarPreference.findUnique({
+      where: { organizationId_userId: { organizationId, userId } },
+      select: { preferences: true },
+    });
+    const applied = new Set(toStringList(toSidebarPreferences(record?.preferences).autoJoinedChannelIds));
+    const pending = defaultChannelIds.filter((id) => !applied.has(id));
+    if (pending.length === 0) {
+      return;
+    }
+
+    const channels = await this.prisma.channel.findMany({
+      where: {
+        id: { in: pending },
+        organizationId,
+        type: "CHANNEL",
+        visibility: "PUBLIC",
+        deletedAt: null,
+        OR: [{ teamId: null }, { team: { visibility: "PUBLIC", deletedAt: null } }],
+      },
+      select: { id: true },
+    });
+    if (channels.length > 0) {
+      await this.prisma.channelMember.createMany({
+        data: channels.map(({ id }) => ({ channelId: id, userId })),
+        skipDuplicates: true,
+      });
+    }
+    await this.mutatePreferences(organizationId, userId, (current) => ({
+      ...current,
+      autoJoinedChannelIds: [...applied, ...pending],
+    }));
+  }
+
+  private async notifyNewMessage(
+    organizationId: string,
+    channel: Channel,
+    authorId: string,
+    content: string,
+    mentionUserIds: string[],
+    recipientUserIds: string[],
+  ): Promise<void> {
+    if (!this.notifications) {
+      return;
+    }
+    try {
+      const mentioned = new Set(mentionUserIds.filter((id) => id !== authorId && recipientUserIds.includes(id)));
+      const isConversation = channel.type === "DIRECT" || channel.type === "GROUP";
+      const directRecipients = isConversation
+        ? recipientUserIds.filter((id) => id !== authorId && !mentioned.has(id))
+        : [];
+      if (mentioned.size === 0 && directRecipients.length === 0) {
+        return;
+      }
+
+      const authorName = await this.getUserDisplayName(authorId);
+      const body = summarize(content);
+      const where = isConversation ? "" : ` in #${channel.name}`;
+      await this.deliverConnectNotifications(organizationId, channel.id, [
+        ...[...mentioned].map((userId) => ({
+          userId,
+          type: "MENTION" as const,
+          title: `${authorName} mentioned you${where}`,
+          body,
+        })),
+        ...directRecipients.map((userId) => ({
+          userId,
+          type: "DIRECT_MESSAGE" as const,
+          title: `New message from ${authorName}`,
+          body,
+        })),
+      ]);
+    } catch {
+      // Notifications are best-effort; a failure must never fail the send.
+    }
+  }
+
+  private async notifyMissedCall(
+    organizationId: string,
+    channelId: string,
+    actorUserId: string,
+    type: "audio" | "video",
+    recipientUserIds: string[],
+  ): Promise<void> {
+    if (!this.notifications) {
+      return;
+    }
+    try {
+      const callerName = await this.getUserDisplayName(actorUserId);
+      await this.deliverConnectNotifications(
+        organizationId,
+        channelId,
+        recipientUserIds
+          .filter((userId) => userId !== actorUserId)
+          .map((userId) => ({ userId, type: "CALL" as const, title: `Missed ${type} call from ${callerName}` })),
+      );
+    } catch {
+      // Best-effort, see notifyNewMessage.
+    }
+  }
+
+  /** Skips muted conversations and suppresses email during quiet hours or Do Not Disturb. */
+  private async deliverConnectNotifications(
+    organizationId: string,
+    channelId: string,
+    items: { userId: string; type: "MENTION" | "DIRECT_MESSAGE" | "CALL"; title: string; body?: string }[],
+  ): Promise<void> {
+    if (!this.notifications || items.length === 0) {
+      return;
+    }
+    const userIds = [...new Set(items.map((item) => item.userId))];
+    const [sidebarRecords, userSettings, profiles] = await Promise.all([
+      this.prisma.connectSidebarPreference.findMany({
+        where: { organizationId, userId: { in: userIds } },
+        select: { userId: true, preferences: true },
+      }),
+      this.prisma.connectUserSettings.findMany({ where: { organizationId, userId: { in: userIds } } }),
+      this.prisma.userProfile.findMany({
+        where: { userId: { in: userIds } },
+        select: { userId: true, timezone: true },
+      }),
+    ]);
+    const muted = new Set(
+      sidebarRecords
+        .filter(({ preferences }) => {
+          const settings = toSidebarPreferences(toSidebarPreferences(preferences).settings);
+          return (
+            toSidebarPreferences(toSidebarPreferences(settings.conversationNotifications)[channelId]).muted === true
+          );
+        })
+        .map(({ userId }) => userId),
+    );
+    const settingsByUser = new Map(userSettings.map((settings) => [settings.userId, settings]));
+    const timezoneByUser = new Map(profiles.map((profile) => [profile.userId, profile.timezone]));
+
+    await Promise.all(
+      items
+        .filter((item) => !muted.has(item.userId))
+        .map(async (item) => {
+          const settings = settingsByUser.get(item.userId);
+          const quiet = Boolean(
+            settings &&
+            this.settings &&
+            (this.settings.effectiveManualStatus(settings) === "dnd" ||
+              this.settings.isWithinQuietHours(settings, timezoneByUser.get(item.userId))),
+          );
+          await this.notifications?.create(
+            organizationId,
+            { userId: item.userId, type: item.type, title: item.title, ...(item.body ? { body: item.body } : {}) },
+            { emailByDefault: false, suppressEmail: quiet },
+          );
+        }),
+    );
+  }
+
   private async requireTeamAdmin(organizationId: string, teamId: string, userId: string) {
     const membership = await this.prisma.teamMember.findFirst({
       where: { teamId, userId, role: "ADMIN", team: { organizationId, deletedAt: null } },
       select: { team: true },
     });
-    if (!membership) {throw new AppError(ErrorCode.FORBIDDEN, "Only team admins can perform this action", HttpStatus.FORBIDDEN);}
+    if (!membership) {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only team admins can perform this action", HttpStatus.FORBIDDEN);
+    }
     return membership.team;
   }
 
@@ -2081,7 +2739,89 @@ export class ConnectService {
       where: { channelId_userId: { channelId, userId } },
       select: { role: true },
     });
-    if (membership?.role !== "ADMIN") {throw new AppError(ErrorCode.FORBIDDEN, "Only channel admins can perform this action", HttpStatus.FORBIDDEN);}
+    if (membership?.role !== "ADMIN") {
+      throw new AppError(ErrorCode.FORBIDDEN, "Only channel admins can perform this action", HttpStatus.FORBIDDEN);
+    }
     return channel;
   }
+}
+
+function policyError(message: string) {
+  return new AppError(ErrorCode.FORBIDDEN, message, HttpStatus.FORBIDDEN);
+}
+
+function assertChannelNamePrefix(name: string, prefixes: string[]) {
+  if (prefixes.length === 0) {
+    return;
+  }
+  const normalized = name.trim().toLocaleLowerCase();
+  if (!prefixes.some((prefix) => normalized.startsWith(prefix.toLocaleLowerCase()))) {
+    throw new AppError(
+      ErrorCode.VALIDATION_FAILED,
+      `Channel names must start with one of: ${prefixes.join(", ")}`,
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+function assertMessageLength(content: string, maxLength: number) {
+  if (content.length > maxLength) {
+    throw new AppError(
+      ErrorCode.VALIDATION_FAILED,
+      `Messages are limited to ${maxLength} characters`,
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+function assertAllowedReaction(emoji: string, allowedReactions: string[]) {
+  if (allowedReactions.length > 0 && !allowedReactions.includes(emoji)) {
+    throw policyError("This reaction is not allowed in this organization");
+  }
+}
+
+function assertWithinWindow(since: Date, windowMinutes: number | null, action: string) {
+  if (windowMinutes === null) {
+    return;
+  }
+  if (Date.now() - since.getTime() > windowMinutes * 60_000) {
+    throw policyError(`Messages can only be ${action} within ${windowMinutes} minutes`);
+  }
+}
+
+function assertImagePolicy(
+  dataUrl: string | undefined,
+  policy: Pick<ConnectPolicy, "maxImageSizeKb" | "allowedImageTypes">,
+) {
+  if (!dataUrl) {
+    return;
+  }
+  const match = /^data:([^;,]+)(;base64)?,/.exec(dataUrl);
+  if (!match) {
+    return;
+  }
+  const mimeType = match[1].toLowerCase();
+  if (!policy.allowedImageTypes.includes(mimeType)) {
+    throw new AppError(
+      ErrorCode.VALIDATION_FAILED,
+      `Images must be one of: ${policy.allowedImageTypes.join(", ")}`,
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+  const payload = dataUrl.slice(match[0].length);
+  const bytes = match[2]
+    ? Math.floor((payload.length * 3) / 4) - (payload.endsWith("==") ? 2 : payload.endsWith("=") ? 1 : 0)
+    : payload.length;
+  if (bytes > policy.maxImageSizeKb * 1024) {
+    throw new AppError(
+      ErrorCode.VALIDATION_FAILED,
+      `Images are limited to ${policy.maxImageSizeKb} KB`,
+      HttpStatus.BAD_REQUEST,
+    );
+  }
+}
+
+function summarize(content: string) {
+  const text = content.replace(/\s+/g, " ").trim();
+  return text.length > 140 ? `${text.slice(0, 137)}...` : text;
 }

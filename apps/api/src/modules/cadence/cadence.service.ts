@@ -6,6 +6,8 @@ import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { AuditService } from "../audit/audit.service";
 import type { CreateCardDto, CreateSessionDto, GroupCardDto } from "./dto/cadence.dto";
+import { AppSettingsService } from "../settings/app-settings.service";
+import { resolveAppSettings, settingsPolicyError } from "../settings/settings.defaults";
 
 export type SessionWithCards = CadenceSession & {
   cards: Array<CadenceCard & { _count: { votes: number } }>;
@@ -17,16 +19,18 @@ export class CadenceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly settings: AppSettingsService,
   ) {}
 
   // ---------------- Sessions ----------------
 
   async listSessions(organizationId: string): Promise<Array<CadenceSession & { _count: { cards: number } }>> {
+    const { sessionListSize } = await resolveAppSettings(this.settings, "cadence", organizationId);
     return this.prisma.cadenceSession.findMany({
       where: { organizationId },
       include: { _count: { select: { cards: { where: { deletedAt: null } } } } },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: sessionListSize,
     });
   }
 
@@ -48,7 +52,9 @@ export class CadenceService {
         type: dto.type,
         title: dto.title.trim(),
         facilitatorId,
-        isAnonymous: dto.isAnonymous ?? true,
+        isAnonymous:
+          dto.isAnonymous ??
+          (await resolveAppSettings(this.settings, "cadence", organizationId)).anonymousFeedbackByDefault,
         phase: "COLLECT",
         startedAt: new Date(),
       },
@@ -125,6 +131,10 @@ export class CadenceService {
         "Cards can only be added during the collect phase",
         HttpStatus.BAD_REQUEST,
       );
+    }
+    const { maxCardContentLength } = await resolveAppSettings(this.settings, "cadence", organizationId);
+    if (dto.content.length > maxCardContentLength) {
+      throw settingsPolicyError(`Cards are limited to ${maxCardContentLength} characters`, HttpStatus.BAD_REQUEST);
     }
 
     const maxPosition = await this.prisma.cadenceCard.aggregate({
@@ -208,6 +218,9 @@ export class CadenceService {
 
   async unvote(organizationId: string, sessionId: string, cardId: string, userId: string): Promise<void> {
     await this.getSessionRow(organizationId, sessionId);
+    if (!(await resolveAppSettings(this.settings, "cadence", organizationId)).allowVoteChanges) {
+      throw settingsPolicyError("Votes cannot be changed in this organization");
+    }
     await this.prisma.cadenceVote.deleteMany({ where: { cardId, userId } });
   }
 

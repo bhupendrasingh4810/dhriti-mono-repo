@@ -12,8 +12,11 @@ import {
   LogOut,
   Map,
   MessageSquare,
+  NotebookPen,
   PanelsTopLeft,
   Settings,
+  SlidersHorizontal,
+  Sparkles,
   SquareCheckBig,
   UserRound,
   Users,
@@ -25,6 +28,7 @@ import { useConnectPresence } from "@/contexts/connect-presence-context";
 import { useConnectSearch } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
+import { useSettingsAccess } from "@/features/settings/use-app-settings";
 
 interface Props {
   activeView: AppView;
@@ -36,6 +40,7 @@ export default function Header({ activeView }: Props) {
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user, logout } = useAuth();
+  const settingsAccess = useSettingsAccess();
   const { presence } = useConnectPresence();
   const { recentUsers, recentUsersError, selectUser } = useConnectSearch();
   const userName = user?.name ?? "User";
@@ -47,7 +52,7 @@ export default function Header({ activeView }: Props) {
     .slice(0, 2)
     .toUpperCase();
   const organizationPath = user?.organization?.slug ?? user?.organization?.id ?? "";
-  const canManageSettings = Boolean(user?.isPlatformUser || user?.role === "ORG_ADMIN");
+  const canManageSettings = settingsAccess.canManage === true;
 
   function clearMenuCloseTimer() {
     if (!menuCloseTimer.current) return;
@@ -104,6 +109,12 @@ export default function Header({ activeView }: Props) {
       href: `/${organizationPath}/settings/work-items`,
     },
     {
+      id: "flow-defaults",
+      label: "Defaults and limits",
+      icon: <SlidersHorizontal aria-hidden="true" size={16} strokeWidth={1.75} />,
+      href: `/${organizationPath}/flow/settings`,
+    },
+    {
       id: "connect-settings",
       label: "Connect Settings",
       icon: <MessageSquare aria-hidden="true" size={16} strokeWidth={1.75} />,
@@ -142,6 +153,22 @@ export default function Header({ activeView }: Props) {
       sectionTitle: "HRMS Settings",
       dividerAbove: true,
       href: `/${organizationPath}/hrms/settings`,
+    },
+    {
+      id: "nexus-settings",
+      label: "Nexus Settings",
+      icon: <Sparkles aria-hidden="true" size={16} strokeWidth={1.75} />,
+      sectionTitle: "Nexus Settings",
+      dividerAbove: true,
+      href: `/${organizationPath}/nexus/settings`,
+    },
+    {
+      id: "notes-settings",
+      label: "Notes Settings",
+      icon: <NotebookPen aria-hidden="true" size={16} strokeWidth={1.75} />,
+      sectionTitle: "Notes Settings",
+      dividerAbove: true,
+      href: `/${organizationPath}/notes/settings`,
     },
   ];
 
@@ -235,6 +262,20 @@ export default function Header({ activeView }: Props) {
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
+        {settingsAccess.loading ? (
+          <span role="status" className="text-xs text-text-secondary">
+            Checking settings access…
+          </span>
+        ) : settingsAccess.error ? (
+          <div className="flex items-center gap-1">
+            <span role="alert" className="text-xs text-error">
+              Settings access unavailable
+            </span>
+            <button type="button" className="text-xs text-brand underline" onClick={settingsAccess.retry}>
+              Retry
+            </button>
+          </div>
+        ) : null}
         <button
           type="button"
           onMouseEnter={(event) => {

@@ -24,9 +24,24 @@ import { TenantGuard } from "../../common/guards/tenant.guard";
 import { ConnectService } from "./connect.service";
 import { AddChannelMemberDto, CreateChannelDto, UpdateChannelDto } from "./dto/channel.dto";
 import { CreateConnectTeamDto, UpdateConnectTeamDto, UpsertConnectMemberDto } from "./dto/team.dto";
-import { AddReactionDto, CreateMessageDto, ListMessagesQueryDto, MarkMessagesReadDto, UpdateMessageDto } from "./dto/message.dto";
+import {
+  AddReactionDto,
+  CreateMessageDto,
+  ListMessagesQueryDto,
+  MarkMessagesReadDto,
+  UpdateMessageDto,
+} from "./dto/message.dto";
 import { CreatePostCommentDto, CreatePostDto, UpdatePostCommentDto, UpdatePostDto, VotePollDto } from "./dto/post.dto";
-import { CreateDirectConversationDto, CreateGroupConversationDto, LeaveGroupConversationDto, RecordConnectUserSearchDto, SearchConnectUsersQueryDto, SetSidebarFavoriteDto, UpdateConversationNotificationDto, UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
+import {
+  CreateDirectConversationDto,
+  CreateGroupConversationDto,
+  LeaveGroupConversationDto,
+  RecordConnectUserSearchDto,
+  SearchConnectUsersQueryDto,
+  SetSidebarFavoriteDto,
+  UpdateConversationNotificationDto,
+  UpdateSidebarSettingsDto,
+} from "./dto/sidebar.dto";
 import { SetRecordingConsentDto } from "./dto/recording.dto";
 
 @ApiTags("connect")
@@ -144,7 +159,10 @@ export class ConnectController {
   @Get("conversations")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @ApiOperation({ summary: "List the current user's direct and group conversations" })
-  async listConversations(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
+  async listConversations(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+  ) {
     return this.connect.listConversations(organization.organizationId, user.userId);
   }
 
@@ -272,21 +290,34 @@ export class ConnectController {
   @Get("teams/:teamId")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @ApiOperation({ summary: "Get Connect team details, members, and channels" })
-  async getTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string) {
+  async getTeam(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("teamId") teamId: string,
+  ) {
     return this.connect.getTeamDetails(organization.organizationId, teamId, user.userId);
   }
 
   @Post("teams")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.create" })
   @ApiOperation({ summary: "Create a Connect team" })
-  async createTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Body() dto: CreateConnectTeamDto) {
+  async createTeam(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Body() dto: CreateConnectTeamDto,
+  ) {
     return this.connect.createTeam(organization.organizationId, user.userId, dto);
   }
 
   @Patch("teams/:teamId")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @ApiOperation({ summary: "Update a Connect team" })
-  async updateTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Body() dto: UpdateConnectTeamDto) {
+  async updateTeam(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("teamId") teamId: string,
+    @Body() dto: UpdateConnectTeamDto,
+  ) {
     return this.connect.updateTeam(organization.organizationId, teamId, user.userId, dto);
   }
 
@@ -294,7 +325,11 @@ export class ConnectController {
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Delete a Connect team" })
-  async deleteTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string): Promise<void> {
+  async deleteTeam(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("teamId") teamId: string,
+  ): Promise<void> {
     return this.connect.deleteTeam(organization.organizationId, teamId, user.userId);
   }
 
@@ -302,15 +337,31 @@ export class ConnectController {
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Add a user or admin to a Connect team" })
-  async upsertTeamMember(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Body() dto: UpsertConnectMemberDto): Promise<void> {
-    return this.connect.upsertTeamMember(organization.organizationId, teamId, user.userId, dto.userId, dto.role ?? "MEMBER");
+  async upsertTeamMember(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("teamId") teamId: string,
+    @Body() dto: UpsertConnectMemberDto,
+  ): Promise<void> {
+    return this.connect.upsertTeamMember(
+      organization.organizationId,
+      teamId,
+      user.userId,
+      dto.userId,
+      dto.role ?? "MEMBER",
+    );
   }
 
   @Delete("teams/:teamId/members/:userId")
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.update" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Remove a user from a Connect team" })
-  async removeTeamMember(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string, @Param("userId") userId: string): Promise<void> {
+  async removeTeamMember(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("teamId") teamId: string,
+    @Param("userId") userId: string,
+  ): Promise<void> {
     return this.connect.removeTeamMember(organization.organizationId, teamId, user.userId, userId);
   }
 
@@ -318,7 +369,11 @@ export class ConnectController {
   @RequireAccess({ entitlement: "connect.enabled", permission: "connect.channel.read" })
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Leave a Connect team" })
-  async leaveTeam(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext, @Param("teamId") teamId: string): Promise<void> {
+  async leaveTeam(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("teamId") teamId: string,
+  ): Promise<void> {
     return this.connect.leaveTeam(organization.organizationId, teamId, user.userId);
   }
 
@@ -356,7 +411,13 @@ export class ConnectController {
     @Param("channelId") channelId: string,
     @Body() dto: AddChannelMemberDto,
   ): Promise<void> {
-    return this.connect.upsertChannelMember(organization.organizationId, channelId, user.userId, dto.userId, dto.role ?? "MEMBER");
+    return this.connect.upsertChannelMember(
+      organization.organizationId,
+      channelId,
+      user.userId,
+      dto.userId,
+      dto.role ?? "MEMBER",
+    );
   }
 
   @Delete("channels/:channelId/members/:userId")
@@ -546,7 +607,12 @@ export class ConnectController {
     @Param("channelId") channelId: string,
     @Body() dto: MarkMessagesReadDto,
   ) {
-    const lastReadAt = await this.connect.markChannelRead(organization.organizationId, channelId, user.userId, dto.messageId);
+    const lastReadAt = await this.connect.markChannelRead(
+      organization.organizationId,
+      channelId,
+      user.userId,
+      dto.messageId,
+    );
     return { lastReadAt };
   }
 

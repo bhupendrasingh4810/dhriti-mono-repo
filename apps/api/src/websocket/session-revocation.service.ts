@@ -19,7 +19,9 @@ export class SessionRevocationSocketService implements OnModuleInit, OnModuleDes
       await subscriber.connect();
       await subscriber.subscribe(SESSION_REVOCATION_CHANNEL);
       subscriber.on("message", (channel, sessionId) => {
-        if (channel === SESSION_REVOCATION_CHANNEL) {this.disconnectSession(sessionId);}
+        if (channel === SESSION_REVOCATION_CHANNEL) {
+          this.disconnectSession(sessionId);
+        }
       });
       this.subscriber = subscriber;
     } catch (error) {
@@ -38,7 +40,9 @@ export class SessionRevocationSocketService implements OnModuleInit, OnModuleDes
 
   private disconnectSession(sessionId: string): void {
     for (const socket of this.namespace?.sockets.values() ?? []) {
-      if (this.sessionId(socket) !== sessionId) {continue;}
+      if (this.sessionId(socket) !== sessionId) {
+        continue;
+      }
       socket.emit("session:revoked", { message: "Your session has been revoked." });
       socket.disconnect(true);
     }

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import EmojiPicker, { type EmojiClickData } from "emoji-picker-react";
+import { useAppSettings, useConnectUserSettings } from "@/features/settings/use-app-settings";
 import {
   Bell,
   Bold,
@@ -209,6 +210,11 @@ export default function ConnectMessageInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const composerInputRef = useRef<HTMLDivElement>(null);
   const isEditing = mode === "edit";
+  const connectPolicy = useAppSettings("connect");
+  const sendShortcut = useConnectUserSettings()?.sendShortcut ?? "ENTER";
+  const maxMessageLength = connectPolicy?.maxMessageLength ?? null;
+  const messageLength = draftValue.trim().length;
+  const overLimit = maxMessageLength !== null && messageLength > maxMessageLength;
 
   useEffect(() => {
     if (value !== lastSyncedValueRef.current) {
@@ -510,6 +516,7 @@ export default function ConnectMessageInput({
   function handleSend() {
     const content = draftValue.trim();
     if (!content && pendingAttachments.length === 0) return;
+    if (overLimit) return;
     const mentionedNames = [...content.matchAll(/@\[([^\]]+)\]/g)].map((match) => match[1].trim().toLowerCase());
     const mentionUserIds = users
       .filter((user) => mentionedNames.includes(user.displayName.toLowerCase()))
@@ -554,7 +561,8 @@ export default function ConnectMessageInput({
       applyFormat("underline");
       return;
     }
-    if (event.key === "Enter" && !event.shiftKey) {
+    const modifierHeld = event.ctrlKey || event.metaKey;
+    if (event.key === "Enter" && !event.shiftKey && (sendShortcut === "MOD_ENTER") === modifierHeld) {
       event.preventDefault();
       handleSend();
     }
@@ -784,6 +792,14 @@ export default function ConnectMessageInput({
                 {priorityFlag === "urgent" ? "Urgent" : "Important"}
               </span>
             )}
+            {maxMessageLength !== null && messageLength > maxMessageLength * 0.9 ? (
+              <span
+                aria-live="polite"
+                className={`text-xs tabular-nums ${overLimit ? "text-error" : "text-text-secondary"}`}
+              >
+                {messageLength}/{maxMessageLength}
+              </span>
+            ) : null}
             {isEditing ? (
               <>
                 <IconButton label="Cancel edit" onClick={onCancelEdit}>
@@ -797,7 +813,9 @@ export default function ConnectMessageInput({
               <button
                 type="button"
                 onClick={handleSend}
-                className="inline-flex items-center gap-1 rounded bg-emerald-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800"
+                disabled={overLimit}
+                title={sendShortcut === "MOD_ENTER" ? "Send (Ctrl/⌘ + Enter)" : "Send (Enter)"}
+                className="inline-flex items-center gap-1 rounded bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-800"
               >
                 <ComposerIcon name="send" size={14} />
                 Send

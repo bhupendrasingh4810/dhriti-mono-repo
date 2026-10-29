@@ -49,6 +49,7 @@ type ConnectConversationProps = {
   onOpenDetails: () => void;
   onStartCall: (type: CallType) => void;
   isChannelAdmin?: boolean;
+  canPinMessages?: boolean;
   isMuted?: boolean;
   onToggleMute?: () => void;
   onDeleteChannel?: () => void;
@@ -112,6 +113,7 @@ export function ConnectConversations({
   onOpenDetails,
   onStartCall,
   isChannelAdmin,
+  canPinMessages = true,
   isMuted,
   onToggleMute,
   onDeleteChannel,
@@ -305,15 +307,17 @@ export function ConnectConversations({
                 </button>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={onClearPinnedMessages}
-              className="grid size-6 shrink-0 place-items-center rounded text-text-secondary hover:bg-brand/10 hover:text-brand"
-              aria-label="Unpin all messages"
-              title="Unpin all messages"
-            >
-              <X size={16} aria-hidden="true" />
-            </button>
+            {canPinMessages ? (
+              <button
+                type="button"
+                onClick={onClearPinnedMessages}
+                className="grid size-6 shrink-0 place-items-center rounded text-text-secondary hover:bg-brand/10 hover:text-brand"
+                aria-label="Unpin all messages"
+                title="Unpin all messages"
+              >
+                <X size={16} aria-hidden="true" />
+              </button>
+            ) : null}
           </div>
         </section>
       ) : null}
@@ -532,6 +536,7 @@ export function ConnectConversations({
                         onOpenMessageEmoji(event, message.id);
                       }}
                       onEdit={() => onStartEditMessage(message)}
+                      createdAt={message.createdAt}
                       onQuote={() => onQuoteMessage(message)}
                       onOpenMenu={(event) => {
                         clearHoverActionCloseTimer();

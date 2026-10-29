@@ -5,6 +5,7 @@ import { BarChart3, Bold, EllipsisVertical, ImagePlus, Italic, MessageCircle, Pe
 import { Dialog } from "@dhriti/ui/dialog";
 import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
+import { useAppSettings } from "@/features/settings/use-app-settings";
 import { connectService, type ConnectPost, type ConnectPostComment, type UpdateConnectPostInput } from "@/services/connect.service";
 import type { ConversationUser } from "@/types/connect.types";
 
@@ -41,17 +42,30 @@ function formatTime(value: string) {
   return new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
 }
 
-async function readImage(file: File | undefined) {
+type ImagePolicy = { allowedTypes: string[]; maxBytes: number };
+
+const DEFAULT_IMAGE_POLICY: ImagePolicy = {
+  allowedTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  maxBytes: MAX_IMAGE_BYTES,
+};
+
+async function readImage(file: File | undefined, policy: ImagePolicy = DEFAULT_IMAGE_POLICY) {
   if (!file) return "";
-  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
-    throw new Error("Choose a JPEG, PNG, WebP, or GIF image.");
+  if (!policy.allowedTypes.includes(file.type)) {
+    throw new Error(`Choose an image of type: ${policy.allowedTypes.map((type) => type.replace("image/", "").toUpperCase()).join(", ")}.`);
   }
   if (file.size > MAX_IMAGE_BYTES) throw new Error("Images must be 2 MB or smaller.");
-  if (file.size > MAX_COMPRESSED_IMAGE_BYTES && file.type === "image/gif") {
-    throw new Error("Animated GIFs must be 600 KB or smaller because they cannot be compressed without losing animation.");
+  const targetBytes = Math.min(MAX_COMPRESSED_IMAGE_BYTES, policy.maxBytes);
+  const sizeLabel = `${Math.round(targetBytes / 1024)} KB`;
+  if (file.size > targetBytes && file.type === "image/gif") {
+    throw new Error(`Animated GIFs must be ${sizeLabel} or smaller because they cannot be compressed without losing animation.`);
+  }
+  const outputType = ["image/webp", "image/jpeg", "image/png"].find((type) => policy.allowedTypes.includes(type));
+  if (file.size > targetBytes && !outputType) {
+    throw new Error(`Images must be ${sizeLabel} or smaller.`);
   }
 
-  const image = file.size > MAX_COMPRESSED_IMAGE_BYTES ? await compressImage(file) : file;
+  const image = file.size > targetBytes ? await compressImage(file, targetBytes, outputType) : file;
   return ensureImagePayloadSize(await readImageDataUrl(image));
 }
 
@@ -64,7 +78,11 @@ function readImageDataUrl(file: Blob) {
   });
 }
 
-async function compressImage(file: File): Promise<Blob> {
+async function compressImage(
+  file: File,
+  targetBytes = MAX_COMPRESSED_IMAGE_BYTES,
+  outputType = "image/webp",
+): Promise<Blob> {
   const imageUrl = URL.createObjectURL(file);
   const image = new Image();
 
@@ -87,9 +105,9 @@ async function compressImage(file: File): Promise<Blob> {
       const context = canvas.getContext("2d");
       if (!context) throw new Error("Unable to prepare image for compression.");
       context.drawImage(image, 0, 0, width, height);
-      const compressed = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+      const compressed = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, outputType, quality));
       if (!compressed) throw new Error("Unable to compress image.");
-      if (compressed.size <= MAX_COMPRESSED_IMAGE_BYTES) return compressed;
+      if (compressed.size <= targetBytes) return compressed;
 
       width = Math.max(1, Math.round(width * 0.8));
       height = Math.max(1, Math.round(height * 0.8));
@@ -99,7 +117,7 @@ async function compressImage(file: File): Promise<Blob> {
     URL.revokeObjectURL(imageUrl);
   }
 
-  throw new Error("Unable to compress the image below 600 KB. Choose a smaller image.");
+  throw new Error(`Unable to compress the image below ${Math.round(targetBytes / 1024)} KB. Choose a smaller image.`);
 }
 
 async function ensureImagePayloadSize(imageUrl: string): Promise<string> {
@@ -421,6 +439,11 @@ function PostComposer({
         : "surface",
   );
   const [poll, setPoll] = useState<PollDraft | null>(null);
+  const connectPolicy = useAppSettings("connect");
+  const pollsEnabled = connectPolicy?.pollsEnabled ?? true;
+  const imagePolicy: ImagePolicy = connectPolicy
+    ? { allowedTypes: connectPolicy.allowedImageTypes, maxBytes: connectPolicy.maxImageSizeKb * 1024 }
+    : DEFAULT_IMAGE_POLICY;
   const [submitting, setSubmitting] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -526,8 +549,8 @@ function PostComposer({
       {backgroundImageUrl ? <div className="relative mt-3"><img src={backgroundImageUrl} alt="Selected post background" className="h-[200px] w-full rounded-lg object-cover" /><button type="button" onClick={() => setBackgroundImageUrl("")} aria-label="Remove background image" title="Remove background image" className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-surface/90 text-text-primary shadow-sm hover:bg-surface"><X size={16} /></button></div> : null}
       {poll ? <PollComposer value={poll} onChange={setPoll} onRemove={() => setPoll(null)} /> : null}
       <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-        <ImagePicker label="Add image" onImage={(file) => readImage(file).then(setImageUrl).catch((reason) => onError(reason.message))} />
-        <ImagePicker label="Background image" onImage={(file) => readImage(file).then(setBackgroundImageUrl).catch((reason) => onError(reason.message))} />
+        <ImagePicker label="Add image" onImage={(file) => readImage(file, imagePolicy).then(setImageUrl).catch((reason) => onError(reason.message))} />
+        <ImagePicker label="Background image" onImage={(file) => readImage(file, imagePolicy).then(setBackgroundImageUrl).catch((reason) => onError(reason.message))} />
         <select
           value={backgroundTone}
           onChange={(event) => setBackgroundTone(event.target.value as "surface" | "raised" | "brand")}
@@ -538,7 +561,7 @@ function PostComposer({
           <option value="raised">Raised background</option>
           <option value="brand">Brand background</option>
         </select>
-        {!poll && !isEditing ? (
+        {!poll && !isEditing && pollsEnabled ? (
           <button type="button" onClick={() => setPoll({ options: ["", ""], allowsVoteChanges: true, closeAfterSeconds: 5 * 60 })} className="inline-flex items-center gap-1.5 rounded border border-border px-2.5 py-1.5 text-sm font-semibold text-text-secondary hover:bg-surface-raised">
             <BarChart3 size={16} /> Add poll
           </button>
@@ -591,6 +614,8 @@ function PostCard({
   onReactToComment: (postId: string, commentId: string, emoji: string, currentReaction?: string) => void;
 }) {
   const poll = post.poll;
+  const allowedReactions = useAppSettings("connect")?.allowedReactions ?? [];
+  const reactionChoices: readonly string[] = allowedReactions.length > 0 ? allowedReactions.slice(0, 8) : REACTION_EMOJIS;
   const totalVotes = poll?.options.reduce((sum, option) => sum + option.voteCount, 0) ?? 0;
   const isClosed = poll?.closesAt ? new Date(poll.closesAt) <= new Date() : false;
   const backgroundClass = post.backgroundColor === "var(--app-color-brand-muted)" ? "bg-brand/10" : post.backgroundColor === "var(--app-color-surface-raised)" ? "bg-surface-raised" : "bg-brand/5";
@@ -652,7 +677,7 @@ function PostCard({
 
         <div className="mt-4 border-t border-brand/15 pt-3">
           <div className="flex flex-wrap items-center gap-2">
-            {REACTION_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => onReact(post.id, emoji, currentReaction)} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-full border px-2 text-sm ${currentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React with ${emoji}`}>{emoji}{reactionCounts[emoji] ? <span>{reactionCounts[emoji]}</span> : null}</button>)}
+            {reactionChoices.map((emoji) => <button key={emoji} type="button" onClick={() => onReact(post.id, emoji, currentReaction)} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-full border px-2 text-sm ${currentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React with ${emoji}`}>{emoji}{reactionCounts[emoji] ? <span>{reactionCounts[emoji]}</span> : null}</button>)}
             <span className="ml-auto inline-flex items-center gap-1 text-xs text-text-secondary"><MessageCircle size={14} /> {post.comments.length} comments</span>
           </div>
           <div className="mt-3 flex gap-2">
@@ -668,7 +693,7 @@ function PostCard({
             }, {});
             const canDelete = item.authorId === currentUserId || post.authorId === currentUserId;
             const canEdit = item.authorId === currentUserId;
-            return <div key={item.id} className="flex gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-raised text-xs font-bold text-text-primary">{item.author.name.slice(0, 1)}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-semibold text-brand">{item.author.name}</p><time className="text-xs text-text-muted">{formatTime(item.createdAt)}</time>{canEdit || canDelete ? <CommentActions onEdit={canEdit ? () => onEditComment(item) : undefined} onDelete={canDelete ? () => onDeleteComment(post.id, item.id) : undefined} /> : null}</div><p className="whitespace-pre-wrap text-sm text-text-secondary">{item.content}</p><div className="mt-2 flex flex-wrap gap-1.5">{REACTION_EMOJIS.map((emoji) => <button key={emoji} type="button" onClick={() => onReactToComment(post.id, item.id, emoji, commentReaction)} className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-1.5 text-xs ${commentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React to comment with ${emoji}`}>{emoji}{commentReactionCounts[emoji] ? <span>{commentReactionCounts[emoji]}</span> : null}</button>)}</div></div></div>;
+            return <div key={item.id} className="flex gap-2"><span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-raised text-xs font-bold text-text-primary">{item.author.name.slice(0, 1)}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="text-sm font-semibold text-brand">{item.author.name}</p><time className="text-xs text-text-muted">{formatTime(item.createdAt)}</time>{canEdit || canDelete ? <CommentActions onEdit={canEdit ? () => onEditComment(item) : undefined} onDelete={canDelete ? () => onDeleteComment(post.id, item.id) : undefined} /> : null}</div><p className="whitespace-pre-wrap text-sm text-text-secondary">{item.content}</p><div className="mt-2 flex flex-wrap gap-1.5">{reactionChoices.map((emoji) => <button key={emoji} type="button" onClick={() => onReactToComment(post.id, item.id, emoji, commentReaction)} className={`inline-flex h-7 min-w-7 items-center justify-center gap-1 rounded-full border px-1.5 text-xs ${commentReaction === emoji ? "border-brand bg-brand/10" : "border-border hover:bg-surface-raised"}`} aria-label={`React to comment with ${emoji}`}>{emoji}{commentReactionCounts[emoji] ? <span>{commentReactionCounts[emoji]}</span> : null}</button>)}</div></div></div>;
           })}</div> : null}
           {post.comments.length > 0 ? <button type="button" onClick={() => setCommentsVisible((visible) => !visible)} className="mt-4 flex w-full justify-center text-sm font-semibold text-brand hover:text-brand-dark" aria-expanded={commentsVisible}>{commentsVisible ? "Hide comments" : "Show comments"}</button> : null}
         </div>

@@ -18,8 +18,9 @@ import type {
   CallStatusEvent,
   CallType,
 } from "@/types/connect.types";
+import { useAppSettings } from "@/features/settings/use-app-settings";
 
-const RING_TIMEOUT_MS = 30_000;
+const DEFAULT_RING_TIMEOUT_MS = 30_000;
 
 const WorkspaceCallContext = createContext<CallControls | null>(null);
 
@@ -41,6 +42,11 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
   const socketRef = useRef<Socket | null>(null);
   const socketCleanupRef = useRef<(() => void) | null>(null);
   const ringTimeoutsRef = useRef(new Map<string, number>());
+  const connectPolicy = useAppSettings("connect");
+  const ringTimeoutMsRef = useRef(DEFAULT_RING_TIMEOUT_MS);
+  useEffect(() => {
+    ringTimeoutMsRef.current = (connectPolicy?.callRingTimeoutSeconds ?? DEFAULT_RING_TIMEOUT_MS / 1000) * 1000;
+  }, [connectPolicy]);
 
   function createCall(context: CallContext, direction: ActiveCall["direction"]): ActiveCall {
     return {
@@ -83,7 +89,7 @@ export function WorkspaceCallProvider({ children }: { children: ReactNode }) {
           return call.direction === "outgoing" ? [{ ...item, status: "unanswered" as const }] : [];
         }),
       );
-    }, RING_TIMEOUT_MS);
+    }, ringTimeoutMsRef.current);
 
     ringTimeoutsRef.current.set(call.id, timeout);
   }
