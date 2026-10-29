@@ -67,3 +67,15 @@ export const NarrowViewport: Story = {
     fullWidth: true,
   },
 };
+
+export const FullScreenOnMobile: Story = {
+  args: {
+    fullScreenOnMobile: true,
+    title: "Create note",
+    primaryActionLabel: "Save note",
+    children: "Capture decisions and next steps for the team.",
+  },
+  globals: {
+    viewport: { value: "mobile1", isRotated: false },
+  },
+};

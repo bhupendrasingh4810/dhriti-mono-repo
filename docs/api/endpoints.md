@@ -73,6 +73,44 @@ or media-content guarantee.
 Run settings persistence/concurrency tests against a migrated local database:
 `cd apps/api && SETTINGS_DATABASE_TESTS=true node --env-file=.env node_modules/jest/bin/jest.js --runInBand --runTestsByPath src/modules/settings/app-settings.persistence.spec.ts`.
 
+## Per-app notification preferences
+
+`GET /organization/notifications/preferences` and
+`POST /organization/notifications/preferences` read and upsert the current user's
+organization-scoped event preferences. POST accepts
+`{ type, inApp?, email?, push? }`; omitted fields preserve existing values.
+New rows default to in-app on, push off and email on, except `CALL` defaults
+email off. Existing saved values are unchanged.
+
+The notification enum now supports independent event preferences for:
+
+| App     | Notification types                                                     |
+| ------- | ---------------------------------------------------------------------- |
+| Connect | `DIRECT_MESSAGE`, `MENTION`, `CALL`, `MESSAGE`                         |
+| Notes   | `NOTES_SHARED`, `NOTES_ACCESS_REQUEST`, `NOTES_ACCESS_DECISION`        |
+| Pulse   | `PULSE_INVITATION`, `PULSE_EVENT_UPDATE`, `MEETING_REMINDER`           |
+| Flow    | `FLOW_ASSIGNMENT`, `FLOW_COMMENT`, `FLOW_DUE_DATE`                     |
+| Atlas   | `ATLAS_SHARED`, `ATLAS_COMMENT`, `ATLAS_MENTION`                       |
+| Cadence | `CADENCE_INVITATION`, `CADENCE_REMINDER`, `CADENCE_RESULTS`            |
+| HRMS    | `HRMS_LEAVE_REQUEST`, `HRMS_LEAVE_DECISION`, `HRMS_PAYROLL`            |
+| Control | `CONTROL_MEMBERSHIP`, `CONTROL_ROLE_CHANGE`, `CONTROL_SETTINGS_CHANGE` |
+
+Legacy generic `COMMENT`, `ASSIGNMENT`, `DUE_DATE` and `SYSTEM` preferences
+remain independent under Other activity; they are not silently reassigned to an
+app. NotificationService checks the exact recipient/organization/event preference
+before persisting an in-app notification or sending email. Both channels are
+independent, including email-only delivery. Email suppression supplied by
+Connect quiet hours takes precedence. Push remains stored but is not delivered.
+
+**Delivery scope:** only Connect `DIRECT_MESSAGE`, `MENTION` and `CALL` currently
+have automatic event producers using this service. The settings page explicitly
+labels other events as not yet automatic. Saving these preferences configures
+future/API-submitted delivery; it does not add Notes/HRMS/etc. event producers,
+Pulse reminder scheduling, or new emails triggered directly by other services.
+
+Run API delivery and persistence regressions:
+`cd apps/api && NOTIFICATION_DATABASE_TESTS=true node --env-file=.env node_modules/jest/bin/jest.js --runInBand --runTestsByPath src/modules/notification/notification.service.spec.ts src/modules/notification/notification.persistence.spec.ts`.
+
 ## Notes discovery and sharing
 
 `GET /organization/notes` lists all notes in the current organization that the

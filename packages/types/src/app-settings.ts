@@ -138,6 +138,26 @@ export type NotificationType =
   | "SYSTEM"
   | "MESSAGE"
   | "DIRECT_MESSAGE"
-  | "CALL";
+  | "CALL"
+  | "NOTES_SHARED"
+  | "NOTES_ACCESS_REQUEST"
+  | "NOTES_ACCESS_DECISION"
+  | "PULSE_INVITATION"
+  | "PULSE_EVENT_UPDATE"
+  | "FLOW_ASSIGNMENT"
+  | "FLOW_COMMENT"
+  | "FLOW_DUE_DATE"
+  | "ATLAS_SHARED"
+  | "ATLAS_COMMENT"
+  | "ATLAS_MENTION"
+  | "CADENCE_INVITATION"
+  | "CADENCE_REMINDER"
+  | "CADENCE_RESULTS"
+  | "HRMS_LEAVE_REQUEST"
+  | "HRMS_LEAVE_DECISION"
+  | "HRMS_PAYROLL"
+  | "CONTROL_MEMBERSHIP"
+  | "CONTROL_ROLE_CHANGE"
+  | "CONTROL_SETTINGS_CHANGE";
 
 export type NotificationPreference = { type: NotificationType; inApp: boolean; email: boolean; push: boolean };

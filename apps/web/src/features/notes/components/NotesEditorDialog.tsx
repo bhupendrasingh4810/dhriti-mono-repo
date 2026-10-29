@@ -130,9 +130,10 @@ export function NotesEditorDialog({
       hideHeader
       secondaryActionLabel=""
       maxWidth="xl"
+      fullScreenOnMobile
     >
-      <div className="flex max-h-[min(80vh,760px)] flex-col">
-        <header className="flex items-center justify-between border-b border-border pb-4">
+      <div className="flex min-h-0 flex-1 flex-col sm:max-h-[min(80vh,760px)] sm:flex-auto">
+        <header className="flex shrink-0 items-center justify-between border-b border-border pb-4">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <p className="font-semibold">{note ? `Owned by ${note.owner.name}` : "Create note"}</p>
             {note ? <NotesSharedBadge note={note} /> : null}
@@ -222,7 +223,7 @@ export function NotesEditorDialog({
             </span>
           </label>
         </div>
-        <footer className="flex items-center justify-between border-t border-border pt-4">
+        <footer className="flex shrink-0 items-center justify-between border-t border-border pt-4">
           {error ? (
             <p role="alert" className="text-sm text-error">
               {error}

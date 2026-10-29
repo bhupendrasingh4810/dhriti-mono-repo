@@ -78,7 +78,7 @@ export const QUIET_HOURS_SECTION: SettingsSectionConfig<ConnectUserSettings> = {
   id: "quiet-hours",
   title: "Quiet hours",
   description:
-    "Pause email notifications during these hours, in the time zone from your profile. Windows that cross midnight belong to the day they start.",
+    "Pause Connect email notifications during these hours, in the time zone from your profile. Windows that cross midnight belong to the day they start.",
   fields: [
     { key: "quietHoursEnabled", kind: "toggle", label: "Enable quiet hours" },
     { key: "quietHoursStart", kind: "time", label: "From", dependsOn: "quietHoursEnabled" },

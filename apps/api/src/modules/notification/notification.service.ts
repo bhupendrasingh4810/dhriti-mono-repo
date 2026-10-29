@@ -12,7 +12,7 @@ export interface NotificationPage {
 }
 
 export interface NotificationDeliveryOptions {
-  /** Email delivery when the user has no saved preference for the type. Defaults to true. */
+  /** Email delivery without a saved preference. Defaults off for missed calls, on for other events. */
   emailByDefault?: boolean;
   /** Skip email regardless of preference, e.g. during the recipient's quiet hours. */
   suppressEmail?: boolean;
@@ -75,7 +75,7 @@ export class NotificationService {
       },
     });
 
-    const emailEnabled = preference ? preference.email : (options.emailByDefault ?? true);
+    const emailEnabled = preference ? preference.email : (options.emailByDefault ?? dto.type !== "CALL");
     if (emailEnabled && !options.suppressEmail) {
       await this.sendEmail(organizationId, dto);
     }
@@ -153,7 +153,7 @@ export class NotificationService {
         userId,
         type: dto.type,
         inApp: dto.inApp ?? true,
-        email: dto.email ?? true,
+        email: dto.email ?? dto.type !== "CALL",
         push: dto.push ?? false,
       },
       update: {

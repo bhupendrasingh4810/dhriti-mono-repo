@@ -18,6 +18,7 @@ export interface DialogProps {
   maxWidth?: "xs" | "sm" | "md" | "lg" | "xl" | false;
   fullWidth?: boolean;
   hideHeader?: boolean;
+  fullScreenOnMobile?: boolean;
 }
 
 const widthClasses: Record<Exclude<DialogProps["maxWidth"], false | undefined>, string> = {
@@ -50,6 +51,7 @@ export function Dialog({
   maxWidth = "sm",
   fullWidth = true,
   hideHeader = false,
+  fullScreenOnMobile = false,
 }: DialogProps) {
   const titleId = useId();
 
@@ -81,7 +83,7 @@ export function Dialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-text-primary/40 p-4"
+      className={`fixed inset-0 z-50 grid place-items-center bg-text-primary/40 ${fullScreenOnMobile ? "p-0 sm:p-4" : "p-4"}`}
       onMouseDown={(event) => {
         if (event.currentTarget === event.target && !isSubmitting) {
           onClose();
@@ -89,12 +91,13 @@ export function Dialog({
       }}
     >
       <section
-        aria-labelledby={titleId}
+        aria-labelledby={hideHeader ? undefined : titleId}
+        aria-label={hideHeader ? title : undefined}
         aria-modal="true"
         role="dialog"
         className={`rounded-lg border border-border bg-surface shadow-2xl ${fullWidth ? "w-full" : "w-auto"} ${
           maxWidth === false ? "" : widthClasses[maxWidth]
-        }`}
+        } ${fullScreenOnMobile ? "max-sm:flex max-sm:h-dvh max-sm:w-full max-sm:max-w-none max-sm:flex-col max-sm:rounded-none max-sm:border-0" : ""}`}
       >
         {!hideHeader ? (
           <header className="flex items-center justify-between p-4">
@@ -113,8 +116,14 @@ export function Dialog({
             ) : null}
           </header>
         ) : null}
-        <div className={`${hideHeader ? "" : "border-t border-border "}p-6`}>
-          <div className="flex flex-col gap-2">{children}</div>
+        <div
+          className={`${hideHeader ? "" : "border-t border-border "}p-6 ${fullScreenOnMobile ? "max-sm:flex max-sm:min-h-0 max-sm:flex-1 max-sm:flex-col" : ""}`}
+        >
+          <div
+            className={`flex flex-col gap-2 ${fullScreenOnMobile ? "max-sm:min-h-0 max-sm:flex-1 max-sm:overflow-y-auto" : ""}`}
+          >
+            {children}
+          </div>
         </div>
         {(primaryActionLabel || secondaryActionLabel) && (
           <footer className="flex justify-end gap-2 p-4">

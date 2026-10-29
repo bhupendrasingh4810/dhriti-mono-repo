@@ -1,5 +1,6 @@
 import { pathSegment, tenantJsonRequest, tenantRequest } from "@/services/request.service";
 import type { ApiEntity, CursorPage } from "@/services/service-types";
+import type { NotificationPreference } from "@dhriti/types";
 export interface NotificationPage extends CursorPage<ApiEntity> {
   notifications: ApiEntity[];
   unreadCount: number;
@@ -18,9 +19,10 @@ export const notificationsService = {
     tenantRequest<void>(organizationId, `${base}/${pathSegment(notificationId)}/read`, { method: "PATCH" }),
   markAllRead: (organizationId: string) =>
     tenantRequest<{ markedRead: number }>(organizationId, `${base}/read-all`, { method: "PATCH" }),
-  listPreferences: (organizationId: string) => tenantRequest<ApiEntity[]>(organizationId, `${base}/preferences`),
+  listPreferences: (organizationId: string) =>
+    tenantRequest<NotificationPreference[]>(organizationId, `${base}/preferences`),
   upsertPreference: (
     organizationId: string,
-    input: { type: string; inApp?: boolean; email?: boolean; push?: boolean },
-  ) => tenantJsonRequest<ApiEntity, typeof input>(organizationId, `${base}/preferences`, "POST", input),
+    input: Pick<NotificationPreference, "type"> & Partial<Omit<NotificationPreference, "type">>,
+  ) => tenantJsonRequest<NotificationPreference, typeof input>(organizationId, `${base}/preferences`, "POST", input),
 };

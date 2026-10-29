@@ -18,25 +18,7 @@ import { QUIET_HOURS_SECTION } from "./personal-settings-schema";
 import type { SettingsFieldConfig } from "./settings-schema";
 import { primeConnectUserSettings } from "./use-app-settings";
 import { useSettingsForm } from "./use-settings-form";
-
-const NOTIFICATION_TYPES: Array<{ type: NotificationType; label: string; description: string }> = [
-  { type: "DIRECT_MESSAGE", label: "Direct messages", description: "New messages in your direct and group chats." },
-  { type: "MENTION", label: "Mentions", description: "When someone @mentions you." },
-  { type: "CALL", label: "Missed calls", description: "Calls you didn't answer." },
-  { type: "COMMENT", label: "Comments", description: "Replies and comments on your work." },
-  { type: "ASSIGNMENT", label: "Assignments", description: "Work assigned to you." },
-  { type: "DUE_DATE", label: "Due dates", description: "Upcoming and overdue work." },
-  { type: "MEETING_REMINDER", label: "Meeting reminders", description: "Reminders before Pulse events." },
-  { type: "SYSTEM", label: "System", description: "Account and organization updates." },
-];
-
-/** Mirrors the API: email is on by default except for missed calls. */
-const defaultPreference = (type: NotificationType): NotificationPreference => ({
-  type,
-  inApp: true,
-  email: type !== "CALL",
-  push: false,
-});
+import { defaultNotificationPreference, NOTIFICATION_SETTINGS_GROUPS } from "./notification-settings-schema";
 
 export default function NotificationSettingsPage() {
   const { user } = useAuth();
@@ -73,7 +55,7 @@ export default function NotificationSettingsPage() {
       description="Choose what you're notified about and when email can reach you."
     >
       {loading ? (
-        <SettingsSkeleton sections={[NOTIFICATION_TYPES.length, 4]} />
+        <SettingsSkeleton sections={[...NOTIFICATION_SETTINGS_GROUPS.map((group) => group.events.length), 4]} />
       ) : loadError ? (
         <SettingsLoadError
           message={loadError}
@@ -85,45 +67,59 @@ export default function NotificationSettingsPage() {
       ) : (
         <>
           <SettingsStatus error={preferences.error} />
-          <SettingsSection
-            id="notification-types"
-            title="Notification types"
-            description="Changes save as soon as you make them."
-          >
-            <div className="hidden grid-cols-[1fr_5rem_5rem] gap-4 px-5 py-2 text-xs font-medium text-text-secondary sm:grid sm:px-6">
-              <span>Type</span>
-              <span className="text-center">In app</span>
-              <span className="text-center">Email</span>
-            </div>
-            {NOTIFICATION_TYPES.map((item) => {
-              const preference = preferences.byType[item.type] ?? defaultPreference(item.type);
-              const busy = preferences.saving.has(item.type);
-              return (
-                <div
-                  key={item.type}
-                  className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 sm:grid-cols-[1fr_5rem_5rem] sm:px-6"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-text-primary">{item.label}</p>
-                    <p className="mt-1 text-xs text-text-secondary">{item.description}</p>
-                  </div>
-                  {(["inApp", "email"] as const).map((channel) => (
-                    <div key={channel} className="flex flex-col items-center gap-1">
-                      <span className="text-xs text-text-secondary sm:hidden">
-                        {channel === "inApp" ? "In app" : "Email"}
-                      </span>
-                      <SettingsToggle
-                        label={`${item.label}: ${channel === "inApp" ? "in-app" : "email"} notifications`}
-                        checked={preference[channel]}
-                        disabled={busy}
-                        onChange={(checked) => void preferences.save({ ...preference, [channel]: checked })}
-                      />
+          <p className="text-sm text-text-secondary">
+            Changes save immediately. Preferences control delivery when an event is submitted to the notification
+            service; they do not enable new notification triggers.
+          </p>
+          {NOTIFICATION_SETTINGS_GROUPS.map((group) => (
+            <SettingsSection
+              key={group.id}
+              id={`notifications-${group.id}`}
+              title={group.title}
+              description={
+                group.events.some((event) => event.automaticDelivery)
+                  ? "Events marked as not yet automatic can be configured ahead of delivery support."
+                  : "Preferences are saved, but this app does not yet send these notifications automatically."
+              }
+            >
+              <div className="hidden grid-cols-[1fr_5rem_5rem] gap-4 px-5 py-2 text-xs font-medium text-text-secondary sm:grid sm:px-6">
+                <span>Type</span>
+                <span className="text-center">In app</span>
+                <span className="text-center">Email</span>
+              </div>
+              {group.events.map((item) => {
+                const preference = preferences.byType[item.type] ?? defaultNotificationPreference(item.type);
+                const busy = preferences.saving.has(item.type);
+                return (
+                  <div
+                    key={item.type}
+                    className="grid grid-cols-[1fr_auto_auto] items-center gap-4 px-5 py-4 sm:grid-cols-[1fr_5rem_5rem] sm:px-6"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-text-primary">{item.label}</p>
+                      <p className="mt-1 text-xs text-text-secondary">{item.description}</p>
+                      {!item.automaticDelivery && group.events.some((event) => event.automaticDelivery) ? (
+                        <p className="mt-1 text-xs text-text-muted">Not yet sent automatically</p>
+                      ) : null}
                     </div>
-                  ))}
-                </div>
-              );
-            })}
-          </SettingsSection>
+                    {(["inApp", "email"] as const).map((channel) => (
+                      <div key={channel} className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-text-secondary sm:hidden">
+                          {channel === "inApp" ? "In app" : "Email"}
+                        </span>
+                        <SettingsToggle
+                          label={`${group.title} ${item.label}: ${channel === "inApp" ? "in-app" : "email"} notifications`}
+                          checked={preference[channel]}
+                          disabled={busy}
+                          onChange={(checked) => void preferences.save({ ...preference, [channel]: checked })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </SettingsSection>
+          ))}
           {draft ? (
             <form onSubmit={onSubmit} className="space-y-6" aria-busy={quietHours.saving}>
               <SettingsStatus
@@ -185,7 +181,7 @@ function useNotificationPreferences(organizationId: string | undefined, userId: 
       .then((rows) => {
         if (!active) return;
         const next: Partial<Record<NotificationType, NotificationPreference>> = {};
-        for (const row of rows as unknown as NotificationPreference[]) next[row.type] = row;
+        for (const row of rows) next[row.type] = row;
         setByType(next);
         setLoadError("");
         setError("");

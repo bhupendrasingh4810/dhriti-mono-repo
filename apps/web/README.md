@@ -83,6 +83,10 @@ folder filters that list without granting access to other notes in the folder.
 Shared notes display a **Shared** badge on both the card and the detail dialog,
 for owners and recipients. Unshared notes do not show the badge.
 
+On mobile (below the `sm` breakpoint), the create/edit note dialog fills the
+viewport, with scrollable content and the header and save action kept visible.
+Desktop dialog sizing is unchanged.
+
 Notes default to **Private**. Below the content field, the editor offers a
 **Public** / **Private** visibility toggle during creation and owner/co-owner updates, with the current
 visibility also shown on each card. Public notes are readable by authenticated
@@ -118,7 +122,17 @@ Personal settings live under the avatar menu:
 - `/[organizationSlug]/settings/general`: Connect status, message send shortcut,
   sounds, ringtone, preferred devices and call background.
 - `/[organizationSlug]/settings/notifications`: per-type in-app/email toggles
-  and quiet hours.
+  grouped by Connect, Notes, Pulse, Flow, Atlas, Cadence, HRMS and Control, plus
+  legacy Other activity preferences and Connect email quiet hours. Each event
+  saves independently through the notification preference API. New event
+  preferences do not add automatic notification triggers: only Connect direct
+  messages, mentions and missed calls currently emit through this service.
+  The page explicitly marks unsupported automatic events; their settings persist
+  and apply when notifications are submitted through the API. Existing saved
+  preferences remain unchanged. Push delivery is not offered.
+
+Run notification catalog coverage and default tests:
+`pnpm --dir apps/web exec tsx --test src/features/settings/notification-settings-schema.test.ts`.
 
 Each app has an organization settings page at `/[organizationSlug]/<app>/settings`
 (`connect`, `flow`, `atlas`, `nexus`, `cadence`, `pulse`, `notes`, `hrms`). The pages

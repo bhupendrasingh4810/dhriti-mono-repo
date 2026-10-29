@@ -7,13 +7,14 @@ import Header from "@/components/layout/workspace/header";
 import { ConnectPresenceProvider } from "@/contexts/connect-presence-context";
 import { ConnectSearchProvider } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
-import { PageType } from "@/types/app.types";
+import type { AppView } from "@/types/app.types";
 
 interface WorkspaceLayoutProps {
   children: ReactNode;
 }
 
-function getActiveApp(pathname: string): PageType {
+function getActiveApp(pathname: string): AppView {
+  if (pathname.split("/")[2] === "notes") return "notes";
   if (pathname.includes("/connect")) return "connect";
   if (pathname.includes("/flow")) return "flow";
   if (pathname.includes("/atlas")) return "atlas";
