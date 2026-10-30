@@ -8,6 +8,7 @@ import { AuditService } from "../../audit/audit.service";
 import { EntitlementService } from "../../authorization/services/entitlement.service";
 import { assignDefaultUserPermissionGroups } from "./default-permission-groups";
 import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization-membership";
+import { enqueueNotification } from "../../notification/notification-events";
 
 const ORGANIZATION_APPS = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"] as const;
 const DEFAULT_PERMISSION_GROUP_TYPES = ["admins", "users", "guest"] as const;
@@ -341,6 +342,16 @@ export class OrganizationService {
         },
       });
       await assignDefaultUserPermissionGroups(transaction, organizationId, user.id, actorUserId);
+      await enqueueNotification(transaction, {
+        organizationId,
+        actorId: actorUserId,
+        sourceType: "control",
+        sourceId: member.id,
+        type: "CONTROL_MEMBERSHIP",
+        recipientIds: [user.id],
+        title: "Your organization membership is active",
+        path: "home",
+      });
       return member;
     });
     await this.audit.record({
@@ -362,12 +373,28 @@ export class OrganizationService {
   ): Promise<MemberWithUser> {
     const member = await this.getMember(organizationId, memberId);
 
-    const updated = await this.prisma.organizationMember.update({
-      where: { id: member.id },
-      data: { user: { update: { role } } },
-      include: {
-        user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const previous = await tx.user.findUniqueOrThrow({ where: { id: member.userId }, select: { role: true } });
+      const changed = await tx.organizationMember.update({
+        where: { id: member.id },
+        data: { user: { update: { role } } },
+        include: {
+          user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
+        },
+      });
+      if (previous.role !== role) {
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: actorUserId,
+          sourceType: "control",
+          sourceId: member.id,
+          type: "CONTROL_ROLE_CHANGE",
+          recipientIds: [member.userId],
+          title: "Your organization role changed",
+          path: "home",
+        });
+      }
+      return changed;
     });
     await this.audit.record({
       action: "iam.member.role_updated",

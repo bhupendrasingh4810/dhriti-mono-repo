@@ -32,6 +32,7 @@ import type { CreatePollDto, CreatePostDto, UpdatePostDto } from "./dto/post.dto
 import type { UpdateSidebarSettingsDto } from "./dto/sidebar.dto";
 import { PermissionService } from "../authorization/services/permission.service";
 import { NotificationService } from "../notification/notification.service";
+import { enqueueNotification } from "../notification/notification-events";
 import { AppSettingsService } from "../settings/app-settings.service";
 import { type ConnectPolicy } from "../settings/settings.defaults";
 import type { ConnectManualStatus } from "../settings/dto/app-settings.dto";
@@ -80,36 +81,6 @@ type PostWithPoll = Post & {
 type ChannelWithMembers = Channel & {
   members: Array<{ userId: string; role: "ADMIN" | "MEMBER" }>;
 };
-
-interface IdempotentMessageDelegate {
-  upsert(args: {
-    where: {
-      organizationId_channelId_clientMessageId: {
-        organizationId: string;
-        channelId: string;
-        clientMessageId: string;
-      };
-    };
-    create: {
-      organizationId: string;
-      channelId: string;
-      authorId: string;
-      clientMessageId: string;
-      parentId: string | null;
-      content: string;
-      mentions: { create: Array<{ userId: string }> };
-      poll?: {
-        create: {
-          allowsVoteChanges: boolean;
-          closesAt: Date | null;
-          options: { create: Array<{ content: string; position: number }> };
-        };
-      };
-    };
-    update: Record<string, never>;
-    include: object;
-  }): Promise<MessageWithMeta>;
-}
 
 @Injectable()
 export class ConnectService {
@@ -1595,57 +1566,62 @@ export class ConnectService {
     this.assertValidPoll(dto.poll);
 
     const mentionUserIds = await this.resolveMentions(organizationId, dto.content, dto.mentionUserIds);
-    const alreadySent = dto.clientMessageId
-      ? await this.prisma.message.findUnique({
-          where: {
-            organizationId_channelId_clientMessageId: {
+    const recipientUserIds = await this.getRecipientUserIds(organizationId, channel);
+    const message = await this.prisma.$transaction(async (tx) => {
+      const saved = dto.clientMessageId
+        ? await tx.message.upsert({
+            where: {
+              organizationId_channelId_clientMessageId: {
+                organizationId,
+                channelId,
+                clientMessageId: dto.clientMessageId,
+              },
+            },
+            create: {
               organizationId,
               channelId,
+              authorId,
               clientMessageId: dto.clientMessageId,
+              parentId: dto.parentId ?? null,
+              content: dto.content,
+              mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
+              ...(dto.poll ? { poll: { create: this.createPollData(dto.poll) } } : {}),
             },
-          },
-          select: { id: true },
-        })
-      : null;
-
-    const message = dto.clientMessageId
-      ? await (this.prisma.message as unknown as IdempotentMessageDelegate).upsert({
-          where: {
-            organizationId_channelId_clientMessageId: {
+            update: {},
+            include: this.messageInclude(authorId),
+          })
+        : await tx.message.create({
+            data: {
               organizationId,
               channelId,
-              clientMessageId: dto.clientMessageId,
+              authorId,
+              parentId: dto.parentId ?? null,
+              content: dto.content,
+              mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
+              ...(dto.poll ? { poll: { create: this.createPollData(dto.poll) } } : {}),
             },
-          },
-          create: {
-            organizationId,
-            channelId,
-            authorId,
-            clientMessageId: dto.clientMessageId,
-            parentId: dto.parentId ?? null,
-            content: dto.content,
-            mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
-            ...(dto.poll ? { poll: { create: this.createPollData(dto.poll) } } : {}),
-          },
-          update: {},
-          include: this.messageInclude(authorId),
-        })
-      : await this.prisma.message.create({
-          data: {
-            organizationId,
-            channelId,
-            authorId,
-            parentId: dto.parentId ?? null,
-            content: dto.content,
-            mentions: { create: mentionUserIds.map((userId) => ({ userId })) },
-            ...(dto.poll ? { poll: { create: this.createPollData(dto.poll) } } : {}),
-          },
-          include: this.messageInclude(authorId),
-        });
+            include: this.messageInclude(authorId),
+          });
 
-    if (message.authorId !== authorId) {
-      throw new AppError(ErrorCode.FORBIDDEN, "Message idempotency key belongs to another user", HttpStatus.FORBIDDEN);
-    }
+      if (saved.authorId !== authorId) {
+        throw new AppError(
+          ErrorCode.FORBIDDEN,
+          "Message idempotency key belongs to another user",
+          HttpStatus.FORBIDDEN,
+        );
+      }
+      await this.notifyNewMessage(
+        tx,
+        organizationId,
+        channel,
+        authorId,
+        dto.content,
+        mentionUserIds,
+        recipientUserIds,
+        saved.id,
+      );
+      return saved;
+    });
 
     await this.audit.record({
       action: "connect.message.created",
@@ -1655,7 +1631,6 @@ export class ConnectService {
       resourceId: message.id,
       metadata: { channelId, mentions: mentionUserIds.length },
     });
-    const recipientUserIds = await this.getRecipientUserIds(organizationId, channel);
     this.publisher.messageCreated(organizationId, channelId, recipientUserIds, message);
     if (channel.type === "DIRECT" || channel.type === "GROUP") {
       await Promise.all(recipientUserIds.map((userId) => this.recordRecentChat(organizationId, userId, channelId)));
@@ -1665,9 +1640,6 @@ export class ConnectService {
         senderId: authorId,
         createdAt: message.createdAt,
       });
-    }
-    if (!alreadySent) {
-      void this.notifyNewMessage(organizationId, channel, authorId, dto.content, mentionUserIds, recipientUserIds);
     }
     return this.serializeMessage(message);
   }
@@ -1703,14 +1675,21 @@ export class ConnectService {
             : details.action === "missed"
               ? `Missed ${type} call`
               : `${actor?.name ?? "Someone"} ended the call${duration}`;
-    const message = await this.prisma.message.create({
-      data: {
-        organizationId,
-        channelId,
-        authorId: actorUserId,
-        content: `[CALL] ${description}`,
-      },
-      include: this.messageInclude(actorUserId),
+    const recipientUserIds = await this.getRecipientUserIds(organizationId, channel);
+    const message = await this.prisma.$transaction(async (tx) => {
+      const saved = await tx.message.create({
+        data: {
+          organizationId,
+          channelId,
+          authorId: actorUserId,
+          content: `[CALL] ${description}`,
+        },
+        include: this.messageInclude(actorUserId),
+      });
+      if (details.action === "missed") {
+        await this.notifyMissedCall(tx, organizationId, channel.id, actorUserId, type, recipientUserIds, saved.id);
+      }
+      return saved;
     });
 
     await this.audit.record({
@@ -1722,7 +1701,6 @@ export class ConnectService {
       metadata: { channelId, type: details.type, durationSeconds: details.durationSeconds },
     });
 
-    const recipientUserIds = await this.getRecipientUserIds(organizationId, channel);
     this.publisher.messageCreated(organizationId, channelId, recipientUserIds, message);
     if (channel.type === "DIRECT" || channel.type === "GROUP") {
       await Promise.all(recipientUserIds.map((userId) => this.recordRecentChat(organizationId, userId, channelId)));
@@ -1732,9 +1710,6 @@ export class ConnectService {
         senderId: actorUserId,
         createdAt: message.createdAt,
       });
-    }
-    if (details.action === "missed") {
-      void this.notifyMissedCall(organizationId, channel.id, actorUserId, type, recipientUserIds);
     }
     return message;
   }
@@ -2602,89 +2577,85 @@ export class ConnectService {
   }
 
   private async notifyNewMessage(
+    tx: Prisma.TransactionClient,
     organizationId: string,
     channel: Channel,
     authorId: string,
     content: string,
     mentionUserIds: string[],
     recipientUserIds: string[],
+    messageId: string,
   ): Promise<void> {
-    if (!this.notifications) {
+    const mentioned = new Set(mentionUserIds.filter((id) => id !== authorId && recipientUserIds.includes(id)));
+    const isConversation = channel.type === "DIRECT" || channel.type === "GROUP";
+    const directRecipients = isConversation
+      ? recipientUserIds.filter((id) => id !== authorId && !mentioned.has(id))
+      : [];
+    if (mentioned.size === 0 && directRecipients.length === 0) {
       return;
     }
-    try {
-      const mentioned = new Set(mentionUserIds.filter((id) => id !== authorId && recipientUserIds.includes(id)));
-      const isConversation = channel.type === "DIRECT" || channel.type === "GROUP";
-      const directRecipients = isConversation
-        ? recipientUserIds.filter((id) => id !== authorId && !mentioned.has(id))
-        : [];
-      if (mentioned.size === 0 && directRecipients.length === 0) {
-        return;
-      }
 
-      const authorName = await this.getUserDisplayName(authorId);
-      const body = summarize(content);
-      const where = isConversation ? "" : ` in #${channel.name}`;
-      await this.deliverConnectNotifications(organizationId, channel.id, [
-        ...[...mentioned].map((userId) => ({
-          userId,
-          type: "MENTION" as const,
-          title: `${authorName} mentioned you${where}`,
-          body,
-        })),
-        ...directRecipients.map((userId) => ({
-          userId,
-          type: "DIRECT_MESSAGE" as const,
-          title: `New message from ${authorName}`,
-          body,
-        })),
-      ]);
-    } catch {
-      // Notifications are best-effort; a failure must never fail the send.
-    }
+    const authorName = await this.getUserDisplayName(authorId);
+    const body = summarize(content);
+    const where = isConversation ? "" : ` in #${channel.name}`;
+    await this.deliverConnectNotifications(tx, organizationId, channel.id, authorId, messageId, [
+      ...[...mentioned].map((userId) => ({
+        userId,
+        type: "MENTION" as const,
+        title: `${authorName} mentioned you${where}`,
+        body,
+      })),
+      ...directRecipients.map((userId) => ({
+        userId,
+        type: "DIRECT_MESSAGE" as const,
+        title: `New message from ${authorName}`,
+        body,
+      })),
+    ]);
   }
 
   private async notifyMissedCall(
+    tx: Prisma.TransactionClient,
     organizationId: string,
     channelId: string,
     actorUserId: string,
     type: "audio" | "video",
     recipientUserIds: string[],
+    messageId: string,
   ): Promise<void> {
-    if (!this.notifications) {
-      return;
-    }
-    try {
-      const callerName = await this.getUserDisplayName(actorUserId);
-      await this.deliverConnectNotifications(
-        organizationId,
-        channelId,
-        recipientUserIds
-          .filter((userId) => userId !== actorUserId)
-          .map((userId) => ({ userId, type: "CALL" as const, title: `Missed ${type} call from ${callerName}` })),
-      );
-    } catch {
-      // Best-effort, see notifyNewMessage.
-    }
+    const callerName = await this.getUserDisplayName(actorUserId);
+    await this.deliverConnectNotifications(
+      tx,
+      organizationId,
+      channelId,
+      actorUserId,
+      messageId,
+      recipientUserIds
+        .filter((userId) => userId !== actorUserId)
+        .map((userId) => ({ userId, type: "CALL" as const, title: `Missed ${type} call from ${callerName}` })),
+    );
   }
 
   /** Skips muted conversations and suppresses email during quiet hours or Do Not Disturb. */
   private async deliverConnectNotifications(
+    tx: Prisma.TransactionClient,
     organizationId: string,
     channelId: string,
+    actorId: string,
+    messageId: string,
     items: { userId: string; type: "MENTION" | "DIRECT_MESSAGE" | "CALL"; title: string; body?: string }[],
   ): Promise<void> {
-    if (!this.notifications || items.length === 0) {
+    if (items.length === 0) {
       return;
     }
     const userIds = [...new Set(items.map((item) => item.userId))];
     const [sidebarRecords, userSettings, profiles] = await Promise.all([
-      this.prisma.connectSidebarPreference.findMany({
+      tx.connectSidebarPreference.findMany({
         where: { organizationId, userId: { in: userIds } },
         select: { userId: true, preferences: true },
       }),
-      this.prisma.connectUserSettings.findMany({ where: { organizationId, userId: { in: userIds } } }),
-      this.prisma.userProfile.findMany({
+      tx.connectUserSettings.findMany({ where: { organizationId, userId: { in: userIds } } }),
+      tx.userProfile.findMany({
         where: { userId: { in: userIds } },
         select: { userId: true, timezone: true },
       }),
@@ -2713,11 +2684,19 @@ export class ConnectService {
             (this.settings.effectiveManualStatus(settings) === "dnd" ||
               this.settings.isWithinQuietHours(settings, timezoneByUser.get(item.userId))),
           );
-          await this.notifications?.create(
+          await enqueueNotification(tx, {
             organizationId,
-            { userId: item.userId, type: item.type, title: item.title, ...(item.body ? { body: item.body } : {}) },
-            { emailByDefault: false, suppressEmail: quiet },
-          );
+            actorId,
+            sourceType: "connect",
+            sourceId: channelId,
+            recipientIds: [item.userId],
+            type: item.type,
+            title: item.title,
+            body: item.body,
+            path: "connect",
+            dedupKey: `message:${messageId}:${item.type}`,
+            suppressEmail: quiet,
+          });
         }),
     );
   }

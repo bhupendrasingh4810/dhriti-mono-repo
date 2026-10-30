@@ -1,9 +1,25 @@
 import { pathSegment, tenantJsonRequest, tenantRequest } from "@/services/request.service";
-import type { ApiEntity, CursorPage } from "@/services/service-types";
-import type { NotificationPreference } from "@dhriti/types";
-export interface NotificationPage extends CursorPage<ApiEntity> {
-  notifications: ApiEntity[];
+import type { NotificationPreference, NotificationType } from "@dhriti/types";
+export interface InboxNotification {
+  id: string;
+  userId: string;
+  actorId: string | null;
+  sourceType: string;
+  sourceId: string | null;
+  type: NotificationType;
+  title: string;
+  body: string | null;
+  linkUrl: string | null;
+  payload: Record<string, unknown>;
+  isRead: boolean;
+  isSeen: boolean;
+  createdAt: string;
+}
+export interface NotificationPage {
+  notifications: InboxNotification[];
+  nextCursor: string | null;
   unreadCount: number;
+  unseenCount: number;
 }
 const base = "/api/organization/notifications";
 export const notificationsService = {
@@ -11,14 +27,14 @@ export const notificationsService = {
     tenantRequest<NotificationPage>(organizationId, base, { query }),
   unreadCount: (organizationId: string) =>
     tenantRequest<{ unreadCount: number }>(organizationId, `${base}/unread-count`),
-  create: (
-    organizationId: string,
-    input: { userId: string; type: string; title: string; body?: string; data?: Record<string, unknown> },
-  ) => tenantJsonRequest<ApiEntity, typeof input>(organizationId, base, "POST", input),
+  create: (organizationId: string, input: { userId: string; type: NotificationType; title: string; body?: string }) =>
+    tenantJsonRequest<{ eventId: string }, typeof input>(organizationId, base, "POST", input),
   markRead: (organizationId: string, notificationId: string) =>
     tenantRequest<void>(organizationId, `${base}/${pathSegment(notificationId)}/read`, { method: "PATCH" }),
   markAllRead: (organizationId: string) =>
     tenantRequest<{ markedRead: number }>(organizationId, `${base}/read-all`, { method: "PATCH" }),
+  markSeen: (organizationId: string, ids: string[]) =>
+    tenantJsonRequest<void, { ids: string[] }>(organizationId, `${base}/seen`, "PATCH", { ids }),
   listPreferences: (organizationId: string) =>
     tenantRequest<NotificationPreference[]>(organizationId, `${base}/preferences`),
   upsertPreference: (

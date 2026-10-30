@@ -97,19 +97,98 @@ The notification enum now supports independent event preferences for:
 
 Legacy generic `COMMENT`, `ASSIGNMENT`, `DUE_DATE` and `SYSTEM` preferences
 remain independent under Other activity; they are not silently reassigned to an
-app. NotificationService checks the exact recipient/organization/event preference
-before persisting an in-app notification or sending email. Both channels are
-independent, including email-only delivery. Email suppression supplied by
-Connect quiet hours takes precedence. Push remains stored but is not delivered.
+app. Every accepted event creates durable inbox history, **including when
+`inApp` is false**. `inApp` controls live alerts only. Email is independent;
+Connect quiet hours, Do Not Disturb and muted conversations take precedence.
+Absent a saved preference, email defaults on except missed calls. Push remains
+stored but is not delivered.
 
-**Delivery scope:** only Connect `DIRECT_MESSAGE`, `MENTION` and `CALL` currently
-have automatic event producers using this service. The settings page explicitly
-labels other events as not yet automatic. Saving these preferences configures
-future/API-submitted delivery; it does not add Notes/HRMS/etc. event producers,
-Pulse reminder scheduling, or new emails triggered directly by other services.
+### Notification storage, transport and delivery
+
+Business mutations call `enqueueNotification(tx, event)` inside their database
+transaction. The versioned intent records tenant, actor, source resource and
+deduplicated recipients; actors do not receive their own activity alerts.
+The outbox and business change either both commit or both roll back.
+Connect message retries use the persisted message ID for notification deduplication.
+
+The API's notification worker polls every two seconds, claiming outbox rows with
+`FOR UPDATE SKIP LOCKED`. Inbox materialization and per-channel delivery intents
+commit together. The transport-independent `materializeEvent(tx, envelope)`
+consumer can also be called by a future broker adapter: preserve the envelope ID
+to retain inbox idempotency. Kafka is not required or configured in this release.
+
+Inbox rows retain `recipient_id`, `actor_id`, `source_type`, `source_id`,
+`is_read`, `is_seen`, JSONB `payload` and UTC `created_at`; existing API field
+names remain camelCase for compatibility. History belongs to PostgreSQL, not
+Redis. There is no automatic history pruning in this release.
+
+Delivery is at-least-once, with independent REALTIME/EMAIL statuses, a two-minute
+claim lease, exponential retry delays and terminal `FAILED` after eight attempts.
+Queue times and comparisons use UTC explicitly, regardless of PostgreSQL session
+timezone. Logs and `lastError` expose failures. Failed outbox rows can be replayed
+by an operator by setting `status='PENDING'`, `attempts=0`, `availableAt` to UTC
+now; failed delivery rows can be retried similarly after clearing their lease.
+Do not reset SENT deliveries unless intentional redelivery is desired.
+External email can duplicate if a process crashes after provider acceptance but
+before recording success; this is not an exactly-once email guarantee.
+Outbox, realtime and email loops run independently so a slow email provider does
+not block inbox creation or online alerts.
+
+Deploy both notification migrations before the matching API/web release. They
+rename legacy notification columns, so coordinate the rollout rather than
+running old and new API versions against the renamed schema simultaneously.
+
+Active tenant membership and current channel preferences are checked again at
+delivery. Notes/Connect/Flow/Pulse eligibility is also rechecked. Notes, HRMS and
+anonymous Cadence alerts use generic previews, never note bodies, leave reasons,
+salary values or anonymous feedback. Resource HTTP endpoints remain authoritative.
+
+REALTIME publishes an invalidation to Redis; each API instance relays only to its
+local authenticated `/notifications` sockets in tenant/user rooms. Clients never
+choose another recipient's room. Token/session and membership validity are
+rechecked every minute. A SENT realtime intent means dispatched, not read.
+The bell refreshes on connection, on tab visibility and every 30 seconds; Redis
+loss therefore does not lose history. Email requires configured Brevo credentials
+and includes a destination based on `WEB_APP_URL`; missing configuration fails
+and retries rather than being acknowledged as sent. No browser/mobile push yet.
+
+### Inbox API
+
+- `GET /organization/notifications`: cursor page, `unreadCount`, `unseenCount`.
+  Ordering is `createdAt DESC, id DESC`; cursors are tenant/recipient scoped.
+- `PATCH /organization/notifications/seen`: `{ ids: string[] }`, maximum 200.
+  Only loaded IDs are marked seen; concurrently arriving events are not swallowed.
+- `PATCH /organization/notifications/:id/read`: marks both read and seen.
+- `PATCH /organization/notifications/read-all`: marks all current inbox rows read.
+- `POST /organization/notifications`: queues `{ eventId }`, not a synchronous
+  notification row. HTTP callers may target only themselves; cross-user events
+  must originate in an authorized business operation. Arbitrary `linkUrl` input
+  is rejected; app producers supply organization-relative destinations.
+
+### Automatic producers
+
+| App | Implemented triggers and recipients |
+| --- | --- |
+| Connect | Direct/group messages and mentions to eligible members; missed calls to other participants |
+| Notes | Newly shared access; edit/co-owner requests to owners; decisions to requesters |
+| Pulse | Event/meeting creation and added attendees; updates and cancellation to attendees |
+| Flow | Issue creation/reassignment to the new assignee |
+| Atlas | Page comments to the page author |
+| Cadence | Team session creation to team members; completed sessions to card participants |
+| HRMS | New leave requests to organization owners; decisions and payroll approvals to the employee |
+| Control | Added membership to the member; role changes to the member; organization/app settings changes to other owners |
+
+Pulse reminders, Flow due dates/comments, Atlas sharing/mentions and Cadence
+reminders are **not scheduled/emitted yet** and remain labelled accordingly in
+settings. Their underlying scheduling/sharing/comment surfaces require separate
+implementation; saving preferences does not enable them. HRMS alerts land on
+Home because there is no HRMS records route yet. Notes alerts open the note or
+Requests directly; other implemented apps use their existing landing routes.
 
 Run API delivery and persistence regressions:
 `cd apps/api && NOTIFICATION_DATABASE_TESTS=true node --env-file=.env node_modules/jest/bin/jest.js --runInBand --runTestsByPath src/modules/notification/notification.service.spec.ts src/modules/notification/notification.persistence.spec.ts`.
+Notification and Notes persistence suites create and remove unique PostgreSQL
+schemas so a running development worker cannot consume test fixtures.
 
 ## Notes discovery and sharing
 

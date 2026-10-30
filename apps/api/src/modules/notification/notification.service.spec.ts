@@ -8,13 +8,12 @@ const types: SharedNotificationType[] = Object.values(NotificationType);
 const assertEnumParity: Record<SharedNotificationType, NotificationType> = NotificationType;
 
 describe("Notification event preferences", () => {
-  function setup(preference: { inApp: boolean; email: boolean } | null = null) {
+  function setup() {
     const prisma = {
       notificationPreference: {
-        findUnique: jest.fn().mockResolvedValue(preference),
         upsert: jest.fn().mockResolvedValue({}),
       },
-      notification: { create: jest.fn().mockResolvedValue({ id: "notification" }) },
+      notificationOutbox: { create: jest.fn().mockResolvedValue({ id: "event" }) },
       user: { findUnique: jest.fn().mockResolvedValue({ email: "member@example.test", name: "Member" }) },
     };
     const email = { send: jest.fn().mockResolvedValue(undefined) };
@@ -30,7 +29,7 @@ describe("Notification event preferences", () => {
     expect(
       await validate(
         Object.assign(new CreateNotificationDto(), {
-          userId: "member",
+          userId: "00000000-0000-4000-8000-000000000001",
           title: "Test notification",
           type,
         }),
@@ -45,52 +44,32 @@ describe("Notification event preferences", () => {
     expect(await validate(Object.assign(new UpsertPreferenceDto(), { type: "UNKNOWN_EVENT" }))).not.toHaveLength(0);
   });
 
-  it.each(types)("enforces independent in-app and email preferences for %s", async (type) => {
-    for (const inApp of [true, false]) {
-      for (const emailEnabled of [true, false]) {
-        const { service, prisma, email } = setup({ inApp, email: emailEnabled });
-        await service.create("org", { userId: "member", type, title: "Activity" });
-        expect(prisma.notificationPreference.findUnique).toHaveBeenCalledWith({
-          where: { userId_organizationId_type: { userId: "member", organizationId: "org", type } },
-        });
-        expect(prisma.notification.create).toHaveBeenCalledTimes(inApp ? 1 : 0);
-        expect(email.send).toHaveBeenCalledTimes(emailEnabled ? 1 : 0);
-      }
-    }
+  it.each(types)("queues %s durably without synchronous channel delivery", async (type) => {
+    const { service, prisma, email } = setup();
+    expect(await service.create("org", { userId: "member", type, title: "Activity" })).toEqual({ eventId: "event" });
+    expect(prisma.notificationOutbox.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: "org",
+        recipientId: "member",
+        type,
+        payload: expect.objectContaining({ title: "Activity", version: 1 }),
+      }),
+    });
+    expect(email.send).not.toHaveBeenCalled();
   });
 
-  it("preserves quiet-hours suppression even when email is enabled", async () => {
-    for (const inApp of [true, false]) {
-      const { service, email } = setup({ inApp, email: true });
-      await service.create("org", { userId: "member", type: "MENTION", title: "Activity" }, { suppressEmail: true });
-      expect(email.send).not.toHaveBeenCalled();
-    }
-  });
-
-  it("defaults missed-call email off and other event email on without saved preferences", async () => {
-    for (const type of types) {
-      const { service, email, prisma } = setup();
-      await service.create("org", { userId: "member", type, title: "Activity" });
-      expect(prisma.notification.create).toHaveBeenCalledTimes(1);
-      expect(email.send).toHaveBeenCalledTimes(type === "CALL" ? 0 : 1);
-    }
-  });
-
-  it("honors explicit delivery defaults only when no preference is saved", async () => {
-    const defaults = setup();
-    await defaults.service.create(
+  it("persists explicit delivery defaults and quiet-hours decisions for the worker", async () => {
+    const { service, prisma } = setup();
+    await service.create(
       "org",
       { userId: "member", type: "MENTION", title: "Activity" },
-      { emailByDefault: false },
+      { emailByDefault: false, suppressEmail: true },
     );
-    expect(defaults.email.send).not.toHaveBeenCalled();
-    const saved = setup({ inApp: true, email: true });
-    await saved.service.create(
-      "org",
-      { userId: "member", type: "MENTION", title: "Activity" },
-      { emailByDefault: false },
-    );
-    expect(saved.email.send).toHaveBeenCalledTimes(1);
+    expect(prisma.notificationOutbox.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        payload: expect.objectContaining({ emailByDefault: false, suppressEmail: true }),
+      }),
+    });
   });
 
   it("uses the same missed-call default when creating a preference and preserves omitted fields on update", async () => {

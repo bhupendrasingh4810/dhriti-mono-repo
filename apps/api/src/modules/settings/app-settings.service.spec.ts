@@ -19,6 +19,8 @@ function setup() {
     channel: { count: jest.fn(async () => 0) },
     connectUserSettings: { upsert: jest.fn(async (args: { create: object }) => args.create) },
     auditLog: audit,
+    organizationMember: { findMany: jest.fn().mockResolvedValue([{ userId: "owner-1" }]) },
+    notificationOutbox: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
     $executeRaw: jest.fn(async () => 1),
     $transaction: jest.fn(),
   };
@@ -77,7 +79,7 @@ describe("AppSettingsService", () => {
   });
 
   it("audits changed fields on update", async () => {
-    const { service, audit } = setup();
+    const { service, audit, prisma } = setup();
     await service.update("pulse", ORG, "user-1", { defaultReminderMinutes: 15 });
     expect(audit.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -90,6 +92,17 @@ describe("AppSettingsService", () => {
         }),
       }),
     );
+    expect(prisma.notificationOutbox.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          organizationId: ORG,
+          type: "CONTROL_SETTINGS_CHANGE",
+          recipientId: "owner-1",
+          payload: expect.objectContaining({ path: "pulse/settings" }),
+        }),
+      ],
+      skipDuplicates: true,
+    });
   });
 
   it("locks updates before reading and validating the combined policy", async () => {

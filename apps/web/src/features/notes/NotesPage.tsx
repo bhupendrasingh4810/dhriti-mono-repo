@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileText, FolderPlus, Inbox, Plus } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { ConnectCascadingMenu } from "@/components/shared/CascadingMenu";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -30,6 +31,9 @@ type Selection = { folder: NoteFolder | null; label: string; requests?: boolean 
 export default function NotesPage() {
   const { user } = useAuth();
   const organizationId = user?.organization?.id;
+  const searchParams = useSearchParams();
+  const linkedNoteId = searchParams.get("noteId");
+  const linkedView = searchParams.get("view");
   const [tree, setTree] = useState<NotesTree | null>(null);
   const [selection, setSelection] = useState<Selection>({ folder: null, label: "All notes" });
   const [notes, setNotes] = useState<Note[]>([]);
@@ -53,6 +57,29 @@ export default function NotesPage() {
   const [requestCountError, setRequestCountError] = useState("");
   const requestUserId = user?.id;
   const requestCountKey = `${organizationId ?? ""}:${requestUserId ?? ""}`;
+  useEffect(() => {
+    if (!organizationId) return;
+    let active = true;
+    if (linkedView === "requests") {
+      void Promise.resolve().then(() => {
+        if (active) setSelection({ folder: null, label: "Requests", requests: true });
+      });
+    } else if (linkedNoteId) {
+      void notesService
+        .getNote(organizationId, linkedNoteId)
+        .then((note) => {
+          if (!active) return;
+          setEditorMode("view");
+          setEditorNote(note);
+        })
+        .catch((reason) => {
+          if (active) setError(reason instanceof Error ? reason.message : "Unable to open the linked note.");
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [organizationId, linkedNoteId, linkedView]);
   const onRequestsLoaded = useCallback(
     (requests: NoteAccessRequest[]) => {
       if (!requestUserId) return;

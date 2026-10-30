@@ -1,22 +1,73 @@
 model Notification {
   id             String           @id @default(uuid()) @db.Uuid
   organizationId String           @db.Uuid
-  userId         String           @db.Uuid
+  userId         String           @map("recipient_id") @db.Uuid
+  actorId        String?          @map("actor_id") @db.Uuid
+  sourceType     String           @default("system") @map("source_type")
+  sourceId       String?          @map("source_id") @db.Uuid
+  eventId        String?          @unique @map("event_id") @db.Uuid
+  payload        Json             @default("{}") @db.JsonB
+  isSeen         Boolean          @default(false) @map("is_seen")
   type           NotificationType
   title          String
   body           String?
   linkUrl        String?
   metadata       Json?
-  isRead         Boolean          @default(false)
-  readAt         DateTime?
-  createdAt      DateTime         @default(now())
+  isRead         Boolean          @default(false) @map("is_read")
+  readAt         DateTime?        @map("read_at")
+  createdAt      DateTime         @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)")) @map("created_at")
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
 
   @@index([userId, isRead, createdAt])
   @@index([organizationId, createdAt])
+  @@index([organizationId, userId, createdAt, id])
+  @@index([organizationId, userId, isSeen])
   @@map("notifications")
+}
+
+model NotificationOutbox {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  recipientId    String @db.Uuid
+  actorId        String? @db.Uuid
+  sourceType     String
+  sourceId       String? @db.Uuid
+  type           NotificationType
+  payload        Json @db.JsonB
+  dedupKey       String? @unique
+  status         String @default("PENDING")
+  attempts       Int @default(0)
+  availableAt    DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  lastError      String?
+  createdAt      DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  processedAt    DateTime?
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  recipient User @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([status, availableAt])
+  @@map("notification_outbox")
+}
+
+model NotificationDelivery {
+  id             String @id @default(uuid()) @db.Uuid
+  notificationId String @db.Uuid
+  channel        String
+  status         String @default("PENDING")
+  attempts       Int @default(0)
+  availableAt    DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  leaseToken     String? @db.Uuid
+  leaseUntil     DateTime?
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  @@unique([notificationId, channel])
+  @@index([status, availableAt])
+  @@map("notification_deliveries")
 }
 
 model NotificationPreference {

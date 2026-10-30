@@ -13,6 +13,8 @@ describe("PulseService meetings and schedule metadata", () => {
     calendar: { findFirst: jest.Mock };
     organizationMember: { findMany: jest.Mock };
     calendarEvent: { create: jest.Mock; update: jest.Mock };
+    notificationOutbox: { createMany: jest.Mock };
+    $transaction: jest.Mock;
   };
   let connect: { createMeetingConversation: jest.Mock };
   let audit: { record: jest.Mock };
@@ -26,7 +28,10 @@ describe("PulseService meetings and schedule metadata", () => {
         create: jest.fn().mockResolvedValue({ id: "event-id", attendees: [] }),
         update: jest.fn().mockResolvedValue({ id: "event-id", attendees: [], connectChannelId: "channel-id" }),
       },
+      notificationOutbox: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+      $transaction: jest.fn(),
     };
+    prisma.$transaction.mockImplementation((callback: (tx: typeof prisma) => unknown) => callback(prisma));
     connect = { createMeetingConversation: jest.fn().mockResolvedValue({ id: "channel-id" }) };
     audit = { record: jest.fn().mockResolvedValue(undefined) };
     service = new PulseService(
@@ -52,6 +57,17 @@ describe("PulseService meetings and schedule metadata", () => {
         data: { connectChannelId: "channel-id" },
       }),
     );
+    expect(prisma.notificationOutbox.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          organizationId,
+          recipientId: attendeeId,
+          type: "PULSE_INVITATION",
+          actorId: organizerId,
+        }),
+      ],
+      skipDuplicates: true,
+    });
   });
 
   it("accepts only weekly recurrence rules", async () => {

@@ -59,6 +59,8 @@ export const notesService = {
       { status, grantedRole },
     ),
   getTree: (organizationId: string) => tenantRequest<NotesTree>(organizationId, `${base}/tree`),
+  getNote: (organizationId: string, noteId: string) =>
+    tenantRequest<Note>(organizationId, `${base}/${pathSegment(noteId)}`),
   listNotes: (organizationId: string, folderId?: string) =>
     tenantRequest<Note[]>(organizationId, base, { query: folderId ? { folderId } : undefined }),
   saveOrder: (organizationId: string, noteIds: string[], folderId?: string) =>

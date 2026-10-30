@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
+import { enqueueNotification } from "../notification/notification-events";
 import type { Calendar, CalendarEvent, EventAttendee, Prisma, RsvpStatus, User } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
@@ -230,29 +231,42 @@ export class PulseService {
         })),
     ];
 
-    const event = await this.prisma.calendarEvent.create({
-      data: {
-        organizationId,
-        calendarId,
-        title: dto.title.trim(),
-        description: dto.description ?? null,
-        location: dto.location ?? null,
-        meetingUrl: dto.meetingUrl ?? null,
-        kind,
-        availability: dto.availability ?? policy.defaultEventAvailability,
-        privacy: dto.privacy ?? policy.defaultEventPrivacy,
-        reminderMinutes: dto.reminderMinutes ?? policy.defaultReminderMinutes,
-        isOnlineMeeting: dto.isOnlineMeeting ?? false,
-        startsAt: new Date(dto.startsAt),
-        endsAt: new Date(dto.endsAt),
-        isAllDay: dto.isAllDay ?? false,
-        recurrenceRule: dto.recurrenceRule ?? null,
-        createdById: creatorUserId,
-        attendees: {
-          create: attendees,
+    const event = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.calendarEvent.create({
+        data: {
+          organizationId,
+          calendarId,
+          title: dto.title.trim(),
+          description: dto.description ?? null,
+          location: dto.location ?? null,
+          meetingUrl: dto.meetingUrl ?? null,
+          kind,
+          availability: dto.availability ?? policy.defaultEventAvailability,
+          privacy: dto.privacy ?? policy.defaultEventPrivacy,
+          reminderMinutes: dto.reminderMinutes ?? policy.defaultReminderMinutes,
+          isOnlineMeeting: dto.isOnlineMeeting ?? false,
+          startsAt: new Date(dto.startsAt),
+          endsAt: new Date(dto.endsAt),
+          isAllDay: dto.isAllDay ?? false,
+          recurrenceRule: dto.recurrenceRule ?? null,
+          createdById: creatorUserId,
+          attendees: {
+            create: attendees,
+          },
         },
-      },
-      include: this.eventInclude,
+        include: this.eventInclude,
+      });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: creatorUserId,
+        sourceType: "pulse",
+        sourceId: created.id,
+        type: "PULSE_INVITATION",
+        recipientIds: attendees.map((attendee) => attendee.userId),
+        title: "You were invited to a calendar event",
+        path: "pulse",
+      });
+      return created;
     });
 
     await this.audit.record({
@@ -301,23 +315,36 @@ export class PulseService {
       isOnlineMeeting: dto.isOnlineMeeting === true && !existing.isOnlineMeeting,
     });
 
-    const updated = await this.prisma.calendarEvent.update({
-      where: { id: eventId },
-      data: {
-        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
-        ...(dto.location !== undefined ? { location: dto.location } : {}),
-        ...(dto.meetingUrl !== undefined ? { meetingUrl: dto.meetingUrl } : {}),
-        ...(dto.isAllDay !== undefined ? { isAllDay: dto.isAllDay } : {}),
-        ...(dto.recurrenceRule !== undefined ? { recurrenceRule: dto.recurrenceRule } : {}),
-        ...(dto.availability !== undefined ? { availability: dto.availability } : {}),
-        ...(dto.privacy !== undefined ? { privacy: dto.privacy } : {}),
-        ...(dto.reminderMinutes !== undefined ? { reminderMinutes: dto.reminderMinutes } : {}),
-        ...(dto.isOnlineMeeting !== undefined ? { isOnlineMeeting: dto.isOnlineMeeting } : {}),
-        startsAt,
-        endsAt,
-      },
-      include: this.eventInclude,
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const event = await tx.calendarEvent.update({
+        where: { id: eventId },
+        data: {
+          ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.location !== undefined ? { location: dto.location } : {}),
+          ...(dto.meetingUrl !== undefined ? { meetingUrl: dto.meetingUrl } : {}),
+          ...(dto.isAllDay !== undefined ? { isAllDay: dto.isAllDay } : {}),
+          ...(dto.recurrenceRule !== undefined ? { recurrenceRule: dto.recurrenceRule } : {}),
+          ...(dto.availability !== undefined ? { availability: dto.availability } : {}),
+          ...(dto.privacy !== undefined ? { privacy: dto.privacy } : {}),
+          ...(dto.reminderMinutes !== undefined ? { reminderMinutes: dto.reminderMinutes } : {}),
+          ...(dto.isOnlineMeeting !== undefined ? { isOnlineMeeting: dto.isOnlineMeeting } : {}),
+          startsAt,
+          endsAt,
+        },
+        include: this.eventInclude,
+      });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: userId,
+        sourceType: "pulse",
+        sourceId: eventId,
+        type: "PULSE_EVENT_UPDATE",
+        recipientIds: event.attendees.map((attendee) => attendee.userId),
+        title: "A calendar event was updated",
+        path: "pulse",
+      });
+      return event;
     });
 
     await this.audit.record({
@@ -356,10 +383,25 @@ export class PulseService {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the organizer can cancel this event", HttpStatus.FORBIDDEN);
     }
 
-    const cancelled = await this.prisma.calendarEvent.update({
-      where: { id: eventId },
-      data: { cancelledAt: existing.cancelledAt ?? new Date() },
-      include: this.eventInclude,
+    const cancelled = await this.prisma.$transaction(async (tx) => {
+      const event = await tx.calendarEvent.update({
+        where: { id: eventId },
+        data: { cancelledAt: existing.cancelledAt ?? new Date() },
+        include: this.eventInclude,
+      });
+      if (!existing.cancelledAt) {
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: userId,
+          sourceType: "pulse",
+          sourceId: eventId,
+          type: "PULSE_EVENT_UPDATE",
+          recipientIds: event.attendees.map((attendee) => attendee.userId),
+          title: "A calendar event was cancelled",
+          path: "pulse",
+        });
+      }
+      return event;
     });
     await this.audit.record({
       action: "pulse.event.cancelled",
@@ -404,10 +446,29 @@ export class PulseService {
     }
     await this.assertOrgMembers(organizationId, [userId]);
 
-    await this.prisma.eventAttendee.upsert({
-      where: { eventId_userId: { eventId, userId } },
-      create: { eventId, userId, status: "PENDING" },
-      update: {},
+    await this.prisma.$transaction(async (tx) => {
+      const existing = await tx.eventAttendee.findUnique({
+        where: { eventId_userId: { eventId, userId } },
+        select: { id: true },
+      });
+      const attendee = await tx.eventAttendee.upsert({
+        where: { eventId_userId: { eventId, userId } },
+        create: { eventId, userId, status: "PENDING" },
+        update: {},
+      });
+      if (!existing) {
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: actorUserId,
+          sourceType: "pulse",
+          sourceId: eventId,
+          type: "PULSE_INVITATION",
+          recipientIds: [userId],
+          title: "You were invited to a calendar event",
+          path: "pulse",
+          dedupKey: `attendee:${attendee.id}`,
+        });
+      }
     });
   }
 

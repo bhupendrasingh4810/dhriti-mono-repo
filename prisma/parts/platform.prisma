@@ -36,6 +36,7 @@ model User {
   facilitatedSessions   CadenceSession[]
   supportTickets        SupportTicket[]
   notifications         Notification[]
+  notificationOutbox NotificationOutbox[]
   notificationPrefs     NotificationPreference[]
   connectSidebarPreferences ConnectSidebarPreference[]
   connectUserSettings ConnectUserSettings[]

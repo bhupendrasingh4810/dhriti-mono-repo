@@ -1,12 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { isolatedPrisma } from "../../database/isolated-prisma.test-helper";
 import { AppSettingsService } from "../settings/app-settings.service";
 import { NotesService } from "./notes.service";
 
 const databaseTests = process.env.NOTES_DATABASE_TESTS === "true" ? describe : describe.skip;
 
 databaseTests("Notes sharing discovery", () => {
-  const prisma = new PrismaClient();
+  const database = isolatedPrisma();
+  const { prisma } = database;
   const organizationId = randomUUID();
   const otherOrganizationId = randomUUID();
   const ownerId = randomUUID();
@@ -24,7 +25,7 @@ databaseTests("Notes sharing discovery", () => {
   );
 
   beforeAll(async () => {
-    await prisma.$connect();
+    await database.setup();
     await prisma.organization.createMany({
       data: [organizationId, otherOrganizationId].map((id) => ({
         id,
@@ -56,14 +57,14 @@ databaseTests("Notes sharing discovery", () => {
     await service.updateNote(organizationId, ownerId, sharedNoteId, {
       permissions: [{ userId: recipientId, canEdit: false, canDelete: false }],
     });
-  });
+  }, 60000);
 
   afterAll(async () => {
     try {
       await prisma.organization.deleteMany({ where: { id: { in: [organizationId, otherOrganizationId] } } });
       await prisma.user.deleteMany({ where: { id: { in: [ownerId, recipientId, unrelatedId] } } });
     } finally {
-      await prisma.$disconnect();
+      await database.cleanup();
     }
   });
 

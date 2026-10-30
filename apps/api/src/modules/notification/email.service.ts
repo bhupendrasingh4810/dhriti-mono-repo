@@ -24,9 +24,12 @@ export class EmailService {
 
   constructor(private readonly config: ApiConfigService) {}
 
-  async send(message: EmailMessage): Promise<void> {
+  async send(message: EmailMessage, options: { requireConfigured?: boolean } = {}): Promise<void> {
     const brevo = this.config.brevo;
     if (!brevo) {
+      if (options.requireConfigured) {
+        throw new Error("Notification email delivery requires Brevo configuration");
+      }
       this.logger.warn(`Email not sent because Brevo is not configured: to=${message.to} subject="${message.subject}"`);
       this.logger.debug(message.text);
       return;
@@ -41,6 +44,7 @@ export class EmailService {
         to: message.to,
         subject: message.subject,
         htmlContent: message.html,
+        textContent: message.text,
       });
       this.logger.log(`Email sent to=${message.to} subject="${message.subject}"`);
     } catch (error) {

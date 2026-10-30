@@ -29,6 +29,7 @@ import { useConnectSearch } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { useSettingsAccess } from "@/features/settings/use-app-settings";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 
 interface Props {
   activeView: AppView;
@@ -36,7 +37,6 @@ interface Props {
 
 export default function Header({ activeView }: Props) {
   const [settingsAnchor, setSettingsAnchor] = useState<HTMLElement | null>(null);
-  const [notificationAnchor, setNotificationAnchor] = useState<HTMLElement | null>(null);
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user, logout } = useAuth();
@@ -63,7 +63,6 @@ export default function Header({ activeView }: Props) {
   function closeMenus() {
     clearMenuCloseTimer();
     setSettingsAnchor(null);
-    setNotificationAnchor(null);
     setUserAnchor(null);
   }
 
@@ -219,16 +218,6 @@ export default function Header({ activeView }: Props) {
       onClick: () => void logout(),
     },
   ];
-  const notificationItems: ConnectCascadingMenuItem[] = [
-    {
-      id: "notifications-empty",
-      label: "No new notifications",
-      description: "You are all caught up.",
-      descriptionLayout: "stacked",
-      icon: <Bell aria-hidden="true" size={16} strokeWidth={1.75} />,
-      closeOnClick: false,
-    },
-  ];
 
   return (
     <header
@@ -276,28 +265,7 @@ export default function Header({ activeView }: Props) {
             </button>
           </div>
         ) : null}
-        <button
-          type="button"
-          onMouseEnter={(event) => {
-            clearMenuCloseTimer();
-            setNotificationAnchor(event.currentTarget);
-            setSettingsAnchor(null);
-            setUserAnchor(null);
-          }}
-          onMouseLeave={scheduleMenuClose}
-          onClick={(event) => {
-            setNotificationAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
-            setSettingsAnchor(null);
-            setUserAnchor(null);
-          }}
-          aria-label="Open notifications"
-          aria-haspopup="menu"
-          aria-expanded={Boolean(notificationAnchor)}
-          className="relative w-9 h-9 cursor-pointer rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all"
-        >
-          <Bell size={20} strokeWidth={1.75} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#036c5f]" />
-        </button>
+        <NotificationBell />
         <button className="w-9 h-9 cursor-pointer rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all">
           <CircleHelp size={20} strokeWidth={1.75} />
         </button>
@@ -307,13 +275,11 @@ export default function Header({ activeView }: Props) {
             onMouseEnter={(event) => {
               clearMenuCloseTimer();
               setSettingsAnchor(event.currentTarget);
-              setNotificationAnchor(null);
               setUserAnchor(null);
             }}
             onMouseLeave={scheduleMenuClose}
             onClick={(event) => {
               setSettingsAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
-              setNotificationAnchor(null);
               setUserAnchor(null);
             }}
             aria-label="Open settings"
@@ -330,13 +296,11 @@ export default function Header({ activeView }: Props) {
             clearMenuCloseTimer();
             setUserAnchor(event.currentTarget);
             setSettingsAnchor(null);
-            setNotificationAnchor(null);
           }}
           onMouseLeave={scheduleMenuClose}
           onClick={(event) => {
             setUserAnchor((anchor) => (anchor === event.currentTarget ? null : event.currentTarget));
             setSettingsAnchor(null);
-            setNotificationAnchor(null);
           }}
           aria-label="Open user menu"
           aria-haspopup="menu"
@@ -359,17 +323,6 @@ export default function Header({ activeView }: Props) {
           />
         </button>
       </div>
-      <ConnectCascadingMenu
-        anchorEl={notificationAnchor}
-        open={Boolean(notificationAnchor)}
-        onClose={closeMenus}
-        items={notificationItems}
-        heading="Notifications"
-        minWidth={240}
-        openToLeft
-        onMouseEnter={clearMenuCloseTimer}
-        onMouseLeave={scheduleMenuClose}
-      />
       {canManageSettings ? (
         <ConnectCascadingMenu
           anchorEl={settingsAnchor}

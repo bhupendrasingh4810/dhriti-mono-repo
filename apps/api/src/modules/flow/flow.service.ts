@@ -12,6 +12,7 @@ import type { CreateProjectDto, UpdateProjectDto } from "./dto/project.dto";
 import type { CreateIssueDto, ListIssuesQueryDto, MoveIssueDto, UpdateIssueDto } from "./dto/issue.dto";
 import type { CreateSprintDto, UpdateSprintDto } from "./dto/sprint.dto";
 import type { CreateColumnDto, UpdateColumnDto } from "./dto/board.dto";
+import { enqueueNotification } from "../notification/notification-events";
 
 @Injectable()
 export class FlowService {
@@ -208,7 +209,7 @@ export class FlowService {
         select: { issueCounter: true },
       });
 
-      return tx.issue.create({
+      const created = await tx.issue.create({
         data: {
           organizationId,
           projectId,
@@ -224,6 +225,17 @@ export class FlowService {
           dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         },
       });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: reporterId,
+        sourceType: "flow",
+        sourceId: created.id,
+        type: "FLOW_ASSIGNMENT",
+        recipientIds: created.assigneeId ? [created.assigneeId] : [],
+        title: "An issue was assigned to you",
+        path: "flow/dashboard",
+      });
+      return created;
     });
 
     await this.audit.record({
@@ -258,18 +270,33 @@ export class FlowService {
       await this.assertSprintInProject(existing.projectId, dto.sprintId);
     }
 
-    const updated = await this.prisma.issue.update({
-      where: { id: issueId },
-      data: {
-        ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
-        ...(dto.description !== undefined ? { description: dto.description } : {}),
-        ...(dto.status !== undefined ? { status: dto.status } : {}),
-        ...(dto.priority !== undefined ? { priority: dto.priority } : {}),
-        ...(dto.assigneeId !== undefined ? { assigneeId: dto.assigneeId } : {}),
-        ...(dto.sprintId !== undefined ? { sprintId: dto.sprintId } : {}),
-        ...(dto.estimate !== undefined ? { estimate: dto.estimate } : {}),
-        ...(dto.dueDate !== undefined ? { dueDate: dto.dueDate === null ? null : new Date(dto.dueDate) } : {}),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const issue = await tx.issue.update({
+        where: { id: issueId },
+        data: {
+          ...(dto.title !== undefined ? { title: dto.title.trim() } : {}),
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.status !== undefined ? { status: dto.status } : {}),
+          ...(dto.priority !== undefined ? { priority: dto.priority } : {}),
+          ...(dto.assigneeId !== undefined ? { assigneeId: dto.assigneeId } : {}),
+          ...(dto.sprintId !== undefined ? { sprintId: dto.sprintId } : {}),
+          ...(dto.estimate !== undefined ? { estimate: dto.estimate } : {}),
+          ...(dto.dueDate !== undefined ? { dueDate: dto.dueDate === null ? null : new Date(dto.dueDate) } : {}),
+        },
+      });
+      if (issue.assigneeId && issue.assigneeId !== existing.assigneeId) {
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: userId,
+          sourceType: "flow",
+          sourceId: issue.id,
+          type: "FLOW_ASSIGNMENT",
+          recipientIds: [issue.assigneeId],
+          title: "An issue was assigned to you",
+          path: "flow/dashboard",
+        });
+      }
+      return issue;
     });
 
     await this.audit.record({

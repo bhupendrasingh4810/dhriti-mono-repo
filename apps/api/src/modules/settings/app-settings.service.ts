@@ -16,6 +16,7 @@ import { AppError } from "../../common/errors/app-error";
 import { ErrorCode } from "../../common/errors/error-codes";
 import { PrismaService } from "../../database/prisma.service";
 import { NULLABLE_SETTINGS_FIELDS, type UpdateConnectUserSettingsDto } from "./dto/app-settings.dto";
+import { enqueueNotification } from "../notification/notification-events";
 
 export const APP_SETTINGS_KEYS = ["connect", "flow", "atlas", "nexus", "cadence", "pulse", "notes", "hrms"] as const;
 export type AppSettingsKey = (typeof APP_SETTINGS_KEYS)[number];
@@ -116,6 +117,22 @@ export class AppSettingsService {
           metadata: JSON.parse(JSON.stringify({ changedFields: Object.keys(data), changes })) as Prisma.InputJsonObject,
         },
       });
+      if (Object.keys(data).some((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))) {
+        const owners = await tx.organizationMember.findMany({
+          where: { organizationId, status: "ACTIVE", deletedAt: null, isOwner: true },
+          select: { userId: true },
+        });
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: actorUserId,
+          sourceType: "control",
+          sourceId: value.id,
+          type: "CONTROL_SETTINGS_CHANGE",
+          recipientIds: owners.map((member) => member.userId),
+          title: `${app.charAt(0).toUpperCase() + app.slice(1)} organization settings changed`,
+          path: `${app}/settings`,
+        });
+      }
       return value;
     });
   }

@@ -26,7 +26,29 @@ test("unimplemented automatic emitters are not presented as active integrations"
   const active = NOTIFICATION_SETTINGS_GROUPS.flatMap((group) => group.events)
     .filter((event) => event.automaticDelivery)
     .map((event) => event.type);
-  assert.deepEqual(active.sort(), ["CALL", "DIRECT_MESSAGE", "MENTION"]);
+  assert.deepEqual(
+    active.sort(),
+    [
+      "CALL",
+      "DIRECT_MESSAGE",
+      "MENTION",
+      "NOTES_SHARED",
+      "NOTES_ACCESS_REQUEST",
+      "NOTES_ACCESS_DECISION",
+      "PULSE_INVITATION",
+      "PULSE_EVENT_UPDATE",
+      "FLOW_ASSIGNMENT",
+      "ATLAS_COMMENT",
+      "CADENCE_INVITATION",
+      "CADENCE_RESULTS",
+      "HRMS_LEAVE_REQUEST",
+      "HRMS_LEAVE_DECISION",
+      "HRMS_PAYROLL",
+      "CONTROL_MEMBERSHIP",
+      "CONTROL_ROLE_CHANGE",
+      "CONTROL_SETTINGS_CHANGE",
+    ].sort(),
+  );
 });
 
 test("defaults preserve existing channel behavior and keep missed-call email off", () => {

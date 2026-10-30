@@ -71,6 +71,7 @@ model Organization {
   supportTickets SupportTicket[]
   settings      OrganizationSettings?
   notifications Notification[]
+  notificationOutbox NotificationOutbox[]
   notificationPreferences NotificationPreference[]
   connectSidebarPreferences ConnectSidebarPreference[]
   connectSettings           ConnectOrganizationSettings?

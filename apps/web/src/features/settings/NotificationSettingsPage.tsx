@@ -68,8 +68,8 @@ export default function NotificationSettingsPage() {
         <>
           <SettingsStatus error={preferences.error} />
           <p className="text-sm text-text-secondary">
-            Changes save immediately. Preferences control delivery when an event is submitted to the notification
-            service; they do not enable new notification triggers.
+            Changes save immediately. In-app alerts control live delivery, not history: notifications remain in your
+            inbox even when alerts are off. Email is delivered separately when configured.
           </p>
           {NOTIFICATION_SETTINGS_GROUPS.map((group) => (
             <SettingsSection
@@ -84,7 +84,7 @@ export default function NotificationSettingsPage() {
             >
               <div className="hidden grid-cols-[1fr_5rem_5rem] gap-4 px-5 py-2 text-xs font-medium text-text-secondary sm:grid sm:px-6">
                 <span>Type</span>
-                <span className="text-center">In app</span>
+                <span className="text-center">Live alerts</span>
                 <span className="text-center">Email</span>
               </div>
               {group.events.map((item) => {
@@ -105,7 +105,7 @@ export default function NotificationSettingsPage() {
                     {(["inApp", "email"] as const).map((channel) => (
                       <div key={channel} className="flex flex-col items-center gap-1">
                         <span className="text-xs text-text-secondary sm:hidden">
-                          {channel === "inApp" ? "In app" : "Email"}
+                          {channel === "inApp" ? "Live alerts" : "Email"}
                         </span>
                         <SettingsToggle
                           label={`${group.title} ${item.label}: ${channel === "inApp" ? "in-app" : "email"} notifications`}

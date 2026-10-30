@@ -14,6 +14,7 @@ interface WorkspaceLayoutProps {
 }
 
 function getActiveApp(pathname: string): AppView {
+  if (pathname.split("/")[2] === "notifications") return "notifications";
   if (pathname.split("/")[2] === "notes") return "notes";
   if (pathname.includes("/connect")) return "connect";
   if (pathname.includes("/flow")) return "flow";

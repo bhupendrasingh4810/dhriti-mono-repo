@@ -19,6 +19,7 @@ import { PrismaService } from "../../../database/prisma.service";
 import { AuditService } from "../../audit/audit.service";
 import { AppSettingsService } from "../../settings/app-settings.service";
 import { resolveAppSettings, settingsPolicyError } from "../../settings/settings.defaults";
+import { enqueueNotification } from "../../notification/notification-events";
 
 @Injectable()
 export class HrmsOperationsService {
@@ -59,16 +60,33 @@ export class HrmsOperationsService {
         HttpStatus.BAD_REQUEST,
       );
     }
-    const record = await this.prisma.hrmsLeaveRequest.create({
-      data: {
+    const record = await this.prisma.$transaction(async (tx) => {
+      const leave = await tx.hrmsLeaveRequest.create({
+        data: {
+          organizationId,
+          employeeId: input.employeeId,
+          leaveType: input.leaveType,
+          startDate: new Date(input.startDate),
+          endDate: new Date(input.endDate),
+          totalDays: input.totalDays,
+          reason: this.clean(input.reason),
+        },
+      });
+      const reviewers = await tx.organizationMember.findMany({
+        where: { organizationId, status: "ACTIVE", deletedAt: null, isOwner: true },
+        select: { userId: true },
+      });
+      await enqueueNotification(tx, {
         organizationId,
-        employeeId: input.employeeId,
-        leaveType: input.leaveType,
-        startDate: new Date(input.startDate),
-        endDate: new Date(input.endDate),
-        totalDays: input.totalDays,
-        reason: this.clean(input.reason),
-      },
+        actorId: actorUserId,
+        sourceType: "hrms",
+        sourceId: leave.id,
+        type: "HRMS_LEAVE_REQUEST",
+        recipientIds: reviewers.map((member) => member.userId),
+        title: "A leave request needs review",
+        path: "home",
+      });
+      return leave;
     });
     return this.auditRecord("hrms.leave.created", organizationId, actorUserId, record.id, {
       employeeId: input.employeeId,
@@ -83,28 +101,47 @@ export class HrmsOperationsService {
   ) {
     const existing = await this.prisma.hrmsLeaveRequest.findFirst({
       where: { id: leaveId, organizationId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!existing) {
       this.notFound();
     }
-    const record = await this.prisma.hrmsLeaveRequest.update({
-      where: { id: leaveId },
-      data: {
-        status,
-        ...(status === "APPROVED"
-          ? {
-              approvedByUserId: actorUserId,
-              approvedAt: new Date(),
-              rejectedByUserId: null,
-              rejectedAt: null,
-              rejectionReason: null,
-            }
-          : {}),
-        ...(status === "REJECTED"
-          ? { rejectedByUserId: actorUserId, rejectedAt: new Date(), rejectionReason: this.clean(rejectionReason) }
-          : {}),
-      },
+    const record = await this.prisma.$transaction(async (tx) => {
+      const leave = await tx.hrmsLeaveRequest.update({
+        where: { id: leaveId },
+        data: {
+          status,
+          ...(status === "APPROVED"
+            ? {
+                approvedByUserId: actorUserId,
+                approvedAt: new Date(),
+                rejectedByUserId: null,
+                rejectedAt: null,
+                rejectionReason: null,
+              }
+            : {}),
+          ...(status === "REJECTED"
+            ? { rejectedByUserId: actorUserId, rejectedAt: new Date(), rejectionReason: this.clean(rejectionReason) }
+            : {}),
+        },
+      });
+      if (existing.status !== status && (status === "APPROVED" || status === "REJECTED")) {
+        const employee = await tx.hrmsEmployee.findUniqueOrThrow({
+          where: { id: leave.employeeId },
+          select: { userId: true },
+        });
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: actorUserId,
+          sourceType: "hrms",
+          sourceId: leave.id,
+          type: "HRMS_LEAVE_DECISION",
+          recipientIds: [employee.userId],
+          title: `Your leave request was ${status.toLowerCase()}`,
+          path: "home",
+        });
+      }
+      return leave;
     });
     return this.auditRecord("hrms.leave.status_updated", organizationId, actorUserId, record.id, { status }).then(
       () => record,
@@ -215,14 +252,33 @@ export class HrmsOperationsService {
   async approvePayroll(organizationId: string, payrollId: string, actorUserId: string) {
     const existing = await this.prisma.hrmsPayrollRecord.findFirst({
       where: { id: payrollId, organizationId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!existing) {
       this.notFound();
     }
-    const record = await this.prisma.hrmsPayrollRecord.update({
-      where: { id: payrollId },
-      data: { status: PayrollStatus.APPROVED, approvedByUserId: actorUserId, approvedAt: new Date() },
+    const record = await this.prisma.$transaction(async (tx) => {
+      const payroll = await tx.hrmsPayrollRecord.update({
+        where: { id: payrollId },
+        data: { status: PayrollStatus.APPROVED, approvedByUserId: actorUserId, approvedAt: new Date() },
+      });
+      const employee = await tx.hrmsEmployee.findUniqueOrThrow({
+        where: { id: payroll.employeeId },
+        select: { userId: true },
+      });
+      if (existing.status !== "APPROVED") {
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: actorUserId,
+          sourceType: "hrms",
+          sourceId: payroll.id,
+          type: "HRMS_PAYROLL",
+          recipientIds: [employee.userId],
+          title: "Your payroll record was approved",
+          path: "home",
+        });
+      }
+      return payroll;
     });
     return this.auditRecord("hrms.payroll.approved", organizationId, actorUserId, record.id).then(() => record);
   }

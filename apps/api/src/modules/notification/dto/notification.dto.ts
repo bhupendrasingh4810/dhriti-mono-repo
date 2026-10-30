@@ -1,7 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, IsUrl, Max, MaxLength, Min, MinLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUrl,
+  IsUUID,
+  Max,
+  MaxLength,
+  Min,
+  MinLength,
+} from "class-validator";
 import { NotificationType } from "@prisma/client";
-import { Type } from "class-transformer";
+import { Transform, Type } from "class-transformer";
 
 export class ListNotificationsQueryDto {
   @ApiPropertyOptional({ default: 50, maximum: 200 })
@@ -14,19 +28,27 @@ export class ListNotificationsQueryDto {
 
   @ApiPropertyOptional({ description: "Only unread notifications" })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }: { value: unknown }) => (value === "true" ? true : value === "false" ? false : value))
   @IsBoolean()
   unreadOnly?: boolean;
 
   @ApiPropertyOptional({ description: "Cursor = notification id for pagination" })
   @IsOptional()
-  @IsString()
+  @IsUUID()
   cursor?: string;
+}
+
+export class MarkNotificationsSeenDto {
+  @ApiProperty({ type: [String], maxItems: 200 })
+  @IsArray()
+  @ArrayMaxSize(200)
+  @IsUUID("all", { each: true })
+  ids!: string[];
 }
 
 export class CreateNotificationDto {
   @ApiProperty({ format: "uuid" })
-  @IsString()
+  @IsUUID()
   userId!: string;
 
   @ApiProperty({ enum: NotificationType })

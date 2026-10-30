@@ -6,6 +6,7 @@ import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import type { UpdateOrgEntitlementDto, UpdateOrgSettingsDto, UpsertOrgFeatureFlagDto } from "./dto/organization.dto";
+import { enqueueNotification } from "../../notification/notification-events";
 
 export interface OrgDashboard {
   members: { total: number; active: number; orgAdmins: number; admins: number };
@@ -143,29 +144,46 @@ export class OrganizationAdminService {
     actorUserId: string,
     dto: UpdateOrgSettingsDto,
   ): Promise<OrganizationSettings> {
-    const settings = await this.prisma.organizationSettings.upsert({
-      where: { organizationId },
-      create: {
+    const settings = await this.prisma.$transaction(async (tx) => {
+      const updated = await tx.organizationSettings.upsert({
+        where: { organizationId },
+        create: {
+          organizationId,
+          domain: dto.domain ?? null,
+          brandingLogoUrl: dto.brandingLogoUrl ?? null,
+          timezone: dto.timezone ?? "UTC",
+          locale: dto.locale ?? "en",
+          mfaEnforced: dto.mfaEnforced ?? false,
+          passwordMinLength: dto.passwordMinLength ?? 10,
+          sessionTimeoutMinutes: dto.sessionTimeoutMinutes ?? 10080,
+          dataRetentionDays: dto.dataRetentionDays ?? null,
+        },
+        update: {
+          ...(dto.domain !== undefined ? { domain: dto.domain } : {}),
+          ...(dto.brandingLogoUrl !== undefined ? { brandingLogoUrl: dto.brandingLogoUrl } : {}),
+          ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
+          ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
+          ...(dto.mfaEnforced !== undefined ? { mfaEnforced: dto.mfaEnforced } : {}),
+          ...(dto.passwordMinLength !== undefined ? { passwordMinLength: dto.passwordMinLength } : {}),
+          ...(dto.sessionTimeoutMinutes !== undefined ? { sessionTimeoutMinutes: dto.sessionTimeoutMinutes } : {}),
+          ...(dto.dataRetentionDays !== undefined ? { dataRetentionDays: dto.dataRetentionDays } : {}),
+        },
+      });
+      const owners = await tx.organizationMember.findMany({
+        where: { organizationId, status: "ACTIVE", deletedAt: null, isOwner: true },
+        select: { userId: true },
+      });
+      await enqueueNotification(tx, {
         organizationId,
-        domain: dto.domain ?? null,
-        brandingLogoUrl: dto.brandingLogoUrl ?? null,
-        timezone: dto.timezone ?? "UTC",
-        locale: dto.locale ?? "en",
-        mfaEnforced: dto.mfaEnforced ?? false,
-        passwordMinLength: dto.passwordMinLength ?? 10,
-        sessionTimeoutMinutes: dto.sessionTimeoutMinutes ?? 10080,
-        dataRetentionDays: dto.dataRetentionDays ?? null,
-      },
-      update: {
-        ...(dto.domain !== undefined ? { domain: dto.domain } : {}),
-        ...(dto.brandingLogoUrl !== undefined ? { brandingLogoUrl: dto.brandingLogoUrl } : {}),
-        ...(dto.timezone !== undefined ? { timezone: dto.timezone } : {}),
-        ...(dto.locale !== undefined ? { locale: dto.locale } : {}),
-        ...(dto.mfaEnforced !== undefined ? { mfaEnforced: dto.mfaEnforced } : {}),
-        ...(dto.passwordMinLength !== undefined ? { passwordMinLength: dto.passwordMinLength } : {}),
-        ...(dto.sessionTimeoutMinutes !== undefined ? { sessionTimeoutMinutes: dto.sessionTimeoutMinutes } : {}),
-        ...(dto.dataRetentionDays !== undefined ? { dataRetentionDays: dto.dataRetentionDays } : {}),
-      },
+        actorId: actorUserId,
+        sourceType: "control",
+        sourceId: updated.id,
+        type: "CONTROL_SETTINGS_CHANGE",
+        recipientIds: owners.map((member) => member.userId),
+        title: "Organization settings were saved",
+        path: "control/org/settings",
+      });
+      return updated;
     });
 
     await this.audit.record({

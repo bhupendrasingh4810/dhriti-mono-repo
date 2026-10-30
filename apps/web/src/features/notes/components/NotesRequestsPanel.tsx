@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Inbox, RefreshCw, Send } from "lucide-react";
 import { notesService, type NoteAccessRequest, type NoteAccessRole } from "@/services/notes.service";
+import { withRefreshFeedback } from "@/lib/refresh-feedback";
 
 interface NotesRequestsPanelProps {
   organizationId: string;
@@ -106,8 +107,7 @@ export function NotesRequestsPanel({ organizationId, userId, onChanged, onReques
 
   useEffect(() => {
     let active = true;
-    void notesService
-      .listRequests(organizationId)
+    void withRefreshFeedback(notesService.listRequests(organizationId))
       .then((next) => {
         if (active) {
           setRequests(next);
@@ -149,15 +149,21 @@ export function NotesRequestsPanel({ organizationId, userId, onChanged, onReques
         <button
           type="button"
           aria-label="Refresh requests"
+          aria-busy={loading}
           title="Refresh requests"
           disabled={loading || busy}
           onClick={() => {
             setLoading(true);
             setRevision((value) => value + 1);
           }}
-          className="rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-surface-raised disabled:opacity-60"
+          className="rounded-md border border-border px-3 py-2 text-sm font-medium text-brand hover:bg-surface-raised disabled:cursor-wait"
         >
-          <RefreshCw size={18} aria-hidden="true" className={loading ? "animate-spin" : ""} />
+          <RefreshCw
+            size={18}
+            strokeWidth={2.5}
+            aria-hidden="true"
+            className={loading ? "motion-safe:animate-spin" : ""}
+          />
         </button>
       </div>
       {error ? (

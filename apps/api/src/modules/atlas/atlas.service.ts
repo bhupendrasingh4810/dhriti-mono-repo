@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
+import { enqueueNotification } from "../notification/notification-events";
 import type { AtlasComment, AtlasPage, AtlasSpace, User } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
@@ -299,10 +300,23 @@ export class AtlasService {
     userId: string,
     dto: CreateCommentDto,
   ): Promise<CommentWithAuthor> {
-    await this.getPage(organizationId, pageId);
-    return this.prisma.atlasComment.create({
-      data: { organizationId, pageId, authorId: userId, content: dto.content },
-      include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+    const page = await this.getPage(organizationId, pageId);
+    return this.prisma.$transaction(async (tx) => {
+      const comment = await tx.atlasComment.create({
+        data: { organizationId, pageId, authorId: userId, content: dto.content },
+        include: { author: { select: { id: true, name: true, avatarUrl: true } } },
+      });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: userId,
+        sourceType: "atlas",
+        sourceId: pageId,
+        type: "ATLAS_COMMENT",
+        recipientIds: [page.createdById],
+        title: "A comment was added to your page",
+        path: "atlas",
+      });
+      return comment;
     });
   }
 

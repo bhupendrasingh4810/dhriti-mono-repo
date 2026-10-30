@@ -8,6 +8,7 @@ import { AuditService } from "../audit/audit.service";
 import type { CreateCardDto, CreateSessionDto, GroupCardDto } from "./dto/cadence.dto";
 import { AppSettingsService } from "../settings/app-settings.service";
 import { resolveAppSettings, settingsPolicyError } from "../settings/settings.defaults";
+import { enqueueNotification } from "../notification/notification-events";
 
 export type SessionWithCards = CadenceSession & {
   cards: Array<CadenceCard & { _count: { votes: number } }>;
@@ -45,19 +46,34 @@ export class CadenceService {
         throw new AppError(ErrorCode.TEAM_NOT_FOUND, "Team not found", HttpStatus.BAD_REQUEST);
       }
     }
-    const session = await this.prisma.cadenceSession.create({
-      data: {
-        organizationId,
-        teamId: dto.teamId ?? null,
-        type: dto.type,
-        title: dto.title.trim(),
-        facilitatorId,
-        isAnonymous:
-          dto.isAnonymous ??
-          (await resolveAppSettings(this.settings, "cadence", organizationId)).anonymousFeedbackByDefault,
-        phase: "COLLECT",
-        startedAt: new Date(),
-      },
+    const policy = await resolveAppSettings(this.settings, "cadence", organizationId);
+    const session = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.cadenceSession.create({
+        data: {
+          organizationId,
+          teamId: dto.teamId ?? null,
+          type: dto.type,
+          title: dto.title.trim(),
+          facilitatorId,
+          isAnonymous: dto.isAnonymous ?? policy.anonymousFeedbackByDefault,
+          phase: "COLLECT",
+          startedAt: new Date(),
+        },
+      });
+      if (created.teamId) {
+        const members = await tx.teamMember.findMany({ where: { teamId: created.teamId }, select: { userId: true } });
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: facilitatorId,
+          sourceType: "cadence",
+          sourceId: created.id,
+          type: "CADENCE_INVITATION",
+          recipientIds: members.map((member) => member.userId),
+          title: "A retrospective session is ready",
+          path: "cadence",
+        });
+      }
+      return created;
     });
 
     await this.audit.record({
@@ -102,12 +118,31 @@ export class CadenceService {
     const session = await this.getSessionRow(organizationId, sessionId);
     this.assertFacilitator(session, userId);
 
-    const updated = await this.prisma.cadenceSession.update({
-      where: { id: sessionId },
-      data: {
-        phase,
-        ...(phase === "DONE" ? { endedAt: new Date() } : {}),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const result = await tx.cadenceSession.update({
+        where: { id: sessionId },
+        data: {
+          phase,
+          ...(phase === "DONE" ? { endedAt: new Date() } : {}),
+        },
+      });
+      if (phase === "DONE" && session.phase !== "DONE") {
+        const authors = await tx.cadenceCard.findMany({
+          where: { sessionId, deletedAt: null },
+          select: { authorId: true },
+        });
+        await enqueueNotification(tx, {
+          organizationId,
+          actorId: userId,
+          sourceType: "cadence",
+          sourceId: sessionId,
+          type: "CADENCE_RESULTS",
+          recipientIds: [session.facilitatorId, ...authors.map((card) => card.authorId)],
+          title: "A retrospective session has completed",
+          path: "cadence",
+        });
+      }
+      return result;
     });
 
     await this.audit.record({

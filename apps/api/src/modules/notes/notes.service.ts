@@ -19,6 +19,7 @@ import type {
 } from "./dto/notes.dto";
 import { AppSettingsService } from "../settings/app-settings.service";
 import { resolveAppSettings, settingsPolicyError } from "../settings/settings.defaults";
+import { enqueueNotification } from "../notification/notification-events";
 
 type NoteWithPermissions = Note & {
   permissions: NotePermission[];
@@ -239,26 +240,39 @@ export class NotesService {
     await this.assertPermissionMembers(organizationId, userId, dto.permissions);
     const policy = await this.assertNotePolicy(organizationId, dto);
 
-    const note = await this.prisma.note.create({
-      data: {
+    const note = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.note.create({
+        data: {
+          organizationId,
+          ownerId: userId,
+          folderId: dto.folderId ?? null,
+          title: dto.title.trim(),
+          content: dto.content ?? "",
+          isPublic: dto.isPublic ?? false,
+          permissions: dto.permissions
+            ? {
+                create: dto.permissions.map((permission) => ({
+                  userId: permission.userId,
+                  canEdit: permission.canEdit ?? policy.defaultShareCanEdit,
+                  canDelete: permission.canDelete ?? policy.defaultShareCanDelete,
+                  isOwner: permission.isOwner ?? false,
+                })),
+              }
+            : undefined,
+        },
+        include: this.noteInclude,
+      });
+      await enqueueNotification(tx, {
         organizationId,
-        ownerId: userId,
-        folderId: dto.folderId ?? null,
-        title: dto.title.trim(),
-        content: dto.content ?? "",
-        isPublic: dto.isPublic ?? false,
-        permissions: dto.permissions
-          ? {
-              create: dto.permissions.map((permission) => ({
-                userId: permission.userId,
-                canEdit: permission.canEdit ?? policy.defaultShareCanEdit,
-                canDelete: permission.canDelete ?? policy.defaultShareCanDelete,
-                isOwner: permission.isOwner ?? false,
-              })),
-            }
-          : undefined,
-      },
-      include: this.noteInclude,
+        actorId: userId,
+        sourceType: "notes",
+        sourceId: created.id,
+        type: "NOTES_SHARED",
+        recipientIds: created.permissions.map((permission) => permission.userId),
+        title: "A note was shared with you",
+        path: `notes?noteId=${created.id}`,
+      });
+      return created;
     });
     await this.record("notes.note.created", organizationId, userId, note.id);
     return note;
@@ -315,6 +329,18 @@ export class NotesService {
               }),
         },
         include: this.noteInclude,
+      });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: userId,
+        sourceType: "notes",
+        sourceId: noteId,
+        type: "NOTES_SHARED",
+        recipientIds: updated.permissions
+          .filter((permission) => !note.permissions.some((old) => old.userId === permission.userId))
+          .map((permission) => permission.userId),
+        title: "A note was shared with you",
+        path: `notes?noteId=${noteId}`,
       });
       if (dto.isPublic === false) {
         await tx.noteAccessRequest.updateMany({
@@ -373,11 +399,25 @@ export class NotesService {
       if (existing?.status === "PENDING") {
         throw this.validationError("You already have a pending request for this note");
       }
-      return tx.noteAccessRequest.upsert({
+      const request = await tx.noteAccessRequest.upsert({
         where: { noteId_userId: { noteId, userId } },
         create: { noteId, userId, requestedRole: dto.requestedRole },
         update: { requestedRole: dto.requestedRole, status: "PENDING", grantedRole: null, reviewedById: null },
       });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: userId,
+        sourceType: "notes",
+        sourceId: noteId,
+        type: "NOTES_ACCESS_REQUEST",
+        recipientIds: [
+          note.ownerId,
+          ...note.permissions.filter((permission) => permission.isOwner).map((permission) => permission.userId),
+        ],
+        title: "A note access request needs your review",
+        path: "notes?view=requests",
+      });
+      return request;
     });
     await this.record("notes.request.created", organizationId, userId, noteId);
     return result;
@@ -427,6 +467,16 @@ export class NotesService {
       const updated = await tx.noteAccessRequest.update({
         where: { id: requestId },
         data: { status: dto.status, grantedRole: dto.status === "APPROVED" ? grantedRole : null, reviewedById: userId },
+      });
+      await enqueueNotification(tx, {
+        organizationId,
+        actorId: userId,
+        sourceType: "notes",
+        sourceId: note.id,
+        type: "NOTES_ACCESS_DECISION",
+        recipientIds: [current.userId],
+        title: `Your note access request was ${dto.status.toLowerCase()}`,
+        path: "notes?view=requests",
       });
       return updated;
     });

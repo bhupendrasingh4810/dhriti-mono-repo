@@ -124,15 +124,46 @@ Personal settings live under the avatar menu:
 - `/[organizationSlug]/settings/notifications`: per-type in-app/email toggles
   grouped by Connect, Notes, Pulse, Flow, Atlas, Cadence, HRMS and Control, plus
   legacy Other activity preferences and Connect email quiet hours. Each event
-  saves independently through the notification preference API. New event
-  preferences do not add automatic notification triggers: only Connect direct
-  messages, mentions and missed calls currently emit through this service.
-  The page explicitly marks unsupported automatic events; their settings persist
-  and apply when notifications are submitted through the API. Existing saved
-  preferences remain unchanged. Push delivery is not offered.
+  saves independently through the notification preference API. All listed apps
+  have supported automatic producers; unsupported event types (such as scheduled
+  reminders) are explicitly marked. Live alerts and email are independent.
+  Disabling live alerts does not remove inbox history. Existing saved preferences
+  remain unchanged. Push delivery is not offered.
+
+The header bell uses the real organization-scoped inbox, with unseen/unread
+counts, loaded-item seen state, individual/all read actions, pagination and
+explicit loading/error states. Live invalidations use an authenticated
+`/notifications` socket; credentials renew every five minutes. Connection,
+tab-visibility and 30-second fallback refreshes reconcile durable history after
+offline periods. Notes links open the relevant note or Requests. Email delivery
+requires API Brevo configuration and a valid `WEB_APP_URL`.
+Choose **View all** in the bell to open `/[organizationSlug]/notifications`.
+The dedicated inbox reuses the bell's notification presentation and actions,
+adds All/Unread filters, and revalidates loaded pages on refresh so read-state
+changes from other views are reflected. Only loaded notifications are marked
+seen; opening the page does not mark them read. Read actions update the bell
+immediately in the same tab. The page reuses the header's live connection rather
+than opening a second socket.
+The inbox shows theme-token skeleton rows while the user context or initial
+notifications load, including when switching filters. Skeleton animation respects
+reduced-motion preferences; background refreshes preserve the loaded list.
+Notification inbox, bell dropdown and Notes Requests refresh buttons use the brand
+color and spin while fetching. They prevent duplicate refresh clicks and stop
+spinning on success or failure; animation respects reduced-motion preferences.
+Refresh icons use a stronger stroke and remain busy for at least 500 ms, or until
+the request completes if it takes longer.
+Notification rows (`NotificationItem`) show a tinted app icon (Connect, Notes,
+Pulse, Flow, Atlas, Cadence, HRMS, Control) using semantic status tokens, the app
+name, a relative timestamp (full date on hover), a bold title and an unread dot
+and accent bar for unread items. Bodies clamp to two lines, and rows are grouped
+under sticky Today, Yesterday and Earlier headings. Type-to-app mapping lives in
+`notification-presentation.ts`.
+See [notification architecture and trigger coverage](../../docs/api/endpoints.md#notification-storage-transport-and-delivery).
 
 Run notification catalog coverage and default tests:
 `pnpm --dir apps/web exec tsx --test src/features/settings/notification-settings-schema.test.ts`.
+Run inbox rendering regressions:
+`pnpm --dir apps/web exec tsx --test src/features/notifications/NotificationInbox.test.tsx`.
 
 Each app has an organization settings page at `/[organizationSlug]/<app>/settings`
 (`connect`, `flow`, `atlas`, `nexus`, `cadence`, `pulse`, `notes`, `hrms`). The pages

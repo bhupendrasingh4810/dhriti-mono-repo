@@ -20,11 +20,13 @@ import { CadenceGateway } from "./cadence.gateway";
 import { WebRtcGateway } from "./webrtc.gateway";
 import { FlowGateway } from "./flow.gateway";
 import { SessionRevocationSocketService } from "./session-revocation.service";
+import { NotificationsGateway } from "./notifications.gateway";
 
 @Module({
   imports: [AuthModule, ConnectModule, PulseModule, AtlasModule, NexusModule, CadenceModule, FlowModule],
   providers: [
     WsAuthService,
+    NotificationsGateway,
     ConnectGateway,
     ConnectAdapterLifecycleService,
     ConnectPresenceService,

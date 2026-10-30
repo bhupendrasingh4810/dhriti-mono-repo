@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { isolatedPrisma } from "../../database/isolated-prisma.test-helper";
 import { validate } from "class-validator";
 import { AppSettingsService } from "../settings/app-settings.service";
 import { CreateNoteAccessRequestDto, ReviewNoteAccessRequestDto, UpdateNoteDto } from "./dto/notes.dto";
@@ -8,7 +8,8 @@ import { NotesService } from "./notes.service";
 const databaseTests = process.env.NOTES_DATABASE_TESTS === "true" ? describe : describe.skip;
 
 databaseTests("Public notes and access requests", () => {
-  const prisma = new PrismaClient();
+  const database = isolatedPrisma();
+  const { prisma } = database;
   const organizationId = randomUUID();
   const otherOrganizationId = randomUUID();
   const ownerId = randomUUID();
@@ -23,7 +24,7 @@ databaseTests("Public notes and access requests", () => {
     service.createNote(organizationId, ownerId, { title: "Organization guide", isPublic: true });
 
   beforeAll(async () => {
-    await prisma.$connect();
+    await database.setup();
     await prisma.organization.createMany({
       data: [organizationId, otherOrganizationId].map((id) => ({
         id,
@@ -37,14 +38,14 @@ databaseTests("Public notes and access requests", () => {
     await prisma.organizationMember.createMany({
       data: [ownerId, requesterId, viewerId].map((userId) => ({ organizationId, userId })),
     });
-  });
+  }, 60000);
 
   afterAll(async () => {
     try {
       await prisma.organization.deleteMany({ where: { id: { in: [organizationId, otherOrganizationId] } } });
       await prisma.user.deleteMany({ where: { id: { in: [ownerId, requesterId, viewerId] } } });
     } finally {
-      await prisma.$disconnect();
+      await database.cleanup();
     }
   });
 
@@ -74,6 +75,16 @@ databaseTests("Public notes and access requests", () => {
   it("lists incoming and outgoing requests without exposing them to unrelated members or tenants", async () => {
     const note = await createPublic();
     const request = await service.requestAccess(organizationId, requesterId, note.id, { requestedRole: "EDIT" });
+    expect(
+      await prisma.notificationOutbox.findFirst({
+        where: {
+          organizationId,
+          sourceId: note.id,
+          type: "NOTES_ACCESS_REQUEST",
+          recipientId: ownerId,
+        },
+      }),
+    ).toMatchObject({ actorId: requesterId });
     expect((await service.listRequests(organizationId, ownerId)).map(({ id }) => id)).toContain(request.id);
     expect((await service.listRequests(organizationId, requesterId)).map(({ id }) => id)).toContain(request.id);
     expect(await service.listRequests(organizationId, viewerId)).toEqual([]);
@@ -97,6 +108,16 @@ databaseTests("Public notes and access requests", () => {
       grantedRole: "EDIT",
       reviewedById: ownerId,
     });
+    expect(
+      await prisma.notificationOutbox.findFirst({
+        where: {
+          organizationId,
+          sourceId: note.id,
+          type: "NOTES_ACCESS_DECISION",
+          recipientId: requesterId,
+        },
+      }),
+    ).toMatchObject({ actorId: ownerId });
     await service.updateNote(organizationId, requesterId, note.id, { content: "Approved edit" });
     await expect(service.deleteNote(organizationId, requesterId, note.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
     await expect(service.updateNote(organizationId, requesterId, note.id, { isPublic: false })).rejects.toMatchObject({
