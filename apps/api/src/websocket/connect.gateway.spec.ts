@@ -268,4 +268,35 @@ describe("ConnectGateway", () => {
     });
     expect(result).toEqual({ ok: true });
   });
+
+  it("announces a group video call as available to other members", async () => {
+    connect.getChannelForMember.mockResolvedValue({ id: channelId, type: "GROUP", name: "Design" });
+    connect.getChannelMemberIds.mockResolvedValue([principal.userId, "recipient-id", "third-member-id"]);
+
+    const result = await gateway.inviteCall(socket, {
+      channelId,
+      callId: "group-video-call-id",
+      type: "video",
+      conversationName: "Design",
+    });
+
+    expect(connect.createCallRecord).toHaveBeenCalledWith(principal.organizationId, channelId, principal.userId, {
+      callId: "group-video-call-id",
+      scope: "group",
+      type: "video",
+      participantIds: [principal.userId, "recipient-id", "third-member-id"],
+    });
+    expect(publisher.callAvailable).toHaveBeenCalledWith(
+      principal.organizationId,
+      ["recipient-id", "third-member-id"],
+      expect.objectContaining({
+        callId: "group-video-call-id",
+        type: "video",
+        scope: "group",
+        conversationName: "Design",
+      }),
+    );
+    expect(publisher.callInvitation).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true });
+  });
 });

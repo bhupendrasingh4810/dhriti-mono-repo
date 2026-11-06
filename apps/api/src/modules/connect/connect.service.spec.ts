@@ -377,4 +377,30 @@ describe("ConnectService organization policy", () => {
       }),
     ).rejects.toThrow("Video calls are turned off");
   });
+
+  it("persists an enabled audio call with its scope, type, and invited participants", async () => {
+    const connectCall = { upsert: jest.fn().mockResolvedValue(undefined) };
+    const { service } = build({}, { connectCall });
+
+    await service.createCallRecord(organizationId, channelId, authorId, {
+      callId: "call-id",
+      scope: "group",
+      type: "audio",
+      participantIds: [authorId, "other-user"],
+    });
+
+    expect(connectCall.upsert).toHaveBeenCalledWith({
+      where: { id: "call-id" },
+      create: expect.objectContaining({
+        id: "call-id",
+        organizationId,
+        channelId,
+        initiatedById: authorId,
+        scope: "GROUP",
+        type: "AUDIO",
+        participants: { create: [{ userId: authorId }, { userId: "other-user" }] },
+      }),
+      update: {},
+    });
+  });
 });
