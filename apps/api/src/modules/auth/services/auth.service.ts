@@ -177,6 +177,15 @@ export class AuthService {
       throw this.invalidCredentials();
     }
 
+    if (user.status === "LOCKED" && auth.lockedUntil && auth.lockedUntil <= new Date()) {
+      await this.prisma.$transaction([
+        this.prisma.user.update({ where: { id: user.id }, data: { status: "ACTIVE" } }),
+        this.prisma.userAuth.update({ where: { userId: user.id }, data: { failedLoginAttempts: 0 } }),
+      ]);
+      user.status = "ACTIVE";
+      auth.failedLoginAttempts = 0;
+    }
+
     this.assertNotLocked(user);
 
     if (user.status === "SUSPENDED") {
@@ -584,14 +593,32 @@ export class AuthService {
    */
   private async registerFailedAttempt(user: UserWithAuth): Promise<void> {
     const attempts = (user.auth?.failedLoginAttempts ?? 0) + 1;
-    const shouldLock = attempts >= this.config.lockoutThreshold;
+    const hasCompletedLockCycle = Boolean(user.auth?.lockedUntil && user.auth.lockedUntil <= new Date());
+    const threshold = hasCompletedLockCycle ? 2 : 3;
+    const shouldSuspend = attempts >= threshold && hasCompletedLockCycle;
+    const shouldLock = attempts >= threshold && !hasCompletedLockCycle;
     const lockedUntil = shouldLock ? new Date(Date.now() + this.config.lockoutDurationMinutes * 60 * 1000) : null;
 
-    await this.prisma.userAuth.upsert({
-      where: { userId: user.id },
-      create: { userId: user.id, failedLoginAttempts: attempts, lockedUntil },
-      update: { failedLoginAttempts: attempts, lockedUntil },
-    });
+    await this.prisma.$transaction([
+      this.prisma.userAuth.upsert({
+        where: { userId: user.id },
+        create: { userId: user.id, failedLoginAttempts: attempts, lockedUntil },
+        update: { failedLoginAttempts: attempts, lockedUntil: shouldSuspend ? null : lockedUntil },
+      }),
+      ...(shouldLock || shouldSuspend
+        ? [
+            this.prisma.user.update({
+              where: { id: user.id },
+              data: { status: shouldSuspend ? "SUSPENDED" : "LOCKED" },
+            }),
+          ]
+        : []),
+    ]);
+
+    if (shouldSuspend) {
+      this.logger.warn(`Account suspended user=${user.id} after failed attempts following automatic unlock`);
+      return;
+    }
 
     if (shouldLock && lockedUntil) {
       this.logger.warn(`Account locked user=${user.id} until=${lockedUntil.toISOString()}`);

@@ -86,7 +86,9 @@ function makePrismaMock() {
     organizationMember: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
-  prisma.$transaction.mockImplementation(async (callback: (transaction: typeof prisma) => unknown) => callback(prisma));
+  prisma.$transaction.mockImplementation(async (transaction: ((client: typeof prisma) => unknown) | Promise<unknown>[]) =>
+    Array.isArray(transaction) ? Promise.all(transaction) : transaction(prisma),
+  );
   return prisma;
 }
 
@@ -236,7 +238,7 @@ describe("AuthService.login", () => {
 
   it("increments failed attempts on bad password", async () => {
     const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 3 }));
+    prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 0 }));
     prisma.user.update.mockResolvedValue(makeUser());
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
     const { service } = makeSut(prisma);
@@ -246,14 +248,14 @@ describe("AuthService.login", () => {
     });
     expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: { failedLoginAttempts: 4, lockedUntil: null },
+        update: { failedLoginAttempts: 1, lockedUntil: null },
       }),
     );
   });
 
   it("locks the account at the threshold and sends a notification", async () => {
     const prisma = makePrismaMock();
-    prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 9 }));
+    prisma.user.findUnique.mockResolvedValue(makeUser({ failedLoginAttempts: 2 }));
     prisma.user.update.mockResolvedValue(makeUser());
     (bcrypt.compare as jest.Mock).mockResolvedValueOnce(false);
     const { service, emailSender } = makeSut(prisma);
@@ -264,7 +266,7 @@ describe("AuthService.login", () => {
     expect(prisma.userAuth.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({
-          failedLoginAttempts: 10,
+          failedLoginAttempts: 3,
           lockedUntil: expect.any(Date),
         }),
       }),

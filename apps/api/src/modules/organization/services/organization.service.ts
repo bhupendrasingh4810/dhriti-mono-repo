@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from "@nestjs/common";
 import type { Address, EnabledProduct, Group, Organization, OrganizationMember, User, UserRole } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
+import { ApiConfigService } from "../../../config/config.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
@@ -50,6 +51,7 @@ type AddressInput = {
 export class OrganizationService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ApiConfigService,
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementService,
   ) {}
@@ -405,6 +407,27 @@ export class OrganizationService {
       metadata: { role },
     });
     return updated;
+  }
+
+  async lockMember(organizationId: string, memberId: string, actorUserId: string): Promise<void> {
+    const member = await this.getMember(organizationId, memberId);
+    const lockedUntil = new Date(Date.now() + this.config.lockoutDurationMinutes * 60_000);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: member.userId }, data: { status: "LOCKED" } }),
+      this.prisma.userAuth.upsert({
+        where: { userId: member.userId },
+        create: { userId: member.userId, failedLoginAttempts: 0, lockedUntil },
+        update: { failedLoginAttempts: 0, lockedUntil },
+      }),
+    ]);
+    await this.audit.record({
+      action: "organization.member.locked",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: member.id,
+      metadata: { userId: member.userId, lockedUntil: lockedUntil.toISOString() },
+    });
   }
 
   async removeMember(organizationId: string, memberId: string, actorUserId: string): Promise<void> {

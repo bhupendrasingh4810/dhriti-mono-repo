@@ -9,6 +9,7 @@ import { PlatformService, type PlatformDashboard } from "./platform.service";
 import {
   CreatePlatformOrganizationDto,
   ListPlatformOrganizationsQueryDto,
+  ListPlatformUsersQueryDto,
   CreateProductDto,
   CreateTicketDto,
   UpdateProductDto,
@@ -140,14 +141,20 @@ export class PlatformController {
 
   @Get("users")
   @ApiOperation({ summary: "List platform users (internal staff view)" })
-  async listUsers() {
-    return this.platform.listUsers();
+  async listUsers(@Query() query: ListPlatformUsersQueryDto) {
+    return this.platform.listUsers(query);
   }
 
   @Post("users/:userId/suspend")
   @ApiOperation({ summary: "Suspend a user" })
   async suspendUser(@CurrentUser() user: AuthenticatedUser, @Param("userId") userId: string): Promise<void> {
     return this.platform.setUserSuspended(userId, true, user.userId);
+  }
+
+  @Post("users/:userId/lock")
+  @ApiOperation({ summary: "Temporarily lock a user account" })
+  async lockUser(@CurrentUser() user: AuthenticatedUser, @Param("userId") userId: string): Promise<void> {
+    return this.platform.lockUser(userId, user.userId);
   }
 
   @Post("users/:userId/reactivate")

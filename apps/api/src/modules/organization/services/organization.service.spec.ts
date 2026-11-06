@@ -20,7 +20,10 @@ describe("OrganizationService membership lifecycle", () => {
     };
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
     const entitlements = {};
-    return { service: new OrganizationService(prisma as never, audit as never, entitlements as never), audit };
+    return {
+      service: new OrganizationService(prisma as never, { lockoutDurationMinutes: 60 } as never, audit as never, entitlements as never),
+      audit,
+    };
   }
 
   it("prevents removal of the last active owner", async () => {
@@ -86,7 +89,7 @@ describe("OrganizationService membership lifecycle", () => {
         callback(transaction),
       ),
     };
-    const service = new OrganizationService(prisma as never, {} as never, {} as never);
+    const service = new OrganizationService(prisma as never, { lockoutDurationMinutes: 60 } as never, {} as never, {} as never);
 
     await expect(service.createOrganization("owner-1", { name: " Northwind ", slug: "northwind" })).resolves.toEqual(
       organization,

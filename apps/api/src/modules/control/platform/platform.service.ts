@@ -2,6 +2,7 @@ import { HttpStatus, Injectable } from "@nestjs/common";
 import type { Prisma, Product, Subscription, SupportTicket, SupportTicketStatus } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
+import { ApiConfigService } from "../../../config/config.service";
 import { MetricsService, type MetricsSnapshot } from "../../../common/metrics/metrics.service";
 import { RedisService } from "../../../redis/redis.service";
 import { AppError } from "../../../common/errors/app-error";
@@ -11,6 +12,7 @@ import { assertUserHasNoOtherActiveOrganizationMembership } from "../../organiza
 import type {
   CreateEntitlementDto,
   ListPlatformOrganizationsQueryDto,
+  ListPlatformUsersQueryDto,
   ListEntitlementsQueryDto,
   CreatePlanDto,
   CreateProductDto,
@@ -56,6 +58,7 @@ export interface PlatformDashboard {
 export class PlatformService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly config: ApiConfigService,
     private readonly redis: RedisService,
     private readonly metrics: MetricsService,
     private readonly audit: AuditService,
@@ -411,21 +414,49 @@ export class PlatformService {
    * @returns An array of users with additional information.
    * @throws AppError if there is an issue retrieving the list of users.
    */
-  async listUsers(): Promise<unknown[]> {
-    return this.prisma.user.findMany({
-      where: { deletedAt: null },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        status: true,
-        createdAt: true,
-        auth: { select: { platformRole: true, mfaEnabled: true, lastLoginAt: true } },
-        _count: { select: { memberships: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 500,
-    });
+  async listUsers(query: ListPlatformUsersQueryDto = {}) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const where: Prisma.UserWhereInput = {
+      deletedAt: null,
+      ...(query.search
+        ? {
+            OR: [
+              { name: { contains: query.search, mode: "insensitive" } },
+              { email: { contains: query.search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.mfaEnabled ? { auth: { is: { mfaEnabled: query.mfaEnabled === "true" } } } : {}),
+    };
+    const sortBy = query.sortBy ?? "createdAt";
+    const sortOrder = query.sortOrder ?? "desc";
+    const orderBy: Prisma.UserOrderByWithRelationInput = { [sortBy]: sortOrder };
+    const select = {
+      id: true,
+      email: true,
+      name: true,
+      avatarUrl: true,
+      status: true,
+      createdAt: true,
+      auth: { select: { platformRole: true, mfaEnabled: true, lastLoginAt: true } },
+      _count: { select: { memberships: true } },
+    } satisfies Prisma.UserSelect;
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        select,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+    return {
+      items,
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   /**
@@ -441,16 +472,49 @@ export class PlatformService {
       throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
     }
 
-    await this.prisma.user.update({
-      where: { id: userId },
-      data: { status: suspended ? "SUSPENDED" : "ACTIVE" },
-    });
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { status: suspended ? "SUSPENDED" : "ACTIVE" } }),
+      ...(suspended
+        ? []
+        : [
+            this.prisma.userAuth.upsert({
+              where: { userId },
+              create: { userId, failedLoginAttempts: 0, lockedUntil: null },
+              update: { failedLoginAttempts: 0, lockedUntil: null },
+            }),
+          ]),
+    ]);
 
     await this.audit.record({
       action: suspended ? "control.user.suspended" : "control.user.reactivated",
       actorUserId,
       resourceType: "User",
       resourceId: userId,
+    });
+  }
+
+  async lockUser(userId: string, actorUserId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.deletedAt) {
+      throw new AppError(ErrorCode.USER_NOT_FOUND, "User not found", HttpStatus.NOT_FOUND);
+    }
+
+    const lockedUntil = new Date(Date.now() + this.config.lockoutDurationMinutes * 60_000);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { status: "LOCKED" } }),
+      this.prisma.userAuth.upsert({
+        where: { userId },
+        create: { userId, failedLoginAttempts: 0, lockedUntil },
+        update: { failedLoginAttempts: 0, lockedUntil },
+      }),
+    ]);
+
+    await this.audit.record({
+      action: "control.user.locked",
+      actorUserId,
+      resourceType: "User",
+      resourceId: userId,
+      metadata: { lockedUntil: lockedUntil.toISOString() },
     });
   }
 

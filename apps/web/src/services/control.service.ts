@@ -26,6 +26,32 @@ export interface PlatformOrganizationPage {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export interface PlatformUser extends ApiEntity {
+  name: string | null;
+  email: string;
+  avatarUrl: string | null;
+  status: "ACTIVE" | "SUSPENDED" | string;
+  createdAt: string;
+  auth: { platformRole: string | null; mfaEnabled: boolean; lastLoginAt: string | null } | null;
+}
+
+export type PlatformUserSortField = "name" | "email" | "status" | "createdAt";
+
+export interface ListPlatformUsersQuery {
+  search?: string;
+  status?: "ACTIVE" | "SUSPENDED" | "LOCKED";
+  mfaEnabled?: boolean;
+  sortBy?: PlatformUserSortField;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
+
+export interface PlatformUserPage {
+  items: PlatformUser[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
 export interface CreatePlatformOrganizationInput {
   name: string;
   adminEmail: string;
@@ -142,7 +168,32 @@ export const controlPlatformService = {
     jsonRequest<PlatformOrganization, CreatePlatformOrganizationInput>(`${platform}/organizations`, "POST", input),
   deleteOrganization: (organizationId: string) =>
     tenantRequest<void>("", `${platform}/organizations/${pathSegment(organizationId)}`, { method: "DELETE" }),
-  listUsers: () => tenantRequest<ApiEntity[]>("", `${platform}/users`),
+  listUsers: async (query: ListPlatformUsersQuery = {}) => {
+    const response = await tenantRequest<PlatformUserPage | PlatformUser[]>("", `${platform}/users`, { query });
+    if (!Array.isArray(response)) return response;
+
+    // Keep the table usable while an older API process still returns an array during rollout.
+    const search = query.search?.trim().toLowerCase();
+    const filtered = response.filter((user) =>
+      (!search || `${user.name ?? ""} ${user.email}`.toLowerCase().includes(search)) &&
+      (!query.status || user.status === query.status) &&
+      (query.mfaEnabled === undefined || user.auth?.mfaEnabled === query.mfaEnabled),
+    );
+    const sortBy = query.sortBy ?? "createdAt";
+    const sortOrder = query.sortOrder ?? "desc";
+    const sorted = [...filtered].sort((first, second) => {
+      const firstValue = String(first[sortBy] ?? "");
+      const secondValue = String(second[sortBy] ?? "");
+      const comparison = firstValue.localeCompare(secondValue);
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    return {
+      items: sorted.slice((page - 1) * limit, page * limit),
+      pagination: { page, limit, total: sorted.length, totalPages: Math.max(1, Math.ceil(sorted.length / limit)) },
+    };
+  },
   setOrganizationSuspended: (organizationId: string, suspended: boolean) =>
     tenantRequest<void>(
       "",
@@ -153,6 +204,8 @@ export const controlPlatformService = {
     tenantRequest<void>("", `${platform}/users/${pathSegment(userId)}/${suspended ? "suspend" : "reactivate"}`, {
       method: "POST",
     }),
+  lockUser: (userId: string) =>
+    tenantRequest<void>("", `${platform}/users/${pathSegment(userId)}/lock`, { method: "POST" }),
   listProducts: () => tenantRequest<ApiEntity[]>("", `${platform}/products`),
   listEntitlements: (query: ListEntitlementsQuery = {}) =>
     tenantRequest<ControlEntitlementPage>("", `${platform}/entitlements`, { query }),

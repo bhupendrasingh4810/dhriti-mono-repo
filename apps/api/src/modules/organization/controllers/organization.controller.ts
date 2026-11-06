@@ -173,6 +173,19 @@ export class OrganizationController {
     return this.organizations.updateMemberLifecycle(organization.organizationId, memberId, user.userId, dto.status);
   }
 
+  @Post("organization/members/:memberId/lock")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(TenantGuard, AccessGuard)
+  @RequirePermission("organization.members.remove")
+  @ApiOperation({ summary: "Temporarily lock an active organization member" })
+  async lockMember(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("memberId") memberId: string,
+  ): Promise<void> {
+    return this.organizations.lockMember(organization.organizationId, memberId, user.userId);
+  }
+
   @Post("organization/members/:memberId/transfer-ownership")
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.permissions.manage")

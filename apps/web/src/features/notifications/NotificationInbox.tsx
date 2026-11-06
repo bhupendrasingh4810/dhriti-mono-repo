@@ -136,6 +136,7 @@ export function NotificationInbox({
           const credentials: { token: string; url: string } = await response.json();
           if (!active) return;
           const url = new URL(credentials.url, window.location.origin);
+          url.pathname = "/notifications";
           socket?.removeAllListeners();
           socket?.disconnect();
           socket = io(url.toString(), { auth: { token: credentials.token } });

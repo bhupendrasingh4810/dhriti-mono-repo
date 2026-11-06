@@ -15,7 +15,7 @@ import {
   Min,
   MinLength,
 } from "class-validator";
-import { EntitlementKind, SubscriptionPlan, SubscriptionStatus, SupportTicketPriority, SupportTicketStatus } from "@prisma/client";
+import { EntitlementKind, SubscriptionPlan, SubscriptionStatus, SupportTicketPriority, SupportTicketStatus, UserStatus } from "@prisma/client";
 
 export class CreatePlatformOrganizationDto {
   @ApiProperty({ example: "Acme Technologies" })
@@ -60,6 +60,49 @@ export class ListPlatformOrganizationsQueryDto {
   @IsOptional()
   @IsIn(["name", "seats", "createdAt"])
   sortBy?: "name" | "seats" | "createdAt";
+
+  @ApiPropertyOptional({ enum: ["asc", "desc"], default: "desc" })
+  @IsOptional()
+  @IsIn(["asc", "desc"])
+  sortOrder?: "asc" | "desc";
+
+  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
+
+export class ListPlatformUsersQueryDto {
+  @ApiPropertyOptional({ description: "Searches user names and email addresses" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  search?: string;
+
+  @ApiPropertyOptional({ enum: UserStatus })
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
+
+  @ApiPropertyOptional({ enum: ["true", "false"] })
+  @IsOptional()
+  @IsIn(["true", "false"])
+  mfaEnabled?: "true" | "false";
+
+  @ApiPropertyOptional({ enum: ["name", "email", "status", "createdAt"], default: "createdAt" })
+  @IsOptional()
+  @IsIn(["name", "email", "status", "createdAt"])
+  sortBy?: "name" | "email" | "status" | "createdAt";
 
   @ApiPropertyOptional({ enum: ["asc", "desc"], default: "desc" })
   @IsOptional()
