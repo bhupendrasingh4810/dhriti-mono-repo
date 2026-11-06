@@ -77,7 +77,7 @@ test("unread row shows app icon, unread indicator and themed actions", () => {
   assert.match(html, />Connect</);
   assert.match(html, />5m ago</);
   assert.match(html, /class="sr-only">Unread/);
-  assert.match(html, /href="\/northwind\/connect\/c1"/);
+  assert.match(html, /href="\/northwind\/connect\?conversation=c1"/);
   assert.match(html, /Mark read/);
   assert.match(html, /line-clamp-2/);
   assert.doesNotMatch(html, /#[0-9a-f]{3,6}\b/i);
@@ -94,4 +94,17 @@ test("read row hides unread affordances and ignores foreign links", () => {
     />,
   );
   assert.doesNotMatch(html, /data-unread|Unread|Mark read|<a /);
+});
+
+test("direct-message notifications open the sender's conversation when no link is provided", () => {
+  const html = renderToStaticMarkup(
+    <NotificationItem
+      item={notification({ actorId: "sender-1", linkUrl: null })}
+      organizationSlug="northwind"
+      now={now}
+      onOpen={() => undefined}
+      onMarkRead={() => undefined}
+    />,
+  );
+  assert.match(html, /href="\/northwind\/connect\?user=sender-1"/);
 });

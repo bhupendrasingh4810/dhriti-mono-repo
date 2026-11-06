@@ -191,6 +191,7 @@ export default function ConnectWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const conversationIdFromUrl = searchParams.get("conversation");
+  const directUserIdFromUrl = searchParams.get("user");
   const [selectedConversationId, setSelectedConversationId] = useState(() => conversationIdFromUrl ?? "");
   const [hiddenTransientConversationIds, setHiddenTransientConversationIds] = useState<Set<string>>(() => new Set());
   const [transientConversationIds, setTransientConversationIds] = useState<Set<string>>(() => new Set());
@@ -759,6 +760,7 @@ export default function ConnectWorkspace() {
   function handleSelectConversation(conversationId: string) {
     setSelectedConversationId(conversationId);
     const nextSearchParams = new URLSearchParams(searchParams.toString());
+    nextSearchParams.delete("user");
     nextSearchParams.set("conversation", conversationId);
     router.replace(`${pathname}?${nextSearchParams.toString()}`, { scroll: false });
     setActiveQuickViewId(null);
@@ -827,6 +829,13 @@ export default function ConnectWorkspace() {
     handleSelectConversation(conversationId);
     return conversationId;
   }
+
+  useEffect(() => {
+    if (!directUserIdFromUrl || live.loading || !live.user || directUserIdFromUrl === live.user.id) return;
+    void openDirectConversation(directUserIdFromUrl).catch(live.reportError);
+    // The URL changes to the resolved conversation ID after opening it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directUserIdFromUrl, live.loading, live.user?.id]);
 
   function handleMessageUser(userId: string) {
     setMentionHover(null);

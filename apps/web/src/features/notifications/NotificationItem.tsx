@@ -3,6 +3,21 @@ import { ArrowUpRight, Check } from "lucide-react";
 import type { InboxNotification } from "@/services/notifications.service";
 import { TONE_CLASSES, formatRelativeTime, notificationSource } from "./notification-presentation";
 
+function notificationHref(item: InboxNotification, organizationSlug: string) {
+  const connectPath = `/${organizationSlug}/connect`;
+  const directMessageUserPath = item.type === "DIRECT_MESSAGE" && item.actorId
+    ? `${connectPath}?user=${encodeURIComponent(item.actorId)}`
+    : null;
+
+  if (!item.linkUrl?.startsWith(`/${organizationSlug}/`)) return directMessageUserPath;
+  if (item.linkUrl === connectPath) return directMessageUserPath ?? item.linkUrl;
+
+  const legacyConversationMatch = item.linkUrl.match(new RegExp(`^${connectPath}/([^/?#]+)$`));
+  return legacyConversationMatch
+    ? `${connectPath}?conversation=${encodeURIComponent(legacyConversationMatch[1])}`
+    : item.linkUrl;
+}
+
 export function NotificationItem({
   item,
   organizationSlug,
@@ -19,7 +34,7 @@ export function NotificationItem({
   const source = notificationSource(item.type);
   const Icon = source.icon;
   const unread = !item.isRead;
-  const href = item.linkUrl?.startsWith(`/${organizationSlug}/`) ? item.linkUrl : null;
+  const href = notificationHref(item, organizationSlug);
   const fullTimestamp = new Date(item.createdAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 
   return (

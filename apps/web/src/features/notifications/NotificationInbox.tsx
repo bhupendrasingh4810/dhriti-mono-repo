@@ -33,11 +33,20 @@ export function NotificationInbox({
   const [alert, setAlert] = useState("");
   const container = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
+  const notificationSound = useRef<HTMLAudioElement>(null);
   const panelId = useId();
   const openRef = useRef(fullPage);
   const requestVersion = useRef(0);
   const mounted = useRef(true);
   const pageDepth = useRef(1);
+  const knownNotificationIds = useRef(new Set<string>());
+  const hasLoadedNotifications = useRef(false);
+
+  function playNotificationSound() {
+    if (!notificationSound.current) return;
+    notificationSound.current.currentTime = 0;
+    void notificationSound.current.play().catch(() => undefined);
+  }
 
   async function refresh(nextCursor?: string) {
     const version = ++requestVersion.current;
@@ -57,6 +66,12 @@ export function NotificationInbox({
         }
       }
       if (nextCursor) pageDepth.current++;
+      if (!nextCursor) {
+        const hasNewNotification = hasLoadedNotifications.current && loaded.some((item) => !knownNotificationIds.current.has(item.id));
+        knownNotificationIds.current = new Set(loaded.map((item) => item.id));
+        hasLoadedNotifications.current = true;
+        if (hasNewNotification) playNotificationSound();
+      }
       setItems((current) =>
         nextCursor ? [...current, ...loaded.filter((item) => !current.some((old) => old.id === item.id))] : loaded,
       );
@@ -98,8 +113,20 @@ export function NotificationInbox({
     };
     document.addEventListener("visibilitychange", visibility);
     const inboxUpdated = () => void refresh();
+    const unlockNotificationSound = () => {
+      if (!notificationSound.current) return;
+      notificationSound.current.volume = 0;
+      void notificationSound.current.play().then(() => {
+        if (!notificationSound.current) return;
+        notificationSound.current.pause();
+        notificationSound.current.currentTime = 0;
+        notificationSound.current.volume = 1;
+      }).catch(() => undefined);
+    };
     window.addEventListener("notifications:inbox-updated", inboxUpdated);
     window.addEventListener("notifications:live-update", inboxUpdated);
+    window.addEventListener("pointerdown", unlockNotificationSound, { once: true });
+    window.addEventListener("keydown", unlockNotificationSound, { once: true });
     if (!fullPage) window.addEventListener("notifications:seen-updated", inboxUpdated);
     let socket: ReturnType<typeof io> | undefined;
     const connect = () => {
@@ -109,7 +136,6 @@ export function NotificationInbox({
           const credentials: { token: string; url: string } = await response.json();
           if (!active) return;
           const url = new URL(credentials.url, window.location.origin);
-          url.pathname = "/notifications";
           socket?.removeAllListeners();
           socket?.disconnect();
           socket = io(url.toString(), { auth: { token: credentials.token } });
@@ -119,6 +145,7 @@ export function NotificationInbox({
           });
           socket.on("notifications:changed", () => {
             setAlert("You have a new notification.");
+            playNotificationSound();
             window.dispatchEvent(new Event("notifications:live-update"));
           });
           socket.on("connect_error", () =>
@@ -141,6 +168,8 @@ export function NotificationInbox({
       window.removeEventListener("notifications:inbox-updated", inboxUpdated);
       window.removeEventListener("notifications:live-update", inboxUpdated);
       window.removeEventListener("notifications:seen-updated", inboxUpdated);
+      window.removeEventListener("pointerdown", unlockNotificationSound);
+      window.removeEventListener("keydown", unlockNotificationSound);
       socket?.removeAllListeners();
       socket?.disconnect();
     };
@@ -188,31 +217,34 @@ export function NotificationInbox({
   return (
     <div ref={container} className="relative">
       {!fullPage ? (
-        <button
-          ref={trigger}
-          type="button"
-          aria-label={`Notifications, ${unread} unread, ${unseen} unseen`}
-          aria-expanded={open}
-          aria-controls={open ? panelId : undefined}
-          onClick={() => {
-            openRef.current = !open;
-            setOpen(!open);
-            setAlert("");
-            if (!open) void refresh();
-          }}
-          className="relative grid size-9 place-items-center rounded-lg text-text-secondary hover:bg-surface-raised"
-        >
-          <Bell size={20} aria-hidden="true" />
-          {unseen > 0 ? (
-            <span
-              aria-hidden="true"
-              data-testid="notification-count-badge"
-              className="absolute -right-0.5 -top-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand text-xs font-semibold leading-none tabular-nums text-text-inverse"
-            >
-              {unseen > 9 ? "9+" : unseen}
-            </span>
-          ) : null}
-        </button>
+        <>
+          <audio ref={notificationSound} src="/media/global_notification.mp3" preload="auto" aria-hidden="true" />
+          <button
+            ref={trigger}
+            type="button"
+            aria-label={`Notifications, ${unread} unread, ${unseen} unseen`}
+            aria-expanded={open}
+            aria-controls={open ? panelId : undefined}
+            onClick={() => {
+              openRef.current = !open;
+              setOpen(!open);
+              setAlert("");
+              if (!open) void refresh();
+            }}
+            className="relative grid size-9 place-items-center rounded-lg text-text-secondary hover:bg-surface-raised"
+          >
+            <Bell size={20} aria-hidden="true" />
+            {unseen > 0 ? (
+              <span
+                aria-hidden="true"
+                data-testid="notification-count-badge"
+                className="absolute -right-0.5 -top-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-brand text-xs font-semibold leading-none tabular-nums text-text-inverse"
+              >
+                {unseen > 9 ? "9+" : unseen}
+              </span>
+            ) : null}
+          </button>
+        </>
       ) : null}
       {alert && !open ? (
         <p role="status" className="sr-only">
