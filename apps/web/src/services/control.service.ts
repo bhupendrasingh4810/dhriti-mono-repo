@@ -52,6 +52,33 @@ export interface PlatformUserPage {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+export interface PlatformAuditLog {
+  id: string;
+  actorUserId: string | null;
+  action: string;
+  resourceType: string | null;
+  resourceId: string | null;
+  metadata: Record<string, unknown> | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  actor: { id: string; name: string; email: string } | null;
+  organization: { id: string; name: string; slug: string } | null;
+}
+
+export interface ListPlatformAuditLogsQuery {
+  search?: string;
+  action?: string;
+  resourceType?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PlatformAuditLogPage {
+  items: PlatformAuditLog[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
 export interface CreatePlatformOrganizationInput {
   name: string;
   adminEmail: string;
@@ -174,10 +201,11 @@ export const controlPlatformService = {
 
     // Keep the table usable while an older API process still returns an array during rollout.
     const search = query.search?.trim().toLowerCase();
-    const filtered = response.filter((user) =>
-      (!search || `${user.name ?? ""} ${user.email}`.toLowerCase().includes(search)) &&
-      (!query.status || user.status === query.status) &&
-      (query.mfaEnabled === undefined || user.auth?.mfaEnabled === query.mfaEnabled),
+    const filtered = response.filter(
+      (user) =>
+        (!search || `${user.name ?? ""} ${user.email}`.toLowerCase().includes(search)) &&
+        (!query.status || user.status === query.status) &&
+        (query.mfaEnabled === undefined || user.auth?.mfaEnabled === query.mfaEnabled),
     );
     const sortBy = query.sortBy ?? "createdAt";
     const sortOrder = query.sortOrder ?? "desc";
@@ -248,7 +276,8 @@ export const controlPlatformService = {
   createTicket: (input: Input) => jsonRequest<ApiEntity, Input>(`${platform}/tickets`, "POST", input),
   updateTicket: (ticketId: string, input: Input) =>
     jsonRequest<ApiEntity, Input>(`${platform}/tickets/${pathSegment(ticketId)}`, "PATCH", input),
-  auditLogs: (limit?: number) => tenantRequest<ApiEntity[]>("", `${platform}/audit-logs`, { query: { limit } }),
+  auditLogs: (query: ListPlatformAuditLogsQuery = {}) =>
+    tenantRequest<PlatformAuditLogPage>("", `${platform}/audit-logs`, { query }),
   health: () => tenantRequest<ApiEntity>("", `${platform}/health`),
 };
 const content = "/api/content";

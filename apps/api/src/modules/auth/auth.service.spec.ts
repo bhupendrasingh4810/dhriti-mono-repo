@@ -86,8 +86,9 @@ function makePrismaMock() {
     organizationMember: { findFirst: jest.fn() },
     $transaction: jest.fn(),
   };
-  prisma.$transaction.mockImplementation(async (transaction: ((client: typeof prisma) => unknown) | Promise<unknown>[]) =>
-    Array.isArray(transaction) ? Promise.all(transaction) : transaction(prisma),
+  prisma.$transaction.mockImplementation(
+    async (transaction: ((client: typeof prisma) => unknown) | Promise<unknown>[]) =>
+      Array.isArray(transaction) ? Promise.all(transaction) : transaction(prisma),
   );
   return prisma;
 }
@@ -135,6 +136,7 @@ function makeSut(prisma: PrismaMock) {
     sendResetPasswordConfirmationEmail: jest.fn(async () => undefined),
     sendAccountLockedEmail: jest.fn(async () => undefined),
   };
+  const audit = { record: jest.fn(async () => undefined) };
 
   const service = new AuthService(
     prisma as never,
@@ -143,9 +145,10 @@ function makeSut(prisma: PrismaMock) {
     sessions as never,
     mfa as never,
     emailSender as never,
+    audit as never,
   );
 
-  return { service, config, tokens, sessions, mfa, emailSender };
+  return { service, config, tokens, sessions, mfa, emailSender, audit };
 }
 
 const loginDto = { email: "jane@acme.com", password: "Sup3rSecure!" };

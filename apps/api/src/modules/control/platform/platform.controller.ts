@@ -8,6 +8,7 @@ import { PlatformRolesGuard } from "../../../common/guards/platform-roles.guard"
 import { PlatformService, type PlatformDashboard } from "./platform.service";
 import {
   CreatePlatformOrganizationDto,
+  ListAuditLogsQueryDto,
   ListPlatformOrganizationsQueryDto,
   ListPlatformUsersQueryDto,
   CreateProductDto,
@@ -214,7 +215,10 @@ export class PlatformController {
   @Delete("entitlements/:entitlementId")
   @PlatformRoles("PLATFORM_ADMIN")
   @ApiOperation({ summary: "Delete an unused entitlement definition" })
-  async deleteEntitlement(@CurrentUser() user: AuthenticatedUser, @Param("entitlementId") entitlementId: string): Promise<void> {
+  async deleteEntitlement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("entitlementId") entitlementId: string,
+  ): Promise<void> {
     return this.platform.deleteEntitlement(entitlementId, user.userId);
   }
 
@@ -298,8 +302,8 @@ export class PlatformController {
 
   @Get("audit-logs")
   @ApiOperation({ summary: "Cross-org platform audit logs" })
-  async auditLogs(@Query("limit") limit?: string) {
-    return this.platform.listAuditLogs(limit ? Number(limit) : 100);
+  async auditLogs(@Query() query: ListAuditLogsQueryDto) {
+    return this.platform.listAuditLogs(query);
   }
 
   @Get("health")

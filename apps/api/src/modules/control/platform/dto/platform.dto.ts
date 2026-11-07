@@ -15,7 +15,14 @@ import {
   Min,
   MinLength,
 } from "class-validator";
-import { EntitlementKind, SubscriptionPlan, SubscriptionStatus, SupportTicketPriority, SupportTicketStatus, UserStatus } from "@prisma/client";
+import {
+  EntitlementKind,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  SupportTicketPriority,
+  SupportTicketStatus,
+  UserStatus,
+} from "@prisma/client";
 
 export class CreatePlatformOrganizationDto {
   @ApiProperty({ example: "Acme Technologies" })
@@ -117,6 +124,41 @@ export class ListPlatformUsersQueryDto {
   page?: number;
 
   @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 10 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+}
+
+export class ListAuditLogsQueryDto {
+  @ApiPropertyOptional({ description: "Searches actors, organizations, actions, and resources" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  search?: string;
+
+  @ApiPropertyOptional({ description: "Filters by the audit action" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  action?: string;
+
+  @ApiPropertyOptional({ description: "Filters by resource type" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  resourceType?: string;
+
+  @ApiPropertyOptional({ minimum: 1, default: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @ApiPropertyOptional({ minimum: 1, maximum: 100, default: 20 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

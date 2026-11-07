@@ -8,6 +8,7 @@ import { EmailService } from "../../notification/email.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import type { AuthenticatedUser } from "../../../common/decorators/current-user.decorator";
+import { AuditService } from "../../audit/audit.service";
 
 import { TokenService } from "./token.service";
 import { SessionService, type SessionContext } from "./session.service";
@@ -44,6 +45,7 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly mfa: MfaService,
     private readonly email: EmailService,
+    private readonly audit: AuditService,
   ) {}
 
   // ------------------------------------------------------------------
@@ -96,6 +98,13 @@ export class AuthService {
     });
 
     await this.issueVerificationToken(user);
+    await this.audit.record({
+      action: "auth.user.registered",
+      actorUserId: user.id,
+      resourceType: "User",
+      resourceId: user.id,
+      metadata: { email: user.email },
+    });
     this.logger.log(`Registered user=${user.id}`);
     return { email: user.email };
   }
@@ -120,6 +129,13 @@ export class AuthService {
       data: { status: "ACTIVE" },
     });
     await this.email.sendWelcomeEmail(record.user.email, record.user.name, this.config.onboardingUrl);
+    await this.audit.record({
+      action: "auth.email.verified",
+      actorUserId: record.userId,
+      resourceType: "User",
+      resourceId: record.userId,
+      metadata: { email: record.user.email },
+    });
     return this.issueTokens(record.userId, emailAddress.toLowerCase(), {});
   }
 
@@ -273,6 +289,13 @@ export class AuthService {
    */
   async logout(current: AuthenticatedUser): Promise<void> {
     await this.sessions.revokeSession(current.sessionId);
+    await this.audit.record({
+      action: "auth.session.logged_out",
+      organizationId: current.organizationId,
+      actorUserId: current.userId,
+      resourceType: "Session",
+      resourceId: current.sessionId,
+    });
   }
 
   /**
@@ -282,6 +305,14 @@ export class AuthService {
    */
   async logoutAll(current: AuthenticatedUser): Promise<{ revoked: number }> {
     const revoked = await this.sessions.revokeAllUserSessions(current.userId);
+    await this.audit.record({
+      action: "auth.sessions.logged_out",
+      organizationId: current.organizationId,
+      actorUserId: current.userId,
+      resourceType: "User",
+      resourceId: current.userId,
+      metadata: { revoked },
+    });
     return { revoked };
   }
 
@@ -413,6 +444,16 @@ export class AuthService {
     const organization = await this.resolveDefaultOrganization(userId);
     const session = await this.sessions.createSession(userId, organization?.id ?? null, context);
     const user = await this.requireUser(userId);
+    await this.audit.record({
+      action: "auth.session.logged_in",
+      organizationId: organization?.id,
+      actorUserId: user.id,
+      resourceType: "Session",
+      resourceId: session.sessionId,
+      metadata: { email: user.email },
+      ipAddress: context.ipAddress,
+      userAgent: context.userAgent,
+    });
     return this.buildTokenResponse(user, session, organization?.id ?? null, organization);
   }
 

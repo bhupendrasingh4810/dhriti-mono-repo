@@ -11,6 +11,7 @@ import { AuditService } from "../../audit/audit.service";
 import { assertUserHasNoOtherActiveOrganizationMembership } from "../../organization/services/organization-membership";
 import type {
   CreateEntitlementDto,
+  ListAuditLogsQueryDto,
   ListPlatformOrganizationsQueryDto,
   ListPlatformUsersQueryDto,
   ListEntitlementsQueryDto,
@@ -646,7 +647,9 @@ export class PlatformService {
 
   async updateEntitlement(entitlementId: string, actorUserId: string, dto: UpdateEntitlementDefinitionDto) {
     const existing = await this.prisma.entitlement.findUnique({ where: { id: entitlementId }, select: { id: true } });
-    if (!existing) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);}
+    if (!existing) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);
+    }
     const entitlement = await this.prisma.entitlement.update({
       where: { id: entitlementId },
       data: {
@@ -672,7 +675,9 @@ export class PlatformService {
       where: { id: entitlementId },
       select: { _count: { select: { planEntitlements: true, overrides: true } } },
     });
-    if (!usage) {throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);}
+    if (!usage) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Entitlement not found", HttpStatus.NOT_FOUND);
+    }
     if (usage._count.planEntitlements > 0 || usage._count.overrides > 0) {
       throw new AppError(
         ErrorCode.VALIDATION_FAILED,
@@ -717,7 +722,9 @@ export class PlatformService {
     input: Array<{ entitlementKey: string; enabled: boolean; value?: number }>,
   ) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: { id: true } });
-    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);}
+    if (!plan) {
+      throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);
+    }
     const assignments = await this.resolvePlanEntitlements(input);
     const updated = await this.prisma.$transaction(async (transaction) => {
       await transaction.planEntitlement.deleteMany({ where: { planId } });
@@ -738,7 +745,9 @@ export class PlatformService {
 
   async updatePlanStatus(planId: string, actorUserId: string, isActive: boolean) {
     const plan = await this.prisma.plan.findUnique({ where: { id: planId }, select: { id: true } });
-    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);}
+    if (!plan) {
+      throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);
+    }
     const updated = await this.prisma.plan.update({
       where: { id: planId },
       data: { isActive },
@@ -758,7 +767,9 @@ export class PlatformService {
       where: { id: planId },
       select: { id: true, _count: { select: { subscriptions: true } } },
     });
-    if (!plan) {throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);}
+    if (!plan) {
+      throw new AppError(ErrorCode.PLAN_NOT_FOUND, "Plan not found", HttpStatus.NOT_FOUND);
+    }
     if (plan._count.subscriptions > 0) {
       throw new AppError(
         ErrorCode.VALIDATION_FAILED,
@@ -929,17 +940,75 @@ export class PlatformService {
 
   // ---------------- Platform audit ----------------
 
-  /**
-   * Retrieves a list of audit logs, optionally limited by the specified number.
-   * @param limit The maximum number of audit logs to retrieve (default is 100, maximum is 500).
-   * @returns An array of audit logs.
-   * @throws AppError if there is an issue retrieving the audit logs.
-   */
-  async listAuditLogs(limit = 100): Promise<unknown[]> {
-    return this.prisma.auditLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: Math.min(limit, 500),
-    });
+  async listAuditLogs(query: ListAuditLogsQueryDto = {}) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const search = query.search?.trim();
+    const [matchingActors, matchingOrganizations] = search
+      ? await Promise.all([
+          this.prisma.user.findMany({
+            where: {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { email: { contains: search, mode: "insensitive" } },
+              ],
+            },
+            select: { id: true },
+          }),
+          this.prisma.organization.findMany({
+            where: {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { slug: { contains: search, mode: "insensitive" } },
+              ],
+            },
+            select: { id: true },
+          }),
+        ])
+      : [[], []];
+    const actorIds = matchingActors.map((actor) => actor.id);
+    const organizationIds = matchingOrganizations.map((organization) => organization.id);
+    const where: Prisma.AuditLogWhereInput = {
+      ...(query.action ? { action: { contains: query.action, mode: "insensitive" } } : {}),
+      ...(query.resourceType ? { resourceType: { contains: query.resourceType, mode: "insensitive" } } : {}),
+      ...(search
+        ? {
+            OR: [
+              { action: { contains: search, mode: "insensitive" } },
+              { resourceType: { contains: search, mode: "insensitive" } },
+              { resourceId: { contains: search, mode: "insensitive" } },
+              ...(actorIds.length ? [{ actorUserId: { in: actorIds } }] : []),
+              ...(organizationIds.length ? [{ organizationId: { in: organizationIds } }] : []),
+            ],
+          }
+        : {}),
+    };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { organization: { select: { id: true, name: true, slug: true } } },
+      }),
+      this.prisma.auditLog.count({ where }),
+    ]);
+    const actorIdsOnPage = items.flatMap((item) => (item.actorUserId ? [item.actorUserId] : []));
+    const actors = actorIdsOnPage.length
+      ? await this.prisma.user.findMany({
+          where: { id: { in: actorIdsOnPage } },
+          select: { id: true, name: true, email: true },
+        })
+      : [];
+    const actorsById = new Map(actors.map((actor) => [actor.id, actor]));
+
+    return {
+      items: items.map((item) => ({
+        ...item,
+        actor: item.actorUserId ? (actorsById.get(item.actorUserId) ?? null) : null,
+      })),
+      pagination: { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) },
+    };
   }
 
   // ---------------- System health ----------------

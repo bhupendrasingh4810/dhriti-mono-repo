@@ -19,6 +19,7 @@ import { GoogleStrategy } from "./strategies/google.strategy";
 import { GithubStrategy } from "./strategies/github.strategy";
 import { PasswordService } from "./services/password.service";
 import { PublicAuthRateLimitGuard } from "../../common/guards/public-auth-rate-limit.guard";
+import { AuditModule } from "../audit/audit.module";
 
 /**
  * OAuth strategies are instantiated only when the provider's credentials are
@@ -38,7 +39,7 @@ const conditionalStrategyProviders: Provider[] = [
 ];
 
 @Module({
-  imports: [PassportModule.register({}), JwtModule.register({})],
+  imports: [PassportModule.register({}), JwtModule.register({}), AuditModule],
   controllers: [
     RegistrationController,
     LoginController,
