@@ -20,7 +20,9 @@ function getActiveApp(pathname: string): AppView {
   if (pathname.includes("/flow")) return "flow";
   if (pathname.includes("/atlas")) return "atlas";
   if (pathname.includes("/pulse")) return "pulse";
+  if (pathname.includes("/hrms")) return "hrms";
   if (pathname.includes("/nexus")) return "nexus";
+  if (pathname.includes("/control")) return "control";
   return "home";
 }
 
@@ -30,6 +32,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 
   const pathname = usePathname();
   const activeApp = getActiveApp(pathname);
+
   return (
     <ConnectPresenceProvider>
       <ConnectSearchProvider organizationId={user?.organization?.id ?? ""}>

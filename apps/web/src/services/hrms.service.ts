@@ -2,6 +2,36 @@ import { pathSegment, tenantJsonRequest, tenantRequest } from "@/services/reques
 import type { ApiEntity } from "@/services/service-types";
 const base = "/api/organization/hrms";
 type Input = Record<string, unknown>;
+
+export interface HrmsEmployee extends ApiEntity {
+  employeeNumber: string;
+  status: string;
+  employmentType: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  user: { id: string; name: string; email: string; avatarUrl: string | null };
+}
+
+export interface HrmsAttendanceRecord extends ApiEntity {
+  employeeId: string;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  status: string;
+  workHours: number | null;
+  notes: string | null;
+}
+
+export interface HrmsLeaveRequest extends ApiEntity {
+  employeeId: string;
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason: string | null;
+  status: string;
+  employee: { id: string; employeeNumber: string };
+}
 const resource = (path: string) => ({
   list: (organizationId: string) => tenantRequest<ApiEntity[]>(organizationId, `${base}/${path}`),
   create: (organizationId: string, input: Input) =>
@@ -10,6 +40,7 @@ const resource = (path: string) => ({
 export const hrmsService = {
   employees: {
     ...resource("employees"),
+    list: (organizationId: string) => tenantRequest<HrmsEmployee[]>(organizationId, `${base}/employees`),
     get: (organizationId: string, employeeId: string) =>
       tenantRequest<ApiEntity>(organizationId, `${base}/employees/${pathSegment(employeeId)}`),
     update: (organizationId: string, employeeId: string, input: Input) =>
@@ -24,7 +55,9 @@ export const hrmsService = {
   },
   attendance: {
     list: (organizationId: string, employeeId: string, query: { from?: string; to?: string } = {}) =>
-      tenantRequest<ApiEntity[]>(organizationId, `${base}/employees/${pathSegment(employeeId)}/attendance`, { query }),
+      tenantRequest<HrmsAttendanceRecord[]>(organizationId, `${base}/employees/${pathSegment(employeeId)}/attendance`, {
+        query,
+      }),
     upsert: (organizationId: string, employeeId: string, input: Input) =>
       tenantJsonRequest<ApiEntity, Input>(
         organizationId,
@@ -58,6 +91,7 @@ export const hrmsService = {
   benefits: resource("benefits"),
   leaveRequests: {
     ...resource("leave-requests"),
+    list: (organizationId: string) => tenantRequest<HrmsLeaveRequest[]>(organizationId, `${base}/leave-requests`),
     updateStatus: (organizationId: string, leaveId: string, input: { status: string; rejectionReason?: string }) =>
       tenantJsonRequest<ApiEntity, typeof input>(
         organizationId,

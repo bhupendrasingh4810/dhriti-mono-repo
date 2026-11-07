@@ -1,11 +1,10 @@
-import type { Metadata } from "next";
-import AppSettingsPage from "@/features/settings/AppSettingsPage";
+"use client";
 
-export const metadata: Metadata = {
-  title: "HRMS settings | Dhriti",
-  description: "Manage HRMS settings for your organization.",
-};
+import { useHrmsToast } from "../layout";
+import { HrmsSettings } from "@/features/hrms/settings";
 
 export default function Page() {
-  return <AppSettingsPage app="hrms" />;
+  const onToast = useHrmsToast();
+
+  return <HrmsSettings onToast={onToast} />;
 }
