@@ -20,6 +20,7 @@ function getActiveApp(pathname: string): AppView {
   if (pathname.includes("/flow")) return "flow";
   if (pathname.includes("/atlas")) return "atlas";
   if (pathname.includes("/pulse")) return "pulse";
+  if (pathname.includes("/cadence")) return "cadence";
   if (pathname.includes("/hrms")) return "hrms";
   if (pathname.includes("/nexus")) return "nexus";
   if (pathname.includes("/control")) return "control";
