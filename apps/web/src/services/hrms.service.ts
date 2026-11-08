@@ -7,9 +7,11 @@ export interface HrmsEmployee extends ApiEntity {
   employeeNumber: string;
   status: string;
   employmentType: string | null;
+  workLocationId: string | null;
   startDate: string | null;
   endDate: string | null;
   user: { id: string; name: string; email: string; avatarUrl: string | null };
+  workLocation: { id: string; name: string; code: string | null } | null;
 }
 
 export interface HrmsAttendanceRecord extends ApiEntity {
@@ -32,12 +34,79 @@ export interface HrmsLeaveRequest extends ApiEntity {
   status: string;
   employee: { id: string; employeeNumber: string };
 }
+
+export interface HrmsLocation extends ApiEntity {
+  name: string;
+  code: string | null;
+  countryCode: string;
+  city: string | null;
+  timezone: string;
+  isActive: boolean;
+}
+
+export interface HrmsDesignation extends ApiEntity {
+  name: string;
+  code: string | null;
+  departmentId: string | null;
+  department: { id: string; name: string; code: string | null } | null;
+  isActive: boolean;
+}
+
+export interface HrmsEmploymentType extends ApiEntity {
+  name: string;
+  code: string | null;
+  isActive: boolean;
+}
 const resource = (path: string) => ({
   list: (organizationId: string) => tenantRequest<ApiEntity[]>(organizationId, `${base}/${path}`),
   create: (organizationId: string, input: Input) =>
     tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/${path}`, "POST", input),
 });
 export const hrmsService = {
+  locations: {
+    list: (organizationId: string) => tenantRequest<HrmsLocation[]>(organizationId, `${base}/locations`),
+    create: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsLocation, Input>(organizationId, `${base}/locations`, "POST", input),
+    update: (organizationId: string, locationId: string, input: Input) =>
+      tenantJsonRequest<HrmsLocation, Input>(
+        organizationId,
+        `${base}/locations/${pathSegment(locationId)}`,
+        "PATCH",
+        input,
+      ),
+    remove: (organizationId: string, locationId: string) =>
+      tenantRequest<void>(organizationId, `${base}/locations/${pathSegment(locationId)}`, { method: "DELETE" }),
+  },
+  designations: {
+    list: (organizationId: string) => tenantRequest<HrmsDesignation[]>(organizationId, `${base}/designations`),
+    create: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsDesignation, Input>(organizationId, `${base}/designations`, "POST", input),
+    update: (organizationId: string, designationId: string, input: Input) =>
+      tenantJsonRequest<HrmsDesignation, Input>(
+        organizationId,
+        `${base}/designations/${pathSegment(designationId)}`,
+        "PATCH",
+        input,
+      ),
+    remove: (organizationId: string, designationId: string) =>
+      tenantRequest<void>(organizationId, `${base}/designations/${pathSegment(designationId)}`, { method: "DELETE" }),
+  },
+  employmentTypes: {
+    list: (organizationId: string) => tenantRequest<HrmsEmploymentType[]>(organizationId, `${base}/employment-types`),
+    create: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsEmploymentType, Input>(organizationId, `${base}/employment-types`, "POST", input),
+    update: (organizationId: string, employmentTypeId: string, input: Input) =>
+      tenantJsonRequest<HrmsEmploymentType, Input>(
+        organizationId,
+        `${base}/employment-types/${pathSegment(employmentTypeId)}`,
+        "PATCH",
+        input,
+      ),
+    remove: (organizationId: string, employmentTypeId: string) =>
+      tenantRequest<void>(organizationId, `${base}/employment-types/${pathSegment(employmentTypeId)}`, {
+        method: "DELETE",
+      }),
+  },
   employees: {
     ...resource("employees"),
     list: (organizationId: string) => tenantRequest<HrmsEmployee[]>(organizationId, `${base}/employees`),

@@ -9,6 +9,7 @@ import { HrmsPayrollController } from "./controllers/hrms-payroll.controller";
 import { HrmsTrainingController } from "./controllers/hrms-training.controller";
 import { HrmsAssetController } from "./controllers/hrms-asset.controller";
 import { HrmsBenefitController } from "./controllers/hrms-benefit.controller";
+import { HrmsMasterDataController } from "./controllers/hrms-master-data.controller";
 import { HrmsEmployeeService } from "./services/hrms-employee.service";
 import { HrmsAttendanceService } from "./services/hrms-attendance.service";
 import { HrmsOperationsService } from "./services/hrms-operations.service";
@@ -19,6 +20,7 @@ import { HrmsPayrollService } from "./services/hrms-payroll.service";
 import { HrmsTrainingService } from "./services/hrms-training.service";
 import { HrmsAssetService } from "./services/hrms-asset.service";
 import { HrmsBenefitService } from "./services/hrms-benefit.service";
+import { HrmsMasterDataService } from "./services/hrms-master-data.service";
 
 @Module({
   controllers: [
@@ -31,6 +33,7 @@ import { HrmsBenefitService } from "./services/hrms-benefit.service";
     HrmsTrainingController,
     HrmsAssetController,
     HrmsBenefitController,
+    HrmsMasterDataController,
   ],
   providers: [
     HrmsEmployeeService,
@@ -43,6 +46,7 @@ import { HrmsBenefitService } from "./services/hrms-benefit.service";
     HrmsTrainingService,
     HrmsAssetService,
     HrmsBenefitService,
+    HrmsMasterDataService,
   ],
   exports: [
     HrmsEmployeeService,
@@ -54,6 +58,7 @@ import { HrmsBenefitService } from "./services/hrms-benefit.service";
     HrmsTrainingService,
     HrmsAssetService,
     HrmsBenefitService,
+    HrmsMasterDataService,
   ],
 })
 export class HrmsModule {}

@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 
+import { EmployeeMasterData } from "./components/employee-master-data";
 import { Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
 import AppSettingsPage from "@/features/settings/AppSettingsPage";
 
 const tabs = [
-  "Organization",
+  "App Settings",
   "Departments",
   "Locations",
+  "Designations",
+  "Employment types",
   "Roles & permissions",
   "Workflows",
   "Notifications",
   "Integrations",
-  "App Settings",
 ];
 const stats = [
   ["Locations", "8", "Across 4 countries"],
@@ -174,39 +176,7 @@ function PermissionMatrix() {
   );
 }
 
-function AppSettings({ onToast }: { onToast: (message: string) => void }) {
-  const [settings, setSettings] = useState({
-    allowEmployeeDirectory: true,
-    enableSelfService: true,
-    requireTwoFactorAuthentication: false,
-    showEmployeeBirthdays: true,
-  });
-  const toggleSetting = (key: keyof typeof settings) =>
-    setSettings((current) => ({ ...current, [key]: !current[key] }));
-
-  const options: Array<{ key: keyof typeof settings; title: string; description: string }> = [
-    {
-      key: "allowEmployeeDirectory",
-      title: "Employee directory",
-      description: "Allow employees to browse their organization directory.",
-    },
-    {
-      key: "enableSelfService",
-      title: "Employee self-service",
-      description: "Allow employees to manage their personal HR details and requests.",
-    },
-    {
-      key: "requireTwoFactorAuthentication",
-      title: "Two-factor authentication",
-      description: "Require an additional verification step when employees sign in.",
-    },
-    {
-      key: "showEmployeeBirthdays",
-      title: "People moments",
-      description: "Show birthdays and work anniversaries on the HRMS dashboard.",
-    },
-  ];
-
+function AppSettings() {
   return <AppSettingsPage app="hrms" />;
 }
 
@@ -215,8 +185,8 @@ export function HrmsSettings({ onToast }: { onToast: (message: string) => void }
   const [drawerOpen, setDrawerOpen] = useState(false);
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 overflow-x-auto border-b border-border">
+      <div className="sticky top-0 z-30 mb-5 w-full bg-background py-2">
+        <div className="flex w-full gap-1 overflow-x-auto border-b border-border">
           {tabs.map((item) => (
             <button
               key={item}
@@ -228,14 +198,13 @@ export function HrmsSettings({ onToast }: { onToast: (message: string) => void }
             </button>
           ))}
         </div>
-        <Button icon="plus" onClick={() => setDrawerOpen(true)}>
-          Save settings
-        </Button>
       </div>
       {tab === "Roles & permissions" ? (
         <PermissionMatrix />
       ) : tab === "App Settings" ? (
-        <AppSettings onToast={onToast} />
+        <AppSettings />
+      ) : ["Departments", "Locations", "Designations", "Employment types"].includes(tab) ? (
+        <EmployeeMasterData type={tab} onToast={onToast} />
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

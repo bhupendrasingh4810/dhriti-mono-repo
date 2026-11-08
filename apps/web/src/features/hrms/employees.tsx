@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 
-import { EmployeeMasterData } from "./components/employee-master-data";
 import { Avatar, Badge, Button, Card, CardTitle, Icon, type DirectoryEmployee } from "./components/ui-primitives";
 
 function EmployeeDirectory({
@@ -719,10 +718,6 @@ export function HrmsEmployees({
     "Directory",
     "Import",
     "Organization chart",
-    "Departments",
-    "Designations",
-    "Locations",
-    "Employment types",
     "Offboarding",
   ];
   return (
@@ -741,9 +736,6 @@ export function HrmsEmployees({
       {tab === "Directory" && <EmployeeDirectoryWorkspace employees={employees} onAdd={onAdd} onToast={onToast} />}
       {tab === "Import" && <EmployeeImportFlow onToast={onToast} />}
       {tab === "Organization chart" && <OrganizationChart />}
-      {["Departments", "Designations", "Locations", "Employment types"].includes(tab) && (
-        <EmployeeMasterData type={tab} onToast={onToast} />
-      )}
       {tab === "Offboarding" && <OffboardingWorkflow onToast={onToast} />}
     </>
   );

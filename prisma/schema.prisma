@@ -678,6 +678,7 @@ model HrmsEmployee {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @db.Uuid
   userId         String   @db.Uuid
+  workLocationId String?  @db.Uuid
   employeeNumber String
   status         String
   employmentType String?
@@ -692,6 +693,7 @@ model HrmsEmployee {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  workLocation HrmsLocation? @relation(fields: [workLocationId], references: [id], onDelete: SetNull)
   attendanceRecords HrmsAttendanceRecord[]
   leaveRequests HrmsLeaveRequest[]
   performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
@@ -704,6 +706,7 @@ model HrmsEmployee {
   @@unique([organizationId, userId])
   @@unique([organizationId, employeeNumber])
   @@index([organizationId, status])
+  @@index([organizationId, workLocationId])
   @@map("hrms_employees")
 }
 
@@ -1436,6 +1439,9 @@ model Organization {
   teams    Team[]
   organizationTeams OrganizationTeam[]
   departments OrganizationDepartment[]
+  hrmsLocations HrmsLocation[]
+  hrmsDesignations HrmsDesignation[]
+  hrmsEmploymentTypes HrmsEmploymentType[]
   permissionGroups OrganizationPermissionGroup[]
   permissionGroupAssignments OrganizationPermissionGroupAssignment[]
   hrmsEmployees HrmsEmployee[]
@@ -1548,6 +1554,63 @@ model OrganizationTeam {
   @@map("organization_teams")
 }
 
+model HrmsLocation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  code           String?
+  countryCode    String   @db.VarChar(2)
+  city           String?
+  timezone       String
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    HrmsEmployee[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("hrms_locations")
+}
+
+model HrmsDesignation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  departmentId   String?  @db.Uuid
+  name           String
+  code           String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department   OrganizationDepartment?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, code])
+  @@index([organizationId, departmentId, isActive])
+  @@map("hrms_designations")
+}
+
+model HrmsEmploymentType {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  code           String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+  @@map("hrms_employment_types")
+}
+
 model OrganizationTeamMember {
   id        String   @id @default(uuid()) @db.Uuid
   teamId    String   @db.Uuid
@@ -1578,6 +1641,7 @@ model OrganizationDepartment {
   children     OrganizationDepartment[] @relation("OrganizationDepartmentTree")
   members      OrganizationDepartmentMember[]
   assignments  OrganizationPermissionGroupAssignment[]
+  hrmsDesignations HrmsDesignation[]
 
   @@unique([organizationId, name])
   @@index([organizationId, parentId])

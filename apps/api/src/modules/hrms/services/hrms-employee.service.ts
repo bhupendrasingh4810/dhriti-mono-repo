@@ -22,6 +22,7 @@ export class HrmsEmployeeService {
         employeeNumber: true,
         status: true,
         employmentType: true,
+        workLocationId: true,
         startDate: true,
         endDate: true,
         biometricId: true,
@@ -30,6 +31,7 @@ export class HrmsEmployeeService {
         createdAt: true,
         updatedAt: true,
         user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+        workLocation: { select: { id: true, name: true, code: true } },
       },
       orderBy: { employeeNumber: "asc" },
     });
@@ -41,6 +43,9 @@ export class HrmsEmployeeService {
 
   async create(organizationId: string, actorUserId: string, input: CreateHrmsEmployeeDto) {
     await this.assertActiveMember(organizationId, input.userId);
+    if (input.workLocationId) {
+      await this.assertActiveWorkLocation(organizationId, input.workLocationId);
+    }
     this.validateLifecycleDates(input.startDate ? new Date(input.startDate) : null, input);
     const employee = await this.prisma.hrmsEmployee
       .create({
@@ -50,6 +55,7 @@ export class HrmsEmployeeService {
           employeeNumber: input.employeeNumber.trim(),
           status: input.status.trim(),
           employmentType: input.employmentType?.trim() ?? null,
+          workLocationId: input.workLocationId ?? null,
           startDate: input.startDate ? new Date(input.startDate) : null,
           endDate: input.endDate ? new Date(input.endDate) : null,
           biometricId: input.biometricId?.trim() || null,
@@ -76,6 +82,9 @@ export class HrmsEmployeeService {
 
   async update(organizationId: string, employeeId: string, actorUserId: string, input: UpdateHrmsEmployeeDto) {
     const current = await this.requireEmployee(organizationId, employeeId);
+    if (input.workLocationId) {
+      await this.assertActiveWorkLocation(organizationId, input.workLocationId);
+    }
     const startDate = input.startDate !== undefined ? new Date(input.startDate) : current.startDate;
     this.validateLifecycleDates(startDate, {
       retirementDate:
@@ -92,6 +101,7 @@ export class HrmsEmployeeService {
           ...(input.employeeNumber !== undefined ? { employeeNumber: input.employeeNumber.trim() } : {}),
           ...(input.status !== undefined ? { status: input.status.trim() } : {}),
           ...(input.employmentType !== undefined ? { employmentType: input.employmentType.trim() } : {}),
+          ...(input.workLocationId !== undefined ? { workLocationId: input.workLocationId } : {}),
           ...(input.startDate !== undefined ? { startDate: new Date(input.startDate) } : {}),
           ...(input.endDate !== undefined ? { endDate: new Date(input.endDate) } : {}),
           ...(input.biometricId !== undefined ? { biometricId: input.biometricId?.trim() || null } : {}),
@@ -184,6 +194,16 @@ export class HrmsEmployeeService {
         "Employee must be an active organization member",
         HttpStatus.BAD_REQUEST,
       );
+    }
+  }
+
+  private async assertActiveWorkLocation(organizationId: string, workLocationId: string): Promise<void> {
+    const location = await this.prisma.hrmsLocation.findFirst({
+      where: { id: workLocationId, organizationId, isActive: true },
+      select: { id: true },
+    });
+    if (!location) {
+      throw new AppError(ErrorCode.HRMS_LOCATION_NOT_FOUND, "Active work location not found", HttpStatus.BAD_REQUEST);
     }
   }
 }

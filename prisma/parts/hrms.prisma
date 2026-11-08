@@ -2,6 +2,7 @@ model HrmsEmployee {
   id             String   @id @default(uuid()) @db.Uuid
   organizationId String   @db.Uuid
   userId         String   @db.Uuid
+  workLocationId String?  @db.Uuid
   employeeNumber String
   status         String
   employmentType String?
@@ -16,6 +17,7 @@ model HrmsEmployee {
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
+  workLocation HrmsLocation? @relation(fields: [workLocationId], references: [id], onDelete: SetNull)
   attendanceRecords HrmsAttendanceRecord[]
   leaveRequests HrmsLeaveRequest[]
   performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
@@ -28,6 +30,7 @@ model HrmsEmployee {
   @@unique([organizationId, userId])
   @@unique([organizationId, employeeNumber])
   @@index([organizationId, status])
+  @@index([organizationId, workLocationId])
   @@map("hrms_employees")
 }
 

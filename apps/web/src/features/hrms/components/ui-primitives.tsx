@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -166,7 +165,7 @@ export function Button({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]}`}
+      className={`inline-flex cursor-pointer items-center justify-center gap-2 rounded-md px-3.5 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${variants[variant]}`}
     >
       {icon && <Icon name={icon} size={16} />}
       {children}
@@ -222,7 +221,15 @@ const avatarColors = [
   "bg-cyan-100 text-cyan-700",
 ];
 
-export function Avatar({ initials, index = 0, size = "md" }: { initials: string; index?: number; size?: "sm" | "md" | "lg" }) {
+export function Avatar({
+  initials,
+  index = 0,
+  size = "md",
+}: {
+  initials: string;
+  index?: number;
+  size?: "sm" | "md" | "lg";
+}) {
   const sizes = { sm: "h-7 w-7 text-[10px]", md: "h-9 w-9 text-xs", lg: "h-12 w-12 text-sm" };
   return (
     <div
@@ -232,4 +239,3 @@ export function Avatar({ initials, index = 0, size = "md" }: { initials: string;
     </div>
   );
 }
-

@@ -26,6 +26,7 @@ export class CreateHrmsEmployeeDto extends EmployeeLifecycleDto {
   @ApiProperty() @IsString() @MinLength(1) @Matches(/\S/) @MaxLength(64) employeeNumber!: string;
   @ApiProperty({ example: "ACTIVE" }) @IsString() @MinLength(1) @MaxLength(64) status!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(64) employmentType?: string;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() workLocationId?: string | null;
   @ApiPropertyOptional({ format: "date-time" }) @IsOptional() @IsDateString() startDate?: string;
   @ApiPropertyOptional({ format: "date-time" }) @IsOptional() @IsDateString() endDate?: string;
 }
@@ -39,6 +40,10 @@ export class UpdateHrmsEmployeeDto extends EmployeeLifecycleDto {
   employeeNumber?: string;
   @ApiPropertyOptional({ example: "ACTIVE" }) @IsOptional() @IsString() @MinLength(1) @MaxLength(64) status?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(64) employmentType?: string;
+  @ApiPropertyOptional({ nullable: true })
+  @ValidateIf((_object, value: unknown) => value !== undefined && value !== null)
+  @IsUUID()
+  workLocationId?: string | null;
   @ApiPropertyOptional({ format: "date-time" }) @IsOptional() @IsDateString() startDate?: string;
   @ApiPropertyOptional({ format: "date-time" }) @IsOptional() @IsDateString() endDate?: string;
 }
