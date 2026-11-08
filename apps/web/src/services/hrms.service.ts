@@ -57,6 +57,18 @@ export interface HrmsEmploymentType extends ApiEntity {
   code: string | null;
   isActive: boolean;
 }
+export type HrmsAssetStatus = "AVAILABLE" | "ASSIGNED" | "MAINTENANCE" | "UNFIT";
+export type HrmsAssetCondition = "NEW" | "GOOD" | "FAIR";
+export type HrmsAssetType = "LAPTOP" | "PHONE" | "MONITOR" | "KEYBOARD" | "MOUSE" | "HEADPHONES" | "FURNITURE" | "OTHER";
+export interface HrmsAsset extends ApiEntity {
+  name: string; type: HrmsAssetType; customCategory: string | null; serialNumber: string;
+  condition: HrmsAssetCondition; status: HrmsAssetStatus; assignedEmployeeId: string | null;
+  assignedEmployee: { id: string; employeeNumber: string; user: { name: string } } | null;
+}
+export interface HrmsAssetPage {
+  items: HrmsAsset[]; total: number; page: number; pageSize: number; totalPages: number;
+  summary: { total: number; assigned: number; available: number; maintenance: number };
+}
 const resource = (path: string) => ({
   list: (organizationId: string) => tenantRequest<ApiEntity[]>(organizationId, `${base}/${path}`),
   create: (organizationId: string, input: Input) =>
@@ -148,7 +160,18 @@ export const hrmsService = {
       tenantRequest<void>(organizationId, `${base}/holiday-calendars/${pathSegment(calendarId)}`, { method: "DELETE" }),
   },
   assets: {
-    ...resource("assets"),
+    list: (organizationId: string, query: Record<string, string | number | undefined> = {}) =>
+      tenantRequest<HrmsAssetPage>(organizationId, `${base}/assets`, {
+        query: Object.fromEntries(
+          Object.entries(query).filter(([, value]) => value !== undefined && value !== ""),
+        ),
+      }),
+    create: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsAsset, Input>(organizationId, `${base}/assets`, "POST", input),
+    update: (organizationId: string, assetId: string, input: Input) =>
+      tenantJsonRequest<HrmsAsset, Input>(organizationId, `${base}/assets/${pathSegment(assetId)}`, "PATCH", input),
+    remove: (organizationId: string, assetId: string) =>
+      tenantRequest<void>(organizationId, `${base}/assets/${pathSegment(assetId)}`, { method: "DELETE" }),
     assign: (organizationId: string, assetId: string, employeeId: string) =>
       tenantJsonRequest<ApiEntity, { employeeId: string }>(
         organizationId,

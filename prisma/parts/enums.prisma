@@ -372,11 +372,19 @@ enum AssetType {
 enum AssetStatus {
   AVAILABLE
   ASSIGNED
+  MAINTENANCE
+  UNFIT
   IN_REPAIR
   LOST
   STOLEN
   RETIRED
   DISPOSABLE
+}
+
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
 }
 
 enum InvitationStatus {

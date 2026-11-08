@@ -194,7 +194,9 @@ model HrmsAsset {
   legacyAssetId  String?     @db.Uuid
   name           String
   type           AssetType
-  serialNumber   String?
+  customCategory String?
+  serialNumber   String
+  condition      AssetCondition @default(GOOD)
   status         AssetStatus @default(AVAILABLE)
   assignedEmployeeId String? @db.Uuid
   assignedAt     DateTime?

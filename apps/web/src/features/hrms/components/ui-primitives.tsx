@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
+  ArrowUpDown,
   ArrowRight,
   BarChart3,
   Bell,
@@ -16,6 +17,7 @@ import {
   CircleAlert,
   Clock3,
   Download,
+  Pencil,
   FileText,
   Filter,
   LayoutDashboard,
@@ -25,6 +27,7 @@ import {
   Search,
   Settings,
   Target,
+  Trash2,
   TrendingUp,
   Users,
   WalletCards,
@@ -107,7 +110,10 @@ export type IconName =
   | "close"
   | "cake"
   | "alert"
-  | "arrow";
+  | "arrow"
+  | "sort"
+  | "edit"
+  | "delete";
 
 export function Icon({ name, size = 18, className = "" }: { name: IconName; size?: number; className?: string }) {
   const icons: Record<IconName, LucideIcon> = {
@@ -136,8 +142,11 @@ export function Icon({ name, size = 18, className = "" }: { name: IconName; size
     cake: Cake,
     alert: CircleAlert,
     arrow: ArrowRight,
+    sort: ArrowUpDown,
+    edit: Pencil,
+    delete: Trash2,
   };
-  const LucideIcon = icons[name];
+  const LucideIcon = icons[name] ?? CircleAlert;
   return <LucideIcon aria-hidden="true" size={size} strokeWidth={1.8} className={className} />;
 }
 

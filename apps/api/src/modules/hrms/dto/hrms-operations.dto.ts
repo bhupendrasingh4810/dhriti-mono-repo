@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import {
   AssetType,
+  AssetCondition,
+  AssetStatus,
   LeaveStatus,
   LeaveType,
   ReviewStatus,
@@ -9,11 +11,13 @@ import {
   TrainingStatus,
   TrainingType,
 } from "@prisma/client";
+import { Transform, Type } from "class-transformer";
 import {
   IsBoolean,
   IsDateString,
   IsEnum,
   IsNumber,
+  IsIn,
   IsOptional,
   IsString,
   IsUUID,
@@ -81,9 +85,26 @@ export class EnrollHrmsTrainingDto {
 export class CreateHrmsAssetDto {
   @ApiProperty() @IsString() @MaxLength(200) name!: string;
   @ApiProperty({ enum: AssetType }) @IsEnum(AssetType) type!: AssetType;
-  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) serialNumber?: string;
+  @ApiProperty() @IsString() @MaxLength(200) serialNumber!: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) customCategory?: string;
+  @ApiPropertyOptional({ enum: AssetCondition }) @IsOptional() @IsEnum(AssetCondition) condition?: AssetCondition;
+  @ApiPropertyOptional({ enum: AssetStatus }) @IsOptional() @IsIn(["AVAILABLE", "ASSIGNED", "MAINTENANCE", "UNFIT"]) status?: AssetStatus;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() assignedEmployeeId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) location?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(5000) notes?: string;
+}
+
+export class UpdateHrmsAssetDto extends CreateHrmsAssetDto {}
+
+export class ListHrmsAssetsDto {
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() @Min(1) page?: number;
+  @ApiPropertyOptional() @IsOptional() @Type(() => Number) @IsNumber() @Min(1) pageSize?: number;
+  @ApiPropertyOptional() @IsOptional() @Transform(({ value }) => value || undefined) @IsString() @MaxLength(200) search?: string;
+  @ApiPropertyOptional({ enum: AssetType }) @IsOptional() @Transform(({ value }) => value || undefined) @IsEnum(AssetType) type?: AssetType;
+  @ApiPropertyOptional({ enum: AssetCondition }) @IsOptional() @Transform(({ value }) => value || undefined) @IsEnum(AssetCondition) condition?: AssetCondition;
+  @ApiPropertyOptional() @IsOptional() @Transform(({ value }) => value || undefined) @IsIn(["AVAILABLE", "ASSIGNED", "MAINTENANCE", "UNFIT"]) status?: AssetStatus;
+  @ApiPropertyOptional() @IsOptional() @Transform(({ value }) => value || undefined) @IsIn(["name", "serialNumber", "status", "condition", "createdAt"]) sortBy?: "name" | "serialNumber" | "status" | "condition" | "createdAt";
+  @ApiPropertyOptional() @IsOptional() @Transform(({ value }) => value || undefined) @IsIn(["asc", "desc"]) sortOrder?: "asc" | "desc";
 }
 
 export class AssignHrmsAssetDto {

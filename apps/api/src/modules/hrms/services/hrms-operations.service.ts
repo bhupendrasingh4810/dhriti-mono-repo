@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import {
   AssetStatus,
+  type AssetCondition,
   LeaveStatus,
   PayrollStatus,
   ReviewStatus,
@@ -367,25 +368,77 @@ export class HrmsOperationsService {
     }).then(() => record);
   }
 
-  listAssets(organizationId: string) {
-    return this.prisma.hrmsAsset.findMany({
-      where: { organizationId },
-      orderBy: { name: "asc" },
-      include: { assignedEmployee: { select: { employeeNumber: true } } },
-    });
+  async listAssets(
+    organizationId: string,
+    query: {
+      page?: number; pageSize?: number; search?: string; type?: AssetType; condition?: AssetCondition;
+      status?: AssetStatus; sortBy?: "name" | "serialNumber" | "status" | "condition" | "createdAt"; sortOrder?: "asc" | "desc";
+    } = {},
+  ) {
+    const page = Math.max(1, query.page ?? 1);
+    const pageSize = Math.min(100, Math.max(1, query.pageSize ?? 20));
+    const where: Prisma.HrmsAssetWhereInput = {
+      organizationId,
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.condition ? { condition: query.condition } : {}),
+      ...(query.status ? { status: query.status } : {}),
+      ...(query.search ? {
+        OR: [
+          { name: { contains: query.search, mode: "insensitive" } },
+          { serialNumber: { contains: query.search, mode: "insensitive" } },
+          { assignedEmployee: { user: { name: { contains: query.search, mode: "insensitive" } } } },
+        ],
+      } : {}),
+    };
+    const [items, total, assigned, available, maintenance] = await Promise.all([
+      this.prisma.hrmsAsset.findMany({
+        where, skip: (page - 1) * pageSize, take: pageSize,
+        orderBy: { [query.sortBy ?? "name"]: query.sortOrder ?? "asc" },
+        include: { assignedEmployee: { select: { id: true, employeeNumber: true, user: { select: { name: true } } } } },
+      }),
+      this.prisma.hrmsAsset.count({ where }),
+      this.prisma.hrmsAsset.count({ where: { organizationId, status: AssetStatus.ASSIGNED } }),
+      this.prisma.hrmsAsset.count({ where: { organizationId, status: AssetStatus.AVAILABLE } }),
+      this.prisma.hrmsAsset.count({ where: { organizationId, status: AssetStatus.MAINTENANCE } }),
+    ]);
+    return {
+      items, total, page, pageSize, totalPages: Math.ceil(total / pageSize),
+      summary: {
+        total: await this.prisma.hrmsAsset.count({ where: { organizationId } }),
+        assigned, available, maintenance,
+      },
+    };
   }
   async createAsset(
     organizationId: string,
     actorUserId: string,
-    input: { name: string; type: AssetType; serialNumber?: string; location?: string; notes?: string },
+    input: { name: string; type: AssetType; serialNumber: string; customCategory?: string; condition?: AssetCondition; status?: AssetStatus; assignedEmployeeId?: string; location?: string; notes?: string },
   ) {
+    const status = input.status ?? AssetStatus.AVAILABLE;
+    this.assertSupportedAssetStatus(status);
+    if (input.type === "OTHER" && !this.clean(input.customCategory)) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "A custom category is required for Other assets", HttpStatus.BAD_REQUEST);
+    }
+    if (input.assignedEmployeeId) {
+      if (status !== AssetStatus.ASSIGNED) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Assigned assets must have Assigned status", HttpStatus.BAD_REQUEST);
+      }
+      await this.requireActiveEmployee(organizationId, input.assignedEmployeeId);
+    } else if (status === AssetStatus.ASSIGNED) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "An employee is required for Assigned status", HttpStatus.BAD_REQUEST);
+    }
     const record = await this.prisma.hrmsAsset
       .create({
         data: {
           organizationId,
           name: input.name.trim(),
           type: input.type,
-          serialNumber: this.clean(input.serialNumber),
+          customCategory: input.type === "OTHER" ? this.clean(input.customCategory) : null,
+          serialNumber: input.serialNumber.trim(),
+          condition: input.condition ?? "GOOD",
+          status,
+          assignedEmployeeId: input.assignedEmployeeId ?? null,
+          assignedAt: input.assignedEmployeeId ? new Date() : null,
           location: this.clean(input.location),
           notes: this.clean(input.notes),
         },
@@ -402,12 +455,15 @@ export class HrmsOperationsService {
   async assignAsset(organizationId: string, assetId: string, actorUserId: string, employeeId?: string) {
     const asset = await this.prisma.hrmsAsset.findFirst({
       where: { id: assetId, organizationId },
-      select: { id: true },
+      select: { id: true, status: true },
     });
     if (!asset) {
       this.notFound();
     }
     if (employeeId) {
+      if (asset.status !== AssetStatus.AVAILABLE) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Only available assets can be assigned", HttpStatus.CONFLICT);
+      }
       await this.requireActiveEmployee(organizationId, employeeId);
     }
     const record = await this.prisma.hrmsAsset.update({
@@ -421,6 +477,59 @@ export class HrmsOperationsService {
     return this.auditRecord("hrms.asset.assignment_updated", organizationId, actorUserId, record.id, {
       employeeId: employeeId ?? null,
     }).then(() => record);
+  }
+  async updateAsset(
+    organizationId: string, assetId: string, actorUserId: string,
+    input: { name: string; type: AssetType; serialNumber: string; customCategory?: string; condition?: AssetCondition; status?: AssetStatus; assignedEmployeeId?: string; location?: string; notes?: string },
+  ) {
+    const current = await this.prisma.hrmsAsset.findFirst({ where: { id: assetId, organizationId } });
+    if (!current) {
+      this.notFound();
+    }
+    const status = input.status ?? current.status;
+    this.assertSupportedAssetStatus(status);
+    if (input.type === "OTHER" && !this.clean(input.customCategory)) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "A custom category is required for Other assets", HttpStatus.BAD_REQUEST);
+    }
+    const employeeId = input.assignedEmployeeId ?? null;
+    if (employeeId !== current.assignedEmployeeId) {
+      if (employeeId && current.status !== AssetStatus.AVAILABLE) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "Only available assets can be assigned", HttpStatus.CONFLICT);
+      }
+      if (employeeId) {
+        await this.requireActiveEmployee(organizationId, employeeId);
+      }
+    }
+    if (employeeId && status !== AssetStatus.ASSIGNED) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Assigned assets must have Assigned status", HttpStatus.BAD_REQUEST);
+    }
+    if (!employeeId && status === AssetStatus.ASSIGNED) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "An employee is required for Assigned status", HttpStatus.BAD_REQUEST);
+    }
+    const record = await this.prisma.hrmsAsset.update({
+      where: { id: assetId },
+      data: { name: input.name.trim(), type: input.type, customCategory: input.type === "OTHER" ? this.clean(input.customCategory) : null,
+        serialNumber: input.serialNumber.trim(), condition: input.condition ?? current.condition, status, assignedEmployeeId: employeeId,
+        assignedAt: employeeId ? (employeeId === current.assignedEmployeeId ? current.assignedAt : new Date()) : null,
+        location: this.clean(input.location), notes: this.clean(input.notes) },
+    }).catch(() => { throw new AppError(ErrorCode.VALIDATION_FAILED, "Asset serial number already exists in this organization", HttpStatus.CONFLICT); });
+    return this.auditRecord("hrms.asset.updated", organizationId, actorUserId, record.id).then(() => record);
+  }
+  async deleteAsset(organizationId: string, assetId: string, actorUserId: string) {
+    const asset = await this.prisma.hrmsAsset.findFirst({ where: { id: assetId, organizationId }, select: { id: true, status: true } });
+    if (!asset) {
+      this.notFound();
+    }
+    if (asset.status === AssetStatus.ASSIGNED) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Unassign an asset before deleting it", HttpStatus.CONFLICT);
+    }
+    await this.prisma.hrmsAsset.delete({ where: { id: asset.id } });
+    await this.auditRecord("hrms.asset.deleted", organizationId, actorUserId, asset.id);
+  }
+  private assertSupportedAssetStatus(status: AssetStatus) {
+    if (!([AssetStatus.AVAILABLE, AssetStatus.ASSIGNED, AssetStatus.MAINTENANCE, AssetStatus.UNFIT] as AssetStatus[]).includes(status)) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Unsupported asset status", HttpStatus.BAD_REQUEST);
+    }
   }
 
   listBenefits(organizationId: string) {

@@ -81,6 +81,11 @@ Goal: ship maintainable UI and feature code with strong reuse, strict theme usag
 - Do not introduce standalone CSS files for one-off color/typography overrides.
 - Prefer sx with theme access or shared styled helpers.
 - If a token does not exist, add it to theme first, then consume it.
+- Every required form field must show a red border and an error message immediately below the field when validation fails.
+- Interactive buttons and links must use a pointer cursor.
+- Use clickable sort controls beside sortable table column headings instead of separate sort filters.
+- Use compact table pagination with a rows-per-page selector, visible row range, and previous/next chevron controls.
+- Use accessible edit and delete icons, rather than text labels, for table row actions.
 
 ## Reusable Component Checklist
 
