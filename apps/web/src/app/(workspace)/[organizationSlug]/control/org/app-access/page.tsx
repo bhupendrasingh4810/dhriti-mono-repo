@@ -1,172 +1,73 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { useToast, ToastContainer } from "@/components/shared/Toast";
-import { controlOrganizationService, type ControlProductEntitlement } from "@/services/control.service";
 
-interface App {
-  id: string;
-  key: string;
-  name: string;
-  description: string;
-  icon: string;
-  connected: boolean;
-  users: number;
-  lastSync: string;
-  category: string;
-}
+import { organizationAccessService, type OrganizationEffectiveEntitlement } from "@/services/organization-management.service";
 
 export default function AppAccess() {
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
-  const { toasts, addToast, removeToast } = useToast();
-  const [apps, setApps] = useState<App[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const loadApps = useEffectEvent(async () => {
+  const [entitlements, setEntitlements] = useState<OrganizationEffectiveEntitlement[]>([]);
+  const [error, setError] = useState("");
+  const [savingKey, setSavingKey] = useState("");
+  const [limitDrafts, setLimitDrafts] = useState<Record<string, string>>({});
+  const load = useCallback(async () => {
     try {
-      const entitlements = await controlOrganizationService.listEntitlements(organizationSlug);
-      setApps(entitlements.map(toApp));
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : "Unable to load app access", "error");
+      setEntitlements(await organizationAccessService.listEntitlements(organizationSlug));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to load organization access.");
     }
-  });
-
-  useEffect(() => {
-    void Promise.resolve().then(loadApps);
   }, [organizationSlug]);
-
-  const toggleApp = async (app: App) => {
-    setIsSaving(true);
+  useEffect(() => {
+    const timer = window.setTimeout(() => { void load(); }, 0);
+    return () => window.clearTimeout(timer);
+  }, [load]);
+  const setFeature = async (entitlement: OrganizationEffectiveEntitlement, enabled: boolean) => {
+    setSavingKey(entitlement.key); setError("");
     try {
-      const updated = await controlOrganizationService.setEntitlement(organizationSlug, {
-        productKey: app.key,
-        isEnabled: !app.connected,
+      await organizationAccessService.setEntitlementOverride(organizationSlug, { key: entitlement.key, enabled });
+      await load();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to update feature access.");
+    } finally { setSavingKey(""); }
+  };
+  const setLimit = async (entitlement: OrganizationEffectiveEntitlement, value: number) => {
+    if (!Number.isSafeInteger(value) || value < 0) { setError("Limits must be whole numbers greater than or equal to zero."); return; }
+    setSavingKey(entitlement.key); setError("");
+    try {
+      await organizationAccessService.setEntitlementOverride(organizationSlug, { key: entitlement.key, enabled: true, value });
+      await load();
+      setLimitDrafts((current) => {
+        const { [entitlement.key]: _savedDraft, ...remainingDrafts } = current;
+        return remainingDrafts;
       });
-      setApps((current) => current.map((item) => (item.id === app.id ? toApp(updated) : item)));
-      addToast(`${app.name} ${updated.isEnabled ? "enabled" : "disabled"}`, updated.isEnabled ? "success" : "warning");
-    } catch (error) {
-      addToast(error instanceof Error ? error.message : "Unable to update app access", "error");
-    } finally {
-      setIsSaving(false);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Unable to update plan limit.");
+    } finally { setSavingKey(""); }
+  };
+  const features = entitlements.filter(({ kind }) => kind === "FEATURE");
+  const limits = entitlements.filter(({ kind }) => kind === "LIMIT");
+  const saveLimitDraft = (entitlement: OrganizationEffectiveEntitlement) => {
+    const draft = limitDrafts[entitlement.key];
+    if (draft === undefined) return;
+    if (draft.trim() === "") {
+      setError("Limits must be whole numbers greater than or equal to zero.");
+      return;
     }
+    const savedValue = String(entitlement.value ?? 0);
+    if (draft === savedValue) {
+      setLimitDrafts((current) => {
+        const { [entitlement.key]: _unchangedDraft, ...remainingDrafts } = current;
+        return remainingDrafts;
+      });
+      return;
+    }
+    void setLimit(entitlement, Number(draft));
   };
-
-  const connected = apps.filter((a) => a.connected).length;
-
-  return (
-    <div>
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
-
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>App Access</h1>
-        <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
-          {connected} of {apps.length} apps connected
-        </p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
-        {apps.map((app) => (
-          <div
-            key={app.id}
-            style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 20 }}
-          >
-            <div
-              style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 10,
-                    backgroundColor: app.connected ? "#e6f4f2" : "#f1f5f9",
-                    color: app.connected ? "#036c5f" : "#94a3b8",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 13,
-                    fontWeight: 800,
-                  }}
-                >
-                  {app.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>{app.name}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{app.category}</div>
-                </div>
-              </div>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  padding: "3px 8px",
-                  borderRadius: 20,
-                  backgroundColor: app.connected ? "#dcfce7" : "#f1f5f9",
-                  color: app.connected ? "#166534" : "#64748b",
-                }}
-              >
-                {app.connected ? "Connected" : "Not connected"}
-              </span>
-            </div>
-            <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 14px", lineHeight: 1.5 }}>{app.description}</p>
-            {app.connected && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: 12,
-                  padding: "8px 0",
-                  borderTop: "1px solid #f1f5f9",
-                  borderBottom: "1px solid #f1f5f9",
-                }}
-              >
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#036c5f" }}>{app.users}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>Users</div>
-                </div>
-                <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: "#475569" }}>{app.lastSync}</div>
-                  <div style={{ fontSize: 11, color: "#94a3b8" }}>Last sync</div>
-                </div>
-              </div>
-            )}
-            <button
-              disabled={isSaving}
-              onClick={() => void toggleApp(app)}
-              style={{
-                width: "100%",
-                padding: "8px",
-                borderRadius: 7,
-                border: app.connected ? "1px solid #fecaca" : "1px solid #e2e8f0",
-                backgroundColor: app.connected ? "#fff5f5" : "#036c5f",
-                color: app.connected ? "#dc2626" : "white",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
-              {app.connected ? "Disconnect" : "Connect"}
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function toApp(entitlement: ControlProductEntitlement): App {
-  return {
-    id: entitlement.id,
-    key: entitlement.product.key,
-    name: entitlement.product.name,
-    description: entitlement.product.isActive
-      ? "Managed product access for this organization"
-      : "This product is currently unavailable",
-    icon: entitlement.product.name.slice(0, 2).toUpperCase(),
-    connected: entitlement.isEnabled,
-    users: 0,
-    lastSync: entitlement.updatedAt ? new Date(entitlement.updatedAt).toLocaleString() : "Never",
-    category: "Dhriti product",
-  };
+  return <div className="space-y-6">
+    <header><h1 className="text-2xl font-bold text-text-primary">App access & plan limits</h1><p className="mt-1 text-sm text-text-secondary">Effective plan access with organization-specific overrides.</p></header>
+    {error && <p role="alert" className="rounded-md border border-error p-3 text-sm text-error">{error}</p>}
+    <section className="overflow-hidden rounded-lg border border-border bg-surface"><div className="border-b border-border p-5"><h2 className="font-semibold text-text-primary">Features</h2></div><div className="divide-y divide-border">{features.map((entitlement) => <div key={entitlement.key} className="flex items-center justify-between gap-4 p-5"><div><p className="font-mono text-sm font-semibold text-text-primary">{entitlement.key}</p><p className="mt-1 text-xs text-text-muted">Available through the organization’s effective plan policy.</p></div><button type="button" disabled={savingKey === entitlement.key} onClick={() => void setFeature(entitlement, !entitlement.enabled)} className={`cursor-pointer rounded-md px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40 ${entitlement.enabled ? "bg-brand text-white" : "border border-border text-text-secondary"}`}>{entitlement.enabled ? "Enabled" : "Disabled"}</button></div>)}</div></section>
+    <section className="overflow-hidden rounded-lg border border-border bg-surface"><div className="border-b border-border p-5"><h2 className="font-semibold text-text-primary">Limits</h2></div><div className="divide-y divide-border">{limits.map((entitlement) => <div key={entitlement.key} className="flex items-center justify-between gap-4 p-5"><p className="font-mono text-sm font-semibold text-text-primary">{entitlement.key}</p><input aria-label={`${entitlement.key} limit`} type="number" min="0" value={limitDrafts[entitlement.key] ?? String(entitlement.value ?? 0)} disabled={savingKey === entitlement.key} onChange={(event) => setLimitDrafts((current) => ({ ...current, [entitlement.key]: event.target.value }))} onBlur={() => saveLimitDraft(entitlement)} className="w-28 rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed" /></div>)}</div></section>
+  </div>;
 }

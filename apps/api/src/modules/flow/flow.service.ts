@@ -64,11 +64,11 @@ export class FlowService {
       throw new AppError(ErrorCode.PROJECT_KEY_TAKEN, "A project with this key already exists", HttpStatus.CONFLICT);
     }
 
-    const limit = await this.entitlements.getLimit(organizationId, "max_projects");
+    const limit = await this.entitlements.getLimit(organizationId, "flow.projects.max");
     if (limit === null) {
       throw new AppError(
         ErrorCode.ENTITLEMENT_LIMIT_EXCEEDED,
-        "Organization exceeded max_projects",
+        "Organization exceeded flow.projects.max",
         HttpStatus.FORBIDDEN,
       );
     }

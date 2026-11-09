@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { OrganizationPermissionScope } from "@prisma/client";
-import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, Matches, MaxLength, MinLength } from "class-validator";
+import { IsBoolean, IsDateString, IsEnum, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreatePermissionGroupDto {
   @ApiProperty()
@@ -70,6 +70,36 @@ export class AddPermissionDto {
   permissionId!: string;
 }
 
+export class SetOrganizationEntitlementOverrideDto {
+  @ApiProperty()
+  @IsString()
+  @Matches(/^[a-z][a-z0-9]*(?:[._][a-z0-9]+)*$/)
+  key!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  value?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  reason?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string;
+}
+
 export class CreateDepartmentDto {
   @ApiProperty()
   @IsString()
@@ -113,4 +143,3 @@ export class UpdateDepartmentDto {
   @IsBoolean()
   isActive?: boolean;
 }
-

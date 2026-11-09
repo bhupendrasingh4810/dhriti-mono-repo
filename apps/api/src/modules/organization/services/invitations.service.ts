@@ -187,7 +187,7 @@ export class InvitationsService {
       const memberCount = await this.prisma.organizationMember.count({
         where: { organizationId: invitation.organizationId, deletedAt: null },
       });
-      await this.entitlements.assertWithinLimit(invitation.organizationId, "max_users", memberCount + 1);
+      await this.entitlements.assertWithinLimit(invitation.organizationId, "organization.members.max", memberCount + 1);
     }
 
     const acceptedAt = new Date();

@@ -11,6 +11,11 @@ export interface EffectiveEntitlement {
   enabled: boolean;
   value: number | null;
 }
+const legacyEntitlementAliases: Record<string, string> = {
+  "organization.members.max": "max_users",
+  "connect.teams.max": "max_teams",
+  "flow.projects.max": "max_projects",
+};
 
 @Injectable()
 export class EntitlementService {
@@ -37,7 +42,8 @@ export class EntitlementService {
       select: { id: true, kind: true },
     });
     if (!entitlement) {
-      return { enabled: false, value: null };
+      const legacyKey = legacyEntitlementAliases[entitlementKey];
+      return legacyKey === undefined ? { enabled: false, value: null } : this.getEntitlement(organizationId, legacyKey);
     }
 
     const subscription = await this.prisma.subscription.findFirst({
@@ -79,11 +85,43 @@ export class EntitlementService {
     return result.enabled ? result.value : null;
   }
 
-  async listEntitlements(organizationId: string): Promise<Array<EffectiveEntitlement & { key: string }>> {
-    const entitlements = await this.prisma.entitlement.findMany({ select: { key: true }, orderBy: { key: "asc" } });
+  async listEntitlements(organizationId: string): Promise<Array<EffectiveEntitlement & { key: string; kind: EntitlementKind }>> {
+    const entitlements = await this.prisma.entitlement.findMany({ select: { key: true, kind: true }, orderBy: { key: "asc" } });
     return Promise.all(
-      entitlements.map(async ({ key }) => ({ key, ...(await this.getEntitlement(organizationId, key)) })),
+      entitlements.map(async ({ key, kind }) => ({ key, kind, ...(await this.getEntitlement(organizationId, key)) })),
     );
+  }
+
+  async setOrganizationOverride(
+    organizationId: string,
+    actorUserId: string,
+    input: { key: string; enabled?: boolean; value?: number; reason?: string; expiresAt?: string },
+  ) {
+    const entitlement = await this.prisma.entitlement.findUnique({ where: { key: input.key }, select: { id: true } });
+    if (!entitlement) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, `Unknown entitlement: ${input.key}`, HttpStatus.BAD_REQUEST);
+    }
+    const override = await this.prisma.organizationEntitlement.upsert({
+      where: { organizationId_entitlementId: { organizationId, entitlementId: entitlement.id } },
+      update: {
+        enabled: input.enabled,
+        value: input.value,
+        reason: input.reason?.trim(),
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        createdById: actorUserId,
+      },
+      create: {
+        organizationId,
+        entitlementId: entitlement.id,
+        enabled: input.enabled,
+        value: input.value,
+        reason: input.reason?.trim(),
+        expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+        createdById: actorUserId,
+      },
+    });
+    await this.invalidate(organizationId);
+    return override;
   }
 
   async assertFeatureEnabled(organizationId: string, entitlementKey: string): Promise<void> {

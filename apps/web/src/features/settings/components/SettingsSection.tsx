@@ -20,7 +20,7 @@ export function SettingsSection({
   const headingId = `settings-section-${id}`;
   return (
     <section aria-labelledby={headingId} className="rounded-xl border border-border bg-surface">
-      <header className="border-b border-border px-5 py-4 sm:px-6">
+      <header className="border-b border-border px-5 py-2 sm:px-6">
         <h2 id={headingId} className="text-base font-semibold text-text-primary">
           {title}
         </h2>

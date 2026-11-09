@@ -44,10 +44,13 @@ export function FlowLayout({ children }: FlowLayoutProps) {
   const flowPath = getFlowPath(pathname);
   const navView = getNavView(pathname, flowPath);
   const selectedProject = getSelectedProject(pathname, flowPath);
+  const isSettingsPage = pathname.endsWith("/flow/settings");
 
   return (
     <div
-      className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-slate-50 p-4"
+      className={`flex min-w-0 flex-1 bg-slate-50 p-4 ${
+        isSettingsPage ? "min-h-full" : "h-full min-h-0 overflow-hidden"
+      }`}
       style={{ fontFamily: "var(--font-sans)" }}
     >
       <aside
@@ -63,7 +66,7 @@ export function FlowLayout({ children }: FlowLayoutProps) {
           onCollapse={() => setCollapsed(!collapsed)}
         />
       </aside>
-      <div className="-mr-4 flex min-w-0 flex-1 overflow-hidden">{children}</div>
+      <div className={`-mr-4 flex min-w-0 flex-1 ${isSettingsPage ? "" : "overflow-hidden"}`}>{children}</div>
     </div>
   );
 }

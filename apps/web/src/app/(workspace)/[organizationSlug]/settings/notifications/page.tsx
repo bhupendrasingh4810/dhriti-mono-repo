@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
-import NotificationSettingsPage from "@/features/settings/NotificationSettingsPage";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "Notification settings | Dhriti",
-  description: "Choose which notifications you receive and set quiet hours.",
-};
-
-export default function Page() {
-  return <NotificationSettingsPage />;
+export default async function Page({ params }: { params: Promise<{ organizationSlug: string }> }) {
+  const { organizationSlug } = await params;
+  redirect(`/${organizationSlug}/user/settings/notification`);
 }

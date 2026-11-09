@@ -67,10 +67,10 @@ export default function NotificationSettingsPage() {
       ) : (
         <>
           <SettingsStatus error={preferences.error} />
-          <p className="text-sm text-text-secondary">
+          {/* <p className="text-sm text-text-secondary">
             Changes save immediately. In-app alerts control live delivery, not history: notifications remain in your
             inbox even when alerts are off. Email is delivered separately when configured.
-          </p>
+          </p> */}
           {NOTIFICATION_SETTINGS_GROUPS.map((group) => (
             <SettingsSection
               key={group.id}

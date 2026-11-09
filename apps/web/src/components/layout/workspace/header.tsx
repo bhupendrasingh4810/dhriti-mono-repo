@@ -6,18 +6,13 @@ import {
   ChevronDown,
   CircleHelp,
   Clock,
-  CreditCard,
-  FileText,
-  Grid2X2,
   LogOut,
   Map,
   MessageSquare,
   NotebookPen,
   PanelsTopLeft,
   Settings,
-  SlidersHorizontal,
   Sparkles,
-  SquareCheckBig,
   UserRound,
   Users,
 } from "lucide-react";
@@ -53,6 +48,10 @@ export default function Header({ activeView }: Props) {
     .toUpperCase();
   const organizationPath = user?.organization?.slug ?? user?.organization?.id ?? "";
   const canManageSettings = settingsAccess.canManage === true;
+  const canAccessDhritiSettings =
+    user?.isPlatformUser || user?.role === "PLATFORM_OWNER" || user?.role === "PLATFORM_ADMIN";
+  const canAccessOrganizationSettings = user?.role === "ORG_OWNER" || user?.role === "ORG_ADMIN";
+  const canOpenSettings = canManageSettings || canAccessDhritiSettings || canAccessOrganizationSettings;
 
   function clearMenuCloseTimer() {
     if (!menuCloseTimer.current) return;
@@ -75,99 +74,72 @@ export default function Header({ activeView }: Props) {
 
   const settingsItems: ConnectCascadingMenuItem[] = [
     {
-      id: "user-management",
-      label: "User Management",
-      icon: <Users aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Dhriti Admin Settings",
-      href: `/${organizationPath}/settings/users`,
-    },
-    {
-      id: "billing",
-      label: "Billing",
-      icon: <CreditCard aria-hidden="true" size={16} strokeWidth={1.75} />,
-      href: `/${organizationPath}/settings/billing`,
-    },
-    {
-      id: "system-settings",
-      label: "System",
-      icon: <FileText aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Flow Settings",
-      dividerAbove: true,
-      href: `/${organizationPath}/settings/system`,
-    },
-    {
-      id: "space-settings",
-      label: "Spaces",
-      icon: <Grid2X2 aria-hidden="true" size={16} strokeWidth={1.75} />,
-      href: `/${organizationPath}/settings/spaces`,
-    },
-    {
-      id: "work-item-settings",
-      label: "Work Items",
-      icon: <SquareCheckBig aria-hidden="true" size={16} strokeWidth={1.75} />,
-      href: `/${organizationPath}/settings/work-items`,
-    },
-    {
-      id: "flow-defaults",
-      label: "Defaults and limits",
-      icon: <SlidersHorizontal aria-hidden="true" size={16} strokeWidth={1.75} />,
-      href: `/${organizationPath}/flow/settings`,
-    },
-    {
-      id: "connect-settings",
-      label: "Connect Settings",
-      icon: <MessageSquare aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Connect Settings",
-      dividerAbove: true,
-      href: `/${organizationPath}/connect/settings`,
-    },
-    {
-      id: "pulse-settings",
-      label: "Pulse Settings",
-      icon: <Activity aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Pulse Settings",
-      dividerAbove: true,
-      href: `/${organizationPath}/pulse/settings`,
-    },
-    {
       id: "atlas-settings",
       label: "Atlas Settings",
       icon: <Map aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Atlas Settings",
-      dividerAbove: true,
       href: `/${organizationPath}/atlas/settings`,
     },
     {
       id: "cadence-settings",
       label: "Cadence Settings",
       icon: <Clock aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Cadence Settings",
-      dividerAbove: true,
       href: `/${organizationPath}/cadence/settings`,
+    },
+    {
+      id: "connect-settings",
+      label: "Connect Settings",
+      icon: <MessageSquare aria-hidden="true" size={16} strokeWidth={1.75} />,
+      href: `/${organizationPath}/connect/settings`,
+    },
+    ...(canAccessDhritiSettings
+      ? [
+          {
+            id: "dhriti-settings",
+            label: "Dhriti Settings",
+            icon: <Settings aria-hidden="true" size={16} strokeWidth={1.75} />,
+            href: `/${organizationPath}/control/platform/settings`,
+          },
+        ]
+      : []),
+    {
+      id: "flow-settings",
+      label: "Flow Settings",
+      icon: <Settings aria-hidden="true" size={16} strokeWidth={1.75} />,
+      href: `/${organizationPath}/flow/settings`,
     },
     {
       id: "hrms-settings",
       label: "HRMS Settings",
       icon: <Users aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "HRMS Settings",
-      dividerAbove: true,
       href: `/${organizationPath}/hrms/settings`,
     },
     {
       id: "nexus-settings",
       label: "Nexus Settings",
       icon: <Sparkles aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Nexus Settings",
-      dividerAbove: true,
       href: `/${organizationPath}/nexus/settings`,
     },
     {
       id: "notes-settings",
       label: "Notes Settings",
       icon: <NotebookPen aria-hidden="true" size={16} strokeWidth={1.75} />,
-      sectionTitle: "Notes Settings",
-      dividerAbove: true,
       href: `/${organizationPath}/notes/settings`,
+    },
+    ...(canAccessOrganizationSettings
+      ? [
+          {
+            id: "organization-settings",
+            label: "Organization Settings",
+            icon: <Settings aria-hidden="true" size={16} strokeWidth={1.75} />,
+            href: `/${organizationPath}/control/org/settings`,
+          },
+        ]
+      : []),
+    {
+      id: "pulse-settings",
+      label: "Pulse Settings",
+      icon: <Activity aria-hidden="true" size={16} strokeWidth={1.75} />,
+      href: `/${organizationPath}/pulse/settings`,
     },
   ];
 
@@ -201,13 +173,13 @@ export default function Header({ activeView }: Props) {
       id: "general-settings",
       label: "General Settings",
       icon: <Settings aria-hidden="true" size={16} strokeWidth={1.75} />,
-      href: `/${organizationPath}/settings/general`,
+      href: `/${organizationPath}/user/settings/general`,
     },
     {
       id: "notification-settings",
       label: "Notification Settings",
       icon: <Bell aria-hidden="true" size={16} strokeWidth={1.75} />,
-      href: `/${organizationPath}/settings/notifications`,
+      href: `/${organizationPath}/user/settings/notification`,
     },
     {
       id: "logout",
@@ -269,7 +241,7 @@ export default function Header({ activeView }: Props) {
         <button className="w-9 h-9 cursor-pointer rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-all">
           <CircleHelp size={20} strokeWidth={1.75} />
         </button>
-        {canManageSettings ? (
+        {canOpenSettings ? (
           <button
             type="button"
             onMouseEnter={(event) => {
@@ -323,14 +295,13 @@ export default function Header({ activeView }: Props) {
           />
         </button>
       </div>
-      {canManageSettings ? (
+      {canOpenSettings ? (
         <ConnectCascadingMenu
           anchorEl={settingsAnchor}
           open={Boolean(settingsAnchor)}
           onClose={closeMenus}
           items={settingsItems}
-          minWidth={720}
-          columns={3}
+          minWidth={240}
           onMouseEnter={clearMenuCloseTimer}
           onMouseLeave={scheduleMenuClose}
         />

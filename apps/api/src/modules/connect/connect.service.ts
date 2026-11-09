@@ -670,7 +670,7 @@ export class ConnectService {
     }
 
     const teamCount = await this.prisma.team.count({ where: { organizationId, deletedAt: null } });
-    await this.entitlements.assertWithinLimit(organizationId, "max_teams", teamCount + 1);
+    await this.entitlements.assertWithinLimit(organizationId, "connect.teams.max", teamCount + 1);
 
     const team = await this.prisma.team.create({
       data: {

@@ -399,7 +399,7 @@ export function NotificationInbox({
                 View all
               </Link>
             ) : null}
-            <Link href={`/${organizationSlug}/settings/notifications`}>Settings</Link>
+            <Link href={`/${organizationSlug}/user/settings/notification`}>Settings</Link>
           </footer>
         </section>
       ) : null}

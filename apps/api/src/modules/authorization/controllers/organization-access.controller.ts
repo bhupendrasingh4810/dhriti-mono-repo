@@ -24,6 +24,7 @@ import {
   AssignPermissionGroupDto,
   CreateDepartmentDto,
   CreatePermissionGroupDto,
+  SetOrganizationEntitlementOverrideDto,
   UpdateDepartmentDto,
   UpdatePermissionGroupDto,
 } from "../dto/organization-access.dto";
@@ -289,5 +290,14 @@ export class OrganizationAccessController {
   @RequirePermission("billing.subscription.read")
   getEntitlement(@CurrentOrganization() organization: OrganizationContext, @Param("key") key: string) {
     return this.entitlements.getEntitlement(organization.organizationId, key);
+  }
+  @Post("entitlements")
+  @RequirePermission("billing.subscription.manage")
+  setEntitlementOverride(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: SetOrganizationEntitlementOverrideDto,
+  ) {
+    return this.entitlements.setOrganizationOverride(organization.organizationId, user.userId, dto);
   }
 }

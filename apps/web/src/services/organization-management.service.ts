@@ -53,6 +53,12 @@ export const organizationCollectionsService = {
   groups: tenantCollection(`${org}/groups`),
 };
 const access = (organizationId: string) => `/api/organizations/${pathSegment(organizationId)}`;
+export interface OrganizationEffectiveEntitlement {
+  key: string;
+  kind: "FEATURE" | "LIMIT";
+  enabled: boolean;
+  value: number | null;
+}
 export const organizationAccessService = {
   permissionGroups: {
     list: (organizationId: string) =>
@@ -72,6 +78,19 @@ export const organizationAccessService = {
       tenantRequest<void>(organizationId, `${access(organizationId)}/permission-groups/${pathSegment(groupId)}`, {
         method: "DELETE",
       }),
+    attachPermission: (organizationId: string, groupId: string, permissionId: string) =>
+      tenantJsonRequest<void, { permissionId: string }>(
+        organizationId,
+        `${access(organizationId)}/permission-groups/${pathSegment(groupId)}/permissions`,
+        "POST",
+        { permissionId },
+      ),
+    removePermission: (organizationId: string, groupId: string, permissionId: string) =>
+      tenantRequest<void>(
+        organizationId,
+        `${access(organizationId)}/permission-groups/${pathSegment(groupId)}/permissions/${pathSegment(permissionId)}`,
+        { method: "DELETE" },
+      ),
   },
   departments: {
     list: (organizationId: string) =>
@@ -117,5 +136,9 @@ export const organizationAccessService = {
       headers: idempotencyKey ? { "idempotency-key": idempotencyKey } : undefined,
     }),
   listEntitlements: (organizationId: string) =>
-    tenantRequest<ApiEntity[]>(organizationId, `${access(organizationId)}/entitlements`),
+    tenantRequest<OrganizationEffectiveEntitlement[]>(organizationId, `${access(organizationId)}/entitlements`),
+  setEntitlementOverride: (
+    organizationId: string,
+    input: { key: string; enabled?: boolean; value?: number; reason?: string; expiresAt?: string },
+  ) => tenantJsonRequest<ApiEntity, typeof input>(organizationId, `${access(organizationId)}/entitlements`, "POST", input),
 };

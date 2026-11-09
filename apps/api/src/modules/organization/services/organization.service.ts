@@ -7,7 +7,7 @@ import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import { EntitlementService } from "../../authorization/services/entitlement.service";
-import { assignDefaultUserPermissionGroups } from "./default-permission-groups";
+import { assignDefaultPermissionGroupPermissions, assignDefaultUserPermissionGroups } from "./default-permission-groups";
 import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization-membership";
 import { enqueueNotification } from "../../notification/notification-events";
 
@@ -105,18 +105,6 @@ export class OrganizationService {
         },
       });
 
-      const managePermission = await transaction.permission.findUnique({
-        where: { key: "organization.permissions.manage" },
-        select: { id: true },
-      });
-      if (!managePermission) {
-        throw new AppError(
-          ErrorCode.INTERNAL_ERROR,
-          "Required organization permission is missing",
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
-      }
-
       const groupNamePrefix = organizationName.trim().replace(/\s+/g, "_");
       const groupNames = ORGANIZATION_APPS.flatMap((appName) =>
         DEFAULT_PERMISSION_GROUP_TYPES.map((groupType) => `${groupNamePrefix}_${appName}_${groupType}`),
@@ -129,14 +117,12 @@ export class OrganizationService {
           isSystem: true,
         })),
       });
+      await assignDefaultPermissionGroupPermissions(transaction, organization.id);
 
       const adminGroupNames = ORGANIZATION_APPS.map((appName) => `${groupNamePrefix}_${appName}_admins`);
       const adminGroups = await transaction.organizationPermissionGroup.findMany({
         where: { organizationId: organization.id, name: { in: adminGroupNames } },
         select: { id: true },
-      });
-      await transaction.organizationPermissionGroupPermission.createMany({
-        data: adminGroups.map(({ id }) => ({ permissionGroupId: id, permissionId: managePermission.id })),
       });
       await transaction.organizationPermissionGroupAssignment.createMany({
         data: adminGroups.map(({ id }) => ({
@@ -329,7 +315,7 @@ export class OrganizationService {
       const memberCount = await this.prisma.organizationMember.count({
         where: { organizationId, status: "ACTIVE", deletedAt: null },
       });
-      await this.entitlements.assertWithinLimit(organizationId, "max_users", memberCount + 1);
+      await this.entitlements.assertWithinLimit(organizationId, "organization.members.max", memberCount + 1);
     }
 
     const membership = await this.prisma.$transaction(async (transaction) => {

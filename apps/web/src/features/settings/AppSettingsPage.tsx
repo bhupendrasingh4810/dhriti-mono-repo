@@ -11,6 +11,7 @@ import {
 } from "@/services/app-settings.service";
 import { connectService } from "@/services/connect.service";
 import { SettingsField } from "./components/SettingsField";
+import { AppSettingsLayout } from "./components/AppSettingsLayout";
 import { SettingsLoadError, SettingsPageShell, SettingsSaveBar, SettingsStatus } from "./components/SettingsPageShell";
 import { SettingsSection } from "./components/SettingsSection";
 import { SettingsSkeleton } from "./components/SettingsSkeleton";
@@ -26,7 +27,7 @@ import { requiresRetentionConfirmation } from "./app-settings-policies";
 import { useSettingsForm } from "./use-settings-form";
 
 /** Organization-wide settings page for one app, rendered from its config. */
-export default function AppSettingsPage({ app }: { app: AppSettingsKey }) {
+export default function AppSettingsPage({ app, showBreadcrumb = true }: { app: AppSettingsKey; showBreadcrumb?: boolean }) {
   const { user } = useAuth();
   const organizationId = user?.organization?.id;
   const access = useSettingsAccess();
@@ -75,63 +76,66 @@ export default function AppSettingsPage({ app }: { app: AppSettingsKey }) {
   }
 
   return (
-    <SettingsPageShell
-      scope="Organization settings"
-      title={config.title}
-      description={config.description}
-      readOnly={access.canManage === false && !form.loading}
-    >
-      {access.loading ? (
-        <p role="status" className="rounded-md border border-border bg-surface-raised p-3 text-sm text-text-secondary">
-          Checking settings access…
-        </p>
-      ) : null}
-      {access.error ? (
-        <SettingsLoadError message="Unable to verify settings permissions." onRetry={access.retry} />
-      ) : null}
-      {channelOptionsState.error ? (
-        <SettingsLoadError
-          message="Unable to load public channels for the default-channel setting."
-          onRetry={channelOptionsState.retry}
-        />
-      ) : null}
-      {form.loading ? (
-        <SettingsSkeleton sections={config.sections.map((section) => section.fields.length)} />
-      ) : form.loadError ? (
-        <SettingsLoadError message={form.loadError} onRetry={form.retry} />
-      ) : draft ? (
-        <form onSubmit={onSubmit} className="space-y-6" aria-busy={form.saving}>
-          <SettingsStatus success={form.success} error={form.error || draftError || undefined} />
-          {config.sections.map((section) => (
-            <SettingsSection key={section.id} id={section.id} title={section.title} description={section.description}>
-              {(section.fields as SettingsFieldConfig[]).map((field) => (
-                <SettingsField
-                  key={field.key}
-                  field={field}
-                  value={draft[field.key]}
-                  disabled={
-                    !canManage ||
-                    form.saving ||
-                    (field.kind === "multiselect" &&
-                      (channelOptionsState.loading || Boolean(channelOptionsState.error))) ||
-                    (field.dependsOn ? !draft[field.dependsOn] : false)
-                  }
-                  dynamicOptions={field.kind === "multiselect" ? channelOptionsState.options : undefined}
-                  onChange={(value) => form.update(field.key as never, value)}
-                />
-              ))}
-            </SettingsSection>
-          ))}
-          {canManage ? (
-            <SettingsSaveBar
-              dirty={form.dirty}
-              saving={form.saving}
-              invalid={fieldInvalid || Boolean(draftError)}
-              onDiscard={form.discard}
-            />
-          ) : null}
-        </form>
-      ) : null}
+    <AppSettingsLayout app={app} label={config.title} showSidebar={app !== "hrms"}>
+      <SettingsPageShell
+        scope="Organization settings"
+        title={config.title}
+        description={config.description}
+        readOnly={access.canManage === false && !form.loading}
+        showBreadcrumb={showBreadcrumb}
+      >
+        {access.loading ? (
+          <p role="status" className="rounded-md border border-border bg-surface-raised p-3 text-sm text-text-secondary">
+            Checking settings access…
+          </p>
+        ) : null}
+        {access.error ? (
+          <SettingsLoadError message="Unable to verify settings permissions." onRetry={access.retry} />
+        ) : null}
+        {channelOptionsState.error ? (
+          <SettingsLoadError
+            message="Unable to load public channels for the default-channel setting."
+            onRetry={channelOptionsState.retry}
+          />
+        ) : null}
+        {form.loading ? (
+          <SettingsSkeleton sections={config.sections.map((section) => section.fields.length)} />
+        ) : form.loadError ? (
+          <SettingsLoadError message={form.loadError} onRetry={form.retry} />
+        ) : draft ? (
+          <form onSubmit={onSubmit} className="space-y-6" aria-busy={form.saving}>
+            <SettingsStatus success={form.success} error={form.error || draftError || undefined} />
+            {config.sections.map((section) => (
+              <SettingsSection key={section.id} id={section.id} title={section.title} description={section.description}>
+                {(section.fields as SettingsFieldConfig[]).map((field) => (
+                  <SettingsField
+                    key={field.key}
+                    field={field}
+                    value={draft[field.key]}
+                    disabled={
+                      !canManage ||
+                      form.saving ||
+                      (field.kind === "multiselect" &&
+                        (channelOptionsState.loading || Boolean(channelOptionsState.error))) ||
+                      (field.dependsOn ? !draft[field.dependsOn] : false)
+                    }
+                    dynamicOptions={field.kind === "multiselect" ? channelOptionsState.options : undefined}
+                    onChange={(value) => form.update(field.key as never, value)}
+                  />
+                ))}
+              </SettingsSection>
+            ))}
+            {canManage ? (
+              <SettingsSaveBar
+                dirty={form.dirty}
+                saving={form.saving}
+                invalid={fieldInvalid || Boolean(draftError)}
+                onDiscard={form.discard}
+              />
+            ) : null}
+          </form>
+        ) : null}
+      </SettingsPageShell>
       <Dialog
         open={confirmRetention}
         onClose={() => setConfirmRetention(false)}
@@ -150,7 +154,7 @@ export default function AppSettingsPage({ app }: { app: AppSettingsKey }) {
           change is intended.
         </p>
       </Dialog>
-    </SettingsPageShell>
+    </AppSettingsLayout>
   );
 }
 

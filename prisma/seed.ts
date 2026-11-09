@@ -265,6 +265,9 @@ async function seedData(): Promise<void> {
     { key: "max_users", name: "Maximum users", kind: "LIMIT" as const, value: 100 },
     { key: "max_teams", name: "Maximum teams", kind: "LIMIT" as const, value: 10 },
     { key: "max_projects", name: "Maximum projects", kind: "LIMIT" as const, value: 50 },
+    { key: "organization.members.max", name: "Maximum organization members", kind: "LIMIT" as const, value: 100 },
+    { key: "connect.teams.max", name: "Maximum Connect teams", kind: "LIMIT" as const, value: 10 },
+    { key: "flow.projects.max", name: "Maximum Flow projects", kind: "LIMIT" as const, value: 50 },
   ];
   for (const item of planEntitlements) {
     const entitlement = await prisma.entitlement.upsert({

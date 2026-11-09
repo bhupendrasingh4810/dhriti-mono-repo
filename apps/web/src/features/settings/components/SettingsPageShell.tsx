@@ -7,40 +7,52 @@ export function SettingsPageShell({
   title,
   description,
   readOnly,
+  showBreadcrumb = true,
   children,
 }: {
   scope: string;
   title: string;
   description: string;
   readOnly?: boolean;
+  showBreadcrumb?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6 p-4 text-text-primary sm:p-6 lg:p-8">
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-text-secondary">
-        <Settings className="size-4" aria-hidden="true" />
-        <span>{scope}</span>
-        <ChevronRight className="size-3" aria-hidden="true" />
-        <span aria-current="page" className="text-text-primary">
-          {title}
-        </span>
-      </nav>
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
-        <p className="mt-2 text-sm text-text-secondary">{description}</p>
+    <div className="mx-auto w-full max-w-4xl text-text-primary">
+      <header className="sticky top-0 z-20 bg-background px-4 py-4 sm:px-6 lg:px-8">
+        {showBreadcrumb ? (
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-text-secondary">
+            <Settings className="size-4" aria-hidden="true" />
+            <span>{scope}</span>
+            <ChevronRight className="size-3" aria-hidden="true" />
+            <span aria-current="page" className="text-text-primary">
+              {title}
+            </span>
+          </nav>
+        ) : null}
+        <div className={showBreadcrumb ? "mt-3" : ""}>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
+          <p className="mt-2 text-sm text-text-secondary">{description}</p>
+        </div>
+      </header>
+      <div className="space-y-6 px-4 pb-4 pt-4 sm:px-6 sm:pb-6 sm:pt-4 lg:px-8 lg:pb-8 lg:pt-4">
+        {readOnly ? (
+          <p className="flex items-center gap-2 rounded-md border border-border bg-surface-raised p-3 text-sm text-text-secondary">
+            <Lock className="size-4 shrink-0" aria-hidden="true" />
+            Only people with the organization settings-management permission can change these settings.
+          </p>
+        ) : null}
+        {children}
       </div>
-      {readOnly ? (
-        <p className="flex items-center gap-2 rounded-md border border-border bg-surface-raised p-3 text-sm text-text-secondary">
-          <Lock className="size-4 shrink-0" aria-hidden="true" />
-          Only people with the organization settings-management permission can change these settings.
-        </p>
-      ) : null}
-      {children}
     </div>
   );
 }
 
 export function SettingsStatus({ success, error }: { success?: string; error?: string }) {
+  if (!success && !error) {
+    return null;
+  }
+
   return (
     <div aria-live="polite" aria-atomic="true">
       {success ? (

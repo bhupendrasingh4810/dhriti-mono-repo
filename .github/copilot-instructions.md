@@ -86,6 +86,7 @@ Goal: ship maintainable UI and feature code with strong reuse, strict theme usag
 - Use clickable sort controls beside sortable table column headings instead of separate sort filters.
 - Use compact table pagination with a rows-per-page selector, visible row range, and previous/next chevron controls.
 - Use accessible edit and delete icons, rather than text labels, for table row actions.
+- Always add or update concise in-file documentation whenever code introduces or changes non-obvious behavior, policy, invariants, integration contracts, or migration requirements.
 
 ## Reusable Component Checklist
 

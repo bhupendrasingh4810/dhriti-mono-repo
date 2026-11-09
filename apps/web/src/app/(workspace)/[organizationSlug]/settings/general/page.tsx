@@ -1,11 +1,6 @@
-import type { Metadata } from "next";
-import GeneralSettingsPage from "@/features/settings/GeneralSettingsPage";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = {
-  title: "General settings | Dhriti",
-  description: "Manage your status, messaging, alerts, and call preferences.",
-};
-
-export default function Page() {
-  return <GeneralSettingsPage />;
+export default async function Page({ params }: { params: Promise<{ organizationSlug: string }> }) {
+  const { organizationSlug } = await params;
+  redirect(`/${organizationSlug}/user/settings/general`);
 }
