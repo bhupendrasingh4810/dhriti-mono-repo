@@ -41,6 +41,8 @@ model NotificationOutbox {
   status         String @default("PENDING")
   attempts       Int @default(0)
   availableAt    DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  leaseToken     String? @db.Uuid
+  leaseUntil     DateTime?
   lastError      String?
   createdAt      DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
   processedAt    DateTime?

@@ -57,16 +57,70 @@ export interface HrmsEmploymentType extends ApiEntity {
   code: string | null;
   isActive: boolean;
 }
+
+export type HrmsWorkflowDefinitionStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+export type HrmsWorkflowStageType = "APPROVAL" | "TASK" | "AUTOMATION" | "CONDITION" | "PARALLEL_GATE";
+export type HrmsWorkflowAssigneeRuleType = "INITIATOR" | "USER_IDS";
+
+export interface HrmsWorkflowStage {
+  id: string;
+  key: string;
+  name: string;
+  type?: HrmsWorkflowStageType;
+  assigneeRule?: { kind: HrmsWorkflowAssigneeRuleType; userIds?: string[] };
+  requiredApprovals?: number;
+  slaHours?: number;
+  isTerminal?: boolean;
+}
+
+export interface HrmsWorkflowTransition {
+  from: string;
+  to: string;
+  action?: "APPROVE" | "REJECT" | "COMPLETE" | "SKIP";
+  condition?: { field: string; operator: "equals" | "notEquals" | "greaterThan" | "lessThan"; value: string | number };
+}
+
+export interface HrmsWorkflowDefinition extends ApiEntity {
+  name: string;
+  description: string | null;
+  status: HrmsWorkflowDefinitionStatus;
+  version: number;
+  stages: HrmsWorkflowStage[];
+  transitions: HrmsWorkflowTransition[];
+  templateKey: string | null;
+  isTemplate: boolean;
+  isDefault: boolean;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HrmsWorkflowDefinitionInput {
+  name: string;
+  description?: string;
+  stages: HrmsWorkflowStage[];
+  transitions: HrmsWorkflowTransition[];
+}
 export type HrmsAssetStatus = "AVAILABLE" | "ASSIGNED" | "MAINTENANCE" | "UNFIT";
 export type HrmsAssetCondition = "NEW" | "GOOD" | "FAIR";
-export type HrmsAssetType = "LAPTOP" | "PHONE" | "MONITOR" | "KEYBOARD" | "MOUSE" | "HEADPHONES" | "FURNITURE" | "OTHER";
+export type HrmsAssetType =
+  "LAPTOP" | "PHONE" | "MONITOR" | "KEYBOARD" | "MOUSE" | "HEADPHONES" | "FURNITURE" | "OTHER";
 export interface HrmsAsset extends ApiEntity {
-  name: string; type: HrmsAssetType; customCategory: string | null; serialNumber: string;
-  condition: HrmsAssetCondition; status: HrmsAssetStatus; assignedEmployeeId: string | null;
+  name: string;
+  type: HrmsAssetType;
+  customCategory: string | null;
+  serialNumber: string;
+  condition: HrmsAssetCondition;
+  status: HrmsAssetStatus;
+  assignedEmployeeId: string | null;
   assignedEmployee: { id: string; employeeNumber: string; user: { name: string } } | null;
 }
 export interface HrmsAssetPage {
-  items: HrmsAsset[]; total: number; page: number; pageSize: number; totalPages: number;
+  items: HrmsAsset[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
   summary: { total: number; assigned: number; available: number; maintenance: number };
 }
 const resource = (path: string) => ({
@@ -162,9 +216,7 @@ export const hrmsService = {
   assets: {
     list: (organizationId: string, query: Record<string, string | number | undefined> = {}) =>
       tenantRequest<HrmsAssetPage>(organizationId, `${base}/assets`, {
-        query: Object.fromEntries(
-          Object.entries(query).filter(([, value]) => value !== undefined && value !== ""),
-        ),
+        query: Object.fromEntries(Object.entries(query).filter(([, value]) => value !== undefined && value !== "")),
       }),
     create: (organizationId: string, input: Input) =>
       tenantJsonRequest<HrmsAsset, Input>(organizationId, `${base}/assets`, "POST", input),
@@ -208,6 +260,50 @@ export const hrmsService = {
         `${base}/trainings/${pathSegment(trainingId)}/enrollments`,
         "POST",
         input,
+      ),
+  },
+  workflowDefinitions: {
+    list: (organizationId: string, query: { status?: HrmsWorkflowDefinitionStatus; isTemplate?: boolean } = {}) =>
+      tenantRequest<HrmsWorkflowDefinition[]>(organizationId, `${base}/workflow-definitions`, {
+        query,
+      }),
+    listTemplates: (organizationId: string) =>
+      tenantRequest<HrmsWorkflowDefinition[]>(organizationId, `${base}/workflow-definitions/templates`),
+    get: (organizationId: string, workflowId: string) =>
+      tenantRequest<HrmsWorkflowDefinition>(organizationId, `${base}/workflow-definitions/${pathSegment(workflowId)}`),
+    create: (organizationId: string, input: HrmsWorkflowDefinitionInput) =>
+      tenantJsonRequest<HrmsWorkflowDefinition, HrmsWorkflowDefinitionInput>(
+        organizationId,
+        `${base}/workflow-definitions`,
+        "POST",
+        input,
+      ),
+    update: (
+      organizationId: string,
+      workflowId: string,
+      input: Partial<HrmsWorkflowDefinitionInput> & {
+        status?: Extract<HrmsWorkflowDefinitionStatus, "DRAFT" | "ARCHIVED">;
+      },
+    ) =>
+      tenantJsonRequest<HrmsWorkflowDefinition, typeof input>(
+        organizationId,
+        `${base}/workflow-definitions/${pathSegment(workflowId)}`,
+        "PATCH",
+        input,
+      ),
+    clone: (organizationId: string, workflowId: string, input: { name?: string } = {}) =>
+      tenantJsonRequest<HrmsWorkflowDefinition, typeof input>(
+        organizationId,
+        `${base}/workflow-definitions/${pathSegment(workflowId)}/clone`,
+        "POST",
+        input,
+      ),
+    publish: (organizationId: string, workflowId: string) =>
+      tenantJsonRequest<HrmsWorkflowDefinition, Record<string, never>>(
+        organizationId,
+        `${base}/workflow-definitions/${pathSegment(workflowId)}/publish`,
+        "POST",
+        {},
       ),
   },
 };

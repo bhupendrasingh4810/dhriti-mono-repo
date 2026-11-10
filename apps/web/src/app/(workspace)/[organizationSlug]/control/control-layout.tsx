@@ -43,7 +43,7 @@ const NAVIGATION: Record<ControlMode, ControlNavigationItem[]> = {
     { href: "platform/orgs", label: "Organizations", icon: Building2, enabled: true },
     { href: "platform/dashboard", label: "Overview", icon: LayoutDashboard, enabled: true },
     { href: "platform/plans", label: "Plans", icon: Tag, enabled: true },
-    { href: "platform/users", label: "Platform Users", icon: Users, enabled: true },
+    { href: "platform/users", label: "Platform Workforce", icon: Users, enabled: true },
     { href: "platform/security-center", label: "Security Center", icon: ShieldCheck, enabled: true },
     { href: "platform/settings", label: "Settings", icon: Settings, enabled: true },
     { href: "platform/subscriptions", label: "Subscriptions", icon: ReceiptText, enabled: true },
@@ -51,7 +51,7 @@ const NAVIGATION: Record<ControlMode, ControlNavigationItem[]> = {
   ],
   organization: [
     { href: "org/app-access", label: "App Access", icon: ChartNoAxesColumnIncreasing, enabled: false },
-    { href: "org/employees", label: "Employees", icon: Users, enabled: true },
+    { href: "org/employees", label: "Workforce", icon: Users, enabled: true },
     { href: "org/integrations", label: "Integrations", icon: Cable, enabled: true },
     { href: "org/dashboard", label: "Overview", icon: LayoutDashboard, enabled: true },
     { href: "org/permissions", label: "Roles & Permissions", icon: KeyRound, enabled: true },

@@ -97,47 +97,64 @@ export class NotificationWorker implements OnModuleInit, OnModuleDestroy {
   }
 
   async processNextEvent(organizationId?: string): Promise<boolean> {
-    return this.prisma.$transaction(async (tx) => {
+    const token = randomUUID();
+    const event = await this.prisma.$transaction(async (tx) => {
       const [event] = await tx.$queryRaw<NotificationOutbox[]>`
         SELECT * FROM notification_outbox
-        WHERE status = 'PENDING' AND "availableAt" <= timezone('UTC', CURRENT_TIMESTAMP)
+        WHERE ((status = 'PENDING' AND "availableAt" <= timezone('UTC', CURRENT_TIMESTAMP))
+          OR (status = 'PROCESSING' AND "leaseUntil" < timezone('UTC', CURRENT_TIMESTAMP)))
           AND (${organizationId ?? null}::uuid IS NULL OR "organizationId" = ${organizationId ?? null}::uuid)
         ORDER BY "availableAt", id FOR UPDATE SKIP LOCKED LIMIT 1`;
       if (!event) {
-        return false;
+        return null;
       }
-      await tx.$executeRawUnsafe("SAVEPOINT notification_event");
-      try {
-        const status = await this.materializeEvent(tx, event);
-        await tx.notificationOutbox.update({
-          where: { id: event.id },
-          data: { status, processedAt: new Date(), lastError: null },
-        });
-      } catch (error) {
-        // Recover even from SQL failures before persisting a bounded retry.
-        await tx.$executeRawUnsafe("ROLLBACK TO SAVEPOINT notification_event");
-        const attempts = event.attempts + 1;
-        this.logger.error(
-          `Notification event ${event.id} failed`,
-          error instanceof Error ? error.stack : String(error),
-        );
-        await tx.notificationOutbox.update({
-          where: { id: event.id },
-          data: {
-            attempts,
-            status: attempts >= MAX_ATTEMPTS ? "FAILED" : "PENDING",
-            availableAt: retryAt(attempts),
-            lastError: error instanceof Error ? error.message : String(error),
-          },
-        });
-      }
-
-      return true;
+      return tx.notificationOutbox.update({
+        where: { id: event.id },
+        data: {
+          status: "PROCESSING",
+          leaseToken: token,
+          leaseUntil: new Date(Date.now() + 120000),
+          attempts: { increment: 1 },
+        },
+      });
     });
+    if (!event) {
+      return false;
+    }
+
+    try {
+      if (event.attempts > MAX_ATTEMPTS) {
+        throw new Error("Notification event retry limit exceeded");
+      }
+      const status = await this.materializeEvent(this.prisma, event);
+      await this.prisma.notificationOutbox.updateMany({
+        where: { id: event.id, status: "PROCESSING", leaseToken: token },
+        data: { status, processedAt: new Date(), leaseToken: null, leaseUntil: null, lastError: null },
+      });
+    } catch (error) {
+      this.logger.error(
+        `Notification event ${event.id} failed`,
+        error instanceof Error ? error.stack : String(error),
+      );
+      await this.prisma.notificationOutbox.updateMany({
+        where: { id: event.id, status: "PROCESSING", leaseToken: token },
+        data: {
+          status: event.attempts >= MAX_ATTEMPTS ? "FAILED" : "PENDING",
+          availableAt: retryAt(event.attempts),
+          leaseToken: null,
+          leaseUntil: null,
+          lastError: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+    return true;
   }
 
-  /** Transport-independent, idempotent consumer; broker adapters must preserve the envelope ID. */
-  async materializeEvent(tx: Prisma.TransactionClient, event: NotificationEnvelope): Promise<"PROCESSED" | "SKIPPED"> {
+  /** The claim transaction is intentionally short; materialization stays idempotent through the event ID. */
+  async materializeEvent(
+    tx: Prisma.TransactionClient | PrismaService,
+    event: NotificationEnvelope,
+  ): Promise<"PROCESSED" | "SKIPPED"> {
     const content = notificationPayload(event.payload);
     const member = await tx.organizationMember.findFirst({
       where: { organizationId: event.organizationId, userId: event.recipientId, status: "ACTIVE", deletedAt: null },

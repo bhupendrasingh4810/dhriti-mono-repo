@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient, type LegacyPlatformRole, type Organization, type User } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { assignDefaultUserPermissionGroups } from "../apps/api/src/modules/organization/services/default-permission-groups";
+import { defaultHrmsWorkflowTemplates } from "../apps/api/src/modules/hrms/default-workflow-templates";
 
 const client = new PrismaClient();
 let prisma: Prisma.TransactionClient = client;
@@ -175,6 +176,8 @@ async function seedData(): Promise<void> {
     "hrms.benefit.manage",
     "hrms.holiday.read",
     "hrms.holiday.manage",
+    "hrms.workflow.read",
+    "hrms.workflow.manage",
   ];
   const permissions = await Promise.all(
     systemPermissions.map((key) => {
@@ -1447,6 +1450,8 @@ async function seedData(): Promise<void> {
 
   await seedTenantData(org, organizationUsers, alice);
   await seedTenantData(platformOrg, platformUsers, admin);
+  await seedDefaultHrmsWorkflowTemplates(org.id, alice.id);
+  await seedDefaultHrmsWorkflowTemplates(platformOrg.id, admin.id);
   const issueCounts = await prisma.issue.groupBy({ by: ["projectId"], _max: { number: true } });
   for (const result of issueCounts) {
     await prisma.project.update({ where: { id: result.projectId }, data: { issueCounter: result._max.number ?? 0 } });
@@ -1457,6 +1462,54 @@ async function seedData(): Promise<void> {
   console.log("  Employees: platform.employee01..14@example.test and org.employee01..14@example.test");
   console.log(`  Development password: ${PASSWORD}`);
   console.log(`  Organizations: ${platformOrg.slug} (${platformOrg.id}), ${org.slug} (${org.id})`);
+}
+
+async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUserId: string): Promise<void> {
+  for (const template of defaultHrmsWorkflowTemplates()) {
+    const definition = await prisma.hrmsWorkflowDefinition.upsert({
+      where: { organizationId_templateKey: { organizationId, templateKey: template.key } },
+      update: {
+        name: template.name,
+        stages: template.stages,
+        transitions: template.transitions,
+        status: "ACTIVE",
+        isTemplate: true,
+        isDefault: true,
+        publishedAt: new Date(),
+      },
+      create: {
+        organizationId,
+        templateKey: template.key,
+        name: template.name,
+        stages: template.stages,
+        transitions: template.transitions,
+        status: "ACTIVE",
+        isTemplate: true,
+        isDefault: true,
+        createdByUserId: ownerUserId,
+        publishedAt: new Date(),
+      },
+    });
+    await prisma.hrmsWorkflowDefinitionVersion.upsert({
+      where: { definitionId_version: { definitionId: definition.id, version: definition.version } },
+      update: {
+        name: definition.name,
+        description: definition.description,
+        stages: definition.stages,
+        transitions: definition.transitions,
+        publishedByUserId: ownerUserId,
+      },
+      create: {
+        definitionId: definition.id,
+        version: definition.version,
+        name: definition.name,
+        description: definition.description,
+        stages: definition.stages,
+        transitions: definition.transitions,
+        publishedByUserId: ownerUserId,
+      },
+    });
+  }
 }
 
 async function seedTenantData(organization: Organization, users: User[], owner: User): Promise<void> {

@@ -428,6 +428,9 @@ databaseTests("Durable notification platform", () => {
               spy.mockRestore();
             }
           }),
+        notificationOutbox: {
+          updateMany: prisma.notificationOutbox.updateMany.bind(prisma.notificationOutbox),
+        },
       } as never,
       email as never,
       redis as never,

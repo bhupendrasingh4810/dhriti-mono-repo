@@ -19,7 +19,7 @@ import { useParams, usePathname } from "next/navigation";
 
 const items = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
-  { label: "Employees", href: "employees", icon: Users, group: "People" },
+  { label: "Workforce", href: "employees", icon: Users, group: "People" },
   { label: "Attendance", href: "attendance", icon: Clock3 },
   { label: "Leave", href: "leave", icon: CalendarDays },
   { label: "Payroll", href: "payroll", icon: WalletCards, group: "Operations" },

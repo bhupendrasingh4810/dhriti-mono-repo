@@ -1,5 +1,14 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { Address, EnabledProduct, Group, Organization, OrganizationMember, User, UserRole } from "@prisma/client";
+import type {
+  Address,
+  EnabledProduct,
+  Group,
+  Organization,
+  OrganizationMember,
+  Prisma,
+  User,
+  UserRole,
+} from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { ApiConfigService } from "../../../config/config.service";
@@ -7,9 +16,13 @@ import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import { EntitlementService } from "../../authorization/services/entitlement.service";
-import { assignDefaultPermissionGroupPermissions, assignDefaultUserPermissionGroups } from "./default-permission-groups";
+import {
+  assignDefaultPermissionGroupPermissions,
+  assignDefaultUserPermissionGroups,
+} from "./default-permission-groups";
 import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization-membership";
 import { enqueueNotification } from "../../notification/notification-events";
+import { defaultHrmsWorkflowTemplates } from "../../hrms/default-workflow-templates";
 
 const ORGANIZATION_APPS = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"] as const;
 const DEFAULT_PERMISSION_GROUP_TYPES = ["admins", "users", "guest"] as const;
@@ -133,6 +146,34 @@ export class OrganizationService {
           assignedByUserId: creatorUserId,
         })),
       });
+      // Templates are organization-local so cloning never crosses a tenant boundary.
+      await Promise.all(
+        defaultHrmsWorkflowTemplates().map((template) =>
+          transaction.hrmsWorkflowDefinition.create({
+            data: {
+              organizationId: organization.id,
+              templateKey: template.key,
+              name: template.name,
+              stages: template.stages as Prisma.InputJsonValue,
+              transitions: template.transitions as Prisma.InputJsonValue,
+              status: "ACTIVE",
+              isTemplate: true,
+              isDefault: true,
+              createdByUserId: creatorUserId,
+              publishedAt: new Date(),
+              versions: {
+                create: {
+                  version: 1,
+                  name: template.name,
+                  stages: template.stages as Prisma.InputJsonValue,
+                  transitions: template.transitions as Prisma.InputJsonValue,
+                  publishedByUserId: creatorUserId,
+                },
+              },
+            },
+          }),
+        ),
+      );
 
       return organization;
     });

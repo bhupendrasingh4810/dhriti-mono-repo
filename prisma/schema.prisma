@@ -559,6 +559,37 @@ enum PayrollStatus {
   CANCELLED
 }
 
+enum HrmsWorkflowDefinitionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum HrmsWorkflowInstanceStatus {
+  ACTIVE
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum HrmsWorkflowAssignmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  SKIPPED
+}
+
+enum HrmsWorkflowEventType {
+  INITIATED
+  ASSIGNED
+  APPROVED
+  REJECTED
+  COMPLETED
+  TRANSITIONED
+  CANCELLED
+}
+
 enum TrainingType {
   ONBOARDING
   TECHNICAL
@@ -768,6 +799,120 @@ model HrmsLeaveRequest {
   @@unique([organizationId, legacyLeaveRequestId])
   @@index([employeeId, startDate])
   @@map("hrms_leave_requests")
+}
+
+model HrmsWorkflowDefinition {
+  id            String                       @id @default(uuid()) @db.Uuid
+  organizationId String                      @db.Uuid
+  name          String
+  description   String?                      @db.Text
+  status        HrmsWorkflowDefinitionStatus @default(DRAFT)
+  version       Int                          @default(1)
+  stages        Json                         @db.JsonB
+  transitions   Json                         @db.JsonB
+  templateKey   String?                      @db.VarChar(64)
+  isTemplate    Boolean                      @default(false)
+  isDefault     Boolean                      @default(false)
+  createdByUserId String                    @db.Uuid
+  updatedByUserId String?                   @db.Uuid
+  publishedAt   DateTime?
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions     HrmsWorkflowDefinitionVersion[]
+  instances    HrmsWorkflowInstance[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, isTemplate, status])
+  @@unique([organizationId, templateKey])
+  @@map("hrms_workflow_definitions")
+}
+
+// Published versions are append-only snapshots. Runtime instances additionally
+// persist their own snapshot so later retention changes cannot alter history.
+model HrmsWorkflowDefinitionVersion {
+  id           String   @id @default(uuid()) @db.Uuid
+  definitionId String   @db.Uuid
+  version      Int
+  name         String
+  description  String?  @db.Text
+  stages       Json     @db.JsonB
+  transitions  Json     @db.JsonB
+  publishedByUserId String @db.Uuid
+  publishedAt  DateTime @default(now())
+
+  definition HrmsWorkflowDefinition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+  instances  HrmsWorkflowInstance[]
+
+  @@unique([definitionId, version])
+  @@map("hrms_workflow_definition_versions")
+}
+
+model HrmsWorkflowInstance {
+  id                  String                     @id @default(uuid()) @db.Uuid
+  organizationId      String                     @db.Uuid
+  definitionId        String                     @db.Uuid
+  definitionVersionId String                     @db.Uuid
+  definitionVersion   Int
+  status              HrmsWorkflowInstanceStatus @default(ACTIVE)
+  currentStageId      String
+  context             Json                       @default("{}") @db.JsonB
+  definitionSnapshot  Json                       @db.JsonB
+  initiatedByUserId   String                     @db.Uuid
+  completedAt         DateTime?
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+
+  organization       Organization                   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  definition         HrmsWorkflowDefinition         @relation(fields: [definitionId], references: [id], onDelete: Restrict)
+  definitionVersionRecord HrmsWorkflowDefinitionVersion @relation(fields: [definitionVersionId], references: [id], onDelete: Restrict)
+  assignments        HrmsWorkflowAssignment[]
+  events             HrmsWorkflowEvent[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, definitionId])
+  @@index([organizationId, currentStageId])
+  @@map("hrms_workflow_instances")
+}
+
+model HrmsWorkflowAssignment {
+  id           String                       @id @default(uuid()) @db.Uuid
+  organizationId String                     @db.Uuid
+  instanceId   String                       @db.Uuid
+  stageId      String
+  assigneeUserId String                    @db.Uuid
+  status       HrmsWorkflowAssignmentStatus @default(PENDING)
+  actedAt      DateTime?
+  comment      String?                      @db.Text
+  createdAt    DateTime                     @default(now())
+  updatedAt    DateTime                     @updatedAt
+
+  instance HrmsWorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, stageId, assigneeUserId])
+  @@index([organizationId, assigneeUserId, status])
+  @@index([instanceId, stageId, status])
+  @@map("hrms_workflow_assignments")
+}
+
+model HrmsWorkflowEvent {
+  id             String                @id @default(uuid()) @db.Uuid
+  organizationId String                @db.Uuid
+  instanceId     String                @db.Uuid
+  type           HrmsWorkflowEventType
+  actorUserId    String?               @db.Uuid
+  stageId        String?
+  previousState  Json?                 @db.JsonB
+  nextState      Json?                 @db.JsonB
+  comment        String?               @db.Text
+  evidence       Json?                 @db.JsonB
+  createdAt      DateTime              @default(now())
+
+  instance HrmsWorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, instanceId, createdAt])
+  @@map("hrms_workflow_events")
 }
 
 model HrmsPerformanceReview {
@@ -1365,6 +1510,8 @@ model NotificationOutbox {
   status         String @default("PENDING")
   attempts       Int @default(0)
   availableAt    DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  leaseToken     String? @db.Uuid
+  leaseUntil     DateTime?
   lastError      String?
   createdAt      DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
   processedAt    DateTime?
@@ -1463,6 +1610,8 @@ model Organization {
   hrmsTrainingEnrollments HrmsTrainingEnrollment[]
   hrmsAssets HrmsAsset[]
   hrmsBenefitEnrollments HrmsBenefitEnrollment[]
+  hrmsWorkflowDefinitions HrmsWorkflowDefinition[]
+  hrmsWorkflowInstances HrmsWorkflowInstance[]
   auditLogs AuditLog[]
   files     StoredFile[]
   channels  Channel[]

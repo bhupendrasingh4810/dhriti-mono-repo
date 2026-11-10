@@ -4,14 +4,23 @@ import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   Activity,
+  Bell,
+  CircleCheck,
+  CircleDot,
   ChevronDown,
   Clock3,
+  Flag,
+  GitBranch,
+  KeyRound,
+  Link2,
   ListChecks,
   Map,
   MessageSquare,
   NotebookPen,
+  Route,
   Search,
   Settings,
+  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
@@ -32,53 +41,53 @@ const flowSettingsGroups = [
     id: "work-types",
     label: "Work types",
     items: [
-      { id: "work-type-hierarchy", label: "Work type hierarchy" },
-      { id: "work-types", label: "Work types" },
-      { id: "work-type-schemes", label: "Work type schemes" },
-      { id: "sub-tasks", label: "Sub tasks" },
+      { id: "work-type-hierarchy", label: "Work type hierarchy", icon: GitBranch },
+      { id: "work-types", label: "Work types", icon: ListChecks },
+      { id: "work-type-schemes", label: "Work type schemes", icon: Route },
+      { id: "sub-tasks", label: "Sub tasks", icon: GitBranch },
     ],
   },
   {
     id: "workflows",
     label: "Workflows",
     items: [
-      { id: "workflows", label: "Workflows" },
-      { id: "workflow-schemes", label: "Workflow schemes" },
+      { id: "workflows", label: "Workflows", icon: Route },
+      { id: "workflow-schemes", label: "Workflow schemes", icon: GitBranch },
     ],
   },
   {
     id: "fields",
     label: "Fields",
     items: [
-      { id: "fields", label: "Fields" },
-      { id: "field-schemes", label: "Field Schemes" },
+      { id: "fields", label: "Fields", icon: ListChecks },
+      { id: "field-schemes", label: "Field Schemes", icon: GitBranch },
     ],
   },
   {
     id: "priorities",
     label: "Priorities",
     items: [
-      { id: "priorities", label: "Priorities" },
-      { id: "priority-schemes", label: "Priority Schemes" },
+      { id: "priorities", label: "Priorities", icon: Flag },
+      { id: "priority-schemes", label: "Priority Schemes", icon: GitBranch },
     ],
   },
   {
     id: "work-item-features",
     label: "Work item features",
     items: [
-      { id: "time-tracking", label: "Time tracking" },
-      { id: "work-item-linking", label: "Work item linking" },
+      { id: "time-tracking", label: "Time tracking", icon: Clock3 },
+      { id: "work-item-linking", label: "Work item linking", icon: Link2 },
     ],
   },
   {
     id: "work-item-attributes",
     label: "Work item attributes",
     items: [
-      { id: "statuses", label: "Statuses" },
-      { id: "resolutions", label: "Resolutions" },
-      { id: "work-item-security-schemes", label: "Work item security schemes" },
-      { id: "notification-schemes", label: "Notification schemes" },
-      { id: "permission-schemes", label: "Permissions schemes" },
+      { id: "statuses", label: "Statuses", icon: CircleDot },
+      { id: "resolutions", label: "Resolutions", icon: CircleCheck },
+      { id: "work-item-security-schemes", label: "Work item security schemes", icon: ShieldCheck },
+      { id: "notification-schemes", label: "Notification schemes", icon: Bell },
+      { id: "permission-schemes", label: "Permissions schemes", icon: KeyRound },
     ],
   },
 ] as const;
@@ -92,16 +101,21 @@ function FlowSettingsNavigation({ organizationSlug }: { organizationSlug: string
   const basePath = `/${organizationSlug}/flow/settings`;
 
   return (
-    <nav aria-label="Flow settings navigation" className="flex gap-1 overflow-x-auto md:-mr-4 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:pr-4">
+    <nav
+      aria-label="Flow settings navigation"
+      className="flex gap-1 overflow-x-auto md:-mr-4 md:min-h-0 md:flex-1 md:flex-col md:overflow-y-auto md:pr-4"
+    >
       <Link
         href={basePath}
         aria-current={!selectedSection ? "page" : undefined}
-        className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:flex-none ${
-          !selectedSection ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+        className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors md:flex-none ${
+          !selectedSection
+            ? "bg-on-brand-border text-text-inverse"
+            : "text-on-brand-muted hover:bg-on-brand-hover hover:text-text-inverse"
         }`}
       >
         <ListChecks aria-hidden="true" size={18} strokeWidth={1.75} />
-        <span className="truncate">Flow Settings</span>
+        <span className="truncate">Overview</span>
       </Link>
       {flowSettingsGroups.map((group) => {
         const groupSelected = group.items.some((item) => item.id === selectedSection);
@@ -113,8 +127,8 @@ function FlowSettingsNavigation({ organizationSlug }: { organizationSlug: string
               type="button"
               onClick={() => setOpenGroups((current) => ({ ...current, [group.id]: !open }))}
               aria-expanded={open}
-              className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                groupSelected ? "text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+              className={`mt-4 flex w-full cursor-pointer items-center justify-between gap-3 px-3 text-left text-[10px] font-bold uppercase tracking-widest transition-colors ${
+                groupSelected ? "text-text-inverse" : "text-on-brand-muted hover:text-text-inverse"
               }`}
             >
               <span className="truncate">{group.label}</span>
@@ -125,22 +139,24 @@ function FlowSettingsNavigation({ organizationSlug }: { organizationSlug: string
               />
             </button>
             {open ? (
-              <div className="ml-3 border-l border-on-brand-border pl-2">
+              <div className="mt-2">
                 {group.items.map((item) => {
                   const href = `${basePath}?section=${item.id}`;
                   const active = selectedSection === item.id;
+                  const ItemIcon = item.icon;
 
                   return (
                     <Link
                       key={item.id}
                       href={href}
                       aria-current={active ? "page" : undefined}
-                      className={`mb-1 flex cursor-pointer rounded-md px-3 py-2 text-sm transition-colors ${
+                      className={`mb-1 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                         active
-                          ? "bg-white/15 font-medium text-white"
+                          ? "bg-on-brand-border text-text-inverse"
                           : "text-on-brand-muted hover:bg-on-brand-hover hover:text-text-inverse"
                       }`}
                     >
+                      <ItemIcon aria-hidden="true" size={17} strokeWidth={1.75} />
                       {item.label}
                     </Link>
                   );
@@ -177,7 +193,9 @@ export function AppSettingsLayout({
   return (
     <div className="flex min-h-full flex-col bg-background p-4 md:flex-row md:pt-0">
       <aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse md:fixed md:bottom-4 md:left-[88px] md:top-[76px] md:flex md:w-[312px] md:flex-col">
-        <p className="mb-5 px-2 text-xs font-semibold uppercase tracking-wide text-white/70">{label}</p>
+        <div className="-mx-4 -mt-4 mb-4 border-b border-on-brand-border px-4 py-4">
+          <p className="text-sm font-bold">{label}</p>
+        </div>
         {app === "flow" ? (
           <FlowSettingsNavigation organizationSlug={organizationSlug} />
         ) : (
@@ -185,7 +203,7 @@ export function AppSettingsLayout({
             <Link
               href={href}
               aria-current="page"
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg bg-white/15 px-3 py-2.5 text-sm font-medium text-white md:flex-none"
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg bg-on-brand-border px-3 py-2.5 text-sm font-medium text-text-inverse md:flex-none"
             >
               <Icon aria-hidden="true" size={18} strokeWidth={1.75} />
               <span className="truncate">{label}</span>

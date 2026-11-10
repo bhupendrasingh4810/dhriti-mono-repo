@@ -38,7 +38,7 @@ export default function HrmsLayout({ children }: { children: ReactNode }) {
       window.clearTimeout(timeoutRef.current);
     }
   }, []);
-  const isSettingsPage = pathname.endsWith("/hrms/settings");
+  const isSettingsPage = pathname.includes("/hrms/settings");
 
   return (
     <HrmsToastContext.Provider value={showToast}>

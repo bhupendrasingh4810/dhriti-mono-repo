@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { type ReactNode } from "react";
 import {
   ArrowUpDown,
   ArrowRight,
@@ -57,7 +56,7 @@ export type HRMSInitialData = {
 };
 export type View =
   | "Dashboard"
-  | "Employees"
+  | "Workforce"
   | "Attendance"
   | "Leave"
   | "Payroll"
@@ -72,7 +71,7 @@ type DemoState = "Default" | "Loading" | "Empty" | "Error";
 
 export const views: { label: View; icon: IconName; group?: string }[] = [
   { label: "Dashboard", icon: "grid" },
-  { label: "Employees", icon: "users", group: "People" },
+  { label: "Workforce", icon: "users", group: "People" },
   { label: "Attendance", icon: "clock" },
   { label: "Leave", icon: "calendar" },
   { label: "Payroll", icon: "wallet", group: "Operations" },
@@ -220,7 +219,6 @@ export function CardTitle({ title, subtitle, action }: { title: string; subtitle
   );
 }
 
-const avatars = ["AS", "RK", "NM", "PV", "IK", "SM"];
 const avatarColors = [
   "bg-teal-100 text-teal-700",
   "bg-violet-100 text-violet-700",

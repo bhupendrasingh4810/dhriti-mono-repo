@@ -328,6 +328,37 @@ enum PayrollStatus {
   CANCELLED
 }
 
+enum HrmsWorkflowDefinitionStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum HrmsWorkflowInstanceStatus {
+  ACTIVE
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum HrmsWorkflowAssignmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  SKIPPED
+}
+
+enum HrmsWorkflowEventType {
+  INITIATED
+  ASSIGNED
+  APPROVED
+  REJECTED
+  COMPLETED
+  TRANSITIONED
+  CANCELLED
+}
+
 enum TrainingType {
   ONBOARDING
   TECHNICAL

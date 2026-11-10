@@ -10,6 +10,8 @@ import { HrmsTrainingController } from "./controllers/hrms-training.controller";
 import { HrmsAssetController } from "./controllers/hrms-asset.controller";
 import { HrmsBenefitController } from "./controllers/hrms-benefit.controller";
 import { HrmsMasterDataController } from "./controllers/hrms-master-data.controller";
+import { HrmsWorkflowDefinitionController } from "./controllers/hrms-workflow-definition.controller";
+import { HrmsWorkflowInstanceController } from "./controllers/hrms-workflow-instance.controller";
 import { HrmsEmployeeService } from "./services/hrms-employee.service";
 import { HrmsAttendanceService } from "./services/hrms-attendance.service";
 import { HrmsOperationsService } from "./services/hrms-operations.service";
@@ -21,6 +23,8 @@ import { HrmsTrainingService } from "./services/hrms-training.service";
 import { HrmsAssetService } from "./services/hrms-asset.service";
 import { HrmsBenefitService } from "./services/hrms-benefit.service";
 import { HrmsMasterDataService } from "./services/hrms-master-data.service";
+import { HrmsWorkflowDefinitionService } from "./services/hrms-workflow-definition.service";
+import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.service";
 
 @Module({
   controllers: [
@@ -34,6 +38,8 @@ import { HrmsMasterDataService } from "./services/hrms-master-data.service";
     HrmsAssetController,
     HrmsBenefitController,
     HrmsMasterDataController,
+    HrmsWorkflowDefinitionController,
+    HrmsWorkflowInstanceController,
   ],
   providers: [
     HrmsEmployeeService,
@@ -47,6 +53,8 @@ import { HrmsMasterDataService } from "./services/hrms-master-data.service";
     HrmsAssetService,
     HrmsBenefitService,
     HrmsMasterDataService,
+    HrmsWorkflowDefinitionService,
+    HrmsWorkflowInstanceService,
   ],
   exports: [
     HrmsEmployeeService,
@@ -59,6 +67,8 @@ import { HrmsMasterDataService } from "./services/hrms-master-data.service";
     HrmsAssetService,
     HrmsBenefitService,
     HrmsMasterDataService,
+    HrmsWorkflowDefinitionService,
+    HrmsWorkflowInstanceService,
   ],
 })
 export class HrmsModule {}

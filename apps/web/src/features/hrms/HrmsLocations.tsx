@@ -8,45 +8,38 @@ import { hrmsService, type HrmsDesignation, type HrmsEmploymentType, type HrmsLo
 import { organizationAccessService } from "@/services/organization-management.service";
 import type { ApiEntity } from "@/services/service-types";
 
-import { COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "../master-data-options";
-import { Button, Card, CardTitle, Icon } from "./ui-primitives";
+import { COUNTRY_OPTIONS, TIMEZONE_OPTIONS } from "./master-data-options";
+import { Button, Card, CardTitle, Icon } from "./components/ui-primitives";
 
-type MasterDataType = "Departments" | "Locations" | "Designations" | "Employment types";
-type Department = ApiEntity & {
+type MasterDataType = "Locations" | "Designations" | "Employment types";
+type DepartmentOption = ApiEntity & {
   name: string;
-  code?: string | null;
-  parentId?: string | null;
-  parent?: { name: string } | null;
-  _count?: { members?: number };
 };
-type MasterDataItem = Department | HrmsLocation | HrmsDesignation | HrmsEmploymentType;
+type MasterDataItem = HrmsLocation | HrmsDesignation | HrmsEmploymentType;
 type FormValues = {
   name: string;
   code: string;
-  parentId: string;
   countryCode: string;
   city: string;
   timezone: string;
   departmentId: string;
 };
 
-const masterDataTypes: MasterDataType[] = ["Departments", "Locations", "Designations", "Employment types"];
 const emptyValues: FormValues = {
   name: "",
   code: "",
-  parentId: "",
   countryCode: "",
   city: "",
   timezone: "",
   departmentId: "",
 };
 
-function isMasterDataType(type: string): type is MasterDataType {
-  return masterDataTypes.includes(type as MasterDataType);
-}
-
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unable to complete this request. Please try again.";
+}
+
+function masterDataTypeForComponent(): MasterDataType {
+  return "Locations";
 }
 
 function slugify(value: string) {
@@ -60,7 +53,6 @@ function slugify(value: string) {
 function valuesFor(type: MasterDataType, item?: MasterDataItem): FormValues {
   if (!item) return emptyValues;
   const base = { ...emptyValues, name: item.name, code: item.code ?? "" };
-  if (type === "Departments") return { ...base, parentId: (item as Department).parentId ?? "" };
   if (type === "Locations") {
     const location = item as HrmsLocation;
     return { ...base, countryCode: location.countryCode, city: location.city ?? "", timezone: location.timezone };
@@ -70,13 +62,6 @@ function valuesFor(type: MasterDataType, item?: MasterDataItem): FormValues {
 }
 
 function displayMeta(type: MasterDataType, item: MasterDataItem) {
-  if (type === "Departments") {
-    const department = item as Department;
-    return [
-      department._count?.members ? `${department._count.members} employees` : "No employees",
-      department.parent?.name ?? "Top level",
-    ];
-  }
   if (type === "Locations") {
     const location = item as HrmsLocation;
     return [location.city ?? "No city", location.countryCode];
@@ -127,7 +112,7 @@ function MasterDataDrawer({
 }: {
   type: MasterDataType;
   item: MasterDataItem | null;
-  departments: Department[];
+  departments: DepartmentOption[];
   onClose: () => void;
   onSave: (values: FormValues, item: MasterDataItem | null) => Promise<void>;
 }) {
@@ -243,25 +228,6 @@ function MasterDataDrawer({
                 </IconButton>
               </div>
             </div>
-            {type === "Departments" && (
-              <label className="block">
-                {label("Parent department", "parentId")}
-                <select
-                  value={values.parentId}
-                  onChange={(event) => update("parentId", event.target.value)}
-                  className={fieldClass("parentId")}
-                >
-                  <option value="">No parent department</option>
-                  {departments
-                    .filter((department) => department.id !== item?.id)
-                    .map((department) => (
-                      <option key={department.id} value={department.id}>
-                        {department.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
-            )}
             {type === "Locations" && (
               <>
                 <label className="block">
@@ -336,12 +302,18 @@ function MasterDataDrawer({
   );
 }
 
-export function EmployeeMasterData({ type, onToast }: { type: string; onToast: (message: string) => void }) {
+export function HrmsLocations({
+  onToast,
+  showHeader = true,
+}: {
+  onToast: (message: string) => void;
+  showHeader?: boolean;
+}) {
   const { user } = useAuth();
-  const masterDataType = isMasterDataType(type) ? type : null;
+  const masterDataType = masterDataTypeForComponent();
   const organizationId = user?.organization?.id;
   const [items, setItems] = useState<MasterDataItem[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<DepartmentOption[]>([]);
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(false);
   const [editingItem, setEditingItem] = useState<MasterDataItem | null | undefined>(undefined);
@@ -354,15 +326,15 @@ export function EmployeeMasterData({ type, onToast }: { type: string; onToast: (
     setLoading(true);
     setLoadError("");
     try {
-      const departmentRequest = organizationAccessService.departments.list(organizationId) as Promise<Department[]>;
+      const departmentRequest = organizationAccessService.departments.list(organizationId) as Promise<
+        DepartmentOption[]
+      >;
       const itemRequest =
-        masterDataType === "Departments"
-          ? departmentRequest
-          : masterDataType === "Locations"
-            ? hrmsService.locations.list(organizationId)
-            : masterDataType === "Designations"
-              ? hrmsService.designations.list(organizationId)
-              : hrmsService.employmentTypes.list(organizationId);
+        masterDataType === "Locations"
+          ? hrmsService.locations.list(organizationId)
+          : masterDataType === "Designations"
+            ? hrmsService.designations.list(organizationId)
+            : hrmsService.employmentTypes.list(organizationId);
       const [masterData, departmentData] = await Promise.all([itemRequest, departmentRequest]);
       setItems(masterData as MasterDataItem[]);
       setDepartments(departmentData);
@@ -379,11 +351,7 @@ export function EmployeeMasterData({ type, onToast }: { type: string; onToast: (
   const save = async (values: FormValues, item: MasterDataItem | null) => {
     if (!organizationId || !masterDataType) throw new Error("An organization must be selected before saving.");
     const base = { name: values.name.trim(), code: values.code.trim() };
-    if (masterDataType === "Departments") {
-      const input = { ...base, parentId: values.parentId || (item ? null : undefined) };
-      if (item) await organizationAccessService.departments.update(organizationId, item.id, input);
-      else await organizationAccessService.departments.create(organizationId, input);
-    } else if (masterDataType === "Locations") {
+    if (masterDataType === "Locations") {
       const input = {
         ...base,
         countryCode: values.countryCode,
@@ -429,9 +397,7 @@ export function EmployeeMasterData({ type, onToast }: { type: string; onToast: (
     setDeleting(true);
     setDeleteError("");
     try {
-      if (masterDataType === "Departments")
-        await organizationAccessService.departments.remove(organizationId, deletingItem.id);
-      else if (masterDataType === "Locations") await hrmsService.locations.remove(organizationId, deletingItem.id);
+      if (masterDataType === "Locations") await hrmsService.locations.remove(organizationId, deletingItem.id);
       else if (masterDataType === "Designations")
         await hrmsService.designations.remove(organizationId, deletingItem.id);
       else await hrmsService.employmentTypes.remove(organizationId, deletingItem.id);
@@ -444,10 +410,15 @@ export function EmployeeMasterData({ type, onToast }: { type: string; onToast: (
       setDeleting(false);
     }
   };
-  if (!masterDataType) return null;
   const supportsToggle = masterDataType === "Locations" || masterDataType === "Employment types";
   return (
     <>
+      {showHeader && (
+        <header className="mb-6">
+          <h1 className="text-2xl font-bold text-text-primary">Locations</h1>
+          <p className="mt-1 text-sm text-text-secondary">Manage organization work locations for employees.</p>
+        </header>
+      )}
       <Card className="overflow-hidden">
         <CardTitle
           title={masterDataType}

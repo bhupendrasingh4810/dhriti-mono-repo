@@ -48,6 +48,8 @@ model Organization {
   hrmsTrainingEnrollments HrmsTrainingEnrollment[]
   hrmsAssets HrmsAsset[]
   hrmsBenefitEnrollments HrmsBenefitEnrollment[]
+  hrmsWorkflowDefinitions HrmsWorkflowDefinition[]
+  hrmsWorkflowInstances HrmsWorkflowInstance[]
   auditLogs AuditLog[]
   files     StoredFile[]
   channels  Channel[]

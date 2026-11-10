@@ -2,9 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
-import { EmployeeMasterData } from "./components/employee-master-data";
 import { Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
 import AppSettingsPage from "@/features/settings/AppSettingsPage";
 
@@ -18,6 +17,15 @@ const tabs = [
   "Roles & Permissions",
   "Workflows",
 ];
+const settingsRouteSegments: Partial<Record<(typeof tabs)[number], string>> = {
+  "App Settings": "app-settings",
+  Departments: "departments",
+  Designations: "designations",
+  "Employment Types": "employment-types",
+  Locations: "locations",
+  "Roles & Permissions": "permissions",
+  Workflows: "workflow",
+};
 const stats = [
   ["Locations", "8", "Across 4 countries"],
   ["Departments", "14", "52 teams"],
@@ -112,7 +120,7 @@ function SettingsDrawer({ close, complete }: { close: () => void; complete: (mes
   );
 }
 
-function PermissionMatrix() {
+export function HrmsPermissions() {
   const [permissions, setPermissions] = useState(() => [
     [true, true, true, true],
     [true, true, true, true],
@@ -181,31 +189,50 @@ function AppSettings() {
   return <AppSettingsPage app="hrms" showBreadcrumb={false} />;
 }
 
+export function HrmsSettingsSidebar({ activeTab, onSelect }: { activeTab: string; onSelect?: (tab: string) => void }) {
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
+  const router = useRouter();
+
+  return (
+    <aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse md:fixed md:bottom-4 md:left-[88px] md:top-[76px] md:w-[312px]">
+      <p className="mb-5 px-2 text-xs font-semibold uppercase tracking-wide text-white/70">HRMS settings</p>
+      <nav aria-label="HRMS settings" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-y-auto">
+        {tabs.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => {
+              const routeSegment = settingsRouteSegments[item];
+              if (routeSegment) {
+                router.push(`/${organizationSlug}/hrms/settings/${routeSegment}`);
+                return;
+              }
+              onSelect?.(item);
+            }}
+            className={`flex shrink-0 cursor-pointer items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors md:w-full ${
+              activeTab === item ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            {item}
+          </button>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
 export function HrmsSettings({ onToast }: { onToast: (message: string) => void }) {
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const [tab, setTab] = useState(tabs[0]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   return (
     <div className="flex min-h-full flex-col bg-background md:flex-row">
-      <aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse md:fixed md:bottom-4 md:left-[88px] md:top-[76px] md:w-[312px]">
-        <p className="mb-5 px-2 text-xs font-semibold uppercase tracking-wide text-white/70">HRMS settings</p>
-        <nav aria-label="HRMS settings" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-y-auto">
-          {tabs.map((item) => (
-            <button
-              key={item}
-              type="button"
-              onClick={() => setTab(item)}
-              className={`flex shrink-0 cursor-pointer items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors md:w-full ${
-                tab === item ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
-      </aside>
+      <HrmsSettingsSidebar activeTab={tab} onSelect={setTab} />
       <main className="min-w-0 flex-1 md:ml-[328px]">
-        <nav aria-label="Breadcrumb" className="sticky top-4 z-30 rounded-lg bg-surface px-6 py-5 text-sm text-text-secondary">
+        <nav
+          aria-label="Breadcrumb"
+          className="sticky top-4 z-30 rounded-lg bg-surface px-6 py-5 text-sm text-text-secondary"
+        >
           <Link href={`/${organizationSlug}/hrms`} className="cursor-pointer hover:text-text-primary">
             HRMS
           </Link>
@@ -222,96 +249,91 @@ export function HrmsSettings({ onToast }: { onToast: (message: string) => void }
           {tab === "Roles & Permissions" ? (
             <>
               <HrmsSettingsHeader tab={tab} />
-              <PermissionMatrix />
+              <HrmsPermissions />
             </>
           ) : tab === "App Settings" ? (
             <AppSettings />
-          ) : ["Departments", "Locations", "Designations", "Employment Types"].includes(tab) ? (
-            <>
-              <HrmsSettingsHeader tab={tab} />
-              <EmployeeMasterData type={tab === "Employment Types" ? "Employment types" : tab} onToast={onToast} />
-            </>
           ) : (
             <>
-            <HrmsSettingsHeader tab={tab} />
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {stats.map(([label, value, meta], index) => (
-                <Card key={label} className="p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-text-secondary">{label}</p>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-muted text-brand">
-                      <Icon name="settings" size={16} />
+              <HrmsSettingsHeader tab={tab} />
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                {stats.map(([label, value, meta], index) => (
+                  <Card key={label} className="p-5">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-text-secondary">{label}</p>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-brand-muted text-brand">
+                        <Icon name="settings" size={16} />
+                      </div>
                     </div>
-                  </div>
-                  <p className="mt-4 font-display text-2xl font-bold text-text-primary">{value}</p>
-                  <p className="mt-1 text-xs text-text-muted">{meta}</p>
-                  {index === 0 && (
-                    <div className="mt-4 h-1 rounded-full bg-slate-100">
-                      <div className="h-1 w-3/4 rounded-full bg-brand" />
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-            <Card className="mt-5 overflow-hidden">
-              <CardTitle
-                title={tab === tabs[0] ? "Configuration areas" : tab}
-                subtitle={`Settings · ${tab}`}
-                action={
-                  <div className="flex gap-2">
-                    <Button variant="secondary" icon="filter">
-                      Filters
-                    </Button>
-                    <Button variant="secondary" icon="download" onClick={() => onToast(`${tab} export prepared`)}>
-                      Export
-                    </Button>
-                  </div>
-                }
-              />
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left">
-                  <thead>
-                    <tr className="bg-slate-50">
-                      {columns.map((column) => (
-                        <th
-                          key={column}
-                          className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted"
-                        >
-                          {column}
-                        </th>
-                      ))}
-                      <th className="px-5 py-3 text-xs uppercase text-text-muted">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {rows.map((row) => (
-                      <tr key={row[0]} className="hover:bg-brand-muted/30">
-                        {row.map((cell, index) => (
-                          <td
-                            key={index}
-                            className={`px-5 py-4 text-sm ${index === 0 ? "font-semibold text-text-primary" : "text-text-secondary"}`}
-                          >
-                            {index === row.length - 1 ? <Badge tone="success">{cell}</Badge> : cell}
-                          </td>
-                        ))}
-                        <td className="px-5 py-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDrawerOpen(true);
-                              onToast(`${row[0]} details opened`);
-                            }}
-                            className="rounded-md p-2 text-text-muted hover:bg-slate-100 hover:text-brand"
-                          >
-                            <Icon name="dots" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    <p className="mt-4 font-display text-2xl font-bold text-text-primary">{value}</p>
+                    <p className="mt-1 text-xs text-text-muted">{meta}</p>
+                    {index === 0 && (
+                      <div className="mt-4 h-1 rounded-full bg-slate-100">
+                        <div className="h-1 w-3/4 rounded-full bg-brand" />
+                      </div>
+                    )}
+                  </Card>
+                ))}
               </div>
-            </Card>
+              <Card className="mt-5 overflow-hidden">
+                <CardTitle
+                  title={tab === tabs[0] ? "Configuration areas" : tab}
+                  subtitle={`Settings · ${tab}`}
+                  action={
+                    <div className="flex gap-2">
+                      <Button variant="secondary" icon="filter">
+                        Filters
+                      </Button>
+                      <Button variant="secondary" icon="download" onClick={() => onToast(`${tab} export prepared`)}>
+                        Export
+                      </Button>
+                    </div>
+                  }
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[760px] text-left">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        {columns.map((column) => (
+                          <th
+                            key={column}
+                            className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-text-muted"
+                          >
+                            {column}
+                          </th>
+                        ))}
+                        <th className="px-5 py-3 text-xs uppercase text-text-muted">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {rows.map((row) => (
+                        <tr key={row[0]} className="hover:bg-brand-muted/30">
+                          {row.map((cell, index) => (
+                            <td
+                              key={index}
+                              className={`px-5 py-4 text-sm ${index === 0 ? "font-semibold text-text-primary" : "text-text-secondary"}`}
+                            >
+                              {index === row.length - 1 ? <Badge tone="success">{cell}</Badge> : cell}
+                            </td>
+                          ))}
+                          <td className="px-5 py-4">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDrawerOpen(true);
+                                onToast(`${row[0]} details opened`);
+                              }}
+                              className="rounded-md p-2 text-text-muted hover:bg-slate-100 hover:text-brand"
+                            >
+                              <Icon name="dots" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
             </>
           )}
         </div>

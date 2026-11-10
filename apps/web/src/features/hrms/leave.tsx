@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 
-import { EmployeeMasterData } from "./components/employee-master-data";
 import { TeamLeaveCalendar } from "./components/team-leave-calendar";
 import { Avatar, Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
+import { HrmsLocations } from "./HrmsLocations";
 
 function ReportBuilder({ onToast }: { onToast: (message: string) => void }) {
   const [chart, setChart] = useState("Bar chart");
@@ -504,7 +504,7 @@ export function HrmsLeave({ onToast }: { onToast: (message: string) => void }) {
         </Card>
       )}
       {tab === "Holidays" && (
-        <EmployeeMasterData type="Locations" onToast={(message) => onToast(message.replace("location", "holiday"))} />
+        <HrmsLocations showHeader={false} onToast={(message) => onToast(message.replace("location", "holiday"))} />
       )}
       {tab === "Balance report" && <ReportBuilder onToast={onToast} />}
       {applyOpen && (
