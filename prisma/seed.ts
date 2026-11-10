@@ -1,16 +1,33 @@
-import { Prisma, PrismaClient, type LegacyPlatformRole, type Organization, type User } from "@prisma/client";
+import {
+  OrganizationSystemPermissionGroupRole,
+  Prisma,
+  PrismaClient,
+  type LegacyPlatformRole,
+  type Organization,
+  type User,
+} from "@prisma/client";
 import * as bcrypt from "bcryptjs";
-import { assignDefaultUserPermissionGroups } from "../apps/api/src/modules/organization/services/default-permission-groups";
+import { env } from "node:process";
+import {
+  assignDefaultPermissionGroupPermissions,
+  assignDefaultUserPermissionGroups,
+} from "../apps/api/src/modules/organization/services/default-permission-groups";
 import { defaultHrmsWorkflowTemplates } from "../apps/api/src/modules/hrms/default-workflow-templates";
+import { seedPeople, type SeedPerson } from "./seed-people";
 
 const client = new PrismaClient();
 let prisma: Prisma.TransactionClient = client;
 
 const PASSWORD = "Password@123";
 
+function inputJson(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
+  if (value === null) return Prisma.JsonNull;
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
+}
+
 async function main(): Promise<void> {
-  const reset = process.env.SEED_RESET_DATABASE === "true";
-  if (reset && process.env.NODE_ENV === "production") {
+  const reset = env.SEED_RESET_DATABASE === "true";
+  if (reset && env.NODE_ENV === "production") {
     throw new Error("Database seed reset is disabled in production.");
   }
   await client.$transaction(
@@ -43,28 +60,43 @@ async function seedData(): Promise<void> {
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
   // ---------- Users ----------
-  const [alice, bob, priya, marcus, elena, admin] = await Promise.all([
-    upsertUser("org.admin@example.test", "Alice Sharma", passwordHash, "ORG_ADMIN"),
-    upsertUser("org.employee01@example.test", "Bob Patel", passwordHash),
-    upsertUser("org.employee02@example.test", "Priya Singh", passwordHash),
-    upsertUser("org.employee03@example.test", "Marcus Chen", passwordHash),
-    upsertUser("org.employee04@example.test", "Elena Rodriguez", passwordHash),
-    upsertUser("bhupendrasingh4810@gmail.com", "Bhupendra Singh", passwordHash, "PLATFORM_ADMIN"),
-  ]);
-  const additionalUsers = await Promise.all(
-    Array.from({ length: 10 }, (_, index) => {
-      const number = String(index + 5).padStart(2, "0");
-      return upsertUser(`org.employee${number}@example.test`, `Organization Employee ${number}`, passwordHash);
-    }),
+  if (seedPeople.length !== 70) throw new Error("Expected 70 supplied seed people.");
+  const usersByEmail = new Map(
+    (
+      await Promise.all(
+        seedPeople.map((person, index) =>
+          upsertUser(
+            person.email,
+            `${person.firstName} ${person.lastName}`,
+            passwordHash,
+            index === 0 ? "PLATFORM_ADMIN" : index === 14 ? "ORG_ADMIN" : "EMPLOYEE",
+          ),
+        ),
+      )
+    ).map((user) => [user.email, user]),
   );
-  const platformEmployees = await Promise.all(
-    Array.from({ length: 14 }, (_, index) => {
-      const number = String(index + 1).padStart(2, "0");
-      return upsertUser(`platform.employee${number}@example.test`, `Platform Employee ${number}`, passwordHash);
-    }),
-  );
-  const organizationUsers = [alice, bob, priya, marcus, elena, ...additionalUsers];
-  const platformUsers = [admin, ...platformEmployees];
+  const peopleByUserId = new Map<string, SeedPerson>();
+  const usersFor = (people: SeedPerson[]) =>
+    people.map((person) => {
+      const user = usersByEmail.get(person.email);
+      if (!user) throw new Error(`Seed user ${person.email} was not created.`);
+      peopleByUserId.set(user.id, person);
+      return user;
+    });
+  const [platformPeople, acmePeople, beaconRidgePeople, cedarPeakPeople, harborviewPeople] = [
+    seedPeople.slice(0, 14),
+    seedPeople.slice(14, 28),
+    seedPeople.slice(28, 42),
+    seedPeople.slice(42, 56),
+    seedPeople.slice(56, 70),
+  ];
+  const platformUsers = usersFor(platformPeople);
+  const organizationUsers = usersFor(acmePeople);
+  const beaconRidgeUsers = usersFor(beaconRidgePeople);
+  const cedarPeakUsers = usersFor(cedarPeakPeople);
+  const harborviewUsers = usersFor(harborviewPeople);
+  const [admin] = platformUsers;
+  const [alice, bob, priya, marcus, elena, ...additionalUsers] = organizationUsers;
 
   // ---------- Organization ----------
   const org = await prisma.organization.upsert({
@@ -77,6 +109,55 @@ async function seedData(): Promise<void> {
     update: { deletedAt: null, isPlatformOrganization: true },
     create: { name: "Dhriti Platform", slug: "platform", isPlatformOrganization: true },
   });
+  const beaconRidgeOrg = await prisma.organization.upsert({
+    where: { slug: "beacon-ridge" },
+    update: { deletedAt: null },
+    create: { name: "Beacon Ridge Consulting", slug: "beacon-ridge" },
+  });
+  const cedarPeakOrg = await prisma.organization.upsert({
+    where: { slug: "cedar-peak" },
+    update: { deletedAt: null },
+    create: { name: "Cedar Peak Systems", slug: "cedar-peak" },
+  });
+  const harborviewOrg = await prisma.organization.upsert({
+    where: { slug: "harborview" },
+    update: { deletedAt: null },
+    create: { name: "Harborview Labs", slug: "harborview" },
+  });
+  const existingOwner = async (organizationId: string, fallback: User) => {
+    const membership = await prisma.organizationMember.findFirst({
+      where: { organizationId, status: "ACTIVE", isOwner: true, deletedAt: null, user: { deletedAt: null } },
+      include: { user: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return membership?.user ?? fallback;
+  };
+  const [platformOwner, acmeOwner] = await Promise.all([
+    existingOwner(platformOrg.id, admin),
+    existingOwner(org.id, alice),
+  ]);
+  const tenants = [
+    { organization: platformOrg, users: platformUsers, owner: platformOwner, administrator: admin },
+    { organization: org, users: organizationUsers, owner: acmeOwner, administrator: alice },
+    {
+      organization: beaconRidgeOrg,
+      users: beaconRidgeUsers,
+      owner: beaconRidgeUsers[0],
+      administrator: beaconRidgeUsers[0],
+    },
+    {
+      organization: cedarPeakOrg,
+      users: cedarPeakUsers,
+      owner: cedarPeakUsers[0],
+      administrator: cedarPeakUsers[0],
+    },
+    {
+      organization: harborviewOrg,
+      users: harborviewUsers,
+      owner: harborviewUsers[0],
+      administrator: harborviewUsers[0],
+    },
+  ];
 
   await prisma.organizationSettings.upsert({
     where: { organizationId: org.id },
@@ -84,10 +165,7 @@ async function seedData(): Promise<void> {
     create: { organizationId: org.id, timezone: "Asia/Kolkata", locale: "en" },
   });
 
-  for (const tenant of [
-    { organization: org, users: organizationUsers, owner: alice },
-    { organization: platformOrg, users: platformUsers, owner: admin },
-  ]) {
+  for (const tenant of tenants) {
     for (const user of tenant.users) {
       await prisma.organizationMember.upsert({
         where: { organizationId_userId: { organizationId: tenant.organization.id, userId: user.id } },
@@ -184,10 +262,13 @@ async function seedData(): Promise<void> {
       const segments = key.split(".");
       const action = segments.pop()!;
       const resource = segments.join(".");
+      const productKey = ["connect", "flow", "hrms", "pulse", "atlas", "cadence", "nexus"].includes(segments[0])
+        ? segments[0]
+        : null;
       return prisma.permission.upsert({
         where: { key },
-        update: { resource, action },
-        create: { key, resource, action },
+        update: { resource, action, productKey },
+        create: { key, resource, action, productKey },
       });
     }),
   );
@@ -213,6 +294,8 @@ async function seedData(): Promise<void> {
   }
   const platformAdminRole = platformRoles.get("PLATFORM_ADMIN");
   if (!platformAdminRole) throw new Error("Platform administrator role is missing");
+  const platformUserRole = platformRoles.get("PLATFORM_USER");
+  if (!platformUserRole) throw new Error("Platform user role is missing");
   await prisma.platformRolePermission.createMany({
     data: permissions.map((permission) => ({
       platformRoleId: platformAdminRole.id,
@@ -225,6 +308,13 @@ async function seedData(): Promise<void> {
     update: { revokedAt: null },
     create: { userId: admin.id, platformRoleId: platformAdminRole.id },
   });
+  for (const user of platformUsers.filter((user) => user.id !== admin.id)) {
+    await prisma.platformUserRoleAssignment.upsert({
+      where: { userId_platformRoleId: { userId: user.id, platformRoleId: platformUserRole.id } },
+      update: { revokedAt: null },
+      create: { userId: user.id, platformRoleId: platformUserRole.id, assignedById: admin.id },
+    });
+  }
   const legacyPlatformAssignments = await prisma.userAuth.findMany({
     where: { platformRole: { not: null }, user: { deletedAt: null } },
     select: { userId: true, platformRole: true },
@@ -354,7 +444,7 @@ async function seedData(): Promise<void> {
     });
   }
 
-  const fullEntitlementEmail = "bhupendrasingh4810@gmail.com";
+  const fullEntitlementEmail = admin.email;
   const fullEntitlementUser = await prisma.user.findUnique({
     where: { email: fullEntitlementEmail },
     select: { id: true, deletedAt: true },
@@ -397,138 +487,13 @@ async function seedData(): Promise<void> {
           });
         }),
       );
-      {
-        const transaction = prisma;
-        const groupName = `Seed_access_${fullEntitlementEmail.replace(/[^A-Za-z0-9]+/g, "_")}`;
-        const group = await transaction.organizationPermissionGroup.upsert({
-          where: {
-            organizationId_name: { organizationId: membership.organizationId, name: groupName },
-          },
-          update: { isActive: true, deletedAt: null, isSystem: true },
-          create: {
-            organizationId: membership.organizationId,
-            name: groupName,
-            description: "Full seeded application and organization permissions",
-            isSystem: true,
-          },
-        });
-        await transaction.organizationPermissionGroupPermission.createMany({
-          data: permissions.map((permission) => ({
-            permissionGroupId: group.id,
-            permissionId: permission.id,
-          })),
-          skipDuplicates: true,
-        });
-        const assignment = await transaction.organizationPermissionGroupAssignment.findFirst({
-          where: {
-            organizationId: membership.organizationId,
-            permissionGroupId: group.id,
-            userId: fullEntitlementUser.id,
-            scopeType: "ORGANIZATION",
-          },
-          select: { id: true },
-        });
-        if (assignment) {
-          await transaction.organizationPermissionGroupAssignment.update({
-            where: { id: assignment.id },
-            data: { revokedAt: null },
-          });
-        } else {
-          await transaction.organizationPermissionGroupAssignment.create({
-            data: {
-              organizationId: membership.organizationId,
-              permissionGroupId: group.id,
-              userId: fullEntitlementUser.id,
-              scopeType: "ORGANIZATION",
-            },
-          });
-        }
-      }
     }
-    console.log(
-      `Granted all entitlements and seeded permissions to ${memberships.length} organizations for ${fullEntitlementEmail}.`,
-    );
+    console.log(`Granted all entitlements to ${memberships.length} organizations for ${fullEntitlementEmail}.`);
   } else {
     console.warn(`Skipped full entitlement grants: active user ${fullEntitlementEmail} was not found.`);
   }
 
-  // Backfill legacy tenant administrators into an explicit, organization-scoped
-  // permission group. The reads keep this idempotent for existing databases.
-  const administratorPermissionKeys = [
-    "organization.members.read",
-    "organization.members.invite",
-    "organization.members.remove",
-    "organization.permissions.manage",
-    "organization.settings.manage",
-    "billing.subscription.read",
-    "billing.subscription.manage",
-    "analytics.read",
-    "webhook.read",
-    "webhook.manage",
-  ];
-  const permissionsByKey = new Map(permissions.map((permission) => [permission.key, permission]));
-  const administratorPermissionIds = administratorPermissionKeys.map((key) => {
-    const permission = permissionsByKey.get(key);
-    if (!permission) throw new Error(`Missing system permission: ${key}`);
-    return permission.id;
-  });
-  const organizations = await prisma.organization.findMany({
-    where: { deletedAt: null },
-    select: { id: true },
-  });
-  for (const organization of organizations) {
-    const administrators = await prisma.organizationMember.findMany({
-      where: {
-        organizationId: organization.id,
-        deletedAt: null,
-        user: { deletedAt: null, role: { in: ["PLATFORM_ADMIN", "ADMIN", "ORG_ADMIN"] } },
-      },
-      select: { userId: true },
-    });
-    if (administrators.length === 0) continue;
-
-    const group = await prisma.organizationPermissionGroup.upsert({
-      where: { organizationId_name: { organizationId: organization.id, name: "Legacy_administrators" } },
-      update: { isActive: true, deletedAt: null, isSystem: true },
-      create: {
-        organizationId: organization.id,
-        name: "Legacy_administrators",
-        description: "Compatibility permissions for legacy organization administrators",
-        isSystem: true,
-      },
-    });
-    await prisma.organizationPermissionGroupPermission.createMany({
-      data: administratorPermissionIds.map((permissionId) => ({ permissionGroupId: group.id, permissionId })),
-      skipDuplicates: true,
-    });
-    for (const administrator of administrators) {
-      const assignment = await prisma.organizationPermissionGroupAssignment.findFirst({
-        where: { organizationId: organization.id, permissionGroupId: group.id, userId: administrator.userId },
-        select: { id: true, revokedAt: true },
-      });
-      if (!assignment) {
-        await prisma.organizationPermissionGroupAssignment.create({
-          data: {
-            organizationId: organization.id,
-            permissionGroupId: group.id,
-            userId: administrator.userId,
-            scopeType: "ORGANIZATION",
-          },
-        });
-      } else if (assignment.revokedAt) {
-        await prisma.organizationPermissionGroupAssignment.update({
-          where: { id: assignment.id },
-          data: { revokedAt: null },
-        });
-      }
-    }
-  }
-
-  const apps = ["connect", "flow", "hrms", "pulse", "atlas", "cadence", "nexus"];
-  for (const tenant of [
-    { organization: org, users: organizationUsers, owner: alice },
-    { organization: platformOrg, users: platformUsers, owner: admin },
-  ]) {
+  for (const tenant of tenants) {
     const organizationId = tenant.organization.id;
     await prisma.organization.update({
       where: { id: organizationId },
@@ -566,59 +531,44 @@ async function seedData(): Promise<void> {
         create: { organizationId, entitlementId: entitlement.id, enabled: true, value, reason: "Development seed" },
       });
     }
-    for (const app of apps) {
-      for (const groupType of ["admins", "users", "guest"] as const) {
-        const organizationName = tenant.organization.name.trim().replace(/\s+/g, "_");
-        const name = `${organizationName}_${app}_${groupType}`;
-        const group = await prisma.organizationPermissionGroup.upsert({
-          where: { organizationId_name: { organizationId, name } },
-          update: { isActive: true, isSystem: true, deletedAt: null },
-          create: { organizationId, name, isSystem: true, description: `Default ${app} ${groupType}` },
-        });
-        const groupPermissions = permissions.filter(({ key }) => {
-          if (groupType === "admins") return key.startsWith(`${app}.`) || key.startsWith("organization.");
-          if (groupType === "users" && key === "organization.members.read") return true;
-          if (!key.startsWith(`${app}.`)) return false;
-          if (groupType === "guest") return key.endsWith(".read");
-          return (
-            key.endsWith(".read") ||
-            (["connect", "flow", "atlas", "pulse", "cadence", "nexus"].includes(app) &&
-              /\.(create|update|transition|delete)$/.test(key) &&
-              !key.startsWith("connect.channel.") &&
-              !key.startsWith("flow.project."))
-          );
-        });
-        await prisma.organizationPermissionGroupPermission.createMany({
-          data: groupPermissions.map(({ id }) => ({ permissionGroupId: group.id, permissionId: id })),
-          skipDuplicates: true,
-        });
-        if (groupType === "admins") {
-          const existing = await prisma.organizationPermissionGroupAssignment.findFirst({
-            where: { organizationId, permissionGroupId: group.id, userId: tenant.owner.id, scopeType: "ORGANIZATION" },
-          });
-          if (existing) {
-            await prisma.organizationPermissionGroupAssignment.update({
-              where: { id: existing.id },
-              data: { revokedAt: null },
-            });
-          } else {
-            await prisma.organizationPermissionGroupAssignment.create({
-              data: {
-                organizationId,
-                permissionGroupId: group.id,
-                userId: tenant.owner.id,
-                scopeType: "ORGANIZATION",
-                assignedByUserId: tenant.owner.id,
-              },
-            });
-          }
-        }
-      }
+    for (const [name, systemRole] of [
+      ["Administrators", OrganizationSystemPermissionGroupRole.ADMINISTRATORS],
+      ["Members", OrganizationSystemPermissionGroupRole.MEMBERS],
+      ["Guests", OrganizationSystemPermissionGroupRole.GUESTS],
+    ] as const) {
+      await prisma.organizationPermissionGroup.upsert({
+        where: { organizationId_name: { organizationId, name } },
+        update: { isActive: true, isSystem: true, systemRole, deletedAt: null },
+        create: { organizationId, name, isSystem: true, systemRole, description: `Default ${name} permission group` },
+      });
+    }
+    await assignDefaultPermissionGroupPermissions(prisma, organizationId);
+    const administratorGroup = await prisma.organizationPermissionGroup.findFirstOrThrow({
+      where: { organizationId, systemRole: OrganizationSystemPermissionGroupRole.ADMINISTRATORS },
+      select: { id: true },
+    });
+    const administratorIds = new Set([tenant.owner.id, tenant.administrator.id]);
+    for (const administratorId of administratorIds) {
+      await prisma.organizationPermissionGroupAssignment.updateMany({
+        where: { organizationId, userId: administratorId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      await prisma.organizationPermissionGroupAssignment.create({
+        data: {
+          organizationId,
+          permissionGroupId: administratorGroup.id,
+          userId: administratorId,
+          scopeType: "ORGANIZATION",
+          assignedByUserId: tenant.owner.id,
+        },
+      });
     }
     for (const [index, user] of tenant.users.entries()) {
-      await assignDefaultUserPermissionGroups(prisma, organizationId, user.id, tenant.owner.id);
+      if (!administratorIds.has(user.id)) {
+        await assignDefaultUserPermissionGroups(prisma, organizationId, user.id, tenant.owner.id);
+      }
       await prisma.user.update({ where: { id: user.id }, data: { isPlatformUser: organizationId === platformOrg.id } });
-      const employeeNumber = `${tenant.organization.slug.toUpperCase()}-${String(index + 1).padStart(4, "0")}`;
+      const employeeNumber = `SEED-${tenant.organization.slug.toUpperCase()}-${String(index + 1).padStart(4, "0")}`;
       await prisma.userProfile.upsert({
         where: { userId: user.id },
         update: { timezone: "Asia/Kolkata" },
@@ -704,65 +654,30 @@ async function seedData(): Promise<void> {
     }
   }
 
-  const userProfiles = [
-    {
-      user: alice,
-      firstName: "Alice",
-      lastName: "Sharma",
-      jobTitle: "Engineering Director",
-      department: "Engineering",
-      employeeId: "ACME-1001",
-      skills: ["Leadership", "TypeScript", "Architecture"],
-    },
-    {
-      user: bob,
-      firstName: "Bob",
-      lastName: "Patel",
-      jobTitle: "Staff Engineer",
-      department: "Engineering",
-      employeeId: "ACME-1002",
-      skills: ["Payments", "PostgreSQL", "Node.js"],
-    },
-    {
-      user: priya,
-      firstName: "Priya",
-      lastName: "Singh",
-      jobTitle: "Product Manager",
-      department: "Product",
-      employeeId: "ACME-1003",
-      skills: ["Discovery", "Roadmaps", "Analytics"],
-    },
-    {
-      user: marcus,
-      firstName: "Marcus",
-      lastName: "Chen",
-      jobTitle: "Product Designer",
-      department: "Design",
-      employeeId: "ACME-1004",
-      skills: ["Research", "UX", "Design systems"],
-    },
-    {
-      user: elena,
-      firstName: "Elena",
-      lastName: "Rodriguez",
-      jobTitle: "People Operations Manager",
-      department: "People",
-      employeeId: "ACME-1005",
-      skills: ["HR Operations", "Recruiting", "Benefits"],
-    },
-    ...additionalUsers.map((user, index) => {
-      const number = String(index + 6).padStart(4, "0");
-      return {
-        user,
-        firstName: "Team",
-        lastName: `Member ${number}`,
-        jobTitle: "Team Member",
-        department: index % 3 === 0 ? "Engineering" : index % 3 === 1 ? "Product" : "Operations",
-        employeeId: `ACME-${number}`,
-        skills: ["Collaboration"],
-      };
-    }),
-  ];
+  const userProfiles = organizationUsers.map((user, index) => {
+    const person = peopleByUserId.get(user.id);
+    if (!person) throw new Error(`Missing seed person for ${user.email}.`);
+    const specialists = [
+      ["Engineering Director", "Engineering", ["Leadership", "TypeScript", "Architecture"]],
+      ["Staff Engineer", "Engineering", ["Payments", "PostgreSQL", "Node.js"]],
+      ["Product Manager", "Product", ["Discovery", "Roadmaps", "Analytics"]],
+      ["Product Designer", "Design", ["Research", "UX", "Design systems"]],
+      ["People Operations Manager", "People", ["HR Operations", "Recruiting", "Benefits"]],
+    ] as const;
+    const [jobTitle, department, skills] =
+      specialists[index] ??
+      ["Team Member", index % 3 === 0 ? "Engineering" : index % 3 === 1 ? "Product" : "Operations", ["Collaboration"]];
+    return {
+      user,
+      firstName: person.firstName,
+      lastName: person.lastName,
+      gender: person.gender,
+      jobTitle,
+      department,
+      employeeId: `SEED-ACME-${String(index + 1).padStart(4, "0")}`,
+      skills,
+    };
+  });
 
   for (const profile of userProfiles) {
     await prisma.userProfile.upsert({
@@ -805,15 +720,21 @@ async function seedData(): Promise<void> {
     });
     await prisma.userHRMSProfile.upsert({
       where: { userId: profile.user.id },
-      update: { employeeId: profile.employeeId, employmentType: "FULL_TIME", skills: profile.skills },
+      update: {
+        employeeId: profile.employeeId,
+        employmentType: "FULL_TIME",
+        gender: profile.gender,
+        skills: [...profile.skills],
+      },
       create: {
         userId: profile.user.id,
         employeeId: profile.employeeId,
         employmentType: "FULL_TIME",
+        gender: profile.gender,
         employmentStartDate: new Date("2024-01-01T00:00:00.000Z"),
         officeLocation: "Bengaluru",
         workSchedule: { days: [1, 2, 3, 4, 5], hours: "09:30-18:30" },
-        skills: profile.skills,
+        skills: [...profile.skills],
         experience: 5,
       },
     });
@@ -882,16 +803,6 @@ async function seedData(): Promise<void> {
   }
 
   await Promise.all([
-    prisma.featureFlag.upsert({
-      where: { organizationId_key: { organizationId: org.id, key: "ai-summaries" } },
-      update: { isEnabled: true },
-      create: { organizationId: org.id, key: "ai-summaries", isEnabled: true },
-    }),
-    prisma.featureFlag.upsert({
-      where: { organizationId_key: { organizationId: org.id, key: "advanced-analytics" } },
-      update: { isEnabled: true },
-      create: { organizationId: org.id, key: "advanced-analytics", isEnabled: true },
-    }),
     prisma.holidayCalendar.upsert({
       where: { organizationId_name: { organizationId: org.id, name: "India Holidays" } },
       update: {},
@@ -959,7 +870,7 @@ async function seedData(): Promise<void> {
     create: { messageId: announcement.id, userId: priya.id },
   });
   await prisma.messageReaction.upsert({
-    where: { messageId_userId_emoji: { messageId: announcement.id, userId: bob.id, emoji: "rocket" } },
+    where: { messageId_userId: { messageId: announcement.id, userId: bob.id } },
     update: {},
     create: { messageId: announcement.id, userId: bob.id, emoji: "rocket" },
   });
@@ -1448,20 +1359,21 @@ async function seedData(): Promise<void> {
     });
   }
 
-  await seedTenantData(org, organizationUsers, alice);
-  await seedTenantData(platformOrg, platformUsers, admin);
-  await seedDefaultHrmsWorkflowTemplates(org.id, alice.id);
-  await seedDefaultHrmsWorkflowTemplates(platformOrg.id, admin.id);
+  for (const tenant of tenants) {
+    await seedTenantData(tenant.organization, tenant.users, tenant.owner);
+    await seedDefaultHrmsWorkflowTemplates(tenant.organization.id, tenant.owner.id);
+  }
   const issueCounts = await prisma.issue.groupBy({ by: ["projectId"], _max: { number: true } });
   for (const result of issueCounts) {
     await prisma.project.update({ where: { id: result.projectId }, data: { issueCounter: result._max.number ?? 0 } });
   }
-  await validateSeed([org, platformOrg], apps.length);
+  await validateSeed(tenants);
   console.log(`  Platform admin: ${admin.email}`);
   console.log(`  Organization admin: ${alice.email}`);
-  console.log("  Employees: platform.employee01..14@example.test and org.employee01..14@example.test");
+  console.log(`  Platform users: ${platformUsers.length}`);
+  console.log(`  Organization users: ${organizationUsers.length} per tenant`);
   console.log(`  Development password: ${PASSWORD}`);
-  console.log(`  Organizations: ${platformOrg.slug} (${platformOrg.id}), ${org.slug} (${org.id})`);
+  console.log(`  Organizations: ${tenants.map(({ organization }) => organization.slug).join(", ")}`);
 }
 
 async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUserId: string): Promise<void> {
@@ -1470,8 +1382,8 @@ async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUse
       where: { organizationId_templateKey: { organizationId, templateKey: template.key } },
       update: {
         name: template.name,
-        stages: template.stages,
-        transitions: template.transitions,
+        stages: inputJson(template.stages),
+        transitions: inputJson(template.transitions),
         status: "ACTIVE",
         isTemplate: true,
         isDefault: true,
@@ -1481,8 +1393,8 @@ async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUse
         organizationId,
         templateKey: template.key,
         name: template.name,
-        stages: template.stages,
-        transitions: template.transitions,
+        stages: inputJson(template.stages),
+        transitions: inputJson(template.transitions),
         status: "ACTIVE",
         isTemplate: true,
         isDefault: true,
@@ -1495,8 +1407,8 @@ async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUse
       update: {
         name: definition.name,
         description: definition.description,
-        stages: definition.stages,
-        transitions: definition.transitions,
+        stages: inputJson(definition.stages),
+        transitions: inputJson(definition.transitions),
         publishedByUserId: ownerUserId,
       },
       create: {
@@ -1504,8 +1416,8 @@ async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUse
         version: definition.version,
         name: definition.name,
         description: definition.description,
-        stages: definition.stages,
-        transitions: definition.transitions,
+        stages: inputJson(definition.stages),
+        transitions: inputJson(definition.transitions),
         publishedByUserId: ownerUserId,
       },
     });
@@ -1590,7 +1502,7 @@ async function seedTenantData(organization: Organization, users: User[], owner: 
     });
     await ensureMessage(organizationId, direct.id, user.id, "Thanks! I am ready to collaborate.");
     await prisma.messageReaction.upsert({
-      where: { messageId_userId_emoji: { messageId: welcome.id, userId: user.id, emoji: "👍" } },
+      where: { messageId_userId: { messageId: welcome.id, userId: user.id } },
       update: {},
       create: { messageId: welcome.id, userId: user.id, emoji: "👍" },
     });
@@ -1860,41 +1772,77 @@ async function seedTenantData(organization: Organization, users: User[], owner: 
   });
 }
 
-async function validateSeed(organizations: Organization[], appCount: number): Promise<void> {
-  if (process.env.SEED_RESET_DATABASE === "true") {
-    if ((await prisma.user.count()) !== 30 || (await prisma.organization.count()) !== 2)
-      throw new Error("Expected exactly 30 users and 2 organizations.");
+async function validateSeed(
+  tenants: Array<{ organization: Organization; users: User[]; owner: User; administrator: User }>,
+): Promise<void> {
+  if (env.SEED_RESET_DATABASE === "true") {
+    if ((await prisma.user.count()) !== 70 || (await prisma.organization.count()) !== 5)
+      throw new Error("Expected exactly 70 users and 5 organizations.");
     if (
       (await prisma.user.count({ where: { role: "PLATFORM_ADMIN" } })) !== 1 ||
       (await prisma.user.count({ where: { role: "ORG_ADMIN" } })) !== 1 ||
-      (await prisma.user.count({ where: { role: "EMPLOYEE" } })) !== 28
+      (await prisma.user.count({ where: { role: "EMPLOYEE" } })) !== 68
     )
       throw new Error("Seeded roles do not match the requested account counts.");
   }
-  for (const organization of organizations) {
+  for (const { organization, users, owner, administrator } of tenants) {
     const members = await prisma.organizationMember.findMany({
       where: { organizationId: organization.id, status: "ACTIVE", deletedAt: null },
     });
-    if (members.length !== 15 || members.filter((member) => member.isOwner).length !== 1)
+    if (env.SEED_RESET_DATABASE === "true" && (members.length !== 14 || members.filter((member) => member.isOwner).length !== 1))
       throw new Error(`Invalid membership counts for ${organization.slug}`);
-    for (const member of members) {
-      const userGroups = await prisma.organizationPermissionGroupAssignment.count({
+    for (const user of users) {
+      const membership = members.find((member) => member.userId === user.id);
+      if (!membership) throw new Error(`Seeded membership missing for ${user.email} in ${organization.slug}`);
+      const expectedSystemRole = user.id === owner.id || user.id === administrator.id
+        ? OrganizationSystemPermissionGroupRole.ADMINISTRATORS
+        : OrganizationSystemPermissionGroupRole.MEMBERS;
+      const activeGroupAssignments = await prisma.organizationPermissionGroupAssignment.count({
         where: {
           organizationId: organization.id,
-          userId: member.userId,
+          userId: user.id,
           revokedAt: null,
-          permissionGroup: { isSystem: true, isActive: true, deletedAt: null, name: { endsWith: "_users" } },
+          scopeType: "ORGANIZATION",
+          permissionGroup: { isSystem: true, isActive: true, deletedAt: null, systemRole: expectedSystemRole },
         },
       });
-      if (userGroups !== appCount) throw new Error(`Default group assignments missing for ${member.userId}`);
+      if (activeGroupAssignments !== 1)
+        throw new Error(`Expected one active ${expectedSystemRole} assignment for ${user.email}`);
     }
-    if ((await prisma.hrmsEmployee.count({ where: { organizationId: organization.id } })) !== 15)
+    const seededEmployeeCount = await prisma.hrmsEmployee.count({
+      where: { organizationId: organization.id, userId: { in: users.map(({ id }) => id) } },
+    });
+    if (seededEmployeeCount !== users.length)
       throw new Error(`HR profiles missing for ${organization.slug}`);
-    if ((await prisma.connectSidebarPreference.count({ where: { organizationId: organization.id } })) !== 15)
+    if (
+      (await prisma.connectSidebarPreference.count({
+        where: { organizationId: organization.id, userId: { in: users.map(({ id }) => id) } },
+      })) !== users.length
+    )
       throw new Error(`Sidebar state missing for ${organization.slug}`);
-    if ((await prisma.channel.count({ where: { organizationId: organization.id, type: "DIRECT" } })) !== 14)
-      throw new Error(`Direct chats missing for ${organization.slug}`);
+    if (
+      (await prisma.channel.count({
+        where: { organizationId: organization.id, type: "DIRECT", slug: { startsWith: "direct-" }, deletedAt: null },
+      })) < users.length - 1
+    )
+      throw new Error(`Seeded direct chats missing for ${organization.slug}`);
   }
+  // Message authors must be channel members so seeded messages remain visible
+  // and tenant-safe when a pre-existing channel is reused.
+  await prisma.$executeRaw`
+    INSERT INTO channel_members ("id", "channelId", "userId")
+    SELECT gen_random_uuid(), m."channelId", m."authorId"
+    FROM messages m
+    JOIN channels c ON c.id = m."channelId"
+    JOIN organization_members om
+      ON om."organizationId" = c."organizationId"
+     AND om."userId" = m."authorId"
+     AND om.status = 'ACTIVE'
+     AND om."deletedAt" IS NULL
+    LEFT JOIN channel_members cm ON cm."channelId" = m."channelId" AND cm."userId" = m."authorId"
+    WHERE cm.id IS NULL
+    ON CONFLICT ("channelId", "userId") DO NOTHING
+  `;
   const invalidMembers = await prisma.$queryRaw<Array<{ channelId: string }>>`
     SELECT cm."channelId" FROM channel_members cm
     JOIN channels c ON c.id = cm."channelId"
@@ -1908,7 +1856,7 @@ async function validateSeed(organizations: Organization[], appCount: number): Pr
     WHERE m."organizationId" <> c."organizationId" OR cm.id IS NULL
   `;
   if (invalidMessages.length) throw new Error("Invalid message tenant or author membership.");
-  console.log("Verified: 30 users, 2 organizations, default groups, profiles, conversations, and message membership.");
+  console.log("Verified seeded users, organizations, default groups, profiles, conversations, and message membership.");
 }
 
 async function backfillLegacyHrmsRecords(): Promise<void> {
@@ -2103,7 +2051,7 @@ async function backfillLegacyHrmsRecords(): Promise<void> {
           legacyAssetId: asset.id,
           name: asset.name,
           type: asset.type,
-          serialNumber: asset.serialNumber,
+          serialNumber: asset.serialNumber ?? `legacy-${asset.id}`,
           status: asset.status,
           assignedEmployeeId: employee.id,
           assignedAt: asset.assignedAt,

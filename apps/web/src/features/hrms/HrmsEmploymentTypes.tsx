@@ -191,6 +191,7 @@ function MasterDataDrawer({
           </IconButton>
         </div>
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" />
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             {apiError && (
               <p role="alert" className="rounded-md border border-error px-3 py-2 text-sm text-error">
@@ -412,16 +413,16 @@ export function HrmsEmploymentTypes({
   };
   const supportsToggle = masterDataType === "Locations" || masterDataType === "Employment types";
   return (
-    <>
+    <div className="flex h-full min-h-0 flex-col gap-4">
       {showHeader && (
-        <header className="mb-6">
+        <header className="shrink-0">
           <h1 className="text-2xl font-bold text-text-primary">Employment Types</h1>
           <p className="mt-1 text-sm text-text-secondary">
             Manage the employment categories available to your organization.
           </p>
         </header>
       )}
-      <Card className="overflow-hidden">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <CardTitle
           title={masterDataType}
           subtitle={`Manage organization ${masterDataType.toLowerCase()}`}
@@ -441,7 +442,7 @@ export function HrmsEmploymentTypes({
         ) : items.length === 0 ? (
           <div className="p-5 text-sm text-text-muted">No {masterDataType.toLowerCase()} found.</div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
             {items.map((item) => {
               const [detail] = displayMeta(masterDataType, item);
               const activeItem = item as HrmsLocation | HrmsEmploymentType;
@@ -544,6 +545,6 @@ export function HrmsEmploymentTypes({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

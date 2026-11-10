@@ -179,6 +179,43 @@ export interface ControlPlanEntitlementInput {
   value?: number;
 }
 
+export interface ControlRolePermission extends ApiEntity {
+  key: string;
+  resource: string;
+  action: string;
+  productKey: string | null;
+  description: string | null;
+  isAssignable: boolean;
+  isSystemOnly: boolean;
+}
+
+export interface ControlPlatformRole extends ApiEntity {
+  key: string;
+  name: string;
+  description: string | null;
+  isSystem: boolean;
+  permissions: Array<{ permission: ControlRolePermission }>;
+  _count: { assignments: number };
+}
+
+export interface CreateControlPlatformRoleInput {
+  key: string;
+  name: string;
+  description?: string;
+}
+
+export interface ControlPermissionInput {
+  key: string;
+  resource: string;
+  action: string;
+  productKey?: string;
+  description?: string;
+  isAssignable?: boolean;
+  isSystemOnly?: boolean;
+}
+
+export type UpdateControlPermissionInput = Omit<ControlPermissionInput, "key">;
+
 export interface CreateControlPlanInput {
   key: string;
   name: string;
@@ -234,6 +271,39 @@ export const controlPlatformService = {
     }),
   lockUser: (userId: string) =>
     tenantRequest<void>("", `${platform}/users/${pathSegment(userId)}/lock`, { method: "POST" }),
+  listRoles: () => tenantRequest<ControlPlatformRole[]>("", `${platform}/roles`),
+  listRolePermissions: () => tenantRequest<ControlRolePermission[]>("", `${platform}/roles/permissions`),
+  listPermissions: () => tenantRequest<ControlRolePermission[]>("", `${platform}/permissions`),
+  createPermission: (input: ControlPermissionInput) =>
+    jsonRequest<ControlRolePermission, ControlPermissionInput>(`${platform}/permissions`, "POST", input),
+  updatePermission: (permissionId: string, input: UpdateControlPermissionInput) =>
+    jsonRequest<ControlRolePermission, UpdateControlPermissionInput>(
+      `${platform}/permissions/${pathSegment(permissionId)}`,
+      "PATCH",
+      input,
+    ),
+  deletePermission: (permissionId: string) =>
+    tenantRequest<void>("", `${platform}/permissions/${pathSegment(permissionId)}`, { method: "DELETE" }),
+  createRole: (input: CreateControlPlatformRoleInput) =>
+    jsonRequest<ControlPlatformRole, CreateControlPlatformRoleInput>(`${platform}/roles`, "POST", input),
+  attachRolePermission: (roleId: string, permissionId: string) =>
+    tenantRequest<void>("", `${platform}/roles/${pathSegment(roleId)}/permissions/${pathSegment(permissionId)}`, {
+      method: "PUT",
+    }),
+  removeRolePermission: (roleId: string, permissionId: string) =>
+    tenantRequest<void>("", `${platform}/roles/${pathSegment(roleId)}/permissions/${pathSegment(permissionId)}`, {
+      method: "DELETE",
+    }),
+  assignRole: (roleId: string, userId: string) =>
+    jsonRequest<ApiEntity, Record<string, never>>(
+      `${platform}/roles/${pathSegment(roleId)}/users/${pathSegment(userId)}`,
+      "POST",
+      {},
+    ),
+  revokeRole: (roleId: string, userId: string) =>
+    tenantRequest<void>("", `${platform}/roles/${pathSegment(roleId)}/users/${pathSegment(userId)}/revoke`, {
+      method: "PATCH",
+    }),
   listProducts: () => tenantRequest<ApiEntity[]>("", `${platform}/products`),
   listEntitlements: (query: ListEntitlementsQuery = {}) =>
     tenantRequest<ControlEntitlementPage>("", `${platform}/entitlements`, { query }),
@@ -324,10 +394,6 @@ export const controlOrganizationService = {
       "POST",
       input,
     ),
-  listFeatureFlags: (organizationId: string) =>
-    tenantRequest<ApiEntity[]>(organizationId, "/api/control/organization/feature-flags"),
-  upsertFeatureFlag: (organizationId: string, input: Input) =>
-    tenantJsonRequest<ApiEntity, Input>(organizationId, "/api/control/organization/feature-flags", "POST", input),
   getSubscription: (organizationId: string) =>
     tenantRequest<ApiEntity | null>(organizationId, "/api/control/organization/subscription"),
 };

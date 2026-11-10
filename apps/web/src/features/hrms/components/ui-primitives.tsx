@@ -219,6 +219,24 @@ export function CardTitle({ title, subtitle, action }: { title: string; subtitle
   );
 }
 
+export function ListSkeleton({ rows = 6 }: { rows?: number }) {
+  return (
+    <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto" aria-label="Loading items" role="status">
+      {Array.from({ length: rows }, (_, index) => (
+        <div key={index} className="flex items-center gap-4 px-5 py-4">
+          <div className="size-9 shrink-0 animate-pulse rounded-md bg-surface-raised" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <div className="h-4 w-1/3 animate-pulse rounded bg-surface-raised" />
+            <div className="h-3 w-1/5 animate-pulse rounded bg-surface-raised" />
+          </div>
+          <div className="size-8 animate-pulse rounded-md bg-surface-raised" />
+          <span className="sr-only">Loading</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const avatarColors = [
   "bg-teal-100 text-teal-700",
   "bg-violet-100 text-violet-700",

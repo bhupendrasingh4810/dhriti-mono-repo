@@ -9,7 +9,7 @@ import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
 
 import { OrganizationAdminService, type OrgDashboard } from "./organization.service";
-import { UpdateOrgEntitlementDto, UpdateOrgSettingsDto, UpsertOrgFeatureFlagDto } from "./dto/organization.dto";
+import { UpdateOrgEntitlementDto, UpdateOrgSettingsDto } from "./dto/organization.dto";
 
 @ApiTags("control/organization")
 @ApiBearerAuth()
@@ -83,26 +83,6 @@ export class OrganizationAdminController {
     @Body() dto: UpdateOrgEntitlementDto,
   ) {
     return this.admin.setEntitlement(organization.organizationId, user.userId, dto);
-  }
-
-  // ---------------- Feature flags ----------------
-
-  @Get("feature-flags")
-  @RequirePermission("organization.settings.manage")
-  @ApiOperation({ summary: "List org feature flags" })
-  async listFeatureFlags(@CurrentOrganization() organization: OrganizationContext) {
-    return this.admin.listFeatureFlags(organization.organizationId);
-  }
-
-  @Post("feature-flags")
-  @RequirePermission("organization.settings.manage")
-  @ApiOperation({ summary: "Upsert a feature flag for the org" })
-  async upsertFeatureFlag(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentOrganization() organization: OrganizationContext,
-    @Body() dto: UpsertOrgFeatureFlagDto,
-  ) {
-    return this.admin.upsertFeatureFlag(organization.organizationId, user.userId, dto);
   }
 
   // ---------------- Subscription ----------------

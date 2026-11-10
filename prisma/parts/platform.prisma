@@ -767,20 +767,6 @@ model ProductEntitlement {
   @@map("product_entitlements")
 }
 
-model FeatureFlag {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
-  key            String
-  isEnabled      Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, key])
-  @@map("feature_flags")
-}
-
 model SupportTicket {
   id             String               @id @default(uuid()) @db.Uuid
   organizationId String?              @db.Uuid

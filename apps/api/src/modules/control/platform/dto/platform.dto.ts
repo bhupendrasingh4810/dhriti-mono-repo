@@ -292,18 +292,6 @@ export class ListEntitlementsQueryDto {
   limit?: number;
 }
 
-export class UpsertFeatureFlagDto {
-  @ApiProperty({ example: "ai-summaries" })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
-  key!: string;
-
-  @ApiProperty()
-  @IsBoolean()
-  isEnabled!: boolean;
-}
-
 export class CreateTicketDto {
   @ApiProperty()
   @IsString()
@@ -359,6 +347,86 @@ export class CreatePlatformRoleDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+}
+
+export class CreatePermissionDto {
+  @ApiProperty({ example: "connect.channel.create" })
+  @IsString()
+  @MinLength(3)
+  @MaxLength(160)
+  key!: string;
+
+  @ApiProperty({ example: "connect.channel" })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  resource!: string;
+
+  @ApiProperty({ example: "create" })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  action!: string;
+
+  @ApiPropertyOptional({ example: "connect" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  productKey?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isAssignable?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isSystemOnly?: boolean;
+}
+
+export class UpdatePermissionDto {
+  @ApiPropertyOptional({ example: "connect.channel" })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  resource?: string;
+
+  @ApiPropertyOptional({ example: "create" })
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  action?: string;
+
+  @ApiPropertyOptional({ example: "connect" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  productKey?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isAssignable?: boolean;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isSystemOnly?: boolean;
 }
 
 export class PlanEntitlementDto {

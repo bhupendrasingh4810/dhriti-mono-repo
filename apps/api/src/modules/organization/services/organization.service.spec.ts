@@ -62,26 +62,22 @@ describe("OrganizationService membership lifecycle", () => {
     );
   });
 
-  it("creates app permission groups and grants the creator admin access", async () => {
+  it("creates three metadata-backed default groups and grants the creator administrator access", async () => {
     const organization = { id: "org-new", name: "Northwind" };
-    const apps = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"];
-    const expectedGroupNames = apps.flatMap((app) => [
-      `Northwind_${app}_admins`,
-      `Northwind_${app}_users`,
-      `Northwind_${app}_guest`,
-    ]);
-    const adminGroups = apps.map((app, index) => ({ id: `admin-group-${index}`, name: `Northwind_${app}_admins` }));
+    const administratorGroup = { id: "administrator-group" };
     const transaction = {
       organization: { create: jest.fn().mockResolvedValue(organization) },
       organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
       onBoardingProfile: { upsert: jest.fn().mockResolvedValue({}) },
-      permission: { findUnique: jest.fn().mockResolvedValue({ id: "manage-permission" }) },
+      permission: { findUnique: jest.fn().mockResolvedValue({ id: "manage-permission" }), findMany: jest.fn().mockResolvedValue([]) },
       organizationPermissionGroup: {
-        createMany: jest.fn().mockResolvedValue({ count: 18 }),
-        findMany: jest.fn().mockResolvedValue(adminGroups),
+        createMany: jest.fn().mockResolvedValue({ count: 3 }),
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirstOrThrow: jest.fn().mockResolvedValue(administratorGroup),
       },
-      organizationPermissionGroupPermission: { createMany: jest.fn().mockResolvedValue({ count: 6 }) },
-      organizationPermissionGroupAssignment: { createMany: jest.fn().mockResolvedValue({ count: 6 }) },
+      organizationPermissionGroupPermission: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+      organizationPermissionGroupAssignment: { create: jest.fn().mockResolvedValue({}) },
+      hrmsWorkflowDefinition: { create: jest.fn().mockResolvedValue({}) },
     };
     const prisma = {
       organization: { findUnique: jest.fn().mockResolvedValue(null) },
@@ -98,20 +94,19 @@ describe("OrganizationService membership lifecycle", () => {
     const createdGroups = transaction.organizationPermissionGroup.createMany.mock.calls[0][0].data as Array<{
       name: string;
       isSystem: boolean;
+      systemRole: string;
     }>;
-    expect(createdGroups.map(({ name }) => name)).toEqual(expectedGroupNames);
+    expect(createdGroups.map(({ name }) => name)).toEqual(["Administrators", "Members", "Guests"]);
     expect(createdGroups.every(({ isSystem }) => isSystem)).toBe(true);
-    expect(transaction.organizationPermissionGroupPermission.createMany).toHaveBeenCalledWith({
-      data: adminGroups.map(({ id }) => ({ permissionGroupId: id, permissionId: "manage-permission" })),
-    });
-    expect(transaction.organizationPermissionGroupAssignment.createMany).toHaveBeenCalledWith({
-      data: adminGroups.map(({ id }) => ({
+    expect(createdGroups.map(({ systemRole }) => systemRole)).toEqual(["ADMINISTRATORS", "MEMBERS", "GUESTS"]);
+    expect(transaction.organizationPermissionGroupAssignment.create).toHaveBeenCalledWith({
+      data: {
         organizationId: organization.id,
-        permissionGroupId: id,
+        permissionGroupId: administratorGroup.id,
         userId: "owner-1",
         scopeType: "ORGANIZATION",
         assignedByUserId: "owner-1",
-      })),
+      },
     });
   });
 });

@@ -36,21 +36,25 @@ describe("TenantGuard", () => {
   it("denies a suspended or removed membership", async () => {
     const prisma = {
       organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
+      organization: { findFirst: jest.fn().mockResolvedValue(null) },
       userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
+      user: { findFirst: jest.fn().mockResolvedValue(null) },
     };
     const guard = new TenantGuard(prisma as never);
 
     await expect(guard.canActivate(context() as never)).rejects.toBeInstanceOf(ForbiddenException);
   });
 
-  it("does not allow a platform administrator without organization membership", async () => {
+  it("allows an active platform administrator without organization membership", async () => {
     const prisma = {
       organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
+      organization: { findFirst: jest.fn().mockResolvedValue({ id: organizationId }) },
       userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
+      user: { findFirst: jest.fn().mockResolvedValue({ role: "PLATFORM_ADMIN" }) },
     };
     const guard = new TenantGuard(prisma as never);
 
-    await expect(guard.canActivate(context() as never)).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(guard.canActivate(context() as never)).resolves.toBe(true);
   });
 
   it("rejects an invalid organization identifier before querying membership", async () => {
@@ -64,9 +68,13 @@ describe("TenantGuard", () => {
     expect(prisma.organizationMember.findFirst).not.toHaveBeenCalled();
   });
 
-  it("rejects an organization header that differs from the authenticated session", async () => {
+  it("allows switching to another active organization membership", async () => {
     const prisma = {
-      organizationMember: { findFirst: jest.fn() },
+      organizationMember: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: "member-b", user: { role: "EMPLOYEE" }, organization: { deletedAt: null } }),
+      },
       userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
     };
     const request = {
@@ -75,7 +83,31 @@ describe("TenantGuard", () => {
     };
     const guard = new TenantGuard(prisma as never);
 
-    await expect(guard.canActivate({ switchToHttp: () => ({ getRequest: () => request }) } as never)).rejects.toBeInstanceOf(ForbiddenException);
-    expect(prisma.organizationMember.findFirst).not.toHaveBeenCalled();
+    await expect(guard.canActivate({ switchToHttp: () => ({ getRequest: () => request }) } as never)).resolves.toBe(true);
+    expect(prisma.organizationMember.findFirst).toHaveBeenCalled();
+  });
+
+  it("resolves an organization slug before checking active membership", async () => {
+    const prisma = {
+      organization: { findFirst: jest.fn().mockResolvedValue({ id: organizationId }) },
+      organizationMember: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ id: "member-a", user: { role: "EMPLOYEE" }, organization: { deletedAt: null } }),
+      },
+      userSession: { findFirst: jest.fn().mockResolvedValue({ organizationId }) },
+    };
+    const request = {
+      user: { userId: "user-a", organizationId, sessionId: "session-a" },
+      headers: { "x-organization-id": "acme" },
+    };
+
+    await expect(
+      new TenantGuard(prisma as never).canActivate({ switchToHttp: () => ({ getRequest: () => request }) } as never),
+    ).resolves.toBe(true);
+    expect(prisma.organization.findFirst).toHaveBeenCalledWith({
+      where: { slug: "acme", deletedAt: null },
+      select: { id: true },
+    });
   });
 });

@@ -436,6 +436,13 @@ enum OrganizationPermissionScope {
   FLOW_PROJECT
 }
 
+/// Identifies the three immutable organization defaults without relying on names.
+enum OrganizationSystemPermissionGroupRole {
+  ADMINISTRATORS
+  MEMBERS
+  GUESTS
+}
+
 enum EntitlementKind {
   FEATURE
   LIMIT
@@ -1634,7 +1641,6 @@ model Organization {
   billingWebhookEvents BillingWebhookEvent[]
   organizationEntitlements OrganizationEntitlement[]
   entitlements  ProductEntitlement[]
-  featureFlags  FeatureFlag[]
   supportTickets SupportTicket[]
   settings      OrganizationSettings?
   notifications Notification[]
@@ -1827,6 +1833,7 @@ model OrganizationPermissionGroup {
   name           String
   description    String?
   isSystem       Boolean  @default(false)
+  systemRole     OrganizationSystemPermissionGroupRole?
   isActive       Boolean  @default(true)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -1837,6 +1844,7 @@ model OrganizationPermissionGroup {
   assignments  OrganizationPermissionGroupAssignment[]
 
   @@unique([organizationId, name])
+  @@index([organizationId, systemRole])
   @@index([organizationId, isActive])
   @@map("organization_permission_groups")
 }
@@ -2643,20 +2651,6 @@ model ProductEntitlement {
 
   @@unique([organizationId, productId])
   @@map("product_entitlements")
-}
-
-model FeatureFlag {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
-  key            String
-  isEnabled      Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, key])
-  @@map("feature_flags")
 }
 
 model SupportTicket {

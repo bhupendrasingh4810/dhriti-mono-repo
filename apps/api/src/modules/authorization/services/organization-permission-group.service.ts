@@ -6,6 +6,7 @@ import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
 import { PrismaService } from "../../../database/prisma.service";
 import { PermissionService } from "./permission.service";
+import { EntitlementService } from "./entitlement.service";
 
 @Injectable()
 export class OrganizationPermissionGroupService {
@@ -13,12 +14,20 @@ export class OrganizationPermissionGroupService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly permissions: PermissionService,
+    private readonly entitlements: EntitlementService,
   ) {}
 
   async list(organizationId: string) {
     return this.prisma.organizationPermissionGroup.findMany({
       where: { organizationId, deletedAt: null },
-      include: { permissions: { include: { permission: true } }, _count: { select: { assignments: true } } },
+      include: {
+        permissions: { include: { permission: true } },
+        assignments: {
+          where: { revokedAt: null },
+          include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, profile: { select: { jobTitle: true } } } } },
+        },
+        _count: { select: { assignments: { where: { revokedAt: null } } } },
+      },
       orderBy: { createdAt: "asc" },
     });
   }
@@ -79,10 +88,54 @@ export class OrganizationPermissionGroupService {
   }
 
   async delete(organizationId: string, groupId: string, actorUserId: string): Promise<void> {
-    await this.requireGroup(organizationId, groupId);
-    await this.prisma.organizationPermissionGroup.update({
-      where: { id: groupId },
-      data: { deletedAt: new Date(), isActive: false },
+    const group = await this.requireGroup(organizationId, groupId);
+    if (group.systemRole) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Default organization permission groups cannot be deleted",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    const membersGroup = await this.prisma.organizationPermissionGroup.findFirst({
+      where: {
+        organizationId,
+        systemRole: "MEMBERS",
+        isActive: true,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (!membersGroup) {
+      throw new AppError(
+        ErrorCode.PERMISSION_GROUP_NOT_FOUND,
+        "Default Members permission group not found",
+        HttpStatus.CONFLICT,
+      );
+    }
+    await this.prisma.$transaction(async (transaction) => {
+      const assignments = await transaction.organizationPermissionGroupAssignment.findMany({
+        where: { organizationId, permissionGroupId: groupId, revokedAt: null },
+        select: { userId: true },
+      });
+      await transaction.organizationPermissionGroupAssignment.updateMany({
+        where: { organizationId, permissionGroupId: groupId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      if (assignments.length > 0) {
+        await transaction.organizationPermissionGroupAssignment.createMany({
+          data: assignments.map(({ userId }) => ({
+            organizationId,
+            permissionGroupId: membersGroup.id,
+            userId,
+            scopeType: "ORGANIZATION",
+            assignedByUserId: actorUserId,
+          })),
+        });
+      }
+      await transaction.organizationPermissionGroup.update({
+        where: { id: groupId },
+        data: { deletedAt: new Date(), isActive: false },
+      });
     });
     await this.audit.record({
       action: "iam.permission-group.deleted",
@@ -100,9 +153,19 @@ export class OrganizationPermissionGroupService {
     actorUserId: string,
   ): Promise<void> {
     await this.requireGroup(organizationId, groupId);
-    const permission = await this.prisma.permission.findFirst({ where: { id: permissionId, isAssignable: true } });
+    const permission = await this.prisma.permission.findFirst({
+      where: { id: permissionId, isAssignable: true },
+      select: { id: true, productKey: true },
+    });
     if (!permission) {
       throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Assignable permission not found", HttpStatus.NOT_FOUND);
+    }
+    if (permission.productKey && !(await this.entitlements.hasFeature(organizationId, `${permission.productKey}.enabled`))) {
+      throw new AppError(
+        ErrorCode.FEATURE_NOT_ENTITLED,
+        `Organization is not entitled to ${permission.productKey}`,
+        HttpStatus.FORBIDDEN,
+      );
     }
     await this.prisma.organizationPermissionGroupPermission.upsert({
       where: { permissionGroupId_permissionId: { permissionGroupId: groupId, permissionId } },
@@ -150,17 +213,23 @@ export class OrganizationPermissionGroupService {
     await this.assertMember(organizationId, userId);
     const scopeType = input.scopeType ?? "ORGANIZATION";
     await this.validateScope(organizationId, scopeType, input.departmentId, input.teamId, input.flowProjectId);
-    const assignment = await this.prisma.organizationPermissionGroupAssignment.create({
-      data: {
-        organizationId,
-        permissionGroupId: groupId,
-        userId,
-        scopeType,
-        departmentId: input.departmentId ?? null,
-        teamId: input.teamId ?? null,
-        flowProjectId: input.flowProjectId ?? null,
-        assignedByUserId: actorUserId,
-      },
+    const assignment = await this.prisma.$transaction(async (transaction) => {
+      await transaction.organizationPermissionGroupAssignment.updateMany({
+        where: { organizationId, userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+      return transaction.organizationPermissionGroupAssignment.create({
+        data: {
+          organizationId,
+          permissionGroupId: groupId,
+          userId,
+          scopeType,
+          departmentId: input.departmentId ?? null,
+          teamId: input.teamId ?? null,
+          flowProjectId: input.flowProjectId ?? null,
+          assignedByUserId: actorUserId,
+        },
+      });
     });
     await this.audit.record({
       action: "iam.permission-group.assigned",

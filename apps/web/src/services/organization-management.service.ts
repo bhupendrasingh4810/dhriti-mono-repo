@@ -91,6 +91,19 @@ export const organizationAccessService = {
         `${access(organizationId)}/permission-groups/${pathSegment(groupId)}/permissions/${pathSegment(permissionId)}`,
         { method: "DELETE" },
       ),
+    assignUser: (organizationId: string, groupId: string, userId: string) =>
+      tenantJsonRequest<ApiEntity, Record<string, never>>(
+        organizationId,
+        `${access(organizationId)}/permission-groups/${pathSegment(groupId)}/users/${pathSegment(userId)}`,
+        "POST",
+        {},
+      ),
+    revokeUser: (organizationId: string, groupId: string, userId: string) =>
+      tenantRequest<void>(
+        organizationId,
+        `${access(organizationId)}/permission-groups/${pathSegment(groupId)}/users/${pathSegment(userId)}`,
+        { method: "DELETE" },
+      ),
   },
   departments: {
     list: (organizationId: string) =>
@@ -140,5 +153,6 @@ export const organizationAccessService = {
   setEntitlementOverride: (
     organizationId: string,
     input: { key: string; enabled?: boolean; value?: number; reason?: string; expiresAt?: string },
-  ) => tenantJsonRequest<ApiEntity, typeof input>(organizationId, `${access(organizationId)}/entitlements`, "POST", input),
+  ) =>
+    tenantJsonRequest<ApiEntity, typeof input>(organizationId, `${access(organizationId)}/entitlements`, "POST", input),
 };

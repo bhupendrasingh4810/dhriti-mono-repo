@@ -28,4 +28,8 @@ describe("OrganizationContextGuard", () => {
       guard.canActivate(context({}, { organizationId: "22222222-2222-4222-8222-222222222222" }) as never),
     ).toThrow(ForbiddenException);
   });
+
+  it("allows a route organization slug after TenantGuard resolves it", () => {
+    expect(new OrganizationContextGuard().canActivate(context({ organizationId: "acme" }) as never)).toBe(true);
+  });
 });

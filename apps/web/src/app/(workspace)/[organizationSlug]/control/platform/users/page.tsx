@@ -164,7 +164,7 @@ export default function PlatformUsers() {
     : [];
 
   return (
-    <div className="space-y-5">
+    <div className="flex h-full min-h-0 flex-col gap-5">
       <div>
         <h1 className="text-2xl font-bold text-slate-950">Platform Users</h1>
         <p className="mt-1 text-sm text-slate-500">Platform accounts and current access status.</p>
@@ -213,9 +213,10 @@ export default function PlatformUsers() {
           </select>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white">
+        <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full text-left text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
+          <thead className="sticky top-0 z-10 border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500">
             <tr>
               <th className="px-4 py-3 font-semibold"><SortButton label="Staff member" field="name" activeField={sortBy} order={sortOrder} onSort={toggleSort} /></th>
               <th className="px-4 py-3 font-semibold">Platform role</th>
@@ -284,6 +285,7 @@ export default function PlatformUsers() {
             )}
           </tbody>
         </table>
+        </div>
         <Pagination
           ariaLabel="Platform users pagination"
           page={pagination.page}

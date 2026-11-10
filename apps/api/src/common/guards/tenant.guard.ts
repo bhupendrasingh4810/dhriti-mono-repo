@@ -16,8 +16,8 @@ interface TenantGuardRequest extends Request {
 
 /**
  * Resolves the active organization from the authenticated session and enforces
- * an active membership. The organization header is accepted only when it
- * matches the session context for backward-compatible clients.
+ * an active membership. A requested organization header can switch context
+ * only for an active membership or an active platform administrator.
  */
 @Injectable()
 export class TenantGuard implements CanActivate {
@@ -48,7 +48,15 @@ export class TenantGuard implements CanActivate {
         message: "Session organization context is stale",
       });
     }
-    const organizationId = session.organizationId ?? user.organizationId;
+    const sessionOrganizationId = session.organizationId ?? user.organizationId;
+    const headerOrganization =
+      headerOrganizationId && !isUUID(headerOrganizationId)
+        ? await this.prisma.organization.findFirst({
+            where: { slug: headerOrganizationId, deletedAt: null },
+            select: { id: true },
+          })
+        : null;
+    const organizationId = headerOrganization?.id ?? headerOrganizationId ?? sessionOrganizationId;
 
     if (!organizationId || !isUUID(organizationId)) {
       throw new ForbiddenException({
@@ -56,13 +64,6 @@ export class TenantGuard implements CanActivate {
         message: "A valid active organization is required",
       });
     }
-    if (headerOrganizationId && headerOrganizationId !== organizationId) {
-      throw new ForbiddenException({
-        code: "ORGANIZATION_FORBIDDEN",
-        message: "Organization switching is not allowed",
-      });
-    }
-
     const membership = await this.prisma.organizationMember.findFirst({
       where: {
         organizationId,
@@ -70,10 +71,33 @@ export class TenantGuard implements CanActivate {
         status: "ACTIVE",
         deletedAt: null,
       },
-      select: { id: true, user: { select: { role: true } }, organization: { select: { deletedAt: true } } },
+      select: {
+        id: true,
+        user: { select: { role: true } },
+        organization: { select: { deletedAt: true } },
+      },
     });
 
-    if (!membership || membership.organization.deletedAt !== null) {
+    if (membership && membership.organization.deletedAt === null) {
+      request.organization = {
+        organizationId,
+        memberId: membership.id,
+        role: membership.user.role,
+      };
+      return true;
+    }
+
+    const platformAdministrator = await this.prisma.user.findFirst({
+      where: { id: user.userId, deletedAt: null, status: "ACTIVE", role: "PLATFORM_ADMIN", isPlatformUser: true },
+      select: { role: true },
+    });
+    const targetOrganization =
+      headerOrganization ??
+      (await this.prisma.organization.findFirst({
+        where: { id: organizationId, deletedAt: null },
+        select: { id: true },
+      }));
+    if (!platformAdministrator || !targetOrganization) {
       throw new ForbiddenException({
         code: "ORGANIZATION_FORBIDDEN",
         message: "You are not a member of this organization",
@@ -81,8 +105,8 @@ export class TenantGuard implements CanActivate {
     }
     request.organization = {
       organizationId,
-      memberId: membership.id,
-      role: membership.user.role,
+      memberId: null,
+      role: platformAdministrator.role,
     };
     return true;
   }

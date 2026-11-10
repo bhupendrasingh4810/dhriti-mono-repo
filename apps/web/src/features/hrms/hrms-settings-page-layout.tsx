@@ -10,9 +10,9 @@ export function HrmsSettingsPageLayout({ activeTab, children }: { activeTab: str
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
 
   return (
-    <div className="flex min-h-full flex-col bg-background md:flex-row">
+    <div className="flex h-full min-h-0 flex-col bg-background md:flex-row">
       <HrmsSettingsSidebar activeTab={activeTab} />
-      <main className="min-w-0 flex-1 md:ml-[328px]">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col md:ml-[328px]">
         <nav
           aria-label="Breadcrumb"
           className="sticky top-4 z-30 rounded-lg bg-surface px-6 py-5 text-sm text-text-secondary"
@@ -29,7 +29,7 @@ export function HrmsSettingsPageLayout({ activeTab, children }: { activeTab: str
             {activeTab}
           </span>
         </nav>
-        <div className="mt-4">{children}</div>
+        <div className="mt-4 min-h-0 flex-1">{children}</div>
       </main>
     </div>
   );

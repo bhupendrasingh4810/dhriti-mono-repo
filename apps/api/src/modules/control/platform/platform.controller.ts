@@ -15,12 +15,14 @@ import {
   CreateTicketDto,
   UpdateProductDto,
   CreatePlatformRoleDto,
+  CreatePermissionDto,
   CreateEntitlementDto,
   ListEntitlementsQueryDto,
   CreatePlanDto,
   UpdateEntitlementDefinitionDto,
   UpdatePlanEntitlementsDto,
   UpdatePlanStatusDto,
+  UpdatePermissionDto,
   UpdateSubscriptionDto,
   UpdateTicketDto,
 } from "./dto/platform.dto";
@@ -44,6 +46,48 @@ export class PlatformController {
   @ApiOperation({ summary: "List explicit platform roles and their permissions" })
   listRoles() {
     return this.platformRoles.list();
+  }
+
+  @Get("roles/permissions")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "List permissions assignable to platform roles" })
+  listRolePermissions() {
+    return this.platformRoles.listAssignablePermissions();
+  }
+
+  @Get("permissions")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "List platform permission definitions" })
+  listPermissions() {
+    return this.platformRoles.listPermissions();
+  }
+
+  @Post("permissions")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Create a platform permission definition" })
+  createPermission(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePermissionDto) {
+    return this.platformRoles.createPermission(user.userId, dto);
+  }
+
+  @Patch("permissions/:permissionId")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Update a platform permission definition" })
+  updatePermission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("permissionId") permissionId: string,
+    @Body() dto: UpdatePermissionDto,
+  ) {
+    return this.platformRoles.updatePermission(permissionId, user.userId, dto);
+  }
+
+  @Delete("permissions/:permissionId")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Delete an unassigned platform permission definition" })
+  deletePermission(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("permissionId") permissionId: string,
+  ): Promise<void> {
+    return this.platformRoles.deletePermission(permissionId, user.userId);
   }
 
   @Post("roles")

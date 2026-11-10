@@ -14,7 +14,6 @@ const tabs = [
   "Employment Types",
   "Integrations",
   "Locations",
-  "Roles & Permissions",
   "Workflows",
 ];
 const settingsRouteSegments: Partial<Record<(typeof tabs)[number], string>> = {
@@ -23,7 +22,6 @@ const settingsRouteSegments: Partial<Record<(typeof tabs)[number], string>> = {
   Designations: "designations",
   "Employment Types": "employment-types",
   Locations: "locations",
-  "Roles & Permissions": "permissions",
   Workflows: "workflow",
 };
 const stats = [
@@ -35,7 +33,6 @@ const stats = [
 const columns = ["Setting", "Description", "Last updated", "Updated by", "Status"];
 const rows = [
   ["Organization profile", "Legal entity and HR details", "2 days ago", "Neha Mehta", "Configured"],
-  ["Roles & permissions", "12 custom roles", "Yesterday", "Rohan Kapoor", "Configured"],
   ["Leave workflows", "Conditional approval routing", "Sep 28", "Neha Mehta", "Active"],
   ["Notification preferences", "Email and in-app rules", "Sep 22", "Aditi Bose", "Active"],
 ];
@@ -120,71 +117,6 @@ function SettingsDrawer({ close, complete }: { close: () => void; complete: (mes
   );
 }
 
-export function HrmsPermissions() {
-  const [permissions, setPermissions] = useState(() => [
-    [true, true, true, true],
-    [true, true, true, true],
-    [false, true, true, true],
-    [false, false, true, true],
-    [false, false, true, true],
-  ]);
-  const permissionRows = [
-    "Employee records",
-    "Attendance",
-    "Leave approvals",
-    "Payroll configuration",
-    "Organization settings",
-  ];
-  return (
-    <Card className="overflow-hidden">
-      <CardTitle
-        title="Role and permission matrix"
-        subtitle="Changes apply to the selected organization"
-        action={<Button>Save permissions</Button>}
-      />
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] text-left">
-          <thead className="bg-slate-50">
-            <tr>
-              <th className="px-5 py-3 text-xs uppercase text-text-muted">Permission</th>
-              {["Employee", "Manager", "HR", "Platform Admin"].map((role) => (
-                <th key={role} className="px-5 py-3 text-center text-xs uppercase text-text-muted">
-                  {role}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {permissionRows.map((row, rowIndex) => (
-              <tr key={row}>
-                <td className="px-5 py-4 text-sm font-semibold">{row}</td>
-                {permissions[rowIndex].map((allowed, columnIndex) => (
-                  <td key={columnIndex} className="px-5 py-4 text-center">
-                    <input
-                      type="checkbox"
-                      checked={allowed}
-                      disabled={columnIndex === 3}
-                      onChange={() =>
-                        setPermissions((current) =>
-                          current.map((values, index) =>
-                            index === rowIndex
-                              ? values.map((value, itemIndex) => (itemIndex === columnIndex ? !value : value))
-                              : values,
-                          ),
-                        )
-                      }
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
-}
-
 function AppSettings() {
   return <AppSettingsPage app="hrms" showBreadcrumb={false} />;
 }
@@ -246,12 +178,7 @@ export function HrmsSettings({ onToast }: { onToast: (message: string) => void }
           </span>
         </nav>
         <div className="mt-4">
-          {tab === "Roles & Permissions" ? (
-            <>
-              <HrmsSettingsHeader tab={tab} />
-              <HrmsPermissions />
-            </>
-          ) : tab === "App Settings" ? (
+          {tab === "App Settings" ? (
             <AppSettings />
           ) : (
             <>

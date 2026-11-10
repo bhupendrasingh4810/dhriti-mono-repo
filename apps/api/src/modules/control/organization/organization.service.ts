@@ -1,11 +1,11 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import type { FeatureFlag, OrganizationSettings, ProductEntitlement, Subscription } from "@prisma/client";
+import type { OrganizationSettings, ProductEntitlement, Subscription } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
-import type { UpdateOrgEntitlementDto, UpdateOrgSettingsDto, UpsertOrgFeatureFlagDto } from "./dto/organization.dto";
+import type { UpdateOrgEntitlementDto, UpdateOrgSettingsDto } from "./dto/organization.dto";
 import { enqueueNotification } from "../../notification/notification-events";
 
 export interface OrgDashboard {
@@ -230,37 +230,6 @@ export class OrganizationAdminService {
       metadata: { productKey: dto.productKey, isEnabled: dto.isEnabled },
     });
     return entitlement;
-  }
-
-  // ---------------- Feature flags ----------------
-
-  async listFeatureFlags(organizationId: string): Promise<FeatureFlag[]> {
-    return this.prisma.featureFlag.findMany({
-      where: { organizationId },
-      orderBy: { key: "asc" },
-    });
-  }
-
-  async upsertFeatureFlag(
-    organizationId: string,
-    actorUserId: string,
-    dto: UpsertOrgFeatureFlagDto,
-  ): Promise<FeatureFlag> {
-    const flag = await this.prisma.featureFlag.upsert({
-      where: { organizationId_key: { organizationId, key: dto.key } },
-      create: { organizationId, key: dto.key, isEnabled: dto.isEnabled },
-      update: { isEnabled: dto.isEnabled },
-    });
-
-    await this.audit.record({
-      action: "control.org.feature-flag-changed",
-      organizationId,
-      actorUserId,
-      resourceType: "FeatureFlag",
-      resourceId: flag.id,
-      metadata: { key: dto.key, isEnabled: dto.isEnabled },
-    });
-    return flag;
   }
 
   // ---------------- Subscription ----------------

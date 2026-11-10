@@ -61,14 +61,3 @@ export class UpdateOrgEntitlementDto {
   @IsBoolean()
   isEnabled!: boolean;
 }
-
-export class UpsertOrgFeatureFlagDto {
-  @ApiProperty({ example: "ai-summaries" })
-  @IsString()
-  @MaxLength(120)
-  key!: string;
-
-  @ApiProperty()
-  @IsBoolean()
-  isEnabled!: boolean;
-}

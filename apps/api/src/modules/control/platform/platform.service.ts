@@ -411,8 +411,8 @@ export class PlatformService {
   // ---------------- Users ----------------
 
   /**
-   * Retrieves a list of all users with their authentication and membership details.
-   * @returns An array of users with additional information.
+   * Retrieves active platform staff with their authentication and membership details.
+   * @returns An array of users with active platform role assignments.
    * @throws AppError if there is an issue retrieving the list of users.
    */
   async listUsers(query: ListPlatformUsersQueryDto = {}) {
@@ -420,6 +420,7 @@ export class PlatformService {
     const limit = query.limit ?? 10;
     const where: Prisma.UserWhereInput = {
       deletedAt: null,
+      platformRoleAssignments: { some: { revokedAt: null } },
       ...(query.search
         ? {
             OR: [

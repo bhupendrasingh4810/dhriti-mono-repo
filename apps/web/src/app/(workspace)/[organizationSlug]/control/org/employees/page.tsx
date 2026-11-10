@@ -1,31 +1,47 @@
 "use client";
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { ArrowDownUp, ChevronLeft, ChevronRight, Search, Trash2, UserPlus } from "lucide-react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { useToast, ToastContainer } from "@/components/shared/Toast";
-import { invitationsService } from "@/services/organization-management.service";
-import { controlOrganizationService, type ControlOrganizationMember } from "@/services/control.service";
 
-interface Employee {
+import { ToastContainer, useToast } from "@/components/shared/Toast";
+import { controlOrganizationService, type ControlOrganizationMember } from "@/services/control.service";
+import { invitationsService } from "@/services/organization-management.service";
+
+type Employee = {
   id: string;
   name: string;
   email: string;
   role: string;
-  team: string;
-  joined: string;
+  teams: string;
+  joinedAt: string;
   status: "Active" | "Inactive" | "Pending";
+};
+type SortField = "name" | "joinedAt";
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 }
 
-const statusColors: Record<Employee["status"], { bg: string; color: string }> = {
-  Active: { bg: "#dcfce7", color: "#166534" },
-  Inactive: { bg: "#f1f5f9", color: "#475569" },
-  Pending: { bg: "#fef9c3", color: "#92400e" },
-};
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+}
 
 export default function EmployeePage() {
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const { toasts, addToast, removeToast } = useToast();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | Employee["status"]>("");
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [members, setMembers] = useState<Employee[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -49,6 +65,7 @@ export default function EmployeePage() {
     try {
       await invitationsService.create(organizationSlug, { email: email.trim() });
       addToast(`Invitation sent to ${email.trim()}`, "success");
+      await loadMembers();
     } catch (error) {
       addToast(error instanceof Error ? error.message : "Unable to invite member", "error");
     } finally {
@@ -61,8 +78,8 @@ export default function EmployeePage() {
     setIsSaving(true);
     try {
       await controlOrganizationService.removeMember(organizationSlug, member.id);
-      setMembers((current) => current.filter((item) => item.id !== member.id));
       addToast(`${member.name} removed`, "warning");
+      await loadMembers();
     } catch (error) {
       addToast(error instanceof Error ? error.message : "Unable to remove member", "error");
     } finally {
@@ -70,183 +87,190 @@ export default function EmployeePage() {
     }
   };
 
-  const filtered = members.filter(
-    (m) => m.name.toLowerCase().includes(search.toLowerCase()) || m.email.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filteredMembers = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    return members
+      .filter(
+        (member) =>
+          (!normalizedSearch || `${member.name} ${member.email}`.toLowerCase().includes(normalizedSearch)) &&
+          (!statusFilter || member.status === statusFilter),
+      )
+      .sort((first, second) => {
+        const firstValue = sortField === "name" ? first.name : first.joinedAt;
+        const secondValue = sortField === "name" ? second.name : second.joinedAt;
+        const comparison = firstValue.localeCompare(secondValue);
+        return sortOrder === "asc" ? comparison : -comparison;
+      });
+  }, [members, search, statusFilter, sortField, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredMembers.length / pageSize));
+  const activePage = Math.min(page, totalPages);
+  const visibleMembers = filteredMembers.slice((activePage - 1) * pageSize, activePage * pageSize);
+  const rangeStart = filteredMembers.length ? (activePage - 1) * pageSize + 1 : 0;
+  const rangeEnd = Math.min(activePage * pageSize, filteredMembers.length);
+
+  const toggleSort = (field: SortField) => {
+    if (sortField === field) setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
+    else {
+      setSortField(field);
+      setSortOrder("asc");
+    }
+  };
 
   return (
-    <div>
+    <div className="flex h-full min-h-0 flex-col gap-4">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <header className="flex shrink-0 items-start justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>Employees</h1>
-          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
-            {members.length} employees in this organization
-          </p>
+          <h1 className="text-2xl font-bold text-text-primary">Workforce</h1>
+          <p className="mt-1 text-sm text-text-secondary">Organization members and their current access status.</p>
         </div>
         <button
+          type="button"
           disabled={isSaving}
           onClick={() => void handleInvite()}
-          style={{
-            padding: "9px 18px",
-            borderRadius: 8,
-            border: "none",
-            backgroundColor: "#036c5f",
-            color: "white",
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
+          className="flex cursor-pointer items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-semibold text-text-inverse disabled:cursor-not-allowed disabled:opacity-60"
         >
-          + Invite Member
+          <UserPlus aria-hidden="true" size={16} />
+          Invite member
         </button>
+      </header>
+
+      <div className="flex shrink-0 flex-col justify-between gap-3 sm:flex-row">
+        <label className="relative w-full max-w-xl">
+          <span className="sr-only">Search workforce</span>
+          <Search aria-hidden="true" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            placeholder="Search users..."
+            className="w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand"
+          />
+        </label>
+        <label>
+          <span className="sr-only">Filter by status</span>
+          <select
+            value={statusFilter}
+            onChange={(event) => {
+              setStatusFilter(event.target.value as "" | Employee["status"]);
+              setPage(1);
+            }}
+            className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-brand"
+          >
+            <option value="">All statuses</option>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+            <option value="Inactive">Inactive</option>
+          </select>
+        </label>
       </div>
 
-      <div style={{ position: "relative", marginBottom: 16, maxWidth: 360 }}>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#94a3b8"
-          strokeWidth="2"
-          style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)" }}
-        >
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search members..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            width: "100%",
-            paddingLeft: 32,
-            paddingRight: 12,
-            paddingTop: 9,
-            paddingBottom: 9,
-            border: "1px solid #e2e8f0",
-            borderRadius: 8,
-            fontSize: 13,
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-      </div>
-
-      <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ backgroundColor: "#f8fafc" }}>
-              {["Member", "Role", "Team", "Joined", "Status", "Actions"].map((h) => (
-                <th
-                  key={h}
-                  style={{
-                    padding: "10px 16px",
-                    textAlign: "left",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: "#64748b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => {
-              const sc = statusColors[m.status];
-              return (
-                <tr key={m.id} style={{ borderTop: "1px solid #f1f5f9" }}>
-                  <td style={{ padding: "12px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: "50%",
-                          backgroundColor: "#e6f4f2",
-                          color: "#036c5f",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 12,
-                          fontWeight: 700,
-                        }}
-                      >
-                        {m.name
-                          .split(" ")
-                          .map((w) => w[0])
-                          .join("")}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>{m.name}</div>
-                        <div style={{ fontSize: 12, color: "#64748b" }}>{m.email}</div>
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="min-h-0 flex-1 overflow-auto">
+          <table className="w-full border-collapse text-left">
+            <thead className="sticky top-0 z-10 bg-surface-raised text-xs font-semibold uppercase tracking-wide text-text-muted">
+              <tr>
+                <SortableHeading label="Staff member" active={sortField === "name"} onClick={() => toggleSort("name")} />
+                <th className="px-4 py-3">Access group</th>
+                <th className="px-4 py-3">Teams</th>
+                <SortableHeading label="Joined" active={sortField === "joinedAt"} onClick={() => toggleSort("joinedAt")} />
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {visibleMembers.map((member) => (
+                <tr key={member.id} className="hover:bg-surface-raised">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-muted text-xs font-semibold text-brand">
+                        {initials(member.name)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-text-primary">{member.name}</p>
+                        <p className="truncate text-xs text-text-muted">{member.email}</p>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "#475569" }}>{m.role}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "#475569" }}>{m.team}</td>
-                  <td style={{ padding: "12px 16px", fontSize: 13, color: "#475569" }}>{m.joined}</td>
-                  <td style={{ padding: "12px 16px" }}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        padding: "3px 8px",
-                        borderRadius: 20,
-                        backgroundColor: sc.bg,
-                        color: sc.color,
-                      }}
-                    >
-                      {m.status}
-                    </span>
-                  </td>
-                  <td style={{ padding: "12px 16px" }}>
+                  <td className="px-4 py-3 text-sm text-text-secondary">{member.role}</td>
+                  <td className="px-4 py-3 text-sm text-text-secondary">{member.teams}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-sm text-text-secondary">{formatDate(member.joinedAt)}</td>
+                  <td className="px-4 py-3"><StatusBadge status={member.status} /></td>
+                  <td className="px-4 py-3 text-right">
                     <button
-                      disabled={isSaving || m.role === "Owner"}
-                      onClick={() => void handleRemove(m)}
-                      style={{
-                        padding: "4px 10px",
-                        borderRadius: 5,
-                        border: "1px solid #fecaca",
-                        backgroundColor: "#fff5f5",
-                        cursor: "pointer",
-                        fontSize: 12,
-                        color: "#dc2626",
-                      }}
+                      type="button"
+                      disabled={isSaving || member.role === "Owner"}
+                      onClick={() => void handleRemove(member)}
+                      className="cursor-pointer rounded-md p-2 text-error hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40"
+                      aria-label={`Remove ${member.name}`}
+                      title={`Remove ${member.name}`}
                     >
-                      Remove
+                      <Trash2 aria-hidden="true" size={16} />
                     </button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+              {!visibleMembers.length ? (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-text-muted">No workforce members found.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+        <footer className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-4 py-2 text-xs text-text-secondary">
+          <label className="flex items-center gap-2">
+            Rows per page:
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+              className="cursor-pointer bg-surface text-text-primary outline-none"
+            >
+              {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
+            </select>
+          </label>
+          <span>{rangeStart}-{rangeEnd} of {filteredMembers.length}</span>
+          <button type="button" disabled={activePage === 1} onClick={() => setPage((current) => current - 1)} className="cursor-pointer p-1 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Previous page">
+            <ChevronLeft aria-hidden="true" size={16} />
+          </button>
+          <button type="button" disabled={activePage === totalPages} onClick={() => setPage((current) => current + 1)} className="cursor-pointer p-1 disabled:cursor-not-allowed disabled:opacity-40" aria-label="Next page">
+            <ChevronRight aria-hidden="true" size={16} />
+          </button>
+        </footer>
+      </section>
     </div>
   );
 }
 
+function SortableHeading({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <th className="px-4 py-3">
+      <button type="button" onClick={onClick} className="inline-flex cursor-pointer items-center gap-1 hover:text-text-primary">
+        {label}<ArrowDownUp aria-hidden="true" size={13} className={active ? "text-brand" : ""} />
+      </button>
+    </th>
+  );
+}
+
+function StatusBadge({ status }: { status: Employee["status"] }) {
+  const tone = status === "Active" ? "bg-brand-muted text-brand" : status === "Pending" ? "bg-surface-raised text-text-secondary" : "bg-surface-raised text-text-muted";
+  return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{status}</span>;
+}
+
 function toEmployee(member: ControlOrganizationMember): Employee {
-  const statusByApiValue: Record<string, Employee["status"]> = {
-    ACTIVE: "Active",
-    INVITED: "Pending",
-    PENDING: "Pending",
-  };
+  const statusByApiValue: Record<string, Employee["status"]> = { ACTIVE: "Active", INVITED: "Pending", PENDING: "Pending" };
   return {
     id: member.id,
     name: member.name,
     email: member.email,
     role: member.isOwner ? "Owner" : member.role,
-    team: member.teams.join(", ") || "-",
-    joined: new Date(member.joinedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    teams: member.teams.join(", ") || "No team",
+    joinedAt: member.joinedAt,
     status: statusByApiValue[member.status] ?? "Inactive",
   };
 }

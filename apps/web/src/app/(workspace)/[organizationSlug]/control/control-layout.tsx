@@ -7,7 +7,6 @@ import {
   Building2,
   Cable,
   ChartNoAxesColumnIncreasing,
-  Flag,
   KeyRound,
   LayoutDashboard,
   ReceiptText,
@@ -39,10 +38,10 @@ const NAVIGATION: Record<ControlMode, ControlNavigationItem[]> = {
   platform: [
     { href: "platform/audit-logs", label: "Audit Logs", icon: ScrollText, enabled: true },
     { href: "platform/entitlements", label: "Entitlements", icon: KeyRound, enabled: true },
-    { href: "platform/feature-flags", label: "Feature Flags", icon: Flag, enabled: true },
     { href: "platform/orgs", label: "Organizations", icon: Building2, enabled: true },
     { href: "platform/dashboard", label: "Overview", icon: LayoutDashboard, enabled: true },
     { href: "platform/plans", label: "Plans", icon: Tag, enabled: true },
+    { href: "platform/roles", label: "Roles & Permissions", icon: KeyRound, enabled: true },
     { href: "platform/users", label: "Platform Workforce", icon: Users, enabled: true },
     { href: "platform/security-center", label: "Security Center", icon: ShieldCheck, enabled: true },
     { href: "platform/settings", label: "Settings", icon: Settings, enabled: true },
@@ -135,7 +134,7 @@ export function ControlLayout({ children, mode }: ControlLayoutProps) {
         </header>
         <main
           ref={mainRef}
-          className={`-mr-4 mt-4 flex-1 overflow-y-auto pb-3 pl-0 pt-3 ${hasVerticalScrollbar ? "pr-2" : "pr-4"}`}
+          className={`-mr-4 mt-4 flex-1 overflow-y-auto pb-0 pl-0 pt-3 ${hasVerticalScrollbar ? "pr-2" : "pr-4"}`}
         >
           {children}
         </main>

@@ -57,7 +57,7 @@ export const RetentionConfirmation: Story = {
     primaryButtonColor: "error",
     primaryActionLabel: "Confirm and save",
     children:
-      "Shortening or enabling message or recording retention may permanently delete older data. Changes have a 24-hour grace period before they take effect. Retention cleanup runs only when the server-side feature flag is enabled.",
+      "Shortening or enabling message or recording retention may permanently delete older data. Changes have a 24-hour grace period before they take effect.",
   },
 };
 

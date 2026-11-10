@@ -8,7 +8,10 @@ interface OrganizationRequest extends Request {
   organization?: OrganizationContext;
 }
 
-/** Ensures a route organization id cannot differ from the authenticated tenant context. */
+/**
+ * Ensures UUID route or body organization IDs cannot differ from the
+ * authenticated tenant context. TenantGuard resolves authorized URL slugs.
+ */
 @Injectable()
 export class OrganizationContextGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
@@ -21,7 +24,8 @@ export class OrganizationContextGuard implements CanActivate {
       !activeOrganizationId ||
       !isUUID(activeOrganizationId) ||
       (routeOrganizationId !== undefined &&
-        (!isUUID(routeOrganizationId) || routeOrganizationId !== activeOrganizationId)) ||
+        isUUID(routeOrganizationId) &&
+        routeOrganizationId !== activeOrganizationId) ||
       (bodyOrganizationId !== undefined && (!isUUID(bodyOrganizationId) || bodyOrganizationId !== activeOrganizationId))
     ) {
       throw new ForbiddenException({

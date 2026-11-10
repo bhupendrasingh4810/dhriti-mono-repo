@@ -1,4 +1,5 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
+import { OrganizationSystemPermissionGroupRole } from "@prisma/client";
 import type {
   Address,
   EnabledProduct,
@@ -24,8 +25,11 @@ import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization
 import { enqueueNotification } from "../../notification/notification-events";
 import { defaultHrmsWorkflowTemplates } from "../../hrms/default-workflow-templates";
 
-const ORGANIZATION_APPS = ["connect", "flow", "hrms", "pulse", "atlas", "cadence"] as const;
-const DEFAULT_PERMISSION_GROUP_TYPES = ["admins", "users", "guest"] as const;
+const DEFAULT_PERMISSION_GROUPS = [
+  { name: "Administrators", systemRole: OrganizationSystemPermissionGroupRole.ADMINISTRATORS },
+  { name: "Members", systemRole: OrganizationSystemPermissionGroupRole.MEMBERS },
+  { name: "Guests", systemRole: OrganizationSystemPermissionGroupRole.GUESTS },
+] as const;
 
 export interface MemberWithUser extends OrganizationMember {
   user: Pick<User, "id" | "email" | "name" | "avatarUrl" | "status" | "role">;
@@ -118,33 +122,32 @@ export class OrganizationService {
         },
       });
 
-      const groupNamePrefix = organizationName.trim().replace(/\s+/g, "_");
-      const groupNames = ORGANIZATION_APPS.flatMap((appName) =>
-        DEFAULT_PERMISSION_GROUP_TYPES.map((groupType) => `${groupNamePrefix}_${appName}_${groupType}`),
-      );
       await transaction.organizationPermissionGroup.createMany({
-        data: groupNames.map((name) => ({
+        data: DEFAULT_PERMISSION_GROUPS.map(({ name, systemRole }) => ({
           organizationId: organization.id,
           name,
           description: "System default permission group",
           isSystem: true,
+          systemRole,
         })),
       });
       await assignDefaultPermissionGroupPermissions(transaction, organization.id);
 
-      const adminGroupNames = ORGANIZATION_APPS.map((appName) => `${groupNamePrefix}_${appName}_admins`);
-      const adminGroups = await transaction.organizationPermissionGroup.findMany({
-        where: { organizationId: organization.id, name: { in: adminGroupNames } },
+      const administratorGroup = await transaction.organizationPermissionGroup.findFirstOrThrow({
+        where: {
+          organizationId: organization.id,
+          systemRole: OrganizationSystemPermissionGroupRole.ADMINISTRATORS,
+        },
         select: { id: true },
       });
-      await transaction.organizationPermissionGroupAssignment.createMany({
-        data: adminGroups.map(({ id }) => ({
+      await transaction.organizationPermissionGroupAssignment.create({
+        data: {
           organizationId: organization.id,
-          permissionGroupId: id,
+          permissionGroupId: administratorGroup.id,
           userId: creatorUserId,
           scopeType: "ORGANIZATION",
           assignedByUserId: creatorUserId,
-        })),
+        },
       });
       // Templates are organization-local so cloning never crosses a tenant boundary.
       await Promise.all(

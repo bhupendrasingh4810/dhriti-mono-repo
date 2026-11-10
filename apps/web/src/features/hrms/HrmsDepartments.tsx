@@ -7,7 +7,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { organizationAccessService } from "@/services/organization-management.service";
 import type { ApiEntity } from "@/services/service-types";
 
-import { Button, Card, CardTitle, Icon } from "./components/ui-primitives";
+import { Button, Card, CardTitle, Icon, ListSkeleton } from "./components/ui-primitives";
 
 type Department = ApiEntity & {
   name: string;
@@ -162,6 +162,7 @@ function DepartmentDrawer({
           </IconButton>
         </div>
         <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+          <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" />
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             {apiError && (
               <p role="alert" className="rounded-md border border-error px-3 py-2 text-sm text-error">
@@ -302,12 +303,12 @@ export function HrmsDepartments({ onToast }: { onToast: (message: string) => voi
   };
 
   return (
-    <>
-      <header className="mb-6">
+    <div className="flex h-full min-h-0 flex-col gap-4">
+      <header className="shrink-0">
         <h1 className="text-2xl font-bold text-text-primary">Departments</h1>
         <p className="mt-1 text-sm text-text-secondary">Manage organization departments and reporting structure.</p>
       </header>
-      <Card className="overflow-hidden">
+      <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <CardTitle
           title="Departments"
           subtitle="Manage organization departments"
@@ -322,11 +323,11 @@ export function HrmsDepartments({ onToast }: { onToast: (message: string) => voi
             {loadError}
           </div>
         ) : loading ? (
-          <div className="p-5 text-sm text-text-muted">Loading departments…</div>
+          <ListSkeleton />
         ) : departments.length === 0 ? (
           <div className="p-5 text-sm text-text-muted">No departments found.</div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="min-h-0 flex-1 divide-y divide-border overflow-y-auto">
             {departments.map((department) => (
               <div key={department.id} className="flex items-center gap-4 px-5 py-4 hover:bg-surface-raised">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-muted text-brand">
@@ -401,6 +402,6 @@ export function HrmsDepartments({ onToast }: { onToast: (message: string) => voi
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

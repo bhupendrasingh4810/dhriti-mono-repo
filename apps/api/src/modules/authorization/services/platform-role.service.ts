@@ -14,8 +14,125 @@ export class PlatformRoleService {
 
   list() {
     return this.prisma.platformRole.findMany({
-      include: { permissions: { include: { permission: true } }, _count: { select: { assignments: true } } },
+      include: {
+        permissions: { include: { permission: true } },
+        assignments: {
+          where: { revokedAt: null },
+          include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, profile: { select: { jobTitle: true } } } } },
+        },
+        _count: { select: { assignments: { where: { revokedAt: null } } } },
+      },
       orderBy: { key: "asc" },
+    });
+  }
+
+  listAssignablePermissions() {
+    return this.prisma.permission.findMany({
+      where: { isAssignable: true },
+      orderBy: { key: "asc" },
+    });
+  }
+
+  listPermissions() {
+    return this.prisma.permission.findMany({ orderBy: { key: "asc" } });
+  }
+
+  async createPermission(
+    actorUserId: string,
+    input: {
+      key: string;
+      resource: string;
+      action: string;
+      productKey?: string;
+      description?: string;
+      isAssignable?: boolean;
+      isSystemOnly?: boolean;
+    },
+  ) {
+    const existing = await this.prisma.permission.findUnique({ where: { key: input.key.trim() }, select: { id: true } });
+    if (existing) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Permission key already exists", HttpStatus.CONFLICT);
+    }
+
+    const permission = await this.prisma.permission.create({
+      data: {
+        key: input.key.trim(),
+        resource: input.resource.trim(),
+        action: input.action.trim(),
+        productKey: input.productKey?.trim() || null,
+        description: input.description?.trim() || null,
+        isAssignable: input.isAssignable ?? true,
+        isSystemOnly: input.isSystemOnly ?? false,
+      },
+    });
+    await this.audit.record({
+      action: "iam.permission.created",
+      actorUserId,
+      resourceType: "Permission",
+      resourceId: permission.id,
+    });
+    return permission;
+  }
+
+  async updatePermission(
+    permissionId: string,
+    actorUserId: string,
+    input: {
+      resource?: string;
+      action?: string;
+      productKey?: string | null;
+      description?: string | null;
+      isAssignable?: boolean;
+      isSystemOnly?: boolean;
+    },
+  ) {
+    await this.requirePermission(permissionId);
+    const permission = await this.prisma.permission.update({
+      where: { id: permissionId },
+      data: {
+        ...(input.resource === undefined ? {} : { resource: input.resource.trim() }),
+        ...(input.action === undefined ? {} : { action: input.action.trim() }),
+        ...(input.productKey === undefined ? {} : { productKey: input.productKey?.trim() || null }),
+        ...(input.description === undefined ? {} : { description: input.description?.trim() || null }),
+        ...(input.isAssignable === undefined ? {} : { isAssignable: input.isAssignable }),
+        ...(input.isSystemOnly === undefined ? {} : { isSystemOnly: input.isSystemOnly }),
+      },
+    });
+    await this.audit.record({
+      action: "iam.permission.updated",
+      actorUserId,
+      resourceType: "Permission",
+      resourceId: permissionId,
+    });
+    return permission;
+  }
+
+  async deletePermission(permissionId: string, actorUserId: string): Promise<void> {
+    const permission = await this.prisma.permission.findUnique({
+      where: { id: permissionId },
+      select: {
+        id: true,
+        _count: { select: { platformRolePermissions: true, organizationGroupPermissions: true } },
+      },
+    });
+    if (!permission) {
+      throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Permission not found", HttpStatus.NOT_FOUND);
+    }
+    // Removing an assigned permission would silently change role access, so detach it first.
+    if (permission._count.platformRolePermissions > 0 || permission._count.organizationGroupPermissions > 0) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Remove this permission from all roles and permission groups before deleting it",
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    await this.prisma.permission.delete({ where: { id: permissionId } });
+    await this.audit.record({
+      action: "iam.permission.deleted",
+      actorUserId,
+      resourceType: "Permission",
+      resourceId: permissionId,
     });
   }
 
@@ -119,5 +236,13 @@ export class PlatformRoleService {
       throw new AppError(ErrorCode.PLATFORM_ROLE_NOT_FOUND, "Platform role not found", HttpStatus.NOT_FOUND);
     }
     return role;
+  }
+
+  private async requirePermission(permissionId: string) {
+    const permission = await this.prisma.permission.findUnique({ where: { id: permissionId } });
+    if (!permission) {
+      throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Permission not found", HttpStatus.NOT_FOUND);
+    }
+    return permission;
   }
 }

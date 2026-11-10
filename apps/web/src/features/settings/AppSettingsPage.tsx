@@ -150,8 +150,8 @@ export default function AppSettingsPage({ app, showBreadcrumb = true }: { app: A
           24-hour grace period before they take effect.
         </p>
         <p className="text-sm text-text-secondary">
-          Retention cleanup runs only when the server-side retention feature flag is enabled. Confirm only if this
-          change is intended.
+          Retention cleanup applies according to the configured retention policy. Confirm only if this change is
+          intended.
         </p>
       </Dialog>
     </AppSettingsLayout>

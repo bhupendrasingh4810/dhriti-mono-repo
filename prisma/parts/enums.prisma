@@ -205,6 +205,13 @@ enum OrganizationPermissionScope {
   FLOW_PROJECT
 }
 
+/// Identifies the three immutable organization defaults without relying on names.
+enum OrganizationSystemPermissionGroupRole {
+  ADMINISTRATORS
+  MEMBERS
+  GUESTS
+}
+
 enum EntitlementKind {
   FEATURE
   LIMIT
