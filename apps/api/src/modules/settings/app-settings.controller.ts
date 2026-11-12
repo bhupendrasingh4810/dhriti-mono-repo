@@ -10,7 +10,6 @@ import { ErrorCode } from "../../common/errors/error-codes";
 import { AccessGuard } from "../../common/guards/access.guard";
 import { TenantGuard } from "../../common/guards/tenant.guard";
 import { ConnectService } from "../connect/connect.service";
-import { PermissionService } from "../authorization/services/permission.service";
 import { AppSettingsService } from "./app-settings.service";
 import {
   UpdateAtlasSettingsDto,
@@ -34,20 +33,7 @@ export class AppSettingsController {
   constructor(
     private readonly settings: AppSettingsService,
     private readonly moduleRef: ModuleRef,
-    private readonly permissions: PermissionService,
   ) {}
-
-  @Get("access")
-  @ApiOperation({ summary: "Get the current member's settings capabilities" })
-  async access(@CurrentUser() user: AuthenticatedUser, @CurrentOrganization() organization: OrganizationContext) {
-    return {
-      canManage: await this.permissions.hasPermission({
-        userId: user.userId,
-        organizationId: organization.organizationId,
-        permissionKey: MANAGE_SETTINGS.permission,
-      }),
-    };
-  }
 
   // Personal routes are declared before `:app` so "connect/me" is not captured by it.
   @Get("connect/me")

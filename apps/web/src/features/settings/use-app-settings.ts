@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   appSettingsService,
   type AppSettingsKey,
@@ -94,56 +95,18 @@ export function primeConnectUserSettings(organizationId: string, value: ConnectU
   appSettingsCache.prime(connectUserSettingsKey(organizationId, userId), value);
 }
 
+/** Settings management capability, derived from the shared permission list (no dedicated API call). */
 export function useSettingsAccess(): {
   canManage: boolean | null;
   loading: boolean;
   error: string | null;
   retry: () => void;
 } {
-  const { user } = useAuth();
-  const organizationId = user?.organization?.id;
-  const userId = user?.id;
-  const identityKey = organizationId && userId ? `${organizationId}:${userId}` : null;
-  const [attempt, setAttempt] = useState(0);
-  const [state, setState] = useState<{
-    key: string | null;
-    attempt: number;
-    canManage: boolean | null;
-    loading: boolean;
-    error: string | null;
-  }>({ key: null, attempt: 0, canManage: null, loading: false, error: null });
-
-  useEffect(() => {
-    if (!organizationId || !identityKey) return;
-
-    let active = true;
-    appSettingsService
-      .getAccess(organizationId)
-      .then(({ canManage }) => {
-        if (active) setState({ key: identityKey, attempt, canManage, loading: false, error: null });
-      })
-      .catch((error: unknown) => {
-        if (active) {
-          setState({
-            key: identityKey,
-            attempt,
-            canManage: null,
-            loading: false,
-            error: error instanceof Error ? error.message : "Unable to verify settings access.",
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [attempt, identityKey, organizationId]);
-
-  const matchesCurrentUser = state.key === identityKey && state.attempt === attempt;
+  const { loading, can, refresh } = usePermissions();
   return {
-    canManage: matchesCurrentUser ? state.canManage : null,
-    loading: Boolean(identityKey) && (!matchesCurrentUser || state.loading),
-    error: matchesCurrentUser ? state.error : null,
-    retry: () => setAttempt((value) => value + 1),
+    canManage: loading ? null : can("organization.settings.manage"),
+    loading,
+    error: null,
+    retry: () => void refresh().catch(() => undefined),
   };
 }

@@ -17,6 +17,8 @@ import {
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 
+import { usePermissions } from "@/hooks/use-permissions";
+
 const items = [
   { label: "Dashboard", href: "", icon: LayoutDashboard },
   { label: "Workforce", href: "employees", icon: Users, group: "People" },
@@ -36,6 +38,8 @@ export function HrmsSidebar() {
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
   const pathname = usePathname();
   const basePath = `/${organizationSlug}/hrms`;
+  const { can } = usePermissions();
+  const visibleItems = items.filter((item) => item.href !== "employees" || can("hrms.employee.manage"));
 
   return (
     <aside className="hidden h-full w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-brand bg-brand lg:flex">
@@ -43,9 +47,9 @@ export function HrmsSidebar() {
         <p className="text-sm font-bold text-text-inverse">HRMS</p>
       </div>
       <nav aria-label="HRMS navigation" className="min-h-0 flex-1 overflow-y-auto p-4">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const href = item.href ? `${basePath}/${item.href}` : basePath;
-          const active = pathname === href;
+          const active = item.href ? pathname === href || pathname.startsWith(`${href}/`) : pathname === href;
           const Icon = item.icon;
           return (
             <div key={item.label}>

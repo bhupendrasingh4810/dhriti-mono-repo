@@ -3,6 +3,9 @@ model HrmsEmployee {
   organizationId String   @db.Uuid
   userId         String   @db.Uuid
   workLocationId String?  @db.Uuid
+  departmentId   String?  @db.Uuid
+  designationId  String?  @db.Uuid
+  reportingManagerId String? @db.Uuid
   employeeNumber String
   status         String
   employmentType String?
@@ -18,6 +21,10 @@ model HrmsEmployee {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   workLocation HrmsLocation? @relation(fields: [workLocationId], references: [id], onDelete: SetNull)
+  department   OrganizationDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  designation  HrmsDesignation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
+  reportingManager HrmsEmployee? @relation("HrmsEmployeeReporting", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  directReports HrmsEmployee[] @relation("HrmsEmployeeReporting")
   attendanceRecords HrmsAttendanceRecord[]
   leaveRequests HrmsLeaveRequest[]
   performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
@@ -31,6 +38,8 @@ model HrmsEmployee {
   @@unique([organizationId, employeeNumber])
   @@index([organizationId, status])
   @@index([organizationId, workLocationId])
+  @@index([organizationId, departmentId])
+  @@index([organizationId, reportingManagerId])
   @@map("hrms_employees")
 }
 

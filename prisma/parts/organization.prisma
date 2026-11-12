@@ -183,6 +183,7 @@ model HrmsDesignation {
 
   organization Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   department   OrganizationDepartment?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  employees    HrmsEmployee[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, code])
@@ -238,6 +239,7 @@ model OrganizationDepartment {
   members      OrganizationDepartmentMember[]
   assignments  OrganizationPermissionGroupAssignment[]
   hrmsDesignations HrmsDesignation[]
+  hrmsEmployees HrmsEmployee[]
 
   @@unique([organizationId, name])
   @@index([organizationId, parentId])

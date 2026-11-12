@@ -30,7 +30,6 @@ organization and created with defaults on first read.
 | `PATCH` | `/organization/settings/apps/:app`       | `organization.settings.manage`               |
 | `GET`   | `/organization/settings/apps/connect/me` | Current user (personal Connect prefs)        |
 | `PATCH` | `/organization/settings/apps/connect/me` | Current user                                 |
-| `GET`   | `/organization/settings/apps/access`     | Current member's effective manage capability |
 
 `:app` is one of `connect`, `flow`, `atlas`, `nexus`, `cadence`, `pulse`, `notes`, `hrms`.
 PATCH bodies are partial; unknown keys are rejected. Every organization-settings
@@ -280,6 +279,14 @@ Both HR endpoints additionally accept `biometricId`, `retirementDate`, and
 use `YYYY-MM-DD`, may be cleared with `null`, and cannot precede joining.
 HR changes retain the existing organization scoping and audit records.
 
+The Workforce page additionally uses, all under `/organization/hrms/employees` and
+protected by `hrms.employee.manage`: `GET options` (form data), `GET org-chart`,
+`GET import/template?format=csv|xlsx`, `POST import/parse` (multipart `file`, csv/xlsx,
+10 MB, 5,000 rows), `POST import/validate`, `POST import` (re-validates; invalid rows
+are skipped and reported) and `POST export` (`scope`: `all|selected|filtered`,
+`format`: `csv|xlsx`). Employees
+have `departmentId`, `designationId` and `reportingManagerId` (cycles are rejected).
+
 Schema additions are in `prisma/migrations/20261028000000_expand_employee_profile`;
 regenerate the Prisma client and apply migrations before deploying the API.
 
@@ -296,3 +303,8 @@ The opt-in `profile.persistence.spec.ts` additionally verifies actual database
 round-trips, transactional rollback, and clearing fields. Set `PROFILE_DATABASE_TESTS=true`
 and provide `DATABASE_URL` when running it. It creates uniquely identified synthetic
 users and an organization, then deletes only those fixtures.
+
+
+## Current user permissions
+
+`GET /organizations/:organizationId/me/permissions` returns `{ permissions: string[] }`: every permission key the caller holds in the organization through all assigned permission groups (and platform roles). It requires no specific permission. The web app reads it once through `usePermissions()` (`can`, `canAny`, `canAll`) for UI visibility; the API still enforces each endpoint.

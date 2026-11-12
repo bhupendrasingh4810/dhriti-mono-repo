@@ -236,6 +236,7 @@ async function seedData(): Promise<void> {
     "nexus.task.create",
     "hrms.employee.read",
     "hrms.employee.manage",
+    "hrms.workforce.manage",
     "hrms.attendance.read",
     "hrms.attendance.manage",
     "hrms.leave.read",

@@ -91,8 +91,8 @@ export function HrmsAssets({ onToast }: { onToast: (message: string) => void }) 
     if (!organizationId) return;
     setLoading(true);
     try {
-      const [assets, employeeList] = await Promise.all([hrmsService.assets.list(organizationId, { page, pageSize, search: query || undefined, sortBy, sortOrder, ...filters }), hrmsService.employees.list(organizationId)]);
-      setData(assets); setEmployees(employeeList);
+      const [assets, employeeList] = await Promise.all([hrmsService.assets.list(organizationId, { page, pageSize, search: query || undefined, sortBy, sortOrder, ...filters }), hrmsService.employees.list(organizationId, { pageSize: 100 })]);
+      setData(assets); setEmployees(employeeList.items);
     } catch (reason) { onToast(reason instanceof Error ? reason.message : "Unable to load assets."); } finally { setLoading(false); }
   }, [filters, onToast, organizationId, page, pageSize, query, sortBy, sortOrder]);
   useEffect(() => {

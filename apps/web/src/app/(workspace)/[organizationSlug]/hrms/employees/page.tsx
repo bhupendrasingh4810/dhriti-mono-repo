@@ -1,17 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useHrmsToast } from "../layout";
-import { hrmsDemoData } from "@/features/hrms/demo-data";
-import { HrmsEmployees } from "@/features/hrms/employees";
-
-export default function Page() {
-  const onToast = useHrmsToast();
-
-  return (
-    <HrmsEmployees
-      employees={hrmsDemoData.employees}
-      onAdd={() => onToast("Add employee opened")}
-      onToast={onToast}
-    />
-  );
+export default async function Page({ params }: { params: Promise<{ organizationSlug: string }> }) {
+  const { organizationSlug } = await params;
+  redirect(`/${organizationSlug}/hrms/employees/directory`);
 }

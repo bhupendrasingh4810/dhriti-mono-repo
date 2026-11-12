@@ -8,10 +8,88 @@ export interface HrmsEmployee extends ApiEntity {
   status: string;
   employmentType: string | null;
   workLocationId: string | null;
+  departmentId: string | null;
+  designationId: string | null;
+  reportingManagerId: string | null;
   startDate: string | null;
   endDate: string | null;
+  biometricId: string | null;
   user: { id: string; name: string; email: string; avatarUrl: string | null };
   workLocation: { id: string; name: string; code: string | null } | null;
+  department: { id: string; name: string; code: string | null } | null;
+  designation: { id: string; name: string; code: string | null } | null;
+  reportingManager: { id: string; employeeNumber: string; user: { name: string } } | null;
+}
+export type HrmsEmployeeSortField =
+  | "employeeNumber"
+  | "name"
+  | "status"
+  | "employmentType"
+  | "startDate"
+  | "department"
+  | "location";
+export interface HrmsEmployeeListQuery {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  status?: string;
+  departmentId?: string;
+  sortBy?: HrmsEmployeeSortField;
+  sortOrder?: "asc" | "desc";
+}
+export interface HrmsEmployeeOptions {
+  members: { id: string; name: string; email: string }[];
+  departments: { id: string; name: string }[];
+  designations: { id: string; name: string; departmentId: string | null }[];
+  locations: { id: string; name: string }[];
+  employmentTypes: { id: string; name: string }[];
+  managers: { id: string; employeeNumber: string; user: { name: string } }[];
+}
+export interface HrmsOrgChartNode {
+  id: string;
+  employeeNumber: string;
+  status: string;
+  reportingManagerId: string | null;
+  user: { name: string; avatarUrl: string | null };
+  department: { name: string } | null;
+  designation: { name: string } | null;
+}
+export type HrmsEmployeeFileFormat = "csv" | "xlsx";
+export type HrmsEmployeeExportScope = "all" | "selected" | "filtered";
+export interface HrmsEmployeeImportField {
+  key: string;
+  label: string;
+  required: boolean;
+}
+export interface HrmsEmployeeImportParse {
+  format: HrmsEmployeeFileFormat;
+  headers: string[];
+  rows: { rowNumber: number; values: string[] }[];
+  fields: HrmsEmployeeImportField[];
+  suggestedMapping: Record<string, number | null>;
+}
+export type HrmsEmployeeImportRow = { rowNumber: number } & Record<string, string | number | undefined>;
+export interface HrmsEmployeeImportRowResult {
+  rowNumber: number;
+  valid: boolean;
+  errors: string[];
+}
+export interface HrmsEmployeeImportValidation {
+  results: HrmsEmployeeImportRowResult[];
+  summary: { total: number; valid: number; invalid: number };
+}
+export interface HrmsEmployeeImportOutcome {
+  created: number;
+  skipped: number;
+  errors: HrmsEmployeeImportRowResult[];
+}
+export interface HrmsEmployeePage {
+  items: HrmsEmployee[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  summary: { total: number; active: number; onLeave: number; newJoiners: number };
 }
 
 export interface HrmsAttendanceRecord extends ApiEntity {
@@ -123,6 +201,25 @@ export interface HrmsAssetPage {
   totalPages: number;
   summary: { total: number; assigned: number; available: number; maintenance: number };
 }
+/** Binary responses cannot go through apiRequest (it always parses JSON), so downloads use fetch directly. */
+async function downloadFile(organizationId: string, url: string, fallbackName: string, init: RequestInit = {}) {
+  const headers = new Headers(init.headers);
+  headers.set("x-organization-id", organizationId);
+  const response = await fetch(url, { credentials: "include", ...init, headers });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => undefined)) as { message?: string | string[] } | undefined;
+    const message = Array.isArray(body?.message) ? body.message.join(", ") : body?.message;
+    throw new Error(message || "Download failed.");
+  }
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const name = /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? fallbackName;
+  const href = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = href;
+  anchor.download = name;
+  anchor.click();
+  URL.revokeObjectURL(href);
+}
 const resource = (path: string) => ({
   list: (organizationId: string) => tenantRequest<ApiEntity[]>(organizationId, `${base}/${path}`),
   create: (organizationId: string, input: Input) =>
@@ -175,9 +272,50 @@ export const hrmsService = {
   },
   employees: {
     ...resource("employees"),
-    list: (organizationId: string) => tenantRequest<HrmsEmployee[]>(organizationId, `${base}/employees`),
+    list: (
+      organizationId: string,
+      query: HrmsEmployeeListQuery = {},
+    ) => tenantRequest<HrmsEmployeePage>(organizationId, `${base}/employees`, { query }),
+    options: (organizationId: string) =>
+      tenantRequest<HrmsEmployeeOptions>(organizationId, `${base}/employees/options`),
+    orgChart: (organizationId: string) =>
+      tenantRequest<{ items: HrmsOrgChartNode[]; total: number }>(organizationId, `${base}/employees/org-chart`),
+    parseImport: (organizationId: string, file: File) => {
+      const body = new FormData();
+      body.append("file", file);
+      return tenantRequest<HrmsEmployeeImportParse>(organizationId, `${base}/employees/import/parse`, {
+        method: "POST",
+        body,
+      });
+    },
+    validateImport: (organizationId: string, rows: HrmsEmployeeImportRow[]) =>
+      tenantJsonRequest<HrmsEmployeeImportValidation, Input>(
+        organizationId,
+        `${base}/employees/import/validate`,
+        "POST",
+        { rows },
+      ),
+    import: (organizationId: string, rows: HrmsEmployeeImportRow[]) =>
+      tenantJsonRequest<HrmsEmployeeImportOutcome, Input>(organizationId, `${base}/employees/import`, "POST", {
+        rows,
+      }),
+    downloadTemplate: (organizationId: string, format: HrmsEmployeeFileFormat) =>
+      downloadFile(organizationId, `${base}/employees/import/template?format=${format}`, `employee-import-template.${format}`),
+    export: (
+      organizationId: string,
+      input: {
+        format: HrmsEmployeeFileFormat;
+        scope: HrmsEmployeeExportScope;
+        ids?: string[];
+      } & Pick<HrmsEmployeeListQuery, "query" | "status" | "departmentId" | "sortBy" | "sortOrder">,
+    ) =>
+      downloadFile(organizationId, `${base}/employees/export`, `workforce-export.${input.format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      }),
     get: (organizationId: string, employeeId: string) =>
-      tenantRequest<ApiEntity>(organizationId, `${base}/employees/${pathSegment(employeeId)}`),
+      tenantRequest<HrmsEmployee>(organizationId, `${base}/employees/${pathSegment(employeeId)}`),
     update: (organizationId: string, employeeId: string, input: Input) =>
       tenantJsonRequest<ApiEntity, Input>(
         organizationId,

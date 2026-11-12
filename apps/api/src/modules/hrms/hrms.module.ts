@@ -13,6 +13,7 @@ import { HrmsMasterDataController } from "./controllers/hrms-master-data.control
 import { HrmsWorkflowDefinitionController } from "./controllers/hrms-workflow-definition.controller";
 import { HrmsWorkflowInstanceController } from "./controllers/hrms-workflow-instance.controller";
 import { HrmsEmployeeService } from "./services/hrms-employee.service";
+import { HrmsEmployeeImportService } from "./services/hrms-employee-import.service";
 import { HrmsAttendanceService } from "./services/hrms-attendance.service";
 import { HrmsOperationsService } from "./services/hrms-operations.service";
 import { HrmsHolidayCalendarService } from "./services/hrms-holiday-calendar.service";
@@ -43,6 +44,7 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
   ],
   providers: [
     HrmsEmployeeService,
+    HrmsEmployeeImportService,
     HrmsAttendanceService,
     HrmsOperationsService,
     HrmsHolidayCalendarService,

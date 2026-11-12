@@ -28,6 +28,7 @@ import {
   UpdateDepartmentDto,
   UpdatePermissionGroupDto,
 } from "../dto/organization-access.dto";
+import { PermissionService } from "../services/permission.service";
 import { OrganizationDepartmentService } from "../services/organization-department.service";
 import { OrganizationPermissionGroupService } from "../services/organization-permission-group.service";
 import { EntitlementService } from "../services/entitlement.service";
@@ -44,7 +45,18 @@ export class OrganizationAccessController {
     private readonly departments: OrganizationDepartmentService,
     private readonly subscriptions: SubscriptionService,
     private readonly entitlements: EntitlementService,
+    private readonly permissions: PermissionService,
   ) {}
+
+  /**
+   * Every permission key the caller holds in this organization (all assigned groups, plus platform
+   * roles). Intentionally requires no permission: it only describes the caller, and clients use it to
+   * drive visibility via a single `usePermissions()` hook. Servers still enforce each endpoint.
+   */
+  @Get("me/permissions")
+  async getMyPermissions(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
+    return { permissions: await this.permissions.getUserPermissions(user.userId, organization.organizationId) };
+  }
 
   @Get("permission-groups")
   @RequirePermission("organization.members.read")

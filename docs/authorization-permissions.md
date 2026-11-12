@@ -93,7 +93,7 @@ Do not treat a null or missing limit as unlimited. `EntitlementService` intentio
 
 | Area | Permission keys |
 |---|---|
-| Employees | `hrms.employee.read`, `hrms.employee.manage` |
+| Employees and workforce directory (list, create, import/export, org chart) | `hrms.employee.read`, `hrms.employee.manage` |
 | Attendance | `hrms.attendance.read`, `hrms.attendance.manage` |
 | Leave | `hrms.leave.read`, `hrms.leave.manage`, `hrms.leave.approve` |
 | Performance | `hrms.performance.read`, `hrms.performance.manage` |
