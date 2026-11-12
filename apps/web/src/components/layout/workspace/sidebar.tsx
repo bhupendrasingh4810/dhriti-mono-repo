@@ -5,7 +5,7 @@ import { CalendarDays, FileText, LayoutDashboard, ListChecks, MessageCircle, Not
 import Link from "next/link";
 import type { AppView } from "@/types/app.types";
 import { useAuth } from "@/hooks/use-auth";
-interface NavItem {
+export interface NavItem {
   id: AppView;
   label: string;
   icon: React.ReactNode;
@@ -13,7 +13,7 @@ interface NavItem {
   badge?: number;
 }
 
-const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   {
     id: "home",
     label: "Home",
@@ -72,6 +72,13 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+export function getNavHref(item: NavItem, organizationSlug: string, isPlatformUser?: boolean) {
+  if (item.id === "control") {
+    return `/${organizationSlug}/${item.id}/${isPlatformUser ? "platform" : "org"}/dashboard`;
+  }
+  return `/${organizationSlug}/${item.href}`;
+}
+
 interface SidebarProps {
   activeView: AppView;
   organizationSlug: string;
@@ -80,17 +87,8 @@ interface SidebarProps {
 export default function Sidebar({ activeView, organizationSlug }: SidebarProps) {
   const { user } = useAuth();
 
-  const getNavHref = (item: NavItem) => {
-    if (item.id === "control") {
-      const controlPath = user?.isPlatformUser ? "platform" : "org";
-      return `/${organizationSlug}/${item.id}/${controlPath}/dashboard`;
-    }
-
-    return `/${organizationSlug}/${item.href}`;
-  };
-
   return (
-    <aside className="flex flex-col h-full flex-shrink-0 border-r border-slate-100 bg-white" style={{ width: "72px" }}>
+    <aside className="hidden lg:flex flex-col h-full flex-shrink-0 border-r border-slate-100 bg-white" style={{ width: "72px" }}>
       {/* Nav items */}
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
@@ -98,7 +96,7 @@ export default function Sidebar({ activeView, organizationSlug }: SidebarProps) 
           return (
             <Link
               key={item.id}
-              href={getNavHref(item)}
+              href={getNavHref(item, organizationSlug, user?.isPlatformUser)}
               className="relative flex flex-col items-center gap-1 w-14 py-2.5 rounded-xl cursor-pointer transition-all duration-300 ease-out hover:bg-slate-50"
               style={{
                 backgroundColor: active ? "#e6f4f2" : "transparent",

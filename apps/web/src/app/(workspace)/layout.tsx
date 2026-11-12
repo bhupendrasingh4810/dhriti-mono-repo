@@ -4,6 +4,8 @@ import { type ReactNode } from "react";
 import { useParams, usePathname } from "next/navigation";
 import Sidebar from "@/components/layout/workspace/sidebar";
 import Header from "@/components/layout/workspace/header";
+import { MobileNavOverlays } from "@/components/layout/workspace/mobile-nav";
+import { MobileNavProvider } from "@/contexts/mobile-nav-context";
 import { ConnectPresenceProvider } from "@/contexts/connect-presence-context";
 import { ConnectSearchProvider } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
@@ -37,6 +39,7 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
   return (
     <ConnectPresenceProvider>
       <ConnectSearchProvider organizationId={user?.organization?.id ?? ""}>
+        <MobileNavProvider>
         <main className="flex h-screen flex-col bg-background">
           <div className="w-full shrink-0">
             <Header activeView={activeApp} />
@@ -47,6 +50,8 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
             <div className="min-w-0 flex-1 overflow-y-scroll">{children}</div>
           </div>
         </main>
+        <MobileNavOverlays activeView={activeApp} organizationSlug={organizationSlug as string} />
+        </MobileNavProvider>
       </ConnectSearchProvider>
     </ConnectPresenceProvider>
   );

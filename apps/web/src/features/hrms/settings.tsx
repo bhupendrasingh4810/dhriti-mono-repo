@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -126,9 +127,10 @@ export function HrmsSettingsSidebar({ activeTab, onSelect }: { activeTab: string
   const router = useRouter();
 
   return (
-    <aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse md:fixed md:bottom-4 md:left-[88px] md:top-[76px] md:w-[312px]">
+    <PageSidebar>
+<aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse lg:fixed lg:bottom-4 lg:left-[88px] lg:top-[76px] lg:w-[312px]">
       <p className="mb-5 px-2 text-xs font-semibold uppercase tracking-wide text-white/70">HRMS settings</p>
-      <nav aria-label="HRMS settings" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-y-auto">
+      <nav aria-label="HRMS settings" className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-y-auto">
         {tabs.map((item) => (
           <button
             key={item}
@@ -141,7 +143,7 @@ export function HrmsSettingsSidebar({ activeTab, onSelect }: { activeTab: string
               }
               onSelect?.(item);
             }}
-            className={`flex shrink-0 cursor-pointer items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors md:w-full ${
+            className={`flex shrink-0 cursor-pointer items-center rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors lg:w-full ${
               activeTab === item ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
             }`}
           >
@@ -150,6 +152,7 @@ export function HrmsSettingsSidebar({ activeTab, onSelect }: { activeTab: string
         ))}
       </nav>
     </aside>
+</PageSidebar>
   );
 }
 
@@ -160,7 +163,7 @@ export function HrmsSettings({ onToast }: { onToast: (message: string) => void }
   return (
     <div className="flex min-h-full flex-col bg-background md:flex-row">
       <HrmsSettingsSidebar activeTab={tab} onSelect={setTab} />
-      <main className="min-w-0 flex-1 md:ml-[328px]">
+      <main className="min-w-0 flex-1 lg:ml-[328px]">
         <nav
           aria-label="Breadcrumb"
           className="sticky top-4 z-30 rounded-lg bg-surface px-6 py-5 text-sm text-text-secondary"

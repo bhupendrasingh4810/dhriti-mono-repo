@@ -1,3 +1,4 @@
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import { useState } from "react";
 import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Archive, ChevronDown, Ellipsis, MessagesSquare, UserGroup } from "lucide-react";
@@ -216,7 +217,8 @@ export default function ConnectSidebar({
   };
 
   return (
-    <aside
+    <PageSidebar>
+<aside
       style={{ backgroundColor: "#036c5f" }}
       className="hidden h-full min-h-0 w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] lg:flex"
     >
@@ -344,6 +346,7 @@ export default function ConnectSidebar({
         </div>
       </div>
     </aside>
+</PageSidebar>
   );
 }
 

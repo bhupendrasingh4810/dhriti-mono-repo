@@ -100,7 +100,7 @@ export default function PulseCalendar() {
   }
 
   return (
-    <main className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-4 text-text-primary">
+    <main className="flex h-full min-h-0 flex-col overflow-hidden bg-background p-2 lg:p-4 text-text-primary">
       <div className="flex min-h-0 flex-1 gap-4">
         <PulseCalendarSidebar
           selectedDate={selectedDate}

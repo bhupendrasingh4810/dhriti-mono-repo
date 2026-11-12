@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import { useState } from "react";
 import dayjs, { type Dayjs } from "dayjs";
 import updateLocale from "dayjs/plugin/updateLocale";
@@ -31,7 +32,8 @@ export function PulseCalendarSidebar({
   const hoveredWeek = hoveredDate ? getWorkingWeek(hoveredDate, workingDays) : [];
 
   return (
-    <aside className="w-[312px] overflow-y-auto rounded-xl border border-brand bg-brand">
+    <PageSidebar>
+<aside className="w-[312px] overflow-y-auto rounded-xl border border-brand bg-brand">
       <div className="p-5">
         <div onMouseLeave={() => setHoveredDate(null)}>
           <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="en">
@@ -73,6 +75,7 @@ export function PulseCalendarSidebar({
         <TeamCalendarList />
       </div>
     </aside>
+</PageSidebar>
   );
 }
 

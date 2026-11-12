@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import FlowSidebar from "@/components/flow/flow-sidebar";
 import type { FlowNavView } from "@/types/flow.types";
 import { usePathname, useRouter } from "next/navigation";
@@ -48,24 +49,26 @@ export function FlowLayout({ children }: FlowLayoutProps) {
 
   return (
     <div
-      className={`flex min-w-0 flex-1 bg-slate-50 p-4 ${
+      className={`flex min-w-0 flex-1 bg-slate-50 p-2 lg:p-4 ${
         isSettingsPage ? "min-h-full" : "h-full min-h-0 overflow-hidden"
       }`}
       style={{ fontFamily: "var(--font-sans)" }}
     >
-      <aside
-        className="flex h-full flex-col border-r border-slate-100 bg-white select-none rounded-2xl"
-        style={{ width: collapsed ? 0 : 250, overflow: collapsed ? "hidden" : "visible", transition: "width 0.2s" }}
-      >
-        <FlowSidebar
-          navView={navView}
-          onNav={() => {}}
-          selectedSpace={selectedProject}
-          onSpace={() => {}}
-          collapsed={collapsed}
-          onCollapse={() => setCollapsed(!collapsed)}
-        />
-      </aside>
+      <PageSidebar>
+        <aside
+          className="flex h-full flex-col border-r border-slate-100 bg-white select-none rounded-2xl"
+          style={{ width: collapsed ? 0 : 250, overflow: collapsed ? "hidden" : "visible", transition: "width 0.2s" }}
+        >
+          <FlowSidebar
+            navView={navView}
+            onNav={() => {}}
+            selectedSpace={selectedProject}
+            onSpace={() => {}}
+            collapsed={collapsed}
+            onCollapse={() => setCollapsed(!collapsed)}
+          />
+        </aside>
+      </PageSidebar>
       <div className={`-mr-4 flex min-w-0 flex-1 ${isSettingsPage ? "" : "overflow-hidden"}`}>{children}</div>
     </div>
   );

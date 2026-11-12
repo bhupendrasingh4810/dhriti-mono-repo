@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -86,8 +87,9 @@ export function ControlLayout({ children, mode }: ControlLayoutProps) {
   }, [children]);
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden bg-slate-50 p-4">
-      <aside className="mr-2 flex min-h-0 w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] bg-brand">
+    <div className="flex h-full min-h-0 overflow-hidden bg-slate-50 p-2 lg:p-4">
+      <PageSidebar>
+<aside className="mr-2 flex min-h-0 w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] bg-brand">
         <div className="border-b border-on-brand-border p-4">
           <p className="text-sm font-bold text-text-inverse">Control Panel</p>
           <p className="mt-1 text-xs text-on-brand-muted">{modeLabel} administration</p>
@@ -117,6 +119,7 @@ export function ControlLayout({ children, mode }: ControlLayoutProps) {
           })}
         </nav>
       </aside>
+</PageSidebar>
       <div className="ml-2 flex min-h-0 min-w-0 flex-1 flex-col">
         <header
           className="flex h-14 shrink-0 items-center border-b border-slate-200 bg-white px-6 text-sm text-slate-500"

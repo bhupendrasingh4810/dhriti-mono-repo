@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import {
   BookOpen,
   BriefcaseBusiness,
@@ -42,7 +43,8 @@ export function HrmsSidebar() {
   const visibleItems = items.filter((item) => item.href !== "employees" || can("hrms.employee.manage"));
 
   return (
-    <aside className="hidden h-full w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-brand bg-brand lg:flex">
+    <PageSidebar>
+<aside className="hidden h-full w-[312px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-brand bg-brand lg:flex">
       <div className="border-b border-on-brand-border p-4">
         <p className="text-sm font-bold text-text-inverse">HRMS</p>
       </div>
@@ -79,5 +81,6 @@ export function HrmsSidebar() {
         })}
       </nav>
     </aside>
+</PageSidebar>
   );
 }

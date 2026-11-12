@@ -12,7 +12,7 @@ export function HrmsSettingsPageLayout({ activeTab, children }: { activeTab: str
   return (
     <div className="flex h-full min-h-0 flex-col bg-background md:flex-row">
       <HrmsSettingsSidebar activeTab={activeTab} />
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col md:ml-[328px]">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col lg:ml-[328px]">
         <nav
           aria-label="Breadcrumb"
           className="sticky top-4 z-30 rounded-lg bg-surface px-6 py-5 text-sm text-text-secondary"

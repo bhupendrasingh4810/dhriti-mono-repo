@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FileText, FolderPlus, Inbox, Plus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
@@ -268,8 +269,9 @@ export default function NotesPage() {
   }
 
   return (
-    <main className="flex h-full min-h-0 overflow-hidden bg-background p-4 text-text-primary">
-      <aside className="flex w-[312px] shrink-0 flex-col rounded-xl border border-brand-dark bg-brand text-text-inverse">
+    <main className="flex h-full min-h-0 overflow-hidden bg-background p-2 lg:p-4 text-text-primary">
+      <PageSidebar>
+<aside className="flex w-[312px] shrink-0 flex-col rounded-xl border border-brand-dark bg-brand text-text-inverse">
         <div className="border-b border-brand-dark p-4">
           <h1 className="font-bold">Notes</h1>
         </div>
@@ -333,6 +335,7 @@ export default function NotesPage() {
           </div>
         </nav>
       </aside>
+</PageSidebar>
       <section className="ml-4 flex min-w-0 flex-1 flex-col rounded-xl border border-border bg-surface">
         <header className="flex items-center justify-between border-b border-border px-5 py-2">
           <div>

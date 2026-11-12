@@ -6,7 +6,9 @@ import {
   ChevronDown,
   CircleHelp,
   Clock,
+  LayoutGrid,
   LogOut,
+  Menu,
   Map,
   MessageSquare,
   NotebookPen,
@@ -22,6 +24,7 @@ import { ConnectPresenceIndicator } from "@/features/connect/components/ConnectP
 import { useConnectPresence } from "@/contexts/connect-presence-context";
 import { useConnectSearch } from "@/contexts/connect-search-context";
 import { useAuth } from "@/hooks/use-auth";
+import { useMobileNav } from "@/contexts/mobile-nav-context";
 import type { ConnectCascadingMenuItem } from "@/types/menu.types";
 import { useSettingsAccess } from "@/features/settings/use-app-settings";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
@@ -35,6 +38,7 @@ export default function Header({ activeView }: Props) {
   const [userAnchor, setUserAnchor] = useState<HTMLElement | null>(null);
   const menuCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { user, logout } = useAuth();
+  const { setAppsOpen, setMenuOpen, sidebarCount } = useMobileNav();
   const settingsAccess = useSettingsAccess();
   const { presence } = useConnectPresence();
   const { recentUsers, recentUsersError, selectUser } = useConnectSearch();
@@ -193,17 +197,39 @@ export default function Header({ activeView }: Props) {
 
   return (
     <header
-      className="flex items-center gap-4 px-6 border-b border-slate-100 flex-shrink-0 bg-white relative z-10"
+      className="flex w-full min-w-0 items-center gap-2 px-3 lg:gap-4 lg:px-6 border-b border-slate-100 flex-shrink-0 bg-white relative z-10"
       style={{ height: "60px" }}
     >
       {/* Brand name */}
-      <span className="text-lg font-bold text-slate-900 mr-2" style={{ fontFamily: "var(--font-display)" }}>
+      <span className="text-lg font-bold text-slate-900 lg:mr-2" style={{ fontFamily: "var(--font-display)" }}>
         <div className="flex items-center justify-center py-4 border-b border-slate-100" style={{ height: "60px" }}>
           <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: "#036c5f" }}>
             <PanelsTopLeft aria-hidden="true" size={18} strokeWidth={2} className="text-white" />
           </div>
         </div>
       </span>
+
+      {/* Tablet/mobile: apps dialog and page menu replace the fixed sidebars */}
+      <div className="flex items-center gap-1 lg:hidden">
+        {sidebarCount > 0 && (
+          <button
+            type="button"
+            aria-label="Open menu"
+            onClick={() => setMenuOpen(true)}
+            className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+          >
+            <Menu aria-hidden="true" size={20} strokeWidth={1.75} />
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label="Open apps"
+          onClick={() => setAppsOpen(true)}
+          className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+        >
+          <LayoutGrid aria-hidden="true" size={20} strokeWidth={1.75} />
+        </button>
+      </div>
 
       {/* Nav */}
       <nav className="flex items-center gap-1"></nav>

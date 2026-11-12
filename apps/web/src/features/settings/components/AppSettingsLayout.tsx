@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
@@ -191,19 +192,20 @@ export function AppSettingsLayout({
   const href = `/${organizationSlug}/${app}/settings`;
 
   return (
-    <div className="flex min-h-full flex-col bg-background p-4 md:flex-row md:pt-0">
-      <aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse md:fixed md:bottom-4 md:left-[88px] md:top-[76px] md:flex md:w-[312px] md:flex-col">
+    <div className="flex min-h-full flex-col bg-background p-2 lg:p-4 md:flex-row md:pt-0">
+      <PageSidebar>
+<aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse lg:fixed lg:bottom-4 lg:left-[88px] lg:top-[76px] lg:flex lg:w-[312px] lg:flex-col">
         <div className="-mx-4 -mt-4 mb-4 border-b border-on-brand-border px-4 py-4">
           <p className="text-sm font-bold">{label}</p>
         </div>
         {app === "flow" ? (
           <FlowSettingsNavigation organizationSlug={organizationSlug} />
         ) : (
-          <nav aria-label={`${label} navigation`} className="flex gap-1 md:flex-col">
+          <nav aria-label={`${label} navigation`} className="flex gap-1 lg:flex-col">
             <Link
               href={href}
               aria-current="page"
-              className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg bg-on-brand-border px-3 py-2.5 text-sm font-medium text-text-inverse md:flex-none"
+              className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg bg-on-brand-border px-3 py-2.5 text-sm font-medium text-text-inverse lg:flex-none"
             >
               <Icon aria-hidden="true" size={18} strokeWidth={1.75} />
               <span className="truncate">{label}</span>
@@ -211,7 +213,8 @@ export function AppSettingsLayout({
           </nav>
         )}
       </aside>
-      <main className="min-w-0 flex-1 md:ml-[328px]">{children}</main>
+</PageSidebar>
+      <main className="min-w-0 flex-1 lg:ml-[328px]">{children}</main>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { PageSidebar } from "@/components/layout/workspace/page-sidebar";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Bell, Settings } from "lucide-react";
@@ -24,10 +25,11 @@ export default function UserSettingsLayout({ children }: { children: ReactNode }
   const basePath = `/${organizationSlug}/user/settings`;
 
   return (
-    <div className="flex min-h-full flex-col bg-background p-4 md:flex-row md:pt-0">
-      <aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse md:fixed md:bottom-4 md:left-[88px] md:top-[76px] md:w-[312px]">
+    <div className="flex min-h-full flex-col bg-background p-2 lg:p-4 md:flex-row md:pt-0">
+      <PageSidebar>
+<aside className="w-auto shrink-0 rounded-[20px] bg-brand p-4 text-text-inverse lg:fixed lg:bottom-4 lg:left-[88px] lg:top-[76px] lg:w-[312px]">
         <p className="mb-5 px-2 text-xs font-semibold uppercase tracking-wide text-white/70">Personal settings</p>
-        <nav aria-label="User settings" className="flex gap-1 md:flex-col">
+        <nav aria-label="User settings" className="flex gap-1 lg:flex-col">
           {navigationItems.map(({ href, label, icon: Icon }) => {
             const itemPath = `${basePath}/${href}`;
             const active = pathname === itemPath;
@@ -37,7 +39,7 @@ export default function UserSettingsLayout({ children }: { children: ReactNode }
                 key={href}
                 href={itemPath}
                 aria-current={active ? "page" : undefined}
-                className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors md:flex-none ${
+                className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors lg:flex-none ${
                   active ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
                 }`}
               >
@@ -48,7 +50,8 @@ export default function UserSettingsLayout({ children }: { children: ReactNode }
           })}
         </nav>
       </aside>
-      <main className="min-w-0 flex-1 md:ml-[328px]">{children}</main>
+</PageSidebar>
+      <main className="min-w-0 flex-1 lg:ml-[328px]">{children}</main>
     </div>
   );
 }

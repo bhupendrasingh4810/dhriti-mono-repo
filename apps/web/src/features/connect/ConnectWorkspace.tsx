@@ -108,7 +108,7 @@ function ConnectSkeletonBlock({
 
 function ConnectWorkspaceLoadingShell() {
   return (
-    <div aria-busy="true" aria-label="Loading Connect" className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
+    <div aria-busy="true" aria-label="Loading Connect" className="flex h-full flex-col overflow-hidden bg-slate-50 p-2 lg:p-4 text-slate-900">
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside className="mr-2 hidden w-[312px] shrink-0 flex-col rounded-[20px] bg-brand p-4 lg:flex">
           <div className="flex items-center justify-between">
@@ -1112,7 +1112,7 @@ export default function ConnectWorkspace() {
   const isPostsLayout = selectedConversation?.layout === "POSTS";
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-slate-50 p-4 text-slate-900">
+    <div className="flex h-full flex-col overflow-hidden bg-slate-50 p-2 lg:p-4 text-slate-900">
       {live.error ? (
         <div role="alert" className="mb-2 flex items-center justify-between bg-error/10 p-2 text-sm text-error">
           <span>{live.error}</span>
