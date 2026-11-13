@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 
 import type { HrmsEmployee, HrmsEmployeeOptions } from "@/services/hrms.service";
 import { Button, Icon } from "../components/ui-primitives";
+import { formatShiftRange } from "@/features/hrms/shift-format";
 import { statusLabels } from "./shared";
 
 type FormValues = {
@@ -12,6 +13,7 @@ type FormValues = {
   status: string;
   employmentType: string;
   workLocationId: string;
+  shiftId: string;
   departmentId: string;
   designationId: string;
   reportingManagerId: string;
@@ -61,6 +63,7 @@ export function EmployeeForm({
     status: employee?.status ?? "ACTIVE",
     employmentType: employee?.employmentType ?? "",
     workLocationId: employee?.workLocationId ?? "",
+    shiftId: employee?.shiftId ?? "",
     departmentId: employee?.departmentId ?? "",
     designationId: employee?.designationId ?? "",
     reportingManagerId: employee?.reportingManagerId ?? "",
@@ -97,6 +100,7 @@ export function EmployeeForm({
         status: values.status,
         ...(values.employmentType ? { employmentType: values.employmentType } : {}),
         workLocationId: values.workLocationId || null,
+        shiftId: values.shiftId || null,
         departmentId: values.departmentId || null,
         designationId: values.designationId || null,
         reportingManagerId: values.reportingManagerId || null,
@@ -174,6 +178,16 @@ export function EmployeeForm({
               {options.locations.map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Shift">
+            <select value={values.shiftId} onChange={(e) => set("shiftId", e.target.value)} className={`${fieldClass(false)} cursor-pointer`}>
+              <option value="">No shift</option>
+              {(options.shifts ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name} ({formatShiftRange(item)})
                 </option>
               ))}
             </select>

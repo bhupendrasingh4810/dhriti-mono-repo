@@ -288,6 +288,20 @@ enum AttendanceStatus {
   HOLIDAY
 }
 
+enum AttendanceRegularizationType {
+  MISSED_CLOCK_IN
+  MISSED_CLOCK_OUT
+  LATE_ARRIVAL
+  WORK_FROM_CLIENT_SITE
+  OTHER
+}
+
+enum AttendanceRegularizationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum LeaveType {
   VACATION
   SICK_LEAVE

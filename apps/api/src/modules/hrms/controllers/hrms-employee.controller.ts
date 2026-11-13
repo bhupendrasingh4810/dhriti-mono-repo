@@ -46,7 +46,7 @@ interface UploadedMultipartFile {
 }
 
 /**
- * Static routes (access, options, org-chart, import/*, export) are declared before ":employeeId"
+ * Static routes (access, options, me/shift, me/start-date, org-chart, import/*, export) are declared before ":employeeId"
  * so they are never captured by the parameterised route.
  */
 @ApiTags("hrms")
@@ -63,6 +63,18 @@ export class HrmsEmployeeController {
   @RequireAccess(WORKFORCE)
   list(@CurrentOrganization() organization: OrganizationContext, @Query() query: ListHrmsEmployeesDto) {
     return this.employees.list(organization.organizationId, query);
+  }
+
+  /** Any organization member may read their own shift (Home attendance card, Pulse calendar). */
+  @Get("me/shift")
+  myShift(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
+    return this.employees.myShift(organization.organizationId, user.userId);
+  }
+
+  /** Any organization member may read their own joining date (attendance log lower bound). */
+  @Get("me/start-date")
+  myStartDate(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
+    return this.employees.myStartDate(organization.organizationId, user.userId);
   }
 
   @Get("options")

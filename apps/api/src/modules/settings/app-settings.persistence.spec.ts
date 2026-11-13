@@ -31,28 +31,6 @@ databaseTests("App settings database integrity", () => {
     expect(await settings.get(app, orgId)).toEqual(expect.objectContaining(DEFAULT_APP_SETTINGS[app]));
   });
 
-  it("serializes concurrent partial saves so invalid combined working hours cannot commit", async () => {
-    await settings.get("pulse", orgId);
-    const results = await Promise.allSettled([
-      settings.update("pulse", orgId, userId, { workingHoursStart: 17 }),
-      settings.update("pulse", orgId, userId, { workingHoursEnd: 16 }),
-    ]);
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
-    const saved = await settings.get("pulse", orgId);
-    expect(saved.workingHoursStart).toBeLessThan(saved.workingHoursEnd);
-    expect(await prisma.auditLog.count({ where: { organizationId: orgId, action: "settings.pulse.updated" } })).toBe(1);
-  });
-
-  it("rejects invalid direct database writes through the working-hours constraint", async () => {
-    await expect(
-      prisma.pulseOrganizationSettings.update({
-        where: { organizationId: orgId },
-        data: { workingHoursStart: 18, workingHoursEnd: 9 },
-      }),
-    ).rejects.toThrow();
-  });
-
   it("reads saves from a second API instance immediately", async () => {
     const anotherInstance = new AppSettingsService(prisma as never);
     await anotherInstance.get("notes", orgId);

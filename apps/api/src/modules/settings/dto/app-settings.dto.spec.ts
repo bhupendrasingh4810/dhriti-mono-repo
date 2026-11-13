@@ -59,7 +59,6 @@ const numericBounds: Array<[string, DtoConstructor, string, { min: number; max: 
     "maxCardContentLength",
     APP_SETTINGS_LIMITS.cadence.maxCardContentLength,
   ],
-  ["pulse start hour", UpdatePulseSettingsDto, "workingHoursStart", APP_SETTINGS_LIMITS.pulse.workingHoursStart],
   ["pulse attendees", UpdatePulseSettingsDto, "maxMeetingAttendees", APP_SETTINGS_LIMITS.pulse.maxMeetingAttendees],
   [
     "notes collaborators",

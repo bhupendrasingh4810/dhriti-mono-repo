@@ -13,8 +13,10 @@ const tabs = [
   "Departments",
   "Designations",
   "Employment Types",
+  "Holidays",
   "Integrations",
   "Locations",
+  "Shifts",
   "Workflows",
 ];
 const settingsRouteSegments: Partial<Record<(typeof tabs)[number], string>> = {
@@ -22,7 +24,9 @@ const settingsRouteSegments: Partial<Record<(typeof tabs)[number], string>> = {
   Departments: "departments",
   Designations: "designations",
   "Employment Types": "employment-types",
+  Holidays: "holidays",
   Locations: "locations",
+  Shifts: "shifts",
   Workflows: "workflow",
 };
 const stats = [

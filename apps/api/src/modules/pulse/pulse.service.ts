@@ -513,16 +513,29 @@ export class PulseService {
     }));
   }
 
-  async getSchedule(organizationId: string, query: ListEventsQueryDto) {
+  async getSchedule(organizationId: string, query: ListEventsQueryDto, userId?: string) {
     const from = new Date(query.from);
     const to = new Date(query.to);
     this.assertRange(from, to);
 
-    const [events, calendars, members, leaves] = await Promise.all([
+    const viewer = userId
+      ? await this.prisma.hrmsEmployee.findFirst({ where: { organizationId, userId, deletedAt: null }, select: { workLocationId: true } })
+      : null;
+    const [events, calendars, orgHolidays, members, leaves] = await Promise.all([
       this.listEvents(organizationId, query),
       this.prisma.holidayCalendar.findMany({
         where: { organizationId },
         select: { id: true, name: true, holidays: true },
+      }),
+      // Holidays managed in HRMS settings (one row per date).
+      this.prisma.hrmsHoliday.findMany({
+        where: {
+          organizationId,
+          date: { gte: from, lt: to },
+          // Org-wide holidays plus those for the viewer's work location.
+          OR: [{ workLocationId: null }, ...(viewer?.workLocationId ? [{ workLocationId: viewer.workLocationId }] : [])],
+        },
+        orderBy: { date: "asc" },
       }),
       this.prisma.organizationMember.findMany({
         where: { organizationId, status: "ACTIVE", deletedAt: null, user: { deletedAt: null } },
@@ -550,9 +563,18 @@ export class PulseService {
 
     return {
       events,
-      holidays: calendars.flatMap((calendar) =>
-        this.parseHolidays(calendar.holidays, calendar.id, calendar.name, from, to),
-      ),
+      holidays: [
+        ...orgHolidays.map((holiday) => ({
+          id: holiday.id,
+          title: holiday.isHalfDay ? `${holiday.name} (half day)` : holiday.name,
+          startDate: holiday.date,
+          endDate: holiday.date,
+          isAllDay: true,
+          isHalfDay: holiday.isHalfDay,
+          imageUrl: holiday.imageUrl,
+        })),
+        ...calendars.flatMap((calendar) => this.parseHolidays(calendar.holidays, calendar.id, calendar.name, from, to)),
+      ],
       birthdays: members.flatMap(({ user }) => this.birthdayOccurrences(user, from, to)),
       leaves: leaves.map((leave) => ({
         id: leave.id,

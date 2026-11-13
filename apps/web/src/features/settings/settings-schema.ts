@@ -475,23 +475,8 @@ const cadence: AppSettingsConfig<"cadence"> = {
 const pulse: AppSettingsConfig<"pulse"> = {
   app: "pulse",
   title: "Pulse settings",
-  description: "Working hours, event defaults, and meeting limits.",
+  description: "Event defaults and meeting limits.",
   sections: [
-    {
-      id: "hours",
-      title: "Working hours",
-      description: "Shown on everyone's calendar and used for scheduling.",
-      fields: [
-        { key: "workingDays", kind: "weekdays", label: "Working days" },
-        {
-          key: "workingHoursStart",
-          kind: "hour",
-          label: "Day starts",
-          ...APP_SETTINGS_LIMITS.pulse.workingHoursStart,
-        },
-        { key: "workingHoursEnd", kind: "hour", label: "Day ends", ...APP_SETTINGS_LIMITS.pulse.workingHoursEnd },
-      ],
-    },
     {
       id: "events",
       title: "Event defaults",
@@ -601,8 +586,14 @@ const notes: AppSettingsConfig<"notes"> = {
 const hrms: AppSettingsConfig<"hrms"> = {
   app: "hrms",
   title: "HRMS settings",
-  description: "Leave, attendance, payroll, and training defaults.",
+  description: "Working week, leave, attendance, payroll, and training defaults.",
   sections: [
+    {
+      id: "hours",
+      title: "Working week",
+      description: "Days shown on everyone's Pulse calendar. Daily hours come from each person's shift.",
+      fields: [{ key: "workingDays", kind: "weekdays", label: "Working days" }],
+    },
     {
       id: "leave",
       title: "Leave",
@@ -617,6 +608,42 @@ const hrms: AppSettingsConfig<"hrms"> = {
           noLimitLabel: "No limit",
         },
         { key: "allowHalfDayLeave", kind: "toggle", label: "Allow half-day leave" },
+      ],
+    },
+    {
+      id: "attendance-rules",
+      title: "Clock-in rules",
+      description: "Relative to each employee's shift start.",
+      fields: [
+        {
+          key: "attendanceClockInWindowMinutes",
+          kind: "number",
+          label: "Clock in opens before shift",
+          ...APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes,
+          unit: "minutes",
+        },
+        {
+          key: "attendanceLateAfterMinutes",
+          kind: "number",
+          label: "Mark late arrival after",
+          ...APP_SETTINGS_LIMITS.hrms.attendanceLateAfterMinutes,
+          unit: "minutes",
+        },
+        { key: "missedClockInAlertEnabled", kind: "toggle", label: "Alert when not clocked in" },
+        {
+          key: "missedClockInAlertMinutes",
+          kind: "number",
+          label: "Start alert after shift start",
+          ...APP_SETTINGS_LIMITS.hrms.missedClockInAlertMinutes,
+          unit: "minutes",
+        },
+        {
+          key: "missedClockInAlertRepeatSeconds",
+          kind: "number",
+          label: "Repeat alert sound every",
+          ...APP_SETTINGS_LIMITS.hrms.missedClockInAlertRepeatSeconds,
+          unit: "seconds",
+        },
       ],
     },
     {
@@ -692,18 +719,18 @@ export function validateSettingsField(field: SettingsFieldConfig, value: unknown
     case "text":
       return field.pattern && !field.pattern.test(String(value ?? "")) ? (field.patternHint ?? "Invalid value.") : null;
     case "weekdays":
-      if (!Array.isArray(value) || value.length < APP_SETTINGS_LIMITS.pulse.workingDays.minItems) {
+      if (!Array.isArray(value) || value.length < APP_SETTINGS_LIMITS.hrms.workingDays.minItems) {
         return "Select at least one day.";
       }
-      if (value.length > APP_SETTINGS_LIMITS.pulse.workingDays.maxItems) {
-        return `Select at most ${APP_SETTINGS_LIMITS.pulse.workingDays.maxItems} days.`;
+      if (value.length > APP_SETTINGS_LIMITS.hrms.workingDays.maxItems) {
+        return `Select at most ${APP_SETTINGS_LIMITS.hrms.workingDays.maxItems} days.`;
       }
       if (
         value.some(
           (day) =>
             !Number.isInteger(day) ||
-            day < APP_SETTINGS_LIMITS.pulse.workingDays.minDay ||
-            day > APP_SETTINGS_LIMITS.pulse.workingDays.maxDay,
+            day < APP_SETTINGS_LIMITS.hrms.workingDays.minDay ||
+            day > APP_SETTINGS_LIMITS.hrms.workingDays.maxDay,
         )
       ) {
         return "Select valid weekdays.";
@@ -731,9 +758,6 @@ export function validateSettingsField(field: SettingsFieldConfig, value: unknown
 
 /** Cross-field rules that mirror the API's validation. */
 export function validateSettingsDraft(app: AppSettingsKey, draft: Record<string, unknown>): string | null {
-  if (app === "pulse" && Number(draft.workingHoursStart) >= Number(draft.workingHoursEnd)) {
-    return "Working hours must end after they start.";
-  }
   if (app === "connect" && Array.isArray(draft.allowedImageTypes) && draft.allowedImageTypes.length === 0) {
     return "Allow at least one image type.";
   }

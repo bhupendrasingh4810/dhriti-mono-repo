@@ -42,7 +42,7 @@ export type PulseScheduleEvent = {
 };
 export type PulseSchedule = {
   events: PulseScheduleEvent[];
-  holidays: Array<{ id: string; title: string; startDate: string; endDate: string }>;
+  holidays: Array<{ id: string; title: string; startDate: string; endDate: string; isHalfDay?: boolean; imageUrl?: string | null }>;
   birthdays: Array<{ id: string; title: string; date: string }>;
   leaves: Array<{ id: string; startDate: string; endDate: string; totalDays: number; user: { id: string; name: string } }>;
 };

@@ -1,5 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { UpcomingHolidaysCard } from "@/features/hrms/components/upcoming-holidays";
+import { AttendanceClockPanel, AttendanceMonthSummary } from "@/features/hrms/components/attendance-clock-panel";
+import { useAuth } from "@/hooks/use-auth";
 import type { AppView } from "@/types/app.types";
 interface Props {
   setView: (v: AppView) => void;
@@ -116,57 +119,21 @@ const AI_QUESTIONS = [
   "What changed in the payment project this week?",
 ];
 
-// ─── Hero landscape SVG ──────────────────────────────────────────────────────
-function LandscapeIllustration() {
-  return (
-    <svg viewBox="0 0 340 180" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
-      <circle cx="270" cy="72" r="58" fill="#036c5f" fillOpacity="0.15" />
-      <circle cx="270" cy="72" r="44" fill="#036c5f" fillOpacity="0.2" />
-      {/* Mountains */}
-      <path d="M0 180 L80 90 L130 130 L180 60 L240 120 L290 80 L340 110 L340 180Z" fill="#036c5f" fillOpacity="0.12" />
-      <path
-        d="M0 180 L60 110 L100 140 L150 80 L200 120 L260 70 L310 100 L340 85 L340 180Z"
-        fill="#036c5f"
-        fillOpacity="0.18"
-      />
-      <path
-        d="M0 180 L40 130 L90 155 L140 100 L190 140 L230 105 L280 130 L340 115 L340 180Z"
-        fill="#036c5f"
-        fillOpacity="0.1"
-      />
-      {/* Birds */}
-      <path
-        d="M200 42 Q203 39 206 42"
-        stroke="#036c5f"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.4"
-      />
-      <path
-        d="M212 36 Q215 33 218 36"
-        stroke="#036c5f"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.4"
-      />
-      <path
-        d="M222 44 Q225 41 228 44"
-        stroke="#036c5f"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        fill="none"
-        opacity="0.3"
-      />
-    </svg>
-  );
-}
-
 export default function DashboardHome({ setView }: Props) {
   const [tasks, setTasks] = useState(ALL_TASKS);
   const [taskTab, setTaskTab] = useState<TaskTab>("All");
   const [aiQuery, setAiQuery] = useState("");
+  const { user } = useAuth();
+  const firstName = user?.name?.trim().split(/\s+/)[0] ?? "there";
+  // Greeting follows the viewer's local hour; resolved after mount to keep SSR markup stable.
+  const [greeting, setGreeting] = useState("Welcome");
+  useEffect(() => {
+    const hour = new Date().getHours();
+    const next =
+      hour < 5 ? "Working late" : hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : hour < 21 ? "Good evening" : "Good night";
+    const timer = window.setTimeout(() => setGreeting(next), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const toggleTask = (id: string) => setTasks((t) => t.map((tk) => (tk.id === id ? { ...tk, done: !tk.done } : tk)));
 
@@ -180,104 +147,24 @@ export default function DashboardHome({ setView }: Props) {
 
   return (
     <div className="p-4 space-y-4">
-      {/* ── Hero greeting card ───────────────────────────────────── */}
-      <div
-        className="rounded-2xl overflow-hidden flex"
-        style={{ backgroundColor: "#ffffff", border: "1px solid #e2e8f0", minHeight: "160px" }}
-      >
-        {/* Left text */}
-        <div className="flex-1 p-7 flex flex-col justify-center">
-          <div className="w-10 h-10 rounded-xl bg-[#e6f4f2] flex items-center justify-center mb-4">
-            <span style={{ fontSize: "22px" }}>👋</span>
+      {/* Hero: greeting + monthly attendance KPIs, with the clock panel on the right */}
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-border bg-surface lg:flex-row">
+        <div className="flex flex-1 flex-col justify-center gap-6 bg-gradient-to-br from-brand-muted to-surface p-6 lg:p-8">
+          <div>
+            <p className="font-display text-3xl font-extrabold tracking-tight text-brand lg:text-4xl">
+              {user?.organization?.name ?? "Your organization"}
+            </p>
+            <h2 className="mt-3 font-display text-2xl font-bold text-text-secondary lg:text-3xl">
+              {greeting}, <span className="font-extrabold text-text-primary">{firstName}</span>! 👋
+            </h2>
+            <p className="text-sm text-text-secondary">Here&apos;s what&apos;s happening across your workspace.</p>
           </div>
-          <h2 className="text-2xl font-bold text-slate-900 mb-1" style={{ fontFamily: "var(--font-display)" }}>
-            Good morning, Jane!
-          </h2>
-          <p className="text-sm text-slate-400 mb-1">Thursday, 11 September 2026</p>
-          <p className="text-sm text-slate-500">Here&apos;s what&apos;s happening across your workspace.</p>
+          <AttendanceMonthSummary />
         </div>
-
-        {/* Center stats */}
-        <div className="flex flex-col justify-center gap-4 px-8 border-l border-slate-100">
-          {[
-            {
-              icon: (
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#036c5f"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                </svg>
-              ),
-              label: "Organization",
-              value: "Acme Technologies",
-            },
-            {
-              icon: (
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#036c5f"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              ),
-              label: "Active members",
-              value: "38",
-            },
-            {
-              icon: (
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#036c5f"
-                  strokeWidth="1.75"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <rect x="3" y="3" width="7" height="7" rx="1" />
-                  <rect x="14" y="3" width="7" height="7" rx="1" />
-                  <rect x="3" y="14" width="7" height="7" rx="1" />
-                  <rect x="14" y="14" width="7" height="7" rx="1" />
-                </svg>
-              ),
-              label: "Applications",
-              value: "6",
-            },
-          ].map((s) => (
-            <div key={s.label} className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#e6f4f2] flex items-center justify-center flex-shrink-0">
-                {s.icon}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800 leading-tight">{s.value}</p>
-                <p className="text-xs text-slate-400">{s.label}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Right illustration */}
-        <div className="w-72 flex-shrink-0 overflow-hidden" style={{ backgroundColor: "#f0faf8" }}>
-          <LandscapeIllustration />
-        </div>
+        <AttendanceClockPanel />
       </div>
+
+      <UpcomingHolidaysCard />
 
       {/* ── Middle three-column ──────────────────────────────────── */}
       <div className="grid lg:grid-cols-3 gap-4">

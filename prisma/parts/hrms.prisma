@@ -3,6 +3,7 @@ model HrmsEmployee {
   organizationId String   @db.Uuid
   userId         String   @db.Uuid
   workLocationId String?  @db.Uuid
+  shiftId        String?  @db.Uuid
   departmentId   String?  @db.Uuid
   designationId  String?  @db.Uuid
   reportingManagerId String? @db.Uuid
@@ -21,11 +22,13 @@ model HrmsEmployee {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Restrict)
   workLocation HrmsLocation? @relation(fields: [workLocationId], references: [id], onDelete: SetNull)
+  shift        HrmsShift? @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   department   OrganizationDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   designation  HrmsDesignation? @relation(fields: [designationId], references: [id], onDelete: SetNull)
   reportingManager HrmsEmployee? @relation("HrmsEmployeeReporting", fields: [reportingManagerId], references: [id], onDelete: SetNull)
   directReports HrmsEmployee[] @relation("HrmsEmployeeReporting")
   attendanceRecords HrmsAttendanceRecord[]
+  attendanceRegularizations HrmsAttendanceRegularization[]
   leaveRequests HrmsLeaveRequest[]
   performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
   conductedPerformanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewReviewer")
@@ -39,6 +42,7 @@ model HrmsEmployee {
   @@index([organizationId, status])
   @@index([organizationId, workLocationId])
   @@index([organizationId, departmentId])
+  @@index([organizationId, shiftId])
   @@index([organizationId, reportingManagerId])
   @@map("hrms_employees")
 }
@@ -53,6 +57,9 @@ model HrmsAttendanceRecord {
   checkOut       DateTime?
   status         AttendanceStatus @default(PRESENT)
   workHours      Float?
+  // Completed break time; an in-progress break is tracked by breakStartedAt until it is ended or the user clocks out.
+  breakMinutes   Int              @default(0)
+  breakStartedAt DateTime?
   notes          String?          @db.Text
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
@@ -65,6 +72,31 @@ model HrmsAttendanceRecord {
   @@index([organizationId, date])
   @@index([employeeId, date])
   @@map("hrms_attendance_records")
+}
+
+/// Employee-raised correction for one attendance day. Approval applies the requested times to the day's attendance record.
+model HrmsAttendanceRegularization {
+  id               String                         @id @default(uuid()) @db.Uuid
+  organizationId   String                         @db.Uuid
+  employeeId       String                         @db.Uuid
+  date             DateTime                       @db.Date
+  type             AttendanceRegularizationType
+  requestedCheckIn  DateTime?
+  requestedCheckOut DateTime?
+  reason           String                         @db.Text
+  status           AttendanceRegularizationStatus @default(PENDING)
+  decidedByUserId  String?                        @db.Uuid
+  decidedAt        DateTime?
+  decisionNote     String?                        @db.Text
+  createdAt        DateTime                       @default(now())
+  updatedAt        DateTime                       @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId, date])
+  @@map("hrms_attendance_regularizations")
 }
 
 model HrmsLeaveRequest {
@@ -612,4 +644,46 @@ model HealthInsurance {
   @@index([organizationId, isActive])
   @@index([userId, isActive])
   @@map("health_insurances")
+}
+/// One organization-wide holiday on a calendar date. Read by HRMS settings and merged into Pulse's schedule.
+model HrmsHoliday {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  // Null applies to every location; otherwise only employees working at that location observe the holiday.
+  workLocationId String?  @db.Uuid
+  date           DateTime @db.Date
+  name           String
+  isHalfDay      Boolean  @default(false)
+  // Small downscaled data URL (client resizes before upload) used as the calendar cell background.
+  imageUrl       String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workLocation HrmsLocation? @relation(fields: [workLocationId], references: [id], onDelete: Cascade)
+
+  // One holiday per (date, location) is enforced in HrmsHolidayService because NULL locations are not unique in SQL.
+  @@index([organizationId, date])
+  @@index([workLocationId])
+  @@map("hrms_holidays")
+}
+
+/// Audit trail of holiday-list emails; an ALL broadcast for a year drives the "sent to all" badge.
+model HrmsHolidayBroadcast {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  year           Int
+  audience       String   @db.VarChar(10)
+  recipientCount Int
+  failedCount    Int      @default(0)
+  // True when only holidays changed since the previous send were emailed.
+  changesOnly    Boolean  @default(false)
+  holidayCount   Int      @default(0)
+  sentByUserId   String?  @db.Uuid
+  sentAt         DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, year, sentAt])
+  @@map("hrms_holiday_broadcasts")
 }

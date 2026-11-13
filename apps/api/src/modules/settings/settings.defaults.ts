@@ -76,9 +76,6 @@ export const DEFAULT_APP_SETTINGS: { [K in AppSettingsKey]: SettingsColumns<AppS
     sessionListSize: 100,
   },
   pulse: {
-    workingDays: [1, 2, 3, 4],
-    workingHoursStart: 9,
-    workingHoursEnd: 18,
     defaultEventAvailability: "BUSY",
     defaultEventPrivacy: "DEFAULT",
     defaultReminderMinutes: null,
@@ -94,11 +91,17 @@ export const DEFAULT_APP_SETTINGS: { [K in AppSettingsKey]: SettingsColumns<AppS
     maxNoteContentLength: 100000,
   },
   hrms: {
+    workingDays: [1, 2, 3, 4, 5],
     maxLeaveRequestDays: null,
     allowHalfDayLeave: true,
     defaultAttendanceStatus: "PRESENT",
     defaultPayrollCurrency: "USD",
     maxTrainingParticipants: null,
+    attendanceClockInWindowMinutes: 30,
+    attendanceLateAfterMinutes: 60,
+    missedClockInAlertEnabled: true,
+    missedClockInAlertMinutes: 25,
+    missedClockInAlertRepeatSeconds: 5,
   },
 };
 

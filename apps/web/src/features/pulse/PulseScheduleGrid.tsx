@@ -114,8 +114,12 @@ export function PulseScheduleGrid({
             <div key={`all-day-${date.toISOString()}`} className={`border-b border-border p-0.75 ${index < workingWeek.length - 1 ? "border-r" : ""}`}>
               {loading ? <PulseAllDaySkeleton dayIndex={index} /> : null}
               {holidays.map((holiday) => (
-                <p key={holiday.id} className="border border-warning bg-warning/10 px-1 py-0.65 text-[11px] font-bold text-warning">
-                  {holiday.title}
+                <p
+                  key={holiday.id}
+                  className="border border-warning bg-warning/10 bg-cover bg-center px-1 py-0.65 text-[11px] font-bold text-warning"
+                  style={holiday.imageUrl ? { backgroundImage: `url(${holiday.imageUrl})` } : undefined}
+                >
+                  <span className={holiday.imageUrl ? "bg-surface/85 px-0.5" : undefined}>{holiday.title}</span>
                 </p>
               ))}
               {birthdayEntries.map((birthday) => (

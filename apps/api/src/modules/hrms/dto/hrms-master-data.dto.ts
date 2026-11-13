@@ -109,3 +109,64 @@ export class UpdateHrmsDesignationDto extends UpdateMasterDataDto {
 
 export class CreateHrmsEmploymentTypeDto extends MasterDataDto {}
 export class UpdateHrmsEmploymentTypeDto extends UpdateMasterDataDto {}
+
+const SHIFT_TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export class CreateHrmsShiftDto {
+  @ApiProperty({ example: "Morning" })
+  @IsString()
+  @MinLength(1)
+  @Matches(/\S/)
+  @MaxLength(120)
+  name!: string;
+
+  @ApiProperty({ example: "06:00", description: "24h HH:mm" })
+  @Matches(SHIFT_TIME, { message: "startTime must be HH:mm" })
+  startTime!: string;
+
+  @ApiProperty({ example: "14:00", description: "24h HH:mm; earlier than startTime means the shift crosses midnight" })
+  @Matches(SHIFT_TIME, { message: "endTime must be HH:mm" })
+  endTime!: string;
+
+  @ApiPropertyOptional({ example: "Asia/Kolkata", description: "IANA zone for the shift times; defaults to the organization's" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timeZone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}
+
+export class UpdateHrmsShiftDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @Matches(/\S/)
+  @MaxLength(120)
+  name?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Matches(SHIFT_TIME, { message: "startTime must be HH:mm" })
+  startTime?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Matches(SHIFT_TIME, { message: "endTime must be HH:mm" })
+  endTime?: string;
+
+  @ApiPropertyOptional({ example: "Asia/Kolkata" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timeZone?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+}

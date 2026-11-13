@@ -183,10 +183,6 @@ model PulseOrganizationSettings {
   id             String @id @default(uuid()) @db.Uuid
   organizationId String @unique @db.Uuid
 
-  // ISO weekdays: 1 = Monday ... 7 = Sunday.
-  workingDays               Int[]             @default([1, 2, 3, 4])
-  workingHoursStart         Int               @default(9)
-  workingHoursEnd           Int               @default(18)
   defaultEventAvailability  EventAvailability @default(BUSY)
   defaultEventPrivacy       EventPrivacy      @default(DEFAULT)
   defaultReminderMinutes    Int?
@@ -224,11 +220,21 @@ model HrmsOrganizationSettings {
   id             String @id @default(uuid()) @db.Uuid
   organizationId String @unique @db.Uuid
 
+  // Organization working week, owned by HRMS and read by Pulse. Daily hours come from each employee's HrmsShift.
+  // ISO weekdays: 1 = Monday ... 7 = Sunday.
+  workingDays             Int[]            @default([1, 2, 3, 4])
   maxLeaveRequestDays     Int?
   allowHalfDayLeave       Boolean          @default(true)
   defaultAttendanceStatus AttendanceStatus @default(PRESENT)
   defaultPayrollCurrency  String           @default("USD") @db.VarChar(3)
   maxTrainingParticipants Int?
+
+  // Shift-relative attendance rules (minutes are relative to the employee's shift start).
+  attendanceClockInWindowMinutes Int     @default(30)
+  attendanceLateAfterMinutes     Int     @default(60)
+  missedClockInAlertEnabled      Boolean @default(true)
+  missedClockInAlertMinutes      Int     @default(25)
+  missedClockInAlertRepeatSeconds Int    @default(5)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

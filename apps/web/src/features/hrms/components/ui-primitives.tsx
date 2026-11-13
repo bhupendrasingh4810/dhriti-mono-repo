@@ -2,6 +2,7 @@
 
 import { type ReactNode } from "react";
 import {
+  Eye,
   ArrowUpDown,
   ArrowRight,
   BarChart3,
@@ -112,7 +113,8 @@ export type IconName =
   | "arrow"
   | "sort"
   | "edit"
-  | "delete";
+  | "delete"
+  | "view";
 
 export function Icon({ name, size = 18, className = "" }: { name: IconName; size?: number; className?: string }) {
   const icons: Record<IconName, LucideIcon> = {
@@ -144,6 +146,7 @@ export function Icon({ name, size = 18, className = "" }: { name: IconName; size
     sort: ArrowUpDown,
     edit: Pencil,
     delete: Trash2,
+    view: Eye,
   };
   const LucideIcon = icons[name] ?? CircleAlert;
   return <LucideIcon aria-hidden="true" size={size} strokeWidth={1.8} className={className} />;

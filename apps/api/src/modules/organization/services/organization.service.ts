@@ -24,6 +24,7 @@ import {
 import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization-membership";
 import { enqueueNotification } from "../../notification/notification-events";
 import { defaultHrmsWorkflowTemplates } from "../../hrms/default-workflow-templates";
+import { DEFAULT_HRMS_SHIFTS } from "../../hrms/default-shifts";
 
 const DEFAULT_PERMISSION_GROUPS = [
   { name: "Administrators", systemRole: OrganizationSystemPermissionGroupRole.ADMINISTRATORS },
@@ -148,6 +149,9 @@ export class OrganizationService {
           scopeType: "ORGANIZATION",
           assignedByUserId: creatorUserId,
         },
+      });
+      await transaction.hrmsShift.createMany({
+        data: DEFAULT_HRMS_SHIFTS.map((shift, sortOrder) => ({ ...shift, timeZone: organization.timezone, organizationId: organization.id, sortOrder })),
       });
       // Templates are organization-local so cloning never crosses a tenant boundary.
       await Promise.all(

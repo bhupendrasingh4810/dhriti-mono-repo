@@ -230,12 +230,9 @@ export class AppSettingsService {
   }
 
   private async validate(app: AppSettingsKey, organizationId: string, next: Record<string, unknown>) {
-    if (app === "pulse") {
-      const pulse = next as unknown as PulseOrganizationSettings;
-      if (pulse.workingHoursStart >= pulse.workingHoursEnd) {
-        throw validationError("Working hours must end after they start");
-      }
-      if (pulse.workingDays.length === 0) {
+    if (app === "hrms") {
+      const hrms = next as unknown as HrmsOrganizationSettings;
+      if (hrms.workingDays.length === 0) {
         throw validationError("Select at least one working day");
       }
     }

@@ -13,6 +13,7 @@ import {
   assignDefaultUserPermissionGroups,
 } from "../apps/api/src/modules/organization/services/default-permission-groups";
 import { defaultHrmsWorkflowTemplates } from "../apps/api/src/modules/hrms/default-workflow-templates";
+import { DEFAULT_HRMS_SHIFTS } from "../apps/api/src/modules/hrms/default-shifts";
 import { seedPeople, type SeedPerson } from "./seed-people";
 
 const client = new PrismaClient();
@@ -1363,6 +1364,7 @@ async function seedData(): Promise<void> {
   for (const tenant of tenants) {
     await seedTenantData(tenant.organization, tenant.users, tenant.owner);
     await seedDefaultHrmsWorkflowTemplates(tenant.organization.id, tenant.owner.id);
+    await seedDefaultHrmsShifts(tenant.organization.id, tenant.organization.timezone);
   }
   const issueCounts = await prisma.issue.groupBy({ by: ["projectId"], _max: { number: true } });
   for (const result of issueCounts) {
@@ -1375,6 +1377,22 @@ async function seedData(): Promise<void> {
   console.log(`  Organization users: ${organizationUsers.length} per tenant`);
   console.log(`  Development password: ${PASSWORD}`);
   console.log(`  Organizations: ${tenants.map(({ organization }) => organization.slug).join(", ")}`);
+}
+
+async function seedDefaultHrmsShifts(organizationId: string, timeZone: string): Promise<void> {
+  // Create-only so admin edits to shift times survive re-seeding.
+  for (const [sortOrder, shift] of DEFAULT_HRMS_SHIFTS.entries()) {
+    await prisma.hrmsShift.upsert({
+      where: { organizationId_name: { organizationId, name: shift.name } },
+      update: {},
+      create: { organizationId, ...shift, timeZone, sortOrder },
+    });
+  }
+  // Employees without a shift default to "Day"; existing assignments are untouched.
+  const day = await prisma.hrmsShift.findUnique({ where: { organizationId_name: { organizationId, name: "Day" } } });
+  if (day) {
+    await prisma.hrmsEmployee.updateMany({ where: { organizationId, shiftId: null, deletedAt: null }, data: { shiftId: day.id } });
+  }
 }
 
 async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUserId: string): Promise<void> {

@@ -2,7 +2,9 @@ import { Module } from "@nestjs/common";
 
 import { HrmsEmployeeController } from "./controllers/hrms-employee.controller";
 import { HrmsAttendanceController } from "./controllers/hrms-attendance.controller";
+import { HrmsAttendanceSelfController } from "./controllers/hrms-attendance-self.controller";
 import { HrmsHolidayCalendarController } from "./controllers/hrms-holiday-calendar.controller";
+import { HrmsHolidayController } from "./controllers/hrms-holiday.controller";
 import { HrmsLeaveController } from "./controllers/hrms-leave.controller";
 import { HrmsPerformanceReviewController } from "./controllers/hrms-performance-review.controller";
 import { HrmsPayrollController } from "./controllers/hrms-payroll.controller";
@@ -15,8 +17,11 @@ import { HrmsWorkflowInstanceController } from "./controllers/hrms-workflow-inst
 import { HrmsEmployeeService } from "./services/hrms-employee.service";
 import { HrmsEmployeeImportService } from "./services/hrms-employee-import.service";
 import { HrmsAttendanceService } from "./services/hrms-attendance.service";
+import { HrmsAttendanceClockService } from "./services/hrms-attendance-clock.service";
+import { HrmsAttendanceRegularizationService } from "./services/hrms-attendance-regularization.service";
 import { HrmsOperationsService } from "./services/hrms-operations.service";
 import { HrmsHolidayCalendarService } from "./services/hrms-holiday-calendar.service";
+import { HrmsHolidayService } from "./services/hrms-holiday.service";
 import { HrmsLeaveService } from "./services/hrms-leave.service";
 import { HrmsPerformanceReviewService } from "./services/hrms-performance-review.service";
 import { HrmsPayrollService } from "./services/hrms-payroll.service";
@@ -31,7 +36,9 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
   controllers: [
     HrmsEmployeeController,
     HrmsAttendanceController,
+    HrmsAttendanceSelfController,
     HrmsHolidayCalendarController,
+    HrmsHolidayController,
     HrmsLeaveController,
     HrmsPerformanceReviewController,
     HrmsPayrollController,
@@ -46,8 +53,11 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsEmployeeService,
     HrmsEmployeeImportService,
     HrmsAttendanceService,
+    HrmsAttendanceClockService,
+    HrmsAttendanceRegularizationService,
     HrmsOperationsService,
     HrmsHolidayCalendarService,
+    HrmsHolidayService,
     HrmsLeaveService,
     HrmsPerformanceReviewService,
     HrmsPayrollService,

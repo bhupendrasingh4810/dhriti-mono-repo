@@ -94,8 +94,12 @@ export class PulseController {
   @Get("schedule")
   @RequireAccess({ entitlement: "pulse.enabled", permission: "pulse.calendar.read" })
   @ApiOperation({ summary: "List Pulse events with organization holidays, birthdays, and approved leaves" })
-  async getSchedule(@CurrentOrganization() organization: OrganizationContext, @Query() query: ListEventsQueryDto) {
-    return this.pulse.getSchedule(organization.organizationId, query);
+  async getSchedule(
+    @CurrentUser() user: AuthenticatedUser,
+    @CurrentOrganization() organization: OrganizationContext,
+    @Query() query: ListEventsQueryDto,
+  ) {
+    return this.pulse.getSchedule(organization.organizationId, query, user.userId);
   }
 
   @Post("events")

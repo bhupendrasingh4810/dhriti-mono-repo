@@ -77,6 +77,7 @@ describe("OrganizationService membership lifecycle", () => {
       },
       organizationPermissionGroupPermission: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
       organizationPermissionGroupAssignment: { create: jest.fn().mockResolvedValue({}) },
+      hrmsShift: { createMany: jest.fn().mockResolvedValue({ count: 4 }) },
       hrmsWorkflowDefinition: { create: jest.fn().mockResolvedValue({}) },
     };
     const prisma = {

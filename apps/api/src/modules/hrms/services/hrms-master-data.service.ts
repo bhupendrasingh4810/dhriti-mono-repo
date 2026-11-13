@@ -1,6 +1,7 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
+import { isValidTimeZone } from "../shift-time";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { PrismaService } from "../../../database/prisma.service";
@@ -9,9 +10,11 @@ import type {
   CreateHrmsDesignationDto,
   CreateHrmsEmploymentTypeDto,
   CreateHrmsLocationDto,
+  CreateHrmsShiftDto,
   UpdateHrmsDesignationDto,
   UpdateHrmsEmploymentTypeDto,
   UpdateHrmsLocationDto,
+  UpdateHrmsShiftDto,
 } from "../dto/hrms-master-data.dto";
 
 @Injectable()
@@ -243,6 +246,93 @@ export class HrmsMasterDataService {
       employmentTypeId,
       "HrmsEmploymentType",
     );
+  }
+
+  listShifts(organizationId: string) {
+    return this.prisma.hrmsShift.findMany({
+      where: { organizationId },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    });
+  }
+
+  async createShift(organizationId: string, actorUserId: string, input: CreateHrmsShiftDto) {
+    this.assertShiftTimes(input.startTime, input.endTime);
+    const timeZone = input.timeZone ?? (await this.organizationTimeZone(organizationId));
+    this.assertTimeZone(timeZone);
+    const last = await this.prisma.hrmsShift.aggregate({ where: { organizationId }, _max: { sortOrder: true } });
+    const shift = await this.prisma.hrmsShift
+      .create({
+        data: {
+          organizationId,
+          name: input.name.trim(),
+          startTime: input.startTime,
+          endTime: input.endTime,
+          timeZone,
+          isActive: input.isActive ?? true,
+          sortOrder: (last._max.sortOrder ?? -1) + 1,
+        },
+      })
+      .catch((error: unknown) =>
+        this.handleConflict(error, ErrorCode.HRMS_SHIFT_CONFLICT, "Shift name already exists"),
+      );
+    await this.record("shift", "created", organizationId, actorUserId, shift.id, "HrmsShift");
+    return shift;
+  }
+
+  async updateShift(organizationId: string, shiftId: string, actorUserId: string, input: UpdateHrmsShiftDto) {
+    const current = await this.require(
+      this.prisma.hrmsShift.findFirst({ where: { id: shiftId, organizationId } }),
+      ErrorCode.HRMS_SHIFT_NOT_FOUND,
+      "Shift",
+    );
+    this.assertShiftTimes(input.startTime ?? current.startTime, input.endTime ?? current.endTime);
+    if (input.timeZone !== undefined) {
+      this.assertTimeZone(input.timeZone);
+    }
+    const shift = await this.prisma.hrmsShift
+      .update({
+        where: { id: shiftId },
+        data: {
+          ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+          ...(input.startTime !== undefined ? { startTime: input.startTime } : {}),
+          ...(input.endTime !== undefined ? { endTime: input.endTime } : {}),
+          ...(input.timeZone !== undefined ? { timeZone: input.timeZone } : {}),
+          ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+        },
+      })
+      .catch((error: unknown) =>
+        this.handleConflict(error, ErrorCode.HRMS_SHIFT_CONFLICT, "Shift name already exists"),
+      );
+    await this.record("shift", "updated", organizationId, actorUserId, shift.id, "HrmsShift");
+    return shift;
+  }
+
+  async removeShift(organizationId: string, shiftId: string, actorUserId: string): Promise<void> {
+    await this.require(
+      this.prisma.hrmsShift.findFirst({ where: { id: shiftId, organizationId }, select: { id: true } }),
+      ErrorCode.HRMS_SHIFT_NOT_FOUND,
+      "Shift",
+    );
+    await this.prisma.hrmsShift.delete({ where: { id: shiftId } });
+    await this.record("shift", "deleted", organizationId, actorUserId, shiftId, "HrmsShift");
+  }
+
+  // Equal times would be a zero-length shift; end earlier than start is a valid overnight shift.
+  private assertTimeZone(timeZone: string) {
+    if (!isValidTimeZone(timeZone)) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Invalid time zone", HttpStatus.BAD_REQUEST);
+    }
+  }
+
+  private async organizationTimeZone(organizationId: string) {
+    const organization = await this.prisma.organization.findUnique({ where: { id: organizationId }, select: { timezone: true } });
+    return organization?.timezone ?? "UTC";
+  }
+
+  private assertShiftTimes(start: string, end: string) {
+    if (start === end) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Shift start and end time must differ", HttpStatus.BAD_REQUEST);
+    }
   }
 
   private async requireLocation(organizationId: string, id: string) {

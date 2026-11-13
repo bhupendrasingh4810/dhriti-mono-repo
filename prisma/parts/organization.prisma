@@ -37,10 +37,14 @@ model Organization {
   hrmsLocations HrmsLocation[]
   hrmsDesignations HrmsDesignation[]
   hrmsEmploymentTypes HrmsEmploymentType[]
+  hrmsShifts          HrmsShift[]
+  hrmsHolidays        HrmsHoliday[]
+  hrmsHolidayBroadcasts HrmsHolidayBroadcast[]
   permissionGroups OrganizationPermissionGroup[]
   permissionGroupAssignments OrganizationPermissionGroupAssignment[]
   hrmsEmployees HrmsEmployee[]
   hrmsAttendanceRecords HrmsAttendanceRecord[]
+  hrmsAttendanceRegularizations HrmsAttendanceRegularization[]
   hrmsLeaveRequests HrmsLeaveRequest[]
   hrmsPerformanceReviews HrmsPerformanceReview[]
   hrmsPayrollRecords HrmsPayrollRecord[]
@@ -164,6 +168,7 @@ model HrmsLocation {
 
   organization Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employees    HrmsEmployee[]
+  holidays     HrmsHoliday[]
 
   @@unique([organizationId, name])
   @@unique([organizationId, code])
@@ -206,6 +211,28 @@ model HrmsEmploymentType {
   @@unique([organizationId, code])
   @@index([organizationId, isActive])
   @@map("hrms_employment_types")
+}
+
+/// Named work shift with admin-defined start/end times ("HH:mm", 24h). endTime <= startTime means the shift crosses midnight.
+model HrmsShift {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  startTime      String   @db.VarChar(5)
+  endTime        String   @db.VarChar(5)
+  // IANA zone the HH:mm times are expressed in; clock-in rules are evaluated against it.
+  timeZone       String   @default("Asia/Kolkata")
+  isActive       Boolean  @default(true)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employees    HrmsEmployee[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("hrms_shifts")
 }
 
 model OrganizationTeamMember {

@@ -8,6 +8,7 @@ export interface HrmsEmployee extends ApiEntity {
   status: string;
   employmentType: string | null;
   workLocationId: string | null;
+  shiftId: string | null;
   departmentId: string | null;
   designationId: string | null;
   reportingManagerId: string | null;
@@ -16,6 +17,7 @@ export interface HrmsEmployee extends ApiEntity {
   biometricId: string | null;
   user: { id: string; name: string; email: string; avatarUrl: string | null };
   workLocation: { id: string; name: string; code: string | null } | null;
+  shift: { id: string; name: string; startTime: string; endTime: string; timeZone: string } | null;
   department: { id: string; name: string; code: string | null } | null;
   designation: { id: string; name: string; code: string | null } | null;
   reportingManager: { id: string; employeeNumber: string; user: { name: string } } | null;
@@ -43,6 +45,7 @@ export interface HrmsEmployeeOptions {
   designations: { id: string; name: string; departmentId: string | null }[];
   locations: { id: string; name: string }[];
   employmentTypes: { id: string; name: string }[];
+  shifts: { id: string; name: string; startTime: string; endTime: string; timeZone: string }[];
   managers: { id: string; employeeNumber: string; user: { name: string } }[];
 }
 export interface HrmsOrgChartNode {
@@ -83,6 +86,45 @@ export interface HrmsEmployeeImportOutcome {
   skipped: number;
   errors: HrmsEmployeeImportRowResult[];
 }
+export interface HrmsHoliday {
+  id: string;
+  /** ISO timestamp at UTC midnight of the holiday date. */
+  date: string;
+  name: string;
+  isHalfDay: boolean;
+  imageUrl: string | null;
+  /** Null = applies to every work location. */
+  workLocationId: string | null;
+  workLocation: { id: string; name: string } | null;
+  updatedAt: string;
+}
+export interface HrmsHolidayImportItem {
+  date: string;
+  name: string;
+  isHalfDay?: boolean;
+  locationName?: string;
+}
+export interface HrmsHolidayImportResult {
+  created: number;
+  updated: number;
+  errors: { row: number; message: string }[];
+}
+export interface HrmsHolidayEmailPreview {
+  subject: string;
+  html: string;
+  holidayCount: number;
+}
+export interface HrmsHolidayBroadcast {
+  id: string;
+  year: number;
+  audience: "ALL" | "SELECTED";
+  recipientCount: number;
+  failedCount: number;
+  changesOnly: boolean;
+  holidayCount: number;
+  sentBy: string | null;
+  sentAt: string;
+}
 export interface HrmsEmployeePage {
   items: HrmsEmployee[];
   total: number;
@@ -99,7 +141,31 @@ export interface HrmsAttendanceRecord extends ApiEntity {
   checkOut: string | null;
   status: string;
   workHours: number | null;
+  breakMinutes: number;
+  breakStartedAt: string | null;
   notes: string | null;
+}
+export type HrmsRegularizationType =
+  | "MISSED_CLOCK_IN"
+  | "MISSED_CLOCK_OUT"
+  | "LATE_ARRIVAL"
+  | "WORK_FROM_CLIENT_SITE"
+  | "OTHER";
+export type HrmsRegularizationStatus = "PENDING" | "APPROVED" | "REJECTED";
+export interface HrmsAttendanceRegularization extends ApiEntity {
+  employeeId: string;
+  date: string;
+  type: HrmsRegularizationType;
+  requestedCheckIn: string | null;
+  requestedCheckOut: string | null;
+  reason: string;
+  status: HrmsRegularizationStatus;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  /** The day's current attendance record (null if none); present on list responses. */
+  attendanceRecord?: HrmsAttendanceRecord | null;
+  employee: { id: string; employeeNumber: string; user: { id: string; name: string; avatarUrl: string | null } };
 }
 
 export interface HrmsLeaveRequest extends ApiEntity {
@@ -134,6 +200,17 @@ export interface HrmsEmploymentType extends ApiEntity {
   name: string;
   code: string | null;
   isActive: boolean;
+}
+
+/** Admin-defined shift; times are "HH:mm" (24h) and endTime <= startTime means the shift crosses midnight. */
+export interface HrmsShift extends ApiEntity {
+  name: string;
+  startTime: string;
+  endTime: string;
+  /** IANA zone the times are expressed in. */
+  timeZone: string;
+  isActive: boolean;
+  sortOrder: number;
 }
 
 export type HrmsWorkflowDefinitionStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
@@ -270,6 +347,32 @@ export const hrmsService = {
         method: "DELETE",
       }),
   },
+  shifts: {
+    list: (organizationId: string) => tenantRequest<HrmsShift[]>(organizationId, `${base}/shifts`),
+    create: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsShift, Input>(organizationId, `${base}/shifts`, "POST", input),
+    update: (organizationId: string, shiftId: string, input: Input) =>
+      tenantJsonRequest<HrmsShift, Input>(organizationId, `${base}/shifts/${pathSegment(shiftId)}`, "PATCH", input),
+    remove: (organizationId: string, shiftId: string) =>
+      tenantRequest<void>(organizationId, `${base}/shifts/${pathSegment(shiftId)}`, { method: "DELETE" }),
+  },
+  holidays: {
+    list: (organizationId: string, year: number) =>
+      tenantRequest<HrmsHoliday[]>(organizationId, `${base}/holidays`, { query: { year } }),
+    save: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsHoliday, Input>(organizationId, `${base}/holidays`, "PUT", input),
+    remove: (organizationId: string, holidayId: string) =>
+      tenantRequest<void>(organizationId, `${base}/holidays/${pathSegment(holidayId)}`, { method: "DELETE" }),
+    upcoming: (organizationId: string) => tenantRequest<HrmsHoliday[]>(organizationId, `${base}/holidays/upcoming`),
+    importItems: (organizationId: string, items: HrmsHolidayImportItem[]) =>
+      tenantJsonRequest<HrmsHolidayImportResult, Input>(organizationId, `${base}/holidays/import`, "POST", { items }),
+    preview: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsHolidayEmailPreview, Input>(organizationId, `${base}/holidays/send/preview`, "POST", input),
+    broadcasts: (organizationId: string, year: number) =>
+      tenantRequest<HrmsHolidayBroadcast[]>(organizationId, `${base}/holidays/broadcasts`, { query: { year } }),
+    send: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsHolidayBroadcast, Input>(organizationId, `${base}/holidays/send`, "POST", input),
+  },
   employees: {
     ...resource("employees"),
     list: (
@@ -278,6 +381,13 @@ export const hrmsService = {
     ) => tenantRequest<HrmsEmployeePage>(organizationId, `${base}/employees`, { query }),
     options: (organizationId: string) =>
       tenantRequest<HrmsEmployeeOptions>(organizationId, `${base}/employees/options`),
+    myStartDate: (organizationId: string) =>
+      tenantRequest<{ startDate: string | null }>(organizationId, `${base}/employees/me/start-date`),
+    myShift: (organizationId: string) =>
+      tenantRequest<{ id: string; name: string; startTime: string; endTime: string; timeZone: string } | null>(
+        organizationId,
+        `${base}/employees/me/shift`,
+      ),
     orgChart: (organizationId: string) =>
       tenantRequest<{ items: HrmsOrgChartNode[]; total: number }>(organizationId, `${base}/employees/org-chart`),
     parseImport: (organizationId: string, file: File) => {
@@ -325,6 +435,48 @@ export const hrmsService = {
       ),
     delete: (organizationId: string, employeeId: string) =>
       tenantRequest<void>(organizationId, `${base}/employees/${pathSegment(employeeId)}`, { method: "DELETE" }),
+  },
+  attendanceSelf: {
+    today: (organizationId: string, date: string) =>
+      tenantRequest<{ employeeId: string; record: HrmsAttendanceRecord | null }>(
+        organizationId,
+        `${base}/attendance/me/today`,
+        { query: { date } },
+      ),
+    records: (organizationId: string, query: { from?: string; to?: string } = {}) =>
+      tenantRequest<HrmsAttendanceRecord[]>(organizationId, `${base}/attendance/me/records`, { query }),
+    clockIn: (organizationId: string, date: string) =>
+      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/clock-in`, "POST", { date }),
+    clockOut: (organizationId: string) =>
+      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/clock-out`, "POST", {}),
+    startBreak: (organizationId: string) =>
+      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/break/start`, "POST", {}),
+    endBreak: (organizationId: string) =>
+      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/break/end`, "POST", {}),
+    myRegularizations: (organizationId: string) =>
+      tenantRequest<HrmsAttendanceRegularization[]>(organizationId, `${base}/attendance/me/regularizations`),
+    createRegularization: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsAttendanceRegularization, Input>(
+        organizationId,
+        `${base}/attendance/me/regularizations`,
+        "POST",
+        input,
+      ),
+    regularizations: (organizationId: string, status?: HrmsRegularizationStatus) =>
+      tenantRequest<HrmsAttendanceRegularization[]>(organizationId, `${base}/attendance/regularizations`, {
+        query: { status },
+      }),
+    decideRegularization: (
+      organizationId: string,
+      regularizationId: string,
+      input: { status: "APPROVED" | "REJECTED"; decisionNote: string },
+    ) =>
+      tenantJsonRequest<HrmsAttendanceRegularization, Input>(
+        organizationId,
+        `${base}/attendance/regularizations/${pathSegment(regularizationId)}`,
+        "PATCH",
+        input,
+      ),
   },
   attendance: {
     list: (organizationId: string, employeeId: string, query: { from?: string; to?: string } = {}) =>

@@ -39,9 +39,6 @@ export const APP_SETTINGS_LIMITS = {
     sessionListSize: { min: 10, max: 500 },
   },
   pulse: {
-    workingDays: { minItems: 1, maxItems: 7, minDay: 1, maxDay: 7 },
-    workingHoursStart: { min: 0, max: 23 },
-    workingHoursEnd: { min: 1, max: 24 },
     defaultReminderMinutes: { min: 0, max: 10_080 },
     maxMeetingAttendees: { min: 1, max: 1_000 },
     maxEventDurationMinutes: { min: 5, max: 10_080 },
@@ -51,8 +48,13 @@ export const APP_SETTINGS_LIMITS = {
     maxNoteContentLength: { min: 1_000, max: 100_000 },
   },
   hrms: {
+    workingDays: { minItems: 1, maxItems: 7, minDay: 1, maxDay: 7 },
     maxLeaveRequestDays: { min: 1, max: 365 },
     maxTrainingParticipants: { min: 1, max: 10_000 },
+    attendanceClockInWindowMinutes: { min: 0, max: 240 },
+    attendanceLateAfterMinutes: { min: 0, max: 480 },
+    missedClockInAlertMinutes: { min: 1, max: 480 },
+    missedClockInAlertRepeatSeconds: { min: 3, max: 300 },
     defaultPayrollCurrencyLength: 3,
   },
 } as const;

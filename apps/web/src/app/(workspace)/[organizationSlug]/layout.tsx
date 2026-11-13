@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { decodeJWT, isTokenExpired, type JWTPayload } from "@/lib/auth/tokens";
+import { MissedClockInAlert } from "@/features/hrms/components/missed-clock-in-alert";
 import { WorkspaceCallProvider } from "@/features/connect/components/WorkspaceCallProvider";
 
 interface OrgLayoutProps {
@@ -101,5 +102,10 @@ export default async function OrgLayout({ children, params }: OrgLayoutProps) {
     redirect(unauthorizedUrl.pathname + unauthorizedUrl.search);
   }
 
-  return <WorkspaceCallProvider>{children}</WorkspaceCallProvider>;
+  return (
+    <WorkspaceCallProvider>
+      {children}
+      <MissedClockInAlert />
+    </WorkspaceCallProvider>
+  );
 }

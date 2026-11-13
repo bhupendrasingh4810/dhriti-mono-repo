@@ -100,6 +100,7 @@ export class CreateHrmsEmployeeDto extends EmployeeLifecycleDto {
   @ApiProperty({ example: "ACTIVE" }) @IsString() @MinLength(1) @MaxLength(64) status!: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(64) employmentType?: string;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() workLocationId?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() shiftId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() departmentId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() designationId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() reportingManagerId?: string | null;
@@ -120,6 +121,7 @@ export class UpdateHrmsEmployeeDto extends EmployeeLifecycleDto {
   @ValidateIf((_object, value: unknown) => value !== undefined && value !== null)
   @IsUUID()
   workLocationId?: string | null;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() shiftId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() departmentId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() designationId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() reportingManagerId?: string | null;

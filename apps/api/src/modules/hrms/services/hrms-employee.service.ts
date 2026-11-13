@@ -19,6 +19,7 @@ const employeeSelect = {
   status: true,
   employmentType: true,
   workLocationId: true,
+  shiftId: true,
   departmentId: true,
   designationId: true,
   reportingManagerId: true,
@@ -31,6 +32,7 @@ const employeeSelect = {
   updatedAt: true,
   user: { select: { id: true, name: true, email: true, avatarUrl: true } },
   workLocation: { select: { id: true, name: true, code: true } },
+  shift: { select: { id: true, name: true, startTime: true, endTime: true, timeZone: true, isActive: true } },
   department: { select: { id: true, name: true, code: true } },
   designation: { select: { id: true, name: true, code: true } },
   reportingManager: { select: { id: true, employeeNumber: true, user: { select: { name: true } } } },
@@ -90,7 +92,7 @@ export class HrmsEmployeeService {
 
   /** Lookup data for the add/edit employee form; scoped to the workforce permission, not member admin. */
   async options(organizationId: string) {
-    const [members, departments, designations, locations, employmentTypes, managers] = await this.prisma.$transaction([
+    const [members, departments, designations, locations, employmentTypes, shifts, managers] = await this.prisma.$transaction([
       this.prisma.organizationMember.findMany({
         where: {
           organizationId,
@@ -122,6 +124,11 @@ export class HrmsEmployeeService {
         orderBy: { name: "asc" },
         select: { id: true, name: true },
       }),
+      this.prisma.hrmsShift.findMany({
+        where: { organizationId, isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, startTime: true, endTime: true, timeZone: true },
+      }),
       this.prisma.hrmsEmployee.findMany({
         where: { organizationId, deletedAt: null },
         orderBy: { user: { name: "asc" } },
@@ -134,6 +141,7 @@ export class HrmsEmployeeService {
       designations,
       locations,
       employmentTypes,
+      shifts,
       managers,
     };
   }
@@ -197,6 +205,24 @@ export class HrmsEmployeeService {
     return [primary, { id: "asc" }];
   }
 
+  /** The signed-in user's assigned shift (null when they have no employee record or no shift). Open to every member. */
+  async myShift(organizationId: string, userId: string) {
+    const employee = await this.prisma.hrmsEmployee.findFirst({
+      where: { organizationId, userId, deletedAt: null },
+      select: { shift: { select: { id: true, name: true, startTime: true, endTime: true, timeZone: true, isActive: true } } },
+    });
+    return employee?.shift ?? null;
+  }
+
+  /** The signed-in user's date of joining (null when unknown); bounds how far back their attendance log can go. */
+  async myStartDate(organizationId: string, userId: string) {
+    const employee = await this.prisma.hrmsEmployee.findFirst({
+      where: { organizationId, userId, deletedAt: null },
+      select: { startDate: true },
+    });
+    return { startDate: employee?.startDate?.toISOString().slice(0, 10) ?? null };
+  }
+
   async get(organizationId: string, employeeId: string) {
     return this.requireEmployee(organizationId, employeeId);
   }
@@ -217,6 +243,7 @@ export class HrmsEmployeeService {
           status: input.status.trim(),
           employmentType: input.employmentType?.trim() ?? null,
           workLocationId: input.workLocationId ?? null,
+          shiftId: input.shiftId ?? null,
           departmentId: input.departmentId ?? null,
           designationId: input.designationId ?? null,
           reportingManagerId: input.reportingManagerId ?? null,
@@ -267,6 +294,7 @@ export class HrmsEmployeeService {
           ...(input.status !== undefined ? { status: input.status.trim() } : {}),
           ...(input.employmentType !== undefined ? { employmentType: input.employmentType.trim() } : {}),
           ...(input.workLocationId !== undefined ? { workLocationId: input.workLocationId } : {}),
+          ...(input.shiftId !== undefined ? { shiftId: input.shiftId } : {}),
           ...(input.departmentId !== undefined ? { departmentId: input.departmentId } : {}),
           ...(input.designationId !== undefined ? { designationId: input.designationId } : {}),
           ...(input.reportingManagerId !== undefined ? { reportingManagerId: input.reportingManagerId } : {}),
@@ -382,7 +410,12 @@ export class HrmsEmployeeService {
    */
   private async assertOrganizationReferences(
     organizationId: string,
-    input: { departmentId?: string | null; designationId?: string | null; reportingManagerId?: string | null },
+    input: {
+      departmentId?: string | null;
+      designationId?: string | null;
+      reportingManagerId?: string | null;
+      shiftId?: string | null;
+    },
     employeeId?: string,
   ): Promise<void> {
     if (input.departmentId) {
@@ -392,6 +425,15 @@ export class HrmsEmployeeService {
       });
       if (!department) {
         throw new AppError(ErrorCode.VALIDATION_FAILED, "Active department not found", HttpStatus.BAD_REQUEST);
+      }
+    }
+    if (input.shiftId) {
+      const shift = await this.prisma.hrmsShift.findFirst({
+        where: { id: input.shiftId, organizationId, isActive: true },
+        select: { id: true },
+      });
+      if (!shift) {
+        throw new AppError(ErrorCode.HRMS_SHIFT_NOT_FOUND, "Active shift not found", HttpStatus.BAD_REQUEST);
       }
     }
     if (input.designationId) {

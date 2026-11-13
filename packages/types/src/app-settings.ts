@@ -83,9 +83,6 @@ export type CadenceOrganizationSettings = {
 };
 
 export type PulseOrganizationSettings = {
-  workingDays: number[];
-  workingHoursStart: number;
-  workingHoursEnd: number;
   defaultEventAvailability: "FREE" | "BUSY";
   defaultEventPrivacy: "DEFAULT" | "PRIVATE";
   defaultReminderMinutes: number | null;
@@ -103,11 +100,21 @@ export type NotesOrganizationSettings = {
 };
 
 export type HrmsOrganizationSettings = {
+  /** ISO weekdays (1 = Mon); also consumed by Pulse. Daily hours come from each employee's shift. */
+  workingDays: number[];
   maxLeaveRequestDays: number | null;
   allowHalfDayLeave: boolean;
   defaultAttendanceStatus: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "WORK_FROM_HOME" | "ON_LEAVE" | "HOLIDAY";
   defaultPayrollCurrency: string;
   maxTrainingParticipants: number | null;
+  /** Clock in/out opens this many minutes before the employee's shift starts. */
+  attendanceClockInWindowMinutes: number;
+  /** Clocking in more than this many minutes after shift start is recorded as LATE. */
+  attendanceLateAfterMinutes: number;
+  missedClockInAlertEnabled: boolean;
+  /** Minutes after shift start with no clock-in before the global alert starts ringing. */
+  missedClockInAlertMinutes: number;
+  missedClockInAlertRepeatSeconds: number;
 };
 
 export type AppSettingsMap = {

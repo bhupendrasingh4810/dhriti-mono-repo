@@ -5,12 +5,17 @@ const ORG = "org-1";
 
 function setup() {
   let pulseRow = { id: "pulse-1", organizationId: ORG, ...DEFAULT_APP_SETTINGS.pulse };
+  let hrmsRow = { id: "hrms-1", organizationId: ORG, ...DEFAULT_APP_SETTINGS.hrms };
   let connectRow = { id: "connect-1", organizationId: ORG, ...DEFAULT_APP_SETTINGS.connect };
   const audit = { create: jest.fn(async () => undefined) };
   const prisma = {
     pulseOrganizationSettings: {
       upsert: jest.fn(async (args: { update: object }) => (pulseRow = { ...pulseRow, ...args.update })),
       findUnique: jest.fn(async () => pulseRow),
+    },
+    hrmsOrganizationSettings: {
+      upsert: jest.fn(async (args: { update: object }) => (hrmsRow = { ...hrmsRow, ...args.update })),
+      findUnique: jest.fn(async () => hrmsRow),
     },
     connectOrganizationSettings: {
       upsert: jest.fn(async (args: { update: object }) => (connectRow = { ...connectRow, ...args.update })),
@@ -53,7 +58,7 @@ describe("AppSettingsService", () => {
 
   it("rejects null for non-nullable fields but allows it for nullable limits", async () => {
     const { service } = setup();
-    await expect(service.update("pulse", ORG, "user-1", { workingDays: null })).rejects.toThrow(
+    await expect(service.update("hrms", ORG, "user-1", { workingDays: null })).rejects.toThrow(
       "workingDays cannot be empty",
     );
     await expect(service.update("pulse", ORG, "user-1", { maxEventDurationMinutes: null })).resolves.toMatchObject({
@@ -61,12 +66,9 @@ describe("AppSettingsService", () => {
     });
   });
 
-  it("validates pulse working hours and days", async () => {
+  it("validates HRMS working days", async () => {
     const { service } = setup();
-    await expect(
-      service.update("pulse", ORG, "user-1", { workingHoursStart: "18:00", workingHoursEnd: "09:00" }),
-    ).rejects.toThrow("Working hours must end after they start");
-    await expect(service.update("pulse", ORG, "user-1", { workingDays: [] })).rejects.toThrow(
+    await expect(service.update("hrms", ORG, "user-1", { workingDays: [] })).rejects.toThrow(
       "Select at least one working day",
     );
   });
@@ -107,13 +109,13 @@ describe("AppSettingsService", () => {
 
   it("locks updates before reading and validating the combined policy", async () => {
     const { service, prisma } = setup();
-    await service.update("pulse", ORG, "user-1", { workingHoursStart: 17 });
-    await expect(service.update("pulse", ORG, "user-2", { workingHoursEnd: 16 })).rejects.toThrow(
-      "Working hours must end after they start",
+    await service.update("hrms", ORG, "user-1", { workingDays: [1] });
+    await expect(service.update("hrms", ORG, "user-2", { workingDays: [] })).rejects.toThrow(
+      "Select at least one working day",
     );
     expect(prisma.$executeRaw).toHaveBeenCalledTimes(2);
     expect(prisma.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
-      prisma.pulseOrganizationSettings.upsert.mock.invocationCallOrder[0],
+      prisma.hrmsOrganizationSettings.upsert.mock.invocationCallOrder[0],
     );
   });
 

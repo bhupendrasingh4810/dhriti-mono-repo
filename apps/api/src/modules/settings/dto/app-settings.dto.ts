@@ -373,34 +373,6 @@ export class UpdateCadenceSettingsDto {
 }
 
 export class UpdatePulseSettingsDto {
-  @ApiPropertyOptional({ type: [Number], description: "ISO weekdays, 1 = Monday ... 7 = Sunday" })
-  @IsOptional()
-  @IsArray()
-  @ArrayUnique()
-  @ArrayMaxSize(APP_SETTINGS_LIMITS.pulse.workingDays.maxItems)
-  @IsInt({ each: true })
-  @Min(APP_SETTINGS_LIMITS.pulse.workingDays.minDay, { each: true })
-  @Max(APP_SETTINGS_LIMITS.pulse.workingDays.maxDay, { each: true })
-  workingDays?: number[];
-
-  @ApiPropertyOptional({
-    minimum: APP_SETTINGS_LIMITS.pulse.workingHoursStart.min,
-    maximum: APP_SETTINGS_LIMITS.pulse.workingHoursStart.max,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(APP_SETTINGS_LIMITS.pulse.workingHoursStart.min)
-  @Max(APP_SETTINGS_LIMITS.pulse.workingHoursStart.max)
-  workingHoursStart?: number;
-  @ApiPropertyOptional({
-    minimum: APP_SETTINGS_LIMITS.pulse.workingHoursEnd.min,
-    maximum: APP_SETTINGS_LIMITS.pulse.workingHoursEnd.max,
-  })
-  @IsOptional()
-  @IsInt()
-  @Min(APP_SETTINGS_LIMITS.pulse.workingHoursEnd.min)
-  @Max(APP_SETTINGS_LIMITS.pulse.workingHoursEnd.max)
-  workingHoursEnd?: number;
   @ApiPropertyOptional({ enum: EventAvailability })
   @IsOptional()
   @IsEnum(EventAvailability)
@@ -449,6 +421,16 @@ export class UpdateNotesSettingsDto {
 }
 
 export class UpdateHrmsSettingsDto {
+  @ApiPropertyOptional({ type: [Number], description: "ISO weekdays, 1 = Monday ... 7 = Sunday" })
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(APP_SETTINGS_LIMITS.hrms.workingDays.maxItems)
+  @IsInt({ each: true })
+  @Min(APP_SETTINGS_LIMITS.hrms.workingDays.minDay, { each: true })
+  @Max(APP_SETTINGS_LIMITS.hrms.workingDays.maxDay, { each: true })
+  workingDays?: number[];
+
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   @IsInt()
@@ -456,6 +438,23 @@ export class UpdateHrmsSettingsDto {
   @Max(APP_SETTINGS_LIMITS.hrms.maxLeaveRequestDays.max)
   maxLeaveRequestDays?: number | null;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() allowHalfDayLeave?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes.max)
+  attendanceClockInWindowMinutes?: number;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.attendanceLateAfterMinutes.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.attendanceLateAfterMinutes.max)
+  attendanceLateAfterMinutes?: number;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() missedClockInAlertEnabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.missedClockInAlertMinutes.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.missedClockInAlertMinutes.max)
+  missedClockInAlertMinutes?: number;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.missedClockInAlertRepeatSeconds.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.missedClockInAlertRepeatSeconds.max)
+  missedClockInAlertRepeatSeconds?: number;
   @ApiPropertyOptional({ enum: AttendanceStatus })
   @IsOptional()
   @IsEnum(AttendanceStatus)

@@ -15,6 +15,9 @@ import { PulseCalendarToolbar } from "./PulseCalendarToolbar";
 import { PulseScheduleGrid } from "./PulseScheduleGrid";
 import { useAuth } from "@/hooks/use-auth";
 import { pulseService, type PulseSchedule } from "@/services/pulse.service";
+import { HolidayReminderBanner } from "@/features/hrms/components/upcoming-holidays";
+import { useMyShift } from "@/features/hrms/use-my-shift";
+import { shiftToHourRange } from "@/features/hrms/shift-format";
 import { useAppSettingsState } from "@/features/settings/use-app-settings";
 
 export default function PulseCalendar() {
@@ -27,15 +30,18 @@ export default function PulseCalendar() {
   const [scheduleError, setScheduleError] = useState("");
   const [scheduleVersion, setScheduleVersion] = useState(0);
   const [loadedScheduleKey, setLoadedScheduleKey] = useState<string | null>(null);
-  const pulseSettingsState = useAppSettingsState("pulse");
+  const pulseSettingsState = useAppSettingsState("hrms");
   const pulsePolicy = pulseSettingsState.data;
   const configuredWorkingDays = pulsePolicy?.workingDays;
   const workingDays = useMemo(
     () => (configuredWorkingDays?.length ? configuredWorkingDays : getWorkingDays(pulseOrganizationPolicy.workingDays)),
     [configuredWorkingDays],
   );
-  const startHour = pulsePolicy?.workingHoursStart ?? pulseOrganizationPolicy.workingHours.startHour;
-  const endHour = pulsePolicy?.workingHoursEnd ?? pulseOrganizationPolicy.workingHours.endHour;
+  const { shift } = useMyShift();
+  const { startHour, endHour } = useMemo(
+    () => (shift ? shiftToHourRange(shift) : pulseOrganizationPolicy.workingHours),
+    [shift],
+  );
   const timeSlots = getTimeSlots({ startHour, endHour });
   const workingWeek = useMemo(() => getWorkingWeek(selectedDate, workingDays), [selectedDate, workingDays]);
   const nowLinePosition = useMemo(() => {
@@ -110,6 +116,9 @@ export default function PulseCalendar() {
           onToggleCalendar={toggleCalendar}
         />
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-background">
+          <div className="empty:hidden px-3 pt-3">
+            <HolidayReminderBanner />
+          </div>
           <PulseCalendarToolbar
             workingWeek={workingWeek}
             onToday={() => setSelectedDate(new Date())}

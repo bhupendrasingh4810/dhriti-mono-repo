@@ -10,9 +10,11 @@ import {
   CreateHrmsDesignationDto,
   CreateHrmsEmploymentTypeDto,
   CreateHrmsLocationDto,
+  CreateHrmsShiftDto,
   UpdateHrmsDesignationDto,
   UpdateHrmsEmploymentTypeDto,
   UpdateHrmsLocationDto,
+  UpdateHrmsShiftDto,
 } from "../dto/hrms-master-data.dto";
 import { HrmsMasterDataService } from "../services/hrms-master-data.service";
 
@@ -135,5 +137,43 @@ export class HrmsMasterDataController {
     @Param("employmentTypeId") employmentTypeId: string,
   ): Promise<void> {
     return this.masterData.removeEmploymentType(organization.organizationId, employmentTypeId, user.userId);
+  }
+
+  @Get("shifts")
+  @RequirePermission("organization.members.read")
+  listShifts(@CurrentOrganization() organization: OrganizationContext) {
+    return this.masterData.listShifts(organization.organizationId);
+  }
+
+  @Post("shifts")
+  @RequirePermission("organization.permissions.manage")
+  createShift(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateHrmsShiftDto,
+  ) {
+    return this.masterData.createShift(organization.organizationId, user.userId, dto);
+  }
+
+  @Patch("shifts/:shiftId")
+  @RequirePermission("organization.permissions.manage")
+  updateShift(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shiftId") shiftId: string,
+    @Body() dto: UpdateHrmsShiftDto,
+  ) {
+    return this.masterData.updateShift(organization.organizationId, shiftId, user.userId, dto);
+  }
+
+  @Delete("shifts/:shiftId")
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @RequirePermission("organization.permissions.manage")
+  removeShift(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("shiftId") shiftId: string,
+  ): Promise<void> {
+    return this.masterData.removeShift(organization.organizationId, shiftId, user.userId);
   }
 }

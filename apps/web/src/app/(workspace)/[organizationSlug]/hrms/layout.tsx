@@ -39,13 +39,15 @@ export default function HrmsLayout({ children }: { children: ReactNode }) {
     }
   }, []);
   const isSettingsPage = pathname.includes("/hrms/settings");
+  // The holidays page manages its own inner scrolling, so the shell must not scroll.
+  const isFixedSettingsPage = pathname.includes("/hrms/settings/holidays");
 
   return (
     <HrmsToastContext.Provider value={showToast}>
-      <div className={`flex gap-3 bg-background p-2 lg:p-4 ${isSettingsPage ? "min-h-full" : "h-full min-h-0 overflow-hidden"}`}>
+      <div className={`flex gap-3 bg-background p-2 lg:p-4 ${isFixedSettingsPage ? "h-full min-h-0 overflow-hidden" : isSettingsPage ? "min-h-full" : "h-full min-h-0 overflow-hidden"}`}>
         {!isSettingsPage ? <HrmsSidebar /> : null}
-        <div className={`min-w-0 flex-1 ${isSettingsPage ? "" : "overflow-y-auto"}`}>
-          <div className={isSettingsPage ? "h-full" : "mx-auto max-w-[1500px] px-0 lg:px-2"}>{children}</div>
+        <div className={`min-h-0 min-w-0 flex-1 ${isFixedSettingsPage ? "overflow-hidden" : isSettingsPage ? "" : "overflow-y-auto"}`}>
+          <div className={isSettingsPage ? "h-full" : "mx-auto h-full max-w-[1500px] px-0 lg:px-2"}>{children}</div>
         </div>
       </div>
       {toast && (
