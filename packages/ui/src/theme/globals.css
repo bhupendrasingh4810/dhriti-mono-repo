@@ -1,0 +1,86 @@
+/* Shared by web and Storybook so semantic utilities resolve to the same theme. */
+@theme inline {
+  --color-brand: var(--app-color-brand);
+  --color-brand-dark: var(--app-color-brand-dark);
+  --color-brand-light: var(--app-color-brand-light);
+  --color-brand-muted: var(--app-color-brand-muted);
+
+  --color-sidebar-bg: #0d1b2a;
+  --color-sidebar-text: #94a3b8;
+  --color-sidebar-active: #1e3a4f;
+  --color-sidebar-hover: #152535;
+
+  --color-background: var(--app-color-background);
+  --color-surface: var(--app-color-surface);
+  --color-surface-raised: var(--app-color-surface-raised);
+
+  --color-text-primary: var(--app-color-text-primary);
+  --color-text-secondary: var(--app-color-text-secondary);
+  --color-text-muted: var(--app-color-text-muted);
+  --color-text-inverse: var(--app-color-text-inverse);
+  --color-on-brand-muted: var(--app-color-on-brand-muted);
+  --color-on-brand-border: var(--app-color-on-brand-border);
+  --color-on-brand-hover: var(--app-color-on-brand-hover);
+  --color-text-on-brand-muted: var(--app-color-text-on-brand-muted);
+
+  --color-border: var(--app-color-border);
+  --color-border-strong: var(--app-color-border-strong);
+
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #2563eb;
+  --color-presence-away: #ffce1b;
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-display: "DM Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  --spacing-field-control: 42px;
+  --spacing-field-search: 120px;
+  --spacing-field-calendar: 320px;
+  --spacing-field-time: 288px;
+  --text-field-caption: 0.625rem;
+  --shadow-field-focus: 0 0 0 3px color-mix(in srgb, var(--app-color-brand) 12%, transparent);
+  --shadow-field-error: 0 0 0 3px color-mix(in srgb, #dc2626 12%, transparent);
+  --shadow-field-menu: 0 12px 40px rgb(0 0 0 / 0.14);
+}
+
+:root {
+  --app-color-brand: #036c5f;
+  --app-color-brand-dark: #024d44;
+  --app-color-brand-light: #04886f;
+  --app-color-brand-muted: #e6f4f2;
+  --app-color-background: #f8fafc;
+  --app-color-surface: #ffffff;
+  --app-color-surface-raised: #f1f5f9;
+  --app-color-text-primary: #0f172a;
+  --app-color-text-secondary: #475569;
+  --app-color-text-muted: #94a3b8;
+  --app-color-text-inverse: #ffffff;
+  --app-color-on-brand-muted: rgb(255 255 255 / 0.7);
+  --app-color-on-brand-border: rgb(255 255 255 / 0.2);
+  --app-color-on-brand-hover: rgb(255 255 255 / 0.1);
+  --app-color-text-on-brand-muted: #0f172a;
+  --app-color-border: #e2e8f0;
+  --app-color-border-strong: #cbd5e1;
+  --field-country-menu-width: 288px;
+  --field-picker-gutter: 16px;
+  --field-picker-gap: 6px;
+}
+
+[data-theme="dark"] {
+  --app-color-background: #0f172a;
+  --app-color-surface: #1e293b;
+  --app-color-surface-raised: #334155;
+  --app-color-text-primary: #f8fafc;
+  --app-color-text-secondary: #cbd5e1;
+  --app-color-text-muted: #94a3b8;
+  --app-color-border: #334155;
+  --app-color-border-strong: #475569;
+}

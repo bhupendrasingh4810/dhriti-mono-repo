@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "../src/theme/globals.css";
+@source "../src";
+@source "../stories";
+
+body {
+  font-family: var(--font-sans);
+  background: var(--app-color-background);
+  color: var(--app-color-text-primary);
+}

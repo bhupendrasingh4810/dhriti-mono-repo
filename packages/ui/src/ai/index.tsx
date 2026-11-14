@@ -1,16 +1,15 @@
 "use client";
 
+export {
+  DhritiAIAssistant,
+  type DhritiAIAssistantProps,
+  type DhritiAIMessage,
+  type DhritiAssistantPosition,
+} from "./DhritiAIAssistant";
+export { AIMessage } from "./AIMessage";
+
 export function AIResponse({ text }: { text: string }) {
   return <article className="border border-brand bg-brand-muted p-4 text-sm text-text-primary">{text}</article>;
-}
-
-export function AIMessage({ role, text }: { role: "user" | "assistant"; text: string }) {
-  return (
-    <article className="flex flex-col gap-0.5">
-      <span className="text-xs text-text-secondary">{role}</span>
-      <p className="text-sm text-text-primary">{text}</p>
-    </article>
-  );
 }
 
 export function AISource({ title, href }: { title: string; href?: string }) {

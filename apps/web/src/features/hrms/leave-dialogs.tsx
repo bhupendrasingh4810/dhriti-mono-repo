@@ -2,6 +2,7 @@
 
 import dayjs, { type Dayjs } from "dayjs";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { DhritiSelectMenu } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -188,6 +189,7 @@ export function ApplyLeaveDialog({
   const { user } = useAuth();
   const organizationId = user?.organization?.id;
   const [typeId, setTypeId] = useState("");
+  const [leaveTypeOpen, setLeaveTypeOpen] = useState(false);
   const [from, setFrom] = useState<Dayjs>(() => initialDate ?? dayjs());
   const [to, setTo] = useState<Dayjs>(() => initialDate ?? dayjs());
   const [halfDay, setHalfDay] = useState(false);
@@ -245,30 +247,27 @@ export function ApplyLeaveDialog({
       }
     >
           {employees && <EmployeePicker employees={employees} value={employeeId} onChange={setEmployeeId} />}
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold">
-              Leave type <span className="text-error">*</span>
-            </span>
-            <select
-              value={typeId}
-              onChange={(event) => {
-                setTypeId(event.target.value);
-                setHalfDay(false);
-              }}
-              className={`w-full cursor-pointer rounded-md border bg-surface px-3 py-2.5 text-sm ${attempted && !typeId ? "border-error" : "border-border"}`}
-            >
-              <option value="">Select leave type</option>
-              {balances
-                .filter((balance) => !balance.isCompOff || (balance.available ?? 0) > 0)
-                .map((balance) => (
-                  <option key={balance.typeId} value={balance.typeId}>
-                    {balance.name}
-                    {balance.available === null ? "" : ` · ${balance.available} days`}
-                  </option>
-                ))}
-            </select>
-            {attempted && !typeId && <p className="mt-1 text-xs text-error">Select a leave type.</p>}
-          </label>
+          <DhritiSelectMenu
+            label="Leave type"
+            required
+            placeholder="Select leave type"
+            value={typeId || null}
+            onChange={(value) => {
+              setTypeId(value ?? "");
+              setHalfDay(false);
+            }}
+            open={leaveTypeOpen}
+            onOpenChange={setLeaveTypeOpen}
+            error={attempted && !typeId ? "Select a leave type." : undefined}
+            emptyText="No leave types available"
+            // Keep balance eligibility and half-day reset policy in the form, not shared UI.
+            options={balances
+              .filter((balance) => !balance.isCompOff || (balance.available ?? 0) > 0)
+              .map((balance) => ({
+                value: balance.typeId,
+                label: `${balance.name}${balance.available === null ? "" : ` · ${balance.available} days`}`,
+              }))}
+          />
           <div className="grid grid-cols-2 gap-4">
             <DateField
               labelOutside

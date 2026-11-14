@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@dhriti/ui";
+import { GlobalAIAssistant } from "@/features/assistant/global-ai-assistant";
 import { AlertProvider } from "@/components/shared/alert";
 import { AuthProvider } from "@/hooks/use-auth";
 import "./globals.css";
@@ -19,7 +20,10 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ThemeProvider mode="system" density="comfortable">
           <AuthProvider>
-            <AlertProvider>{children}</AlertProvider>
+            <AlertProvider>
+              {children}
+              <GlobalAIAssistant />
+            </AlertProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>
