@@ -173,7 +173,9 @@ const workspace: PayrollWorkspace = {
 
 function HrmsPayroll({ onToast }: { onToast: (message: string) => void }) {
   const path = usePathname();
-  const section = payrollSections.find(({ path: suffix }) => path === `/test/hrms/payroll${suffix ? `/${suffix}` : ""}`);
+  const section = payrollSections.find(
+    ({ path: suffix }) => path === `/test/hrms/payroll${suffix ? `/${suffix}` : ""}`,
+  );
   if (!section) throw new Error(`Unknown payroll route: ${path}`);
   return (
     <PayrollLayout>
@@ -217,6 +219,137 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+});
+
+describe("payroll onboarding", () => {
+  const emptyWorkspace: PayrollWorkspace = {
+    profiles: [],
+    structures: [],
+    assignments: [],
+    claims: [],
+    variableInputs: [],
+    runs: [],
+    employees: [],
+    locations: [],
+    departments: [],
+    records: [],
+  };
+
+  it("shows a first-payroll checklist from loaded data with actionable organization-scoped links", async () => {
+    vi.mocked(payrollService.workspace).mockResolvedValue(emptyWorkspace);
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    const setup = await screen.findByRole("region", { name: "Set up payroll" });
+    expect(within(setup).getAllByRole("listitem")).toHaveLength(6);
+    expect(setup).toHaveTextContent("0 of 6 milestones complete");
+    expect(setup).toHaveTextContent("Manual review required");
+    expect(setup).toHaveTextContent("not readiness for every employee, pay group or period");
+    for (const [label, path] of [
+      ["Set up payroll profiles", "/test/hrms/payroll/configuration"],
+      ["Set up salary structures", "/test/hrms/payroll/salary-structures"],
+      ["Set up employee salaries", "/test/hrms/payroll/employee-salary"],
+      ["Review variable pay inputs", "/test/hrms/payroll/employee-salary"],
+      ["Review payroll runs", "/test/hrms/payroll/run-payroll"],
+      ["Open finalized payslips", "/test/hrms/payroll/payslips"],
+      ["attendance", "/test/hrms/attendance"],
+      ["leave", "/test/hrms/leave"],
+      ["expense claims", "/test/hrms/payroll/reimbursements"],
+      ["payroll reports", "/test/hrms/payroll/reports"],
+    ]) {
+      expect(within(setup).getByRole("link", { name: label })).toHaveAttribute("href", path);
+    }
+    fireEvent.click(within(setup).getByRole("link", { name: "Set up payroll profiles" }));
+    expect(screen.getByRole("region", { name: "Configuration guide" })).toHaveTextContent("No payroll profiles yet");
+  });
+
+  it("does not display setup completion while data is loading or unavailable", async () => {
+    vi.mocked(payrollService.workspace).mockRejectedValue(new Error("Payroll unavailable"));
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    expect(screen.queryByRole("region", { name: "Set up payroll" })).not.toBeInTheDocument();
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("region", { name: "Set up payroll" })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["DRAFT", 3],
+    ["APPROVED", 4],
+    ["PROCESSED", 6],
+    ["CANCELLED", 3],
+    ["REJECTED", 3],
+  ])(
+    "derives first-use milestones for %s without treating saved or closed drafts as finalized",
+    async (status, count) => {
+      vi.mocked(payrollService.workspace).mockResolvedValue({ ...workspace, runs: [{ ...run, status }] });
+      render(<HrmsPayroll onToast={vi.fn()} />);
+      const setup = await screen.findByRole("region", { name: "Set up payroll" });
+      expect(setup).toHaveTextContent(`${count} of 6 milestones complete`);
+      const review = within(setup).getByRole("heading", { name: "Review payroll inputs" }).closest("li")!;
+      expect(review).toHaveTextContent(
+        status === "APPROVED" || status === "PROCESSED" ? "Complete" : "Manual review required",
+      );
+      expect(review).toHaveTextContent("does not automatically verify attendance");
+    },
+  );
+
+  it("requires profile rules verification and employee output for those milestones", async () => {
+    vi.mocked(payrollService.workspace).mockResolvedValue({
+      ...workspace,
+      profiles: [{ ...profile, rulesVerified: false }],
+      runs: [{ ...run, snapshot: { ...run.snapshot, items: [] } }],
+    });
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    const setup = await screen.findByRole("region", { name: "Set up payroll" });
+    expect(setup).toHaveTextContent("4 of 6 milestones complete");
+    expect(setup).toHaveTextContent("Rules verification needed");
+  });
+
+  it.each([
+    ["configuration", "Configuration", "No payroll profiles yet"],
+    ["salary-structures", "Salary structures", "No salary structures yet"],
+    ["employee-salary", "Employee salary", "No employee salaries assigned"],
+    ["reimbursements", "Reimbursements", "No reimbursements yet"],
+    ["run-payroll", "Run payroll", "No payroll runs yet"],
+    ["payslips", "Payslips", "No finalized payslips yet"],
+    ["reports", "Reports", "No processed payroll reports yet"],
+  ])("explains prerequisites and next steps on an empty %s page", async (path, label, title) => {
+    vi.mocked(payrollService.workspace).mockResolvedValue(emptyWorkspace);
+    navigation.path = `/test/hrms/payroll/${path}`;
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    const guide = await screen.findByRole("region", { name: `${label} guide` });
+    expect(within(guide).getByRole("heading", { name: title })).toBeInTheDocument();
+    expect(within(guide).getAllByRole("link").length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("table", {
+        name: label === "Configuration" ? "Payroll profiles" : label === "Run payroll" ? "Payroll runs" : label,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("explains permissions without enabling setup or payroll actions for read-only users", async () => {
+    auth.manage = false;
+    vi.mocked(payrollService.workspace).mockResolvedValue(emptyWorkspace);
+    navigation.path = "/test/hrms/payroll/configuration";
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    const guide = await screen.findByRole("region", { name: "Configuration guide" });
+    expect(guide).toHaveTextContent("Ask a payroll administrator");
+    expect(screen.getByRole("button", { name: "Add payroll profile" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start payroll run" })).toBeDisabled();
+  });
+
+  it.each(["", "/run-payroll"])("explains payroll states and simulated payments on %s", async (path) => {
+    navigation.path = `/test/hrms/payroll${path}`;
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    await screen.findByText("1 employees");
+    const summary = screen.getByText("What do payroll statuses mean?");
+    fireEvent.click(summary);
+    const guide = summary.closest("details")!;
+    expect(guide).toHaveAttribute("open");
+    expect(guide).toHaveTextContent("Draft");
+    expect(guide).toHaveTextContent("Approved");
+    expect(guide).toHaveTextContent("Processed");
+    expect(guide).toHaveTextContent("A different user must approve a draft");
+    expect(guide).toHaveTextContent("Processing payroll does not transfer money");
+    expect(guide).toHaveTextContent("Sandbox payments are simulations");
+  });
 });
 
 describe("payroll calendars", () => {

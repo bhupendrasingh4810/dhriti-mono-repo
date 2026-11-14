@@ -5,6 +5,21 @@ salary structures, employee salary, reimbursements, run payroll, payslips, and r
 have their own shareable routes beneath it. The shared payroll navigation and start-run
 action are available on every section.
 
+### Getting started in the app
+
+The Dashboard includes a **Set up payroll** checklist linking to payroll profiles,
+salary structures, employee salaries, input review, payroll runs, and finalized
+payslips/reports. Progress is derived from organization data: a rules-verified
+profile, a salary structure, a salary assignment, an approved/processed run, a
+processed run, and a processed run containing employee payslips. These are first-use
+milestones, not a per-employee, pay-group, or period readiness check. Input review
+remains manual every period; an approval does not automatically verify attendance.
+
+Each section explains its purpose, prerequisites, and next steps, with specific
+guidance when no records exist. The Dashboard and Run payroll also explain Draft,
+Approved, and Processed statuses. Processing does not transfer money, and sandbox
+payments move no real funds.
+
 ## User guide: a complete worked example
 
 Payroll is a configurable foundation, not a complete country-compliance or banking

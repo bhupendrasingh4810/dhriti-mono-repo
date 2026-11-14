@@ -18,6 +18,7 @@ import { PayrollPayslips } from "./payroll-payslips";
 import { PayrollReports } from "./payroll-reports";
 import { PayrollPayslipDialog } from "./payroll-payslip-dialog";
 import { money } from "./payroll-shared";
+import { PayrollGuidance } from "./payroll-guidance";
 
 export function HrmsPayroll({ onToast, section }: { onToast: (message: string) => void; section: PayrollSection }) {
   const { user } = useAuth();
@@ -153,6 +154,7 @@ function PayrollWorkspaceView({
         {tab === "Dashboard" && <PayrollDashboard data={data} latest={latest} setDrawer={setDrawer} />}
         {data && (
           <>
+            {tab !== "Dashboard" && <PayrollGuidance section={tab} data={data} />}
             {tab === "Configuration" && (
               <PayrollConfiguration
                 data={data}

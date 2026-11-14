@@ -9,6 +9,8 @@ export const inputClass =
 export const date = (value: string) => value.slice(0, 10);
 export const money = (value: string, currency: string) =>
   new Intl.NumberFormat(undefined, { style: "currency", currency }).format(Number(value));
+export const payrollGuideLinkClass =
+  "inline-flex cursor-pointer items-center gap-1 rounded-md text-sm font-semibold text-brand underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand";
 
 export type PayrollSectionProps = {
   data: PayrollWorkspace;
