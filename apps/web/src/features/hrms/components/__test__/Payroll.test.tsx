@@ -729,9 +729,44 @@ describe("payroll calendars", () => {
     await userEvent.click(screen.getByRole("button", { name: "Clear Payroll period" }));
     expect(fieldButton("Payroll period")).toHaveTextContent(/^$/);
   });
+  it("uses a wider run drawer with medium fields and direct monthly period selection", async () => {
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    await screen.findByText("1 employees");
+    await startPayroll();
+    const dialog = screen.getByRole("dialog", { name: "Start payroll run" });
+    expect(dialog.querySelector("aside")).toHaveClass("w-full", "max-w-3xl");
+    for (const label of [
+      "Country / payroll profile",
+      "Payroll period",
+      "Employee scope",
+      "Pay date",
+      "Proration policy",
+    ]) {
+      expect(fieldButton(label, dialog)).toHaveClass("text-sm");
+    }
+    await userEvent.click(fieldButton("Payroll period", dialog));
+    expect(within(dialog).getByRole("dialog", { name: "Payroll period month picker" })).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "November 2026" }));
+    expect(fieldButton("Payroll period", dialog)).toHaveTextContent("November 2026");
+  });
 });
 
 describe("payroll workspace", () => {
+  it.each(["profile", "structure", "assignment", "variable", "claim"] as const)(
+    "uses medium inputs throughout the %s form",
+    (kind) => {
+      render(<PayrollForm kind={kind} data={workspace} organizationId="org-a" close={vi.fn()} complete={vi.fn()} />);
+      const dialog = screen.getByRole("dialog");
+      const controls = dialog.querySelectorAll(
+        'input:not([type="checkbox"]):not([type="hidden"]), textarea, button[aria-haspopup]',
+      );
+      expect(controls.length).toBeGreaterThan(0);
+      for (const control of controls) {
+        expect(control).toHaveClass("text-sm");
+        expect(control).not.toHaveClass("text-xs");
+      }
+    },
+  );
   it("preserves salary assignments while showing input history and surfaces decision errors before reloading on success", async () => {
     vi.mocked(payrollService.workspace).mockResolvedValue({
       ...workspace,

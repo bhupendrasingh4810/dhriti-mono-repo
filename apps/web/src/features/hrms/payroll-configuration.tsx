@@ -83,7 +83,7 @@ export function PayrollConfiguration({
           <h3 className="text-sm font-semibold">Payroll calendar</h3>
           <DhritiSelectMenu
             label="Calendar pay group"
-            size="sm"
+            size="md"
             value={calendarProfileId || null}
             open={calendarProfileOpen}
             onOpenChange={setCalendarProfileOpen}
@@ -94,9 +94,9 @@ export function PayrollConfiguration({
             clearable
             placeholder="Select a pay group to view its calendar"
             onChange={(value) => {
-                setCalendarProfileId(value ?? "");
-                setCalendarPeriod("");
-              }}
+              setCalendarProfileId(value ?? "");
+              setCalendarPeriod("");
+            }}
           />
           {data.profiles
             .filter((profile) => profile.id === calendarProfileId)

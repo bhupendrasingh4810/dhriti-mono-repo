@@ -109,7 +109,7 @@ export function PayrollDrawer({
       <DhritiDateField
         id={key}
         label={label}
-        size="sm"
+        size="md"
         clearable
         mode={monthOnly ? "month" : "date"}
         value={storedValue}
@@ -134,7 +134,7 @@ export function PayrollDrawer({
   };
   return (
     <PayrollDialog label="Start payroll run" close={close} busy={busy}>
-      <aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-surface text-text-primary shadow-xl">
+      <aside className="ml-auto flex h-full w-full max-w-3xl flex-col bg-surface text-text-primary shadow-xl">
         <header className="flex items-center justify-between border-b border-border px-6 py-4">
           <div>
             <h2 className="text-lg font-bold">Start payroll run</h2>
@@ -163,7 +163,7 @@ export function PayrollDrawer({
             <fieldset disabled={busy || Boolean(run)} className="space-y-4">
               <DhritiSelectMenu
                 label="Country / payroll profile"
-                size="sm"
+                size="md"
                 value={input.profileId || null}
                 open={Boolean(menuOpen.profileId)}
                 onOpenChange={(open) => setMenuIsOpen("profileId", open)}
@@ -235,7 +235,7 @@ export function PayrollDrawer({
               <div className="grid gap-4 sm:grid-cols-2">
                 <DhritiSelectMenu
                   label="Employee scope"
-                  size="sm"
+                  size="md"
                   value={input.departmentId ?? ""}
                   onChange={(value) => change({ departmentId: value ?? undefined })}
                   options={[
@@ -250,7 +250,7 @@ export function PayrollDrawer({
               </div>
               <DhritiSelectMenu
                 label="Proration policy"
-                size="sm"
+                size="md"
                 value={input.prorationPolicy ?? "CALENDAR_DAYS"}
                 options={[
                   {

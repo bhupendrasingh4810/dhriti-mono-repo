@@ -95,7 +95,7 @@ export function PayrollPeriodPicker({
     <div className="space-y-3">
       <DhritiNumberField
         label="Calendar year"
-        size="sm"
+        size="md"
         min={1000}
         max={9998}
         value={year}
@@ -108,7 +108,7 @@ export function PayrollPeriodPicker({
       />
       <DhritiSelectMenu
         label="Payroll period"
-        size="sm"
+        size="md"
         value={value || null}
         open={periodOpen}
         onOpenChange={setPeriodOpen}
@@ -263,7 +263,7 @@ export function PayrollRunDecisionForm({
         </p>
         <DhritiTextareaField
           label="Reason"
-          size="sm"
+          size="md"
           value={reason}
           onChange={setReason}
           disabled={busy}
@@ -368,7 +368,7 @@ export function PayrollForm({
         key={key}
         id={key}
         label={label}
-        size="sm"
+        size="md"
         clearable
         mode={monthOnly ? "month" : "date"}
         value={storedValue}
@@ -390,7 +390,7 @@ export function PayrollForm({
         <DhritiSelectMenu
           id={key}
           label={label}
-          size="sm"
+          size="md"
           value={values[key] || null}
           onChange={(value) => update(key, value ?? "")}
           open={Boolean(menuOpen[key])}
@@ -408,7 +408,7 @@ export function PayrollForm({
         <DhritiNumberField
           id={key}
           label={label}
-          size="sm"
+          size="md"
           value={values[key]}
           onChange={(value) => update(key, value)}
           error={errors[key]}
@@ -417,7 +417,7 @@ export function PayrollForm({
         <DhritiTextField
           id={key}
           label={label}
-          size="sm"
+          size="md"
           value={values[key]}
           onChange={(value) => update(key, value)}
           error={errors[key]}
@@ -693,7 +693,7 @@ export function PayrollForm({
                 </div>
                 <DhritiTextField
                   label="Currency decimal places"
-                  size="sm"
+                  size="md"
                   value={values.minorUnits}
                   onChange={() => {}}
                   readOnly
@@ -767,21 +767,21 @@ export function PayrollForm({
                       <div className="grid gap-2 sm:grid-cols-2">
                         <DhritiTextField
                           label={`Component ${index + 1} code`}
-                          size="sm"
+                          size="md"
                           value={component.code}
                           onChange={(value) => edit({ code: value.toUpperCase() })}
                           error={errors[`component.${index}.code`]}
                         />
                         <DhritiTextField
                           label={`Component ${index + 1} name`}
-                          size="sm"
+                          size="md"
                           value={component.name}
                           onChange={(value) => edit({ name: value })}
                           error={errors[`component.${index}.name`]}
                         />
                         <DhritiSelectMenu
                           label="Type"
-                          size="sm"
+                          size="md"
                           value={component.type}
                           onChange={(value) => {
                             if (value) edit({ type: value as SalaryComponent["type"] });
@@ -796,7 +796,7 @@ export function PayrollForm({
                         />
                         <DhritiSelectMenu
                           label="Calculation"
-                          size="sm"
+                          size="md"
                           value={component.calculation}
                           onChange={(value) => {
                             if (value) edit({ calculation: value as SalaryComponent["calculation"] });
@@ -813,7 +813,7 @@ export function PayrollForm({
                         {component.calculation !== "REMAINDER" && (
                           <DhritiTextField
                             label="Amount / percentage"
-                            size="sm"
+                            size="md"
                             value={component.value}
                             onChange={(value) => edit({ value })}
                             error={errors[`component.${index}.value`]}
@@ -822,7 +822,7 @@ export function PayrollForm({
                         {component.calculation === "PERCENT_COMPONENT" && (
                           <DhritiSelectMenu
                             label="Basis component"
-                            size="sm"
+                            size="md"
                             value={component.basis ?? null}
                             onChange={(value) => edit({ basis: value ?? "" })}
                             options={components.slice(0, index).map((basis) => ({
