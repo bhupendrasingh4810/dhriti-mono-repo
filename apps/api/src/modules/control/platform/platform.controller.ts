@@ -24,6 +24,7 @@ import {
   UpdatePlanStatusDto,
   UpdatePermissionDto,
   UpdateSubscriptionDto,
+  UpdateOrganizationEntitlementDto,
   UpdateTicketDto,
 } from "./dto/platform.dto";
 import { PlatformRoleService } from "../../authorization/services/platform-role.service";
@@ -154,6 +155,24 @@ export class PlatformController {
   @ApiOperation({ summary: "Create an organization with an existing user as its owner" })
   async createOrganization(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreatePlatformOrganizationDto) {
     return this.platform.createOrganization(user.userId, dto);
+  }
+
+  @Get("organizations/:organizationId/entitlements")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "List every entitlement with its effective organization value" })
+  listOrganizationEntitlements(@Param("organizationId") organizationId: string) {
+    return this.platform.listOrganizationEntitlements(organizationId);
+  }
+
+  @Patch("organizations/:organizationId/entitlements")
+  @PlatformRoles("PLATFORM_ADMIN")
+  @ApiOperation({ summary: "Set a persistent organization entitlement override without changing its plan" })
+  updateOrganizationEntitlement(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("organizationId") organizationId: string,
+    @Body() dto: UpdateOrganizationEntitlementDto,
+  ) {
+    return this.platform.updateOrganizationEntitlement(organizationId, user.userId, dto);
   }
 
   @Post("organizations/:organizationId/suspend")

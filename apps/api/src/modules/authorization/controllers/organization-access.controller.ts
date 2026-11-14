@@ -58,6 +58,22 @@ export class OrganizationAccessController {
     return { permissions: await this.permissions.getUserPermissions(user.userId, organization.organizationId) };
   }
 
+  @Get("me/control-access")
+  async getMyControlAccess(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
+    return {
+      isOrganizationAdministrator: await this.permissions.isOrganizationAdministrator(user.userId, organization.organizationId),
+    };
+  }
+
+  /** Members need feature visibility without billing access; numeric limits and billing details stay private. */
+  @Get("me/entitlements")
+  async getMyEntitlements(@CurrentOrganization() organization: OrganizationContext) {
+    const entitlements = await this.entitlements.listEntitlements(organization.organizationId);
+    return entitlements
+      .filter((entitlement) => entitlement.kind === "FEATURE")
+      .map(({ key, enabled }) => ({ key, enabled }));
+  }
+
   @Get("permission-groups")
   @RequirePermission("organization.members.read")
   listPermissionGroups(@CurrentOrganization() organization: OrganizationContext) {

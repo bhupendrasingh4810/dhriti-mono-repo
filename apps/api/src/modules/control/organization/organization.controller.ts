@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Res, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { Response } from "express";
 
@@ -9,7 +9,7 @@ import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
 
 import { OrganizationAdminService, type OrgDashboard } from "./organization.service";
-import { UpdateOrgEntitlementDto, UpdateOrgSettingsDto } from "./dto/organization.dto";
+import { ListOrgMembersQueryDto, UpdateOrgEntitlementDto, UpdateOrgSettingsDto } from "./dto/organization.dto";
 
 @ApiTags("control/organization")
 @ApiBearerAuth()
@@ -30,8 +30,8 @@ export class OrganizationAdminController {
   @Get("members")
   @RequirePermission("organization.members.read")
   @ApiOperation({ summary: "List organization members with user and team details" })
-  async listMembers(@CurrentOrganization() organization: OrganizationContext) {
-    return this.admin.listMembers(organization.organizationId);
+  async listMembers(@CurrentOrganization() organization: OrganizationContext, @Query() query: ListOrgMembersQueryDto) {
+    return this.admin.listMembers(organization.organizationId, query.search);
   }
 
   @Delete("members/:memberId")

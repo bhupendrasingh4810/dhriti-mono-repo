@@ -142,6 +142,20 @@ export interface ControlEntitlementInput {
   unit?: string;
 }
 
+export type PlatformOrganizationEntitlement = Pick<
+  ControlEntitlementDefinition,
+  "id" | "key" | "name" | "kind" | "productKey" | "description" | "unit"
+> & {
+  enabled: boolean;
+  value: number | null;
+};
+
+export interface UpdateOrganizationEntitlementInput {
+  key: string;
+  enabled: boolean;
+  value?: number;
+}
+
 export type EntitlementSortField = "key" | "name" | "productKey" | "kind";
 
 export interface ListEntitlementsQuery {
@@ -230,6 +244,17 @@ export const controlPlatformService = {
     tenantRequest<PlatformOrganizationPage>("", `${platform}/organizations`, { query }),
   createOrganization: (input: CreatePlatformOrganizationInput) =>
     jsonRequest<PlatformOrganization, CreatePlatformOrganizationInput>(`${platform}/organizations`, "POST", input),
+  listOrganizationEntitlements: (organizationId: string) =>
+    tenantRequest<PlatformOrganizationEntitlement[]>(
+      "",
+      `${platform}/organizations/${pathSegment(organizationId)}/entitlements`,
+    ),
+  updateOrganizationEntitlement: (organizationId: string, input: UpdateOrganizationEntitlementInput) =>
+    jsonRequest<PlatformOrganizationEntitlement, UpdateOrganizationEntitlementInput>(
+      `${platform}/organizations/${pathSegment(organizationId)}/entitlements`,
+      "PATCH",
+      input,
+    ),
   deleteOrganization: (organizationId: string) =>
     tenantRequest<void>("", `${platform}/organizations/${pathSegment(organizationId)}`, { method: "DELETE" }),
   listUsers: async (query: ListPlatformUsersQuery = {}) => {
@@ -381,8 +406,10 @@ export const controlOrganizationService = {
     tenantJsonRequest<ApiEntity, Input>(organizationId, "/api/control/organization/settings", "PATCH", input),
   listEntitlements: (organizationId: string) =>
     tenantRequest<ControlProductEntitlement[]>(organizationId, "/api/control/organization/entitlements"),
-  listMembers: (organizationId: string) =>
-    tenantRequest<ControlOrganizationMember[]>(organizationId, "/api/control/organization/members"),
+  listMembers: (organizationId: string, search?: string) =>
+    tenantRequest<ControlOrganizationMember[]>(organizationId, "/api/control/organization/members", {
+      query: { search: search?.trim() || undefined },
+    }),
   removeMember: (organizationId: string, memberId: string) =>
     tenantRequest<void>(organizationId, `/api/control/organization/members/${pathSegment(memberId)}`, {
       method: "DELETE",

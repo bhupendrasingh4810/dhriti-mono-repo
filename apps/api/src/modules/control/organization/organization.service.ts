@@ -73,9 +73,20 @@ export class OrganizationAdminService {
 
   // ---------------- Members ----------------
 
-  async listMembers(organizationId: string): Promise<OrganizationControlMember[]> {
+  async listMembers(organizationId: string, search?: string): Promise<OrganizationControlMember[]> {
+    const term = search?.trim();
     const members = await this.prisma.organizationMember.findMany({
-      where: { organizationId, deletedAt: null },
+      where: {
+        organizationId,
+        deletedAt: null,
+        user: {
+          deletedAt: null,
+          ...(term ? { OR: [
+            { name: { contains: term, mode: "insensitive" as const } },
+            { email: { contains: term, mode: "insensitive" as const } },
+          ] } : {}),
+        },
+      },
       orderBy: { joinedAt: "desc" },
       select: {
         id: true,

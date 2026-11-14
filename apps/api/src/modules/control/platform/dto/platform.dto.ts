@@ -46,6 +46,25 @@ export class CreatePlatformOrganizationDto {
   seats!: number;
 }
 
+export class UpdateOrganizationEntitlementDto {
+  @ApiProperty()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  key!: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  enabled!: boolean;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 2147483647 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(2147483647)
+  value?: number;
+}
+
 export class ListPlatformOrganizationsQueryDto {
   @ApiPropertyOptional({ description: "Searches organization names" })
   @IsOptional()

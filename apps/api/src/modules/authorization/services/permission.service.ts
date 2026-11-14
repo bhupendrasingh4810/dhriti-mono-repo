@@ -23,6 +23,32 @@ export interface PermissionCheck {
 export class PermissionService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Control navigation follows tenant ownership/admin metadata, not global roles or individual grants. */
+  async isOrganizationAdministrator(userId: string, organizationId: string): Promise<boolean> {
+    const membership = await this.prisma.organizationMember.findFirst({
+      where: { organizationId, userId, status: "ACTIVE", deletedAt: null },
+      select: { isOwner: true },
+    });
+    if (!membership) {return false;}
+    if (membership.isOwner) {return true;}
+    return (await this.prisma.organizationPermissionGroupAssignment.findFirst({
+      where: {
+        organizationId,
+        userId,
+        revokedAt: null,
+        scopeType: "ORGANIZATION",
+        permissionGroup: {
+          organizationId,
+          isSystem: true,
+          systemRole: "ADMINISTRATORS",
+          isActive: true,
+          deletedAt: null,
+        },
+      },
+      select: { userId: true },
+    })) !== null;
+  }
+
   async isPlatformAdministrator(userId: string): Promise<boolean> {
     const user = await this.prisma.user.findFirst({
       where: { id: userId, deletedAt: null, status: "ACTIVE" },

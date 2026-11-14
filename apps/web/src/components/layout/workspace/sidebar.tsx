@@ -5,12 +5,14 @@ import { CalendarDays, FileText, LayoutDashboard, ListChecks, MessageCircle, Not
 import Link from "next/link";
 import type { AppView } from "@/types/app.types";
 import { useAuth } from "@/hooks/use-auth";
+import { useAppEntitlements } from "@/hooks/use-app-entitlements";
 export interface NavItem {
   id: AppView;
   label: string;
   icon: React.ReactNode;
   href: string;
   badge?: number;
+  entitlement?: string;
 }
 
 export const NAV_ITEMS: NavItem[] = [
@@ -22,12 +24,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "notes",
+    entitlement: "notes.enabled",
     label: "Notes",
     href: "notes",
     icon: <NotebookPen size={22} strokeWidth={1.75} />,
   },
   {
     id: "connect",
+    entitlement: "connect.enabled",
     label: "Connect",
     href: "connect",
     badge: 3,
@@ -35,12 +39,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "pulse",
+    entitlement: "pulse.enabled",
     label: "Pulse",
     href: "pulse",
     icon: <CalendarDays size={22} strokeWidth={1.75} />,
   },
   {
     id: "flow",
+    entitlement: "flow.enabled",
     label: "Flow",
     href: "flow/dashboard",
     badge: 12,
@@ -48,29 +54,44 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     id: "atlas",
+    entitlement: "atlas.enabled",
     label: "Atlas",
     href: "atlas",
     icon: <FileText size={22} strokeWidth={1.75} />,
   },
   {
     id: "cadence",
+    entitlement: "cadence.enabled",
     label: "Cadence",
     href: "cadence",
     icon: <Star size={22} strokeWidth={1.75} />,
   },
   {
     id: "hrms",
+    entitlement: "hrms.enabled",
     label: "HRMS",
     href: "hrms",
     icon: <UsersRound size={22} strokeWidth={1.75} />,
   },
   {
     id: "control",
+    entitlement: "control.enabled",
     label: "Control",
     href: "control",
     icon: <Shield size={22} strokeWidth={1.75} />,
   },
 ];
+
+export function useVisibleNavItems() {
+  const { isEnabled, error, isOrganizationAdministrator } = useAppEntitlements();
+  return {
+    items: NAV_ITEMS.filter((item) =>
+      (!item.entitlement || isEnabled(item.entitlement)) &&
+      (item.id !== "control" || isOrganizationAdministrator),
+    ),
+    error,
+  };
+}
 
 export function getNavHref(item: NavItem, organizationSlug: string, isPlatformUser?: boolean) {
   if (item.id === "control") {
@@ -86,12 +107,14 @@ interface SidebarProps {
 
 export default function Sidebar({ activeView, organizationSlug }: SidebarProps) {
   const { user } = useAuth();
+  const { items, error } = useVisibleNavItems();
 
   return (
     <aside className="hidden lg:flex flex-col h-full flex-shrink-0 border-r border-slate-100 bg-white" style={{ width: "72px" }}>
       {/* Nav items */}
       <nav className="flex-1 flex flex-col items-center gap-1 py-3 overflow-y-auto">
-        {NAV_ITEMS.map((item) => {
+        {error && <p role="alert" title={error} className="px-1 text-center text-xs text-error">App access unavailable</p>}
+        {items.map((item) => {
           const active = activeView === item.id;
           return (
             <Link

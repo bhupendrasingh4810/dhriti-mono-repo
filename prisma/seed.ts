@@ -350,6 +350,7 @@ async function seedData(): Promise<void> {
   const premiumPlan = plansByLegacyPlan.get("PREMIUM");
   if (!premiumPlan) throw new Error("Premium plan is missing");
   const planEntitlements = [
+    { key: "notes.enabled", name: "Notes", kind: "FEATURE" as const, enabled: true },
     { key: "connect.enabled", name: "Connect", kind: "FEATURE" as const, enabled: true },
     { key: "flow.enabled", name: "Flow", kind: "FEATURE" as const, enabled: true },
     { key: "atlas.enabled", name: "Atlas", kind: "FEATURE" as const, enabled: true },
@@ -357,6 +358,7 @@ async function seedData(): Promise<void> {
     { key: "cadence.enabled", name: "Cadence", kind: "FEATURE" as const, enabled: true },
     { key: "nexus.enabled", name: "Nexus", kind: "FEATURE" as const, enabled: true },
     { key: "hrms.enabled", name: "HRMS", kind: "FEATURE" as const, enabled: true },
+    { key: "control.enabled", name: "Control", kind: "FEATURE" as const, enabled: true },
     { key: "max_users", name: "Maximum users", kind: "LIMIT" as const, value: 100 },
     { key: "max_teams", name: "Maximum teams", kind: "LIMIT" as const, value: 10 },
     { key: "max_projects", name: "Maximum projects", kind: "LIMIT" as const, value: 50 },

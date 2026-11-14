@@ -40,7 +40,12 @@ export function HrmsSidebar() {
   const pathname = usePathname();
   const basePath = `/${organizationSlug}/hrms`;
   const { can } = usePermissions();
-  const visibleItems = items.filter((item) => item.href !== "employees" || can("hrms.employee.manage"));
+  const visibleItems = items.filter((item) => {
+    if (item.href === "employees") return can("hrms.employee.manage");
+    // The settings API requires organization.settings.manage, so hide the entry without it.
+    if (item.href === "settings") return can("organization.settings.manage");
+    return true;
+  });
 
   return (
     <PageSidebar>

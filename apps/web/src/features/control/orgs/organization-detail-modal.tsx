@@ -1,6 +1,8 @@
 import type { OrganizationTableItem } from "./organization-table";
+import { OrganizationEntitlements } from "./organization-entitlements";
+import { OrganizationMembers } from "./organization-members";
 
-export type OrganizationDetailTab = "overview" | "members" | "billing" | "audit";
+export type OrganizationDetailTab = "overview" | "members" | "billing" | "entitlements" | "audit";
 
 type OrganizationDetailModalProps = {
   organization: OrganizationTableItem;
@@ -13,6 +15,7 @@ const tabs: Array<{ id: OrganizationDetailTab; label: string }> = [
   { id: "overview", label: "Overview" },
   { id: "members", label: "Members" },
   { id: "billing", label: "Billing" },
+  { id: "entitlements", label: "Entitlements" },
   { id: "audit", label: "Audit" },
 ];
 
@@ -55,6 +58,7 @@ export function OrganizationDetailModal({
         onClick={(event) => event.stopPropagation()}
       >
         <div
+          className="shrink-0"
           style={{
             padding: "20px 24px",
             borderBottom: "1px solid #e2e8f0",
@@ -94,7 +98,7 @@ export function OrganizationDetailModal({
             ×
           </button>
         </div>
-        <div style={{ display: "flex", borderBottom: "1px solid #e2e8f0", padding: "0 24px" }}>
+        <div className="shrink-0" style={{ display: "flex", borderBottom: "1px solid #e2e8f0", padding: "0 24px" }}>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -115,7 +119,9 @@ export function OrganizationDetailModal({
             </button>
           ))}
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: 24 }}>
+        <div
+          className={`min-h-0 flex-1 p-4 sm:p-6 ${activeTab === "members" ? "flex flex-col overflow-hidden" : "overflow-y-auto"}`}
+        >
           <OrganizationDetailContent organization={organization} activeTab={activeTab} />
         </div>
       </div>
@@ -127,6 +133,10 @@ function OrganizationDetailContent({
   organization,
   activeTab,
 }: Pick<OrganizationDetailModalProps, "organization" | "activeTab">) {
+  if (activeTab === "entitlements") {
+    return <OrganizationEntitlements key={organization.id} organizationId={organization.id} />;
+  }
+
   if (activeTab === "overview")
     return (
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -157,44 +167,7 @@ function OrganizationDetailContent({
       </div>
     );
 
-  if (activeTab === "members")
-    return (
-      <div>
-        <p style={{ fontSize: 13, color: "#64748b", margin: "0 0 16px" }}>Organization member list</p>
-        {["Alice Johnson (Owner)", "Bob Smith (Admin)", "Carol White (Member)", "David Brown (Member)"].map(
-          (member) => (
-            <div
-              key={member}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 0",
-                borderBottom: "1px solid #f1f5f9",
-              }}
-            >
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: "50%",
-                  backgroundColor: "#e6f4f2",
-                  color: "#036c5f",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  fontWeight: 700,
-                }}
-              >
-                {member[0]}
-              </div>
-              <span style={{ fontSize: 13, color: "#0f172a" }}>{member}</span>
-            </div>
-          ),
-        )}
-      </div>
-    );
+  if (activeTab === "members") return <OrganizationMembers key={organization.id} organizationId={organization.id} />;
 
   if (activeTab === "billing")
     return (

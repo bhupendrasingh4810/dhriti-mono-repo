@@ -8,6 +8,7 @@ import { RedisService } from "../../../redis/redis.service";
 import { AppError } from "../../../common/errors/app-error";
 import { ErrorCode } from "../../../common/errors/error-codes";
 import { AuditService } from "../../audit/audit.service";
+import { EntitlementService } from "../../authorization/services/entitlement.service";
 import { assertUserHasNoOtherActiveOrganizationMembership } from "../../organization/services/organization-membership";
 import type {
   CreateEntitlementDto,
@@ -22,6 +23,7 @@ import type {
   UpdateProductDto,
   UpdateEntitlementDefinitionDto,
   UpdateSubscriptionDto,
+  UpdateOrganizationEntitlementDto,
   UpdateTicketDto,
 } from "./dto/platform.dto";
 
@@ -63,7 +65,61 @@ export class PlatformService {
     private readonly redis: RedisService,
     private readonly metrics: MetricsService,
     private readonly audit: AuditService,
+    private readonly entitlements: EntitlementService,
   ) {}
+
+  private async requireActiveOrganization(organizationId: string): Promise<void> {
+    const organization = await this.prisma.organization.findFirst({
+      where: { id: organizationId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!organization) {
+      throw new AppError(ErrorCode.ORGANIZATION_NOT_FOUND, "Organization not found", HttpStatus.NOT_FOUND);
+    }
+  }
+
+  async listOrganizationEntitlements(organizationId: string) {
+    await this.requireActiveOrganization(organizationId);
+    // Enumerate definitions, not assignments, so unassigned and disabled capabilities remain editable.
+    const definitions = await this.prisma.entitlement.findMany({ orderBy: { key: "asc" } });
+    return Promise.all(
+      definitions.map(async (definition) => ({
+        ...definition,
+        ...(await this.entitlements.getEntitlement(organizationId, definition.key)),
+      })),
+    );
+  }
+
+  async updateOrganizationEntitlement(
+    organizationId: string,
+    actorUserId: string,
+    dto: UpdateOrganizationEntitlementDto,
+  ) {
+    await this.requireActiveOrganization(organizationId);
+    const definition = await this.prisma.entitlement.findUnique({ where: { key: dto.key } });
+    if (!definition) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, `Unknown entitlement: ${dto.key}`, HttpStatus.BAD_REQUEST);
+    }
+    if (definition.kind === "LIMIT" && dto.enabled && (dto.value === undefined || dto.value === null)) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "An enabled limit requires a value", HttpStatus.BAD_REQUEST);
+    }
+    // Explicit overrides take precedence over the plan and replace any expiring override.
+    await this.entitlements.setOrganizationOverride(organizationId, actorUserId, {
+      key: dto.key,
+      enabled: dto.enabled,
+      value: definition.kind === "LIMIT" ? dto.value : undefined,
+      reason: "Platform administrator update",
+    });
+    await this.audit.record({
+      action: "control.org.entitlement-changed",
+      organizationId,
+      actorUserId,
+      resourceType: "Entitlement",
+      resourceId: definition.id,
+      metadata: { key: dto.key, enabled: dto.enabled, value: dto.value },
+    });
+    return { ...definition, ...(await this.entitlements.getEntitlement(organizationId, dto.key)) };
+  }
 
   // ---------------- Dashboard ----------------
 

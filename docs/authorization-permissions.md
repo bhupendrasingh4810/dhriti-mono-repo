@@ -55,6 +55,30 @@ Feature entitlements are enforced by controller metadata such as:
 
 Do not treat a null or missing limit as unlimited. `EntitlementService` intentionally rejects it.
 
+### Platform organization overrides
+
+In Control → Platform → Organizations, open an organization's details and select **Entitlements**.
+The list includes every catalog definition, even when it is disabled or absent from the organization's plan.
+Platform administrators can enable or disable features and set non-negative integer limits (including zero).
+Saving creates a non-expiring organization override, replacing any expiry on that override, without modifying
+the subscription plan or other organizations. Enabled limits require a value.
+Use the single **Save** button in the Entitlements header to apply all edited cards. All edited limits are validated
+before any writes. Changes are saved individually: if a request fails, its edits remain available for retry while
+successful changes become the saved baseline and are not submitted again.
+
+The platform-admin endpoints are `GET` and `PATCH /control/platform/organizations/:organizationId/entitlements`.
+Updates are audited and use the shared entitlement writer to invalidate the organization's entitlement cache.
+The desktop sidebar and mobile app picker hide plan-gated products unless their effective `<product>.enabled`
+feature is enabled. Members read feature states through `GET /organizations/:organizationId/me/entitlements`
+without needing billing permissions. Navigation refreshes on window focus, every minute, and after an entitlement
+save in the current window; failed loads hide gated apps and display an error. Notes and Control require
+`notes.enabled` and `control.enabled` respectively, including for platform staff. Only Home remains outside
+this product-entitlement navigation gate.
+Control navigation additionally requires an active organization owner or an active organization-scoped
+assignment to the system Administrators group. Individual permission grants and global user roles do not
+make a member an organization administrator. `GET /organizations/:organizationId/me/control-access`
+provides this tenant-specific visibility decision; API action permissions remain independently enforced.
+
 ## Permissions
 
 ### Organization and platform
@@ -116,6 +140,15 @@ Use the following baseline policy when populating group permissions:
 | `guest` | Read-only permissions deliberately safe for external users; no default write or administration permissions |
 
 The creator is assigned to each app's `admins` group. New members are assigned to active `*_users` groups by the organization membership workflow.
+
+## Platform Organization Members
+
+Platform organization details use the existing `GET /control/organization/members` endpoint with the selected
+organization's `x-organization-id` header. Optional `search` filters names and emails case-insensitively;
+deleted memberships and users are excluded. TenantGuard authorizes cross-organization reads for platform
+administrators, and the endpoint retains its `organization.members.read` permission requirement.
+The members table applies status, owner/non-owner, and team filters plus column sorting to the complete API
+search result before client-side pagination. Filter, sort, search, and rows-per-page changes reset to page one.
 
 ## Adding a New Protected Capability
 

@@ -4,7 +4,7 @@ function makePrisma() {
   return {
     entitlement: { findUnique: jest.fn(), findMany: jest.fn() },
     subscription: { findFirst: jest.fn() },
-    organizationEntitlement: { findFirst: jest.fn() },
+    organizationEntitlement: { findFirst: jest.fn(), upsert: jest.fn() },
   };
 }
 
@@ -15,6 +15,25 @@ function makeRedis() {
 const config = { entitlementCacheTtlSeconds: 60 };
 
 describe("EntitlementService", () => {
+  it("persists an explicit organization override, clears its expiry, and invalidates the tenant cache", async () => {
+    const prisma = makePrisma();
+    const redis = makeRedis();
+    prisma.entitlement.findUnique.mockResolvedValue({ id: "entitlement-a" });
+    prisma.organizationEntitlement.upsert.mockResolvedValue({ enabled: false });
+    const service = new EntitlementService(prisma as never, redis as never, config as never);
+
+    await service.setOrganizationOverride("org-a", "admin-a", { key: "hrms.enabled", enabled: false });
+
+    expect(prisma.organizationEntitlement.upsert).toHaveBeenCalledWith({
+      where: { organizationId_entitlementId: { organizationId: "org-a", entitlementId: "entitlement-a" } },
+      update: expect.objectContaining({ enabled: false, expiresAt: null, createdById: "admin-a" }),
+      create: expect.objectContaining({
+        organizationId: "org-a", entitlementId: "entitlement-a", enabled: false, expiresAt: null, createdById: "admin-a",
+      }),
+    });
+    expect(redis.deleteByPattern).toHaveBeenCalledWith("entitlement:org-a:*");
+  });
+
   it("allows a feature included in an active subscription plan", async () => {
     const prisma = makePrisma();
     const redis = makeRedis();

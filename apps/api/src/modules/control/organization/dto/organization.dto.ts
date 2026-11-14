@@ -1,6 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsBoolean, IsInt, IsOptional, IsString, IsTimeZone, IsUrl, Max, MaxLength, Min } from "class-validator";
 
+export class ListOrgMembersQueryDto {
+  @ApiPropertyOptional({ description: "Search member names and email addresses" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  search?: string;
+}
+
 export class UpdateOrgSettingsDto {
   @ApiPropertyOptional({ example: "acme.com" })
   @IsOptional()

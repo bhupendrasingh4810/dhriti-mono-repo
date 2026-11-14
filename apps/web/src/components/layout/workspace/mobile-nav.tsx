@@ -7,7 +7,7 @@ import { X } from "lucide-react";
 import { useMobileNav } from "@/contexts/mobile-nav-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { AppView } from "@/types/app.types";
-import { NAV_ITEMS, getNavHref } from "./sidebar";
+import { useVisibleNavItems, getNavHref } from "./sidebar";
 
 function useEscape(active: boolean, onClose: () => void) {
   useEffect(() => {
@@ -22,6 +22,7 @@ function useEscape(active: boolean, onClose: () => void) {
 export function MobileNavOverlays({ activeView, organizationSlug }: { activeView: AppView; organizationSlug: string }) {
   const { appsOpen, menuOpen, setAppsOpen, setMenuOpen, setDrawerEl } = useMobileNav();
   const { user } = useAuth();
+  const { items, error } = useVisibleNavItems();
   const closeApps = () => setAppsOpen(false);
   const closeMenu = () => setMenuOpen(false);
   const appsCloseRef = useRef<HTMLButtonElement>(null);
@@ -60,8 +61,9 @@ export function MobileNavOverlays({ activeView, organizationSlug }: { activeView
                 <X aria-hidden="true" size={18} />
               </button>
             </div>
+            {error && <p role="alert" className="mb-3 text-xs text-error">{error}</p>}
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {NAV_ITEMS.map((item) => {
+              {items.map((item) => {
                 const active = item.id === activeView;
                 return (
                   <Link
