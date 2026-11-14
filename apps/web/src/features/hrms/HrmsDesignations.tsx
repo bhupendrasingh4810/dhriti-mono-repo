@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { MapPin, Pencil, Trash2 } from "lucide-react";
+import { DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import { hrmsService, type HrmsDesignation, type HrmsEmploymentType, type HrmsLocation } from "@/services/hrms.service";
@@ -121,6 +122,7 @@ function MasterDataDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [openField, setOpenField] = useState<string | null>(null);
   const singular = type === "Employment types" ? "employment type" : type.slice(0, -1).toLowerCase();
 
   const update = (field: keyof FormValues, value: string) => {
@@ -159,16 +161,6 @@ function MasterDataDrawer({
       setSaving(false);
     }
   };
-  const fieldClass = (field: keyof FormValues) =>
-    `w-full rounded-md border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70 ${
-      errors[field] ? "border-error" : "border-border"
-    }`;
-  const label = (title: string, field: keyof FormValues, required = false) => (
-    <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-      {title} {required && <span className="text-error">*</span>}
-      {errors[field] && <span className="mt-1 block text-xs font-normal text-error">{errors[field]}</span>}
-    </span>
-  );
 
   return (
     <div className="fixed inset-0 z-50 bg-text-primary/35" onClick={onClose}>
@@ -190,7 +182,7 @@ function MasterDataDrawer({
             <Icon name="close" />
           </IconButton>
         </div>
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
           <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" />
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             {apiError && (
@@ -198,95 +190,29 @@ function MasterDataDrawer({
                 {apiError}
               </p>
             )}
-            <label className="block">
-              {label(
-                `${type === "Employment types" ? "Employment type" : singular[0].toUpperCase() + singular.slice(1)} name`,
-                "name",
-                true,
-              )}
-              <input
-                value={values.name}
-                onChange={(event) => update("name", event.target.value)}
-                className={fieldClass("name")}
-                autoFocus
-              />
-            </label>
-            <div>
-              {label("Code", "code", true)}
-              <div className="flex gap-2">
-                <input
-                  value={values.code}
-                  onChange={(event) => update("code", event.target.value)}
-                  className={fieldClass("code")}
-                  disabled={!isCodeManual}
-                />
-                <IconButton
-                  label={isCodeManual ? "Code editing enabled" : "Edit code"}
-                  onClick={() => setIsCodeManual(true)}
-                  disabled={isCodeManual}
-                >
+            <DhritiTextField
+              label={`${type === "Employment types" ? "Employment type" : singular[0].toUpperCase() + singular.slice(1)} name`}
+              required value={values.name} onChange={(value) => update("name", value)} error={errors.name}
+            />
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <DhritiTextField label="Code" required value={values.code} onChange={(value) => update("code", value)} error={errors.code} disabled={!isCodeManual} />
+              </div>
+              <div className="pt-6">
+                <IconButton label={isCodeManual ? "Code editing enabled" : "Edit code"} onClick={() => setIsCodeManual(true)} disabled={isCodeManual}>
                   <Pencil aria-hidden="true" size={18} />
                 </IconButton>
               </div>
             </div>
             {type === "Locations" && (
               <>
-                <label className="block">
-                  {label("Country code", "countryCode", true)}
-                  <select
-                    value={values.countryCode}
-                    onChange={(event) => update("countryCode", event.target.value)}
-                    className={fieldClass("countryCode")}
-                  >
-                    <option value="">Select a country</option>
-                    {COUNTRY_OPTIONS.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.name} - ({country.code})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  {label("City", "city")}
-                  <input
-                    value={values.city}
-                    onChange={(event) => update("city", event.target.value)}
-                    className={fieldClass("city")}
-                  />
-                </label>
-                <label className="block">
-                  {label("IANA timezone", "timezone", true)}
-                  <select
-                    value={values.timezone}
-                    onChange={(event) => update("timezone", event.target.value)}
-                    className={fieldClass("timezone")}
-                  >
-                    <option value="">Select a timezone</option>
-                    {TIMEZONE_OPTIONS.map((timezone) => (
-                      <option key={timezone} value={timezone}>
-                        {timezone}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <DhritiSelectMenu label="Country code" required value={values.countryCode || null} onChange={(value) => update("countryCode", value ?? "")} error={errors.countryCode} placeholder="Select a country" options={COUNTRY_OPTIONS.map((country) => ({ value: country.code, label: `${country.name} - (${country.code})` }))} open={openField === "country"} onOpenChange={(open) => setOpenField(open ? "country" : null)} />
+                <DhritiTextField label="City" value={values.city} onChange={(value) => update("city", value)} />
+                <DhritiSelectMenu label="IANA timezone" required value={values.timezone || null} onChange={(value) => update("timezone", value ?? "")} error={errors.timezone} placeholder="Select a timezone" options={TIMEZONE_OPTIONS.map((timezone) => ({ value: timezone, label: timezone }))} open={openField === "timezone"} onOpenChange={(open) => setOpenField(open ? "timezone" : null)} />
               </>
             )}
             {type === "Designations" && (
-              <label className="block">
-                {label("Department", "departmentId")}
-                <select
-                  value={values.departmentId}
-                  onChange={(event) => update("departmentId", event.target.value)}
-                  className={fieldClass("departmentId")}
-                >
-                  <option value="">No department</option>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {department.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <DhritiSelectMenu label="Department" value={values.departmentId} onChange={(value) => update("departmentId", value ?? "")} options={[{ value: "", label: "No department" }, ...departments.map((department) => ({ value: department.id, label: department.name }))]} open={openField === "department"} onOpenChange={(open) => setOpenField(open ? "department" : null)} />
             )}
           </div>
           <div className="flex justify-end gap-3 border-t border-border px-6 py-4">

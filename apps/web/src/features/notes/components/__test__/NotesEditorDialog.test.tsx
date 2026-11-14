@@ -1,10 +1,12 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NotesEditorDialog } from "../NotesEditorDialog";
 
 const mocks = vi.hoisted(() => ({ createNote: vi.fn().mockResolvedValue(undefined) }));
 
-vi.mock("@dhriti/ui/dialog", () => ({ Dialog: ({ children }: { children: React.ReactNode }) => <div role="dialog">{children}</div> }));
+vi.mock("@dhriti/ui/dialog", () => ({
+  Dialog: ({ children }: { children: React.ReactNode }) => <div role="dialog">{children}</div>,
+}));
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({ user: { id: "owner", organization: { id: "org-1" } } }),
 }));
@@ -13,6 +15,10 @@ vi.mock("@/services/notes.service", () => ({
 }));
 
 describe("NotesEditorDialog", () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+  });
   it("creates a note with entered content and public visibility", async () => {
     const onSaved = vi.fn().mockResolvedValue(undefined);
     render(
@@ -26,9 +32,9 @@ describe("NotesEditorDialog", () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText("Note title"), { target: { value: "Release checklist" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Note title" }), { target: { value: "Release checklist" } });
     fireEvent.change(screen.getByLabelText("Note content"), { target: { value: "Verify migrations" } });
-    fireEvent.click(screen.getByRole("switch", { name: "Make note public" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Make note public" }));
     fireEvent.click(screen.getByRole("button", { name: "Save note" }));
 
     await waitFor(() =>
@@ -40,5 +46,22 @@ describe("NotesEditorDialog", () => {
       }),
     );
     expect(onSaved).toHaveBeenCalledOnce();
+  });
+  it("shows title validation directly below the controlled required field", () => {
+    render(
+      <NotesEditorDialog
+        note={null}
+        folderId={null}
+        viewOnly={false}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+        onAccessLost={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Save note" }));
+    expect(screen.getByRole("textbox", { name: "Note title" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText("A note title is required.")).toBeInTheDocument();
+    fireEvent.change(screen.getByRole("textbox", { name: "Note title" }), { target: { value: "Release notes" } });
+    expect(screen.queryByText("A note title is required.")).not.toBeInTheDocument();
   });
 });

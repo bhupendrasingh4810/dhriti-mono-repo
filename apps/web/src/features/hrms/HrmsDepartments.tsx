@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import { organizationAccessService } from "@/services/organization-management.service";
@@ -92,6 +93,7 @@ function DepartmentDrawer({
   });
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [parentOpen, setParentOpen] = useState(false);
 
   const update = (field: keyof DepartmentValues, value: string) => {
     setValues((current) => {
@@ -136,10 +138,6 @@ function DepartmentDrawer({
     }
   };
 
-  const fieldClass = (field: keyof DepartmentValues) =>
-    `w-full rounded-md border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand ${
-      errors[field] ? "border-error" : "border-border"
-    }`;
 
   return (
     <div className="fixed inset-0 z-50 bg-text-primary/35" onClick={onClose}>
@@ -161,7 +159,7 @@ function DepartmentDrawer({
             <Icon name="close" />
           </IconButton>
         </div>
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
           <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" />
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             {apiError && (
@@ -169,56 +167,18 @@ function DepartmentDrawer({
                 {apiError}
               </p>
             )}
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                Department name <span className="text-error">*</span>
-              </span>
-              <input
-                value={values.name}
-                onChange={(event) => update("name", event.target.value)}
-                className={fieldClass("name")}
-                autoFocus
-              />
-              {errors.name && <span className="mt-1 block text-xs text-error">{errors.name}</span>}
-            </label>
-            <div>
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                Code <span className="text-error">*</span>
-              </span>
-              <div className="flex gap-2">
-                <input
-                  value={values.code}
-                  onChange={(event) => update("code", event.target.value)}
-                  className={fieldClass("code")}
-                  disabled={!isCodeManual}
-                />
-                <IconButton
-                  label={isCodeManual ? "Code editing enabled" : "Edit code"}
-                  onClick={() => setIsCodeManual(true)}
-                  disabled={isCodeManual}
-                >
+            <DhritiTextField label="Department name" required value={values.name} onChange={(value) => update("name", value)} error={errors.name} />
+            <div className="flex items-start gap-2">
+              <div className="min-w-0 flex-1">
+                <DhritiTextField label="Code" required value={values.code} onChange={(value) => update("code", value)} error={errors.code} disabled={!isCodeManual} />
+              </div>
+              <div className="pt-6">
+                <IconButton label={isCodeManual ? "Code editing enabled" : "Edit code"} onClick={() => setIsCodeManual(true)} disabled={isCodeManual}>
                   <Pencil aria-hidden="true" size={18} />
                 </IconButton>
               </div>
-              {errors.code && <span className="mt-1 block text-xs text-error">{errors.code}</span>}
             </div>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">Parent department</span>
-              <select
-                value={values.parentId}
-                onChange={(event) => update("parentId", event.target.value)}
-                className={fieldClass("parentId")}
-              >
-                <option value="">No parent department</option>
-                {departments
-                  .filter((candidate) => candidate.id !== department?.id)
-                  .map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <DhritiSelectMenu label="Parent department" value={values.parentId} onChange={(value) => update("parentId", value ?? "")} options={[{ value: "", label: "No parent department" }, ...departments.filter((candidate) => candidate.id !== department?.id).map((candidate) => ({ value: candidate.id, label: candidate.name }))]} open={parentOpen} onOpenChange={setParentOpen} />
           </div>
           <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
             <Button variant="secondary" onClick={onClose}>

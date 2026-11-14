@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DhritiCheckboxField, DhritiDateField, DhritiSelectMenu } from "@dhriti/ui";
 import { usePermissions } from "@/hooks/use-permissions";
 import {
   payrollService,
@@ -10,9 +11,9 @@ import {
   type RunInput,
 } from "@/services/payroll.service";
 import { Badge, Button, Icon } from "./components/ui-primitives";
-import { PayrollField, PayrollDialog, PayrollPeriodPicker } from "./payroll-forms";
+import { PayrollDialog, PayrollPeriodPicker } from "./payroll-forms";
 import { PayrollTable } from "./payroll-tables";
-import { date, inputClass, money } from "./payroll-shared";
+import { date, money } from "./payroll-shared";
 
 const steps = ["Period & scope", "Validate inputs", "Salary review", "Exceptions", "Approvals", "Process"];
 
@@ -44,6 +45,9 @@ export function PayrollDrawer({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<Record<string, boolean>>({});
+  const [dateOpen, setDateOpen] = useState<Record<string, boolean>>({});
+  const [dateMonths, setDateMonths] = useState<Record<string, string>>({});
   const { can } = usePermissions();
   async function act(action: "next" | "draft" | "approve" | "process") {
     setError("");
@@ -97,6 +101,37 @@ export function PayrollDrawer({
     setInput((current) => ({ ...current, ...patch }));
     setPreview(null);
   };
+  const setMenuIsOpen = (key: string, open: boolean) => setMenuOpen((current) => ({ ...current, [key]: open }));
+  const dateField = (key: "period" | "payDate", label: string, monthOnly = false) => {
+    const storedValue = input[key];
+    const month = dateMonths[key] ?? (storedValue ? storedValue.slice(0, 7) : new Date().toISOString().slice(0, 7));
+    return (
+      <DhritiDateField
+        id={key}
+        label={label}
+        size="sm"
+        clearable
+        mode={monthOnly ? "month" : "date"}
+        value={storedValue}
+        month={month}
+        onMonthChange={(next) => setDateMonths((current) => ({ ...current, [key]: next }))}
+        open={Boolean(dateOpen[key])}
+        onOpenChange={(open) => {
+          setDateOpen((current) => ({ ...current, [key]: open }));
+          if (open && storedValue) setDateMonths((current) => ({ ...current, [key]: storedValue.slice(0, 7) }));
+        }}
+        disabled={busy || Boolean(run)}
+        error={errors[key]}
+        onChange={(next) =>
+          change({
+            [key]: next,
+            // A pay date chosen for the old period must be selected again.
+            ...(key === "period" ? { payDate: "" } : {}),
+          })
+        }
+      />
+    );
+  };
   return (
     <PayrollDialog label="Start payroll run" close={close} busy={busy}>
       <aside className="ml-auto flex h-full w-full max-w-xl flex-col bg-surface text-text-primary shadow-xl">
@@ -126,35 +161,32 @@ export function PayrollDrawer({
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-6">
           {step === 1 && (
             <fieldset disabled={busy || Boolean(run)} className="space-y-4">
-              <PayrollField label="Country / payroll profile">
-                <select
-                  className={`${inputClass} ${errors.profileId ? "border-error" : ""}`}
-                  value={input.profileId}
-                  onChange={(event) =>
-                    change({
-                      profileId: event.target.value,
-                      period:
-                        data.profiles.find((item) => item.id === event.target.value)?.frequency === "MONTHLY"
-                          ? new Date().toISOString().slice(0, 7)
-                          : "",
-                      payDate: "",
-                      prorationPolicy: "CALENDAR_DAYS",
-                    })
-                  }
-                >
-                  <option value="">Select a configured payroll profile</option>
-                  {data.profiles.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name} · {item.countryCode} · {item.currency}
-                    </option>
-                  ))}
-                </select>
-              </PayrollField>
-              {errors.profileId && (
-                <p role="alert" className="text-xs text-error">
-                  {errors.profileId}
-                </p>
-              )}
+              <DhritiSelectMenu
+                label="Country / payroll profile"
+                size="sm"
+                value={input.profileId || null}
+                open={Boolean(menuOpen.profileId)}
+                onOpenChange={(open) => setMenuIsOpen("profileId", open)}
+                clearable
+                options={data.profiles.map((item) => ({
+                  value: item.id,
+                  label: `${item.name} · ${item.countryCode} · ${item.currency}`,
+                }))}
+                placeholder="Select a configured payroll profile"
+                disabled={busy || Boolean(run)}
+                error={errors.profileId}
+                onChange={(value) =>
+                  change({
+                    profileId: value ?? "",
+                    period:
+                      data.profiles.find((item) => item.id === value)?.frequency === "MONTHLY"
+                        ? new Date().toISOString().slice(0, 7)
+                        : "",
+                    payDate: "",
+                    prorationPolicy: "CALENDAR_DAYS",
+                  })
+                }
+              />
               {profile && profile.frequency !== "MONTHLY" ? (
                 <PayrollPeriodPicker
                   key={profile.id}
@@ -170,19 +202,7 @@ export function PayrollDrawer({
                 />
               ) : (
                 <>
-                  <PayrollField label="Payroll period">
-                    <input
-                      type="month"
-                      className={`${inputClass} ${errors.period ? "border-error" : ""}`}
-                      value={input.period}
-                      onChange={(event) => change({ period: event.target.value, payDate: "" })}
-                    />
-                  </PayrollField>
-                  {errors.period && (
-                    <p role="alert" className="text-xs text-error">
-                      {errors.period}
-                    </p>
-                  )}
+                  {dateField("period", "Payroll period", true)}
                   {profile && (
                     <Button
                       variant="secondary"
@@ -213,57 +233,46 @@ export function PayrollDrawer({
                 </>
               )}
               <div className="grid gap-4 sm:grid-cols-2">
-                <PayrollField label="Employee scope">
-                  <select
-                    className={inputClass}
-                    value={input.departmentId ?? ""}
-                    onChange={(event) => change({ departmentId: event.target.value || undefined })}
-                  >
-                    <option value="">All eligible employees in pay group</option>
-                    <optgroup label="By department">
-                      {data.departments.map((department) => (
-                        <option key={department.id} value={department.id}>
-                          {department.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </PayrollField>
-                <PayrollField label="Pay date">
-                  <input
-                    type="date"
-                    className={`${inputClass} ${errors.payDate ? "border-error" : ""}`}
-                    value={input.payDate}
-                    onChange={(event) => change({ payDate: event.target.value })}
-                  />
-                </PayrollField>
+                <DhritiSelectMenu
+                  label="Employee scope"
+                  size="sm"
+                  value={input.departmentId ?? ""}
+                  onChange={(value) => change({ departmentId: value ?? undefined })}
+                  options={[
+                    { value: "", label: "All eligible employees in pay group" },
+                    ...data.departments.map((department) => ({ value: department.id, label: department.name })),
+                  ]}
+                  open={Boolean(menuOpen.departmentId)}
+                  onOpenChange={(open) => setMenuIsOpen("departmentId", open)}
+                  disabled={busy || Boolean(run)}
+                />
+                {dateField("payDate", "Pay date")}
               </div>
-              {errors.payDate && (
-                <p role="alert" className="text-xs text-error">
-                  {errors.payDate}
-                </p>
-              )}
-              <PayrollField label="Proration policy">
-                <select
-                  className={inputClass}
-                  value={input.prorationPolicy}
-                  disabled={Boolean(profile && profile.frequency !== "MONTHLY")}
-                  onChange={(event) =>
-                    change({
-                      prorationPolicy: event.target.value === "CALENDAR_DAYS" ? "CALENDAR_DAYS" : "NONE",
-                    })
-                  }
-                >
-                  <option value="CALENDAR_DAYS">
-                    {profile?.frequency === "MONTHLY"
-                      ? "Calendar days in pay period"
-                      : "Calendar-day monthly allocation"}
-                  </option>
-                  {(!profile || profile.frequency === "MONTHLY") && (
-                    <option value="NONE">Full-month only (legacy)</option>
-                  )}
-                </select>
-              </PayrollField>
+              <DhritiSelectMenu
+                label="Proration policy"
+                size="sm"
+                value={input.prorationPolicy ?? "CALENDAR_DAYS"}
+                options={[
+                  {
+                    value: "CALENDAR_DAYS",
+                    label:
+                      profile?.frequency === "MONTHLY"
+                        ? "Calendar days in pay period"
+                        : "Calendar-day monthly allocation",
+                  },
+                  ...(!profile || profile.frequency === "MONTHLY"
+                    ? [{ value: "NONE", label: "Full-month only (legacy)" }]
+                    : []),
+                ]}
+                open={Boolean(menuOpen.prorationPolicy)}
+                onOpenChange={(open) => setMenuIsOpen("prorationPolicy", open)}
+                disabled={busy || Boolean(run) || Boolean(profile && profile.frequency !== "MONTHLY")}
+                onChange={(value) =>
+                  change({
+                    prorationPolicy: value === "CALENDAR_DAYS" ? "CALENDAR_DAYS" : "NONE",
+                  })
+                }
+              />
               <p className="text-xs text-text-secondary">
                 {profile?.frequency !== "MONTHLY" &&
                   "Monthly salary components are allocated by calendar day within each month, including periods crossing months. "}
@@ -501,15 +510,13 @@ export function PayrollDrawer({
                 no real funds.
               </p>
               {run?.status === "APPROVED" && (
-                <label className="mt-4 flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 cursor-pointer accent-brand"
+                <div className="mt-4">
+                  <DhritiCheckboxField
+                    label="I confirm processing this approved payroll."
                     checked={confirmed}
-                    onChange={(event) => setConfirmed(event.target.checked)}
+                    onChange={setConfirmed}
                   />
-                  I confirm processing this approved payroll.
-                </label>
+                </div>
               )}
             </div>
           )}

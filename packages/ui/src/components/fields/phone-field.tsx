@@ -1,11 +1,11 @@
 "use client";
 
 import { Check, ChevronDown } from "lucide-react";
+import { useRef } from "react";
 import {
   ClearFieldButton,
   FieldFrame,
   fieldInputClass,
-  fieldMenuClass,
   fieldSizes,
   fieldSurface,
   moveMenuFocus,
@@ -14,6 +14,7 @@ import {
   type DhritiTextFieldProps,
 } from "./field-primitives";
 import type { CountryOption } from "./select-fields";
+import { FieldPopover } from "./field-popover";
 
 export interface DhritiPhoneFieldProps extends DhritiTextFieldProps {
   countries: readonly CountryOption[];
@@ -41,7 +42,8 @@ export function DhritiPhoneField({
 }: DhritiPhoneFieldProps) {
   const identity = useFieldIdentity(props);
   const size = fieldSizes[props.size ?? "md"];
-  const root = useFieldMenu(open, onOpenChange, props.disabled, props.readOnly);
+  const panel = useRef<HTMLDivElement>(null);
+  const root = useFieldMenu(open, onOpenChange, props.disabled, props.readOnly, panel);
   const country = countries.find((entry) => entry.code === countryCode);
   const blocked = props.disabled || props.readOnly;
   const filtered = countries.filter((entry) =>
@@ -63,7 +65,7 @@ export function DhritiPhoneField({
           ) {
             event.preventDefault();
             if (!open && !blocked) onOpenChange(true);
-            else moveMenuFocus(root, event.key);
+            else moveMenuFocus(panel, event.key);
           }
         }}
       >
@@ -107,7 +109,7 @@ export function DhritiPhoneField({
           )}
         </div>
         {open && !blocked && (
-          <div className={`${fieldMenuClass} max-w-full`} style={{ width: "var(--field-country-menu-width)" }}>
+          <FieldPopover anchor={root} panel={panel} style={{ width: "var(--field-country-menu-width)" }}>
             <div className="border-b border-border p-2">
               <input
                 type="search"
@@ -147,7 +149,7 @@ export function DhritiPhoneField({
                 </button>
               ))}
             </div>
-          </div>
+          </FieldPopover>
         )}
       </div>
     </FieldFrame>

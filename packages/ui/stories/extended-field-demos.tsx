@@ -12,6 +12,7 @@ export interface ExtendedFieldDemoProps extends Pick<
   "size" | "variant" | "required" | "disabled" | "readOnly" | "error" | "success" | "clearable"
 > {
   kind: "date" | "textarea" | "file" | "time";
+  dateMode?: "date" | "month" | "year";
   prefilled?: boolean;
   initiallyOpen?: boolean;
   longContent?: boolean;
@@ -36,6 +37,7 @@ export const extendedFieldArgs = {
 
 export function ExtendedFieldDemo({
   kind,
+  dateMode = "date",
   prefilled,
   initiallyOpen,
   longContent,
@@ -44,7 +46,9 @@ export function ExtendedFieldDemo({
   multiple,
   ...props
 }: ExtendedFieldDemoProps) {
-  const [date, setDate] = useState(prefilled ? "2026-11-14" : "");
+  const [date, setDate] = useState(
+    prefilled ? (dateMode === "month" ? "2026-11" : dateMode === "year" ? "2026" : "2026-11-14") : "",
+  );
   const [month, setMonth] = useState("2026-11");
   const [time, setTime] = useState(prefilled ? "09:00" : "");
   const [text, setText] = useState(
@@ -75,6 +79,7 @@ export function ExtendedFieldDemo({
         <DhritiDateField
           {...props}
           label="From date"
+          mode={dateMode}
           placeholder="Choose a date"
           value={date}
           onChange={setDate}
@@ -140,7 +145,7 @@ export function ExtendedFieldDemo({
 export function ExtendedFieldStory(props: ExtendedFieldDemoProps) {
   return (
     <ExtendedFieldDemo
-      key={`${props.kind}-${props.prefilled}-${props.initiallyOpen}-${props.longContent}`}
+      key={`${props.kind}-${props.dateMode}-${props.prefilled}-${props.initiallyOpen}-${props.longContent}`}
       {...props}
     />
   );

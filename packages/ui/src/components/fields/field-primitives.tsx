@@ -85,8 +85,9 @@ export function useFieldIdentity(props: FieldPresentationProps) {
 export function FieldFrame({
   children,
   details,
+  labelActivatesControl = true,
   ...props
-}: FieldPresentationProps & { children: ReactNode; details?: ReactNode }) {
+}: FieldPresentationProps & { children: ReactNode; details?: ReactNode; labelActivatesControl?: boolean }) {
   const { id, label, showLabel = true, required, error, success, successText = "Looks good!", helperText } = props;
   const message = (error || helperText || (success && successText)) && (
     <p
@@ -105,7 +106,11 @@ export function FieldFrame({
   return (
     <div className="min-w-0 space-y-1.5">
       {showLabel && (
-        <label htmlFor={id} className="flex items-center gap-1 text-sm font-semibold text-text-secondary">
+        <label
+          htmlFor={id}
+          onClick={labelActivatesControl ? undefined : (event) => event.preventDefault()}
+          className="flex items-center gap-1 text-sm font-semibold text-text-secondary"
+        >
           {label}
           {required && (
             <span className="text-error" aria-hidden="true">

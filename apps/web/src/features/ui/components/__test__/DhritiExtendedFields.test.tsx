@@ -212,6 +212,14 @@ describe("Dhriti time field", () => {
   it("portals out of clipping containers and clamps/flips within the viewport", () => {
     document.documentElement.style.setProperty("--field-picker-gutter", "16px");
     document.documentElement.style.setProperty("--field-picker-gap", "6px");
+    // jsdom does not inherit custom properties; provide the computed theme values used by browsers.
+    const computedStyle = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = computedStyle(element);
+      style.setProperty("--field-picker-gutter", "16px");
+      style.setProperty("--field-picker-gap", "6px");
+      return style;
+    });
     const width = window.innerWidth,
       height = window.innerHeight;
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (this: HTMLElement) {

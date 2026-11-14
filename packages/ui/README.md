@@ -59,6 +59,19 @@ messages. Attachment uploads remain absent until a backend is integrated.
 
 ## Input fields
 
+`DhritiSearchField` is a controlled text field with a search icon and optional
+clear action. `onChange` updates the parent's visible draft immediately;
+`onSearch` emits the controlled value after `debounceMs` (default 300 ms).
+It does not emit on mount, trims nothing, uses the latest callback, and cancels
+pending work on unmount or when disabled/read-only. Parents own query filtering,
+requests, and loading/error state; do not add another debounce around `onSearch`.
+
+`DhritiCheckboxField` and `DhritiRadioField` use `checked` / `onChange` and
+native keyboard semantics. Checkbox `indeterminate` is controlled; radios share
+a parent-provided `name` and the parent controls mutually exclusive values.
+Both support required/error/helper feedback and disabled/read-only controls.
+Use a fieldset/legend in the parent for related radio options.
+
 Import `DhritiTextField`, `DhritiNumberField`, `DhritiEmailField`,
 `DhritiPasswordField`, `DhritiPhoneField`, `DhritiCountryField`,
 `DhritiSelectMenu`, `DhritiComboboxFlat`, `DhritiComboboxHierarchy`,
@@ -104,6 +117,16 @@ Read-only/disabled fields block editing and auxiliary controls.
 date shifts. Arrow keys move by day/week, Home/End move within the week, and
 navigation never changes the selected date until a day is chosen.
 
+Set `mode="month"` for direct month selection (`value`, `min`, and `max` use
+`YYYY-MM`), or `mode="year"` for year selection (`YYYY`). The default is
+`mode="date"`. Empty values remain `""`; `month` / `onMonthChange` always use
+`YYYY-MM` as the parent-controlled navigation anchor. Month mode navigates
+years; year mode navigates twelve-year blocks. Arrow keys move through the
+three-column grid, Home/End move within a row, and selection emits immediately.
+All modes share clearing, bounds, disabled/read-only, validation, and dialog
+popover behavior. Payroll month-only fields use month mode without adding a
+synthetic day to their API values.
+
 `DhritiTimeField` uses `HH:mm` (24-hour) strings, with labeled, scrollable hour
 and minute columns, a selected-time preview, and keyboard navigation.
 `minuteStep` defaults to 5 and must be a positive divisor of 60; existing
@@ -112,8 +135,20 @@ Selecting a column emits immediately; changing hours clamps minutes to the
 allowed interval. Done only requests dismissal: no internal draft is committed.
 Both pickers support clearing, Escape, outside dismissal, focus restoration,
 and parent-controlled validation. Invalid date/time contracts throw explicit
-`RangeError`s. Picker menus portal to the document body, clamp to the viewport,
+`RangeError`s. Picker menus portal to the nearest native dialog (or the document
+body outside a dialog), clamp to the viewport,
 and flip above the trigger when needed, so drawers do not clip their contents.
+
+Selection, country, phone-country, and all combobox menus use the same floating
+popover positioning as date/time pickers. Menus match the control width (the
+phone-country menu keeps its own width), flip to the side with more space, and
+scroll within the available viewport height without enlarging form scroll areas.
+Position follows ancestor scrolling, resizing, and menu-content resizing.
+Native `showModal()` dialogs make outside content inert, so their menus must
+stay within that dialog's top layer to remain visible, clickable, and focusable.
+Selection/combobox labels remain accessible names but do not activate menus.
+Click the control or use arrow keys to open; simply focusing a combobox does not
+open it. Selection/search/open state remain entirely parent-controlled.
 
 `DhritiTextareaField` has a controlled string value, `rows`, optional `maxLength`,
 `showCharacterCount`, and `resize` (`vertical` or `none`). Errors appear directly

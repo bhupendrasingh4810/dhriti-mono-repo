@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { Dialog } from "@dhriti/ui/dialog";
+import { DhritiCheckboxField, DhritiSelectMenu, DhritiTextareaField, DhritiTextField } from "@dhriti/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { notesService, type Note, type NoteAccessRole } from "@/services/notes.service";
 import { canEditNote, canShareNote } from "../note-access";
@@ -44,6 +45,8 @@ export function NotesEditorDialog({
   const [checkingRequest, setCheckingRequest] = useState(Boolean(note?.isPublic && !canManage));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [titleError, setTitleError] = useState("");
+  const [accessOpen, setAccessOpen] = useState(false);
 
   useEffect(() => {
     if (!organizationId || !note?.isPublic || canManage) return;
@@ -76,9 +79,10 @@ export function NotesEditorDialog({
       return;
     }
     if (!organizationId || !title.trim()) {
-      setError("A note title is required.");
+      setTitleError("A note title is required.");
       return;
     }
+    setTitleError("");
     setSaving(true);
     try {
       if (note) {
@@ -148,30 +152,32 @@ export function NotesEditorDialog({
           </button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto py-5">
-          <label className="flex flex-col gap-1.5 text-sm font-medium text-text-primary">
-            Note title
-            <input
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              disabled={!canEdit}
-              placeholder="Enter note title"
-              className="w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand disabled:cursor-not-allowed"
-            />
-          </label>
+          <DhritiTextField
+            label="Note title"
+            required
+            error={titleError || undefined}
+            value={title}
+            onChange={(value) => {
+              setTitle(value);
+              setTitleError("");
+            }}
+            disabled={!canEdit}
+            placeholder="Enter note title"
+          />
           {note?.isPublic && !canManage ? (
             <div className="mt-4 flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1.5 text-sm font-medium">
-                Request access
-                <select
-                  value={requestedRole}
-                  onChange={(event) => setRequestedRole(event.target.value === "OWNER" ? "OWNER" : "EDIT")}
-                  disabled={requesting || requestPending || checkingRequest}
-                  className="rounded-md border border-border bg-surface px-3 py-2 text-sm"
-                >
-                  {!canEditNote(note, user?.id, false) ? <option value="EDIT">Edit access</option> : null}
-                  <option value="OWNER">Co-owner access</option>
-                </select>
-              </label>
+              <DhritiSelectMenu
+                label="Request access"
+                value={requestedRole}
+                onChange={(value) => setRequestedRole(value === "OWNER" ? "OWNER" : "EDIT")}
+                open={accessOpen}
+                onOpenChange={setAccessOpen}
+                disabled={requesting || requestPending || checkingRequest}
+                options={[
+                  ...(!canEditNote(note, user?.id, false) ? [{ value: "EDIT", label: "Edit access" }] : []),
+                  { value: "OWNER", label: "Co-owner access" },
+                ]}
+              />
               <button
                 type="button"
                 disabled={requesting || requestPending || checkingRequest}
@@ -193,35 +199,34 @@ export function NotesEditorDialog({
               ) : null}
             </div>
           ) : null}
-          <textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            disabled={!canEdit}
-            aria-label="Note content"
-            placeholder="Start writing..."
-            className="mt-4 h-56 w-full resize-none rounded-md border border-border bg-surface p-4 text-sm text-text-primary outline-none placeholder:text-text-muted focus:border-brand disabled:cursor-not-allowed"
-          />
-          <label className="mt-4 flex items-center gap-3 text-sm text-text-primary">
-            <input
-              type="checkbox"
-              role="switch"
-              aria-label="Make note public"
+          <div className="mt-4">
+            <DhritiTextareaField
+              label="Note content"
+              showLabel={false}
+              value={content}
+              onChange={setContent}
+              disabled={!canEdit}
+              placeholder="Start writing..."
+              rows={10}
+              resize="none"
+            />
+          </div>
+          <div className="mt-4 flex items-center gap-3 text-sm text-text-primary">
+            <DhritiCheckboxField
+              id="note-public"
+              label="Make note public"
+              showLabel={false}
               checked={isPublic}
-              onChange={(event) => setIsPublic(event.target.checked)}
+              onChange={setIsPublic}
               disabled={!canManage || saving}
-              className="peer sr-only"
             />
-            <span
-              aria-hidden="true"
-              className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full bg-border-strong p-0.5 transition-colors after:size-5 after:rounded-full after:bg-surface after:shadow-sm after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-brand peer-disabled:cursor-not-allowed peer-disabled:opacity-50"
-            />
-            <span>
+            <label htmlFor="note-public" className={!canManage || saving ? "cursor-not-allowed" : "cursor-pointer"}>
               <span className="block font-medium">{isPublic ? "Public" : "Private"}</span>
               <span className="block text-xs text-text-secondary">
                 {isPublic ? "Anyone in this organization can view." : "Only owners and shared members can view."}
               </span>
-            </span>
-          </label>
+            </label>
+          </div>
         </div>
         <footer className="flex shrink-0 items-center justify-between border-t border-border pt-4">
           {error ? (

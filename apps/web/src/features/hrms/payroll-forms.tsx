@@ -2,6 +2,14 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  DhritiCheckboxField,
+  DhritiDateField,
+  DhritiNumberField,
+  DhritiSelectMenu,
+  DhritiTextField,
+  DhritiTextareaField,
+} from "@dhriti/ui";
+import {
   payrollService,
   type PayrollWorkspace,
   type SalaryComponent,
@@ -20,8 +28,6 @@ const titles: Record<FormKind, string> = {
   claim: "Add reimbursement",
   variable: "Add variable pay input",
 };
-const inputClass =
-  "w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:opacity-50";
 
 export function PayrollField({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -59,6 +65,7 @@ export function PayrollPeriodPicker({
   const [year, setYear] = useState(value ? value.slice(0, 4) : String(new Date().getUTCFullYear()));
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<{ key: string; periods: PayrollCalendarPeriod[]; error: string } | null>(null);
+  const [periodOpen, setPeriodOpen] = useState(false);
   const key = `${organizationId}:${profile.id}:${year}:${attempt}`;
   const validYear = /^[1-9]\d{3}$/.test(year) && Number(year) <= 9998;
   useEffect(() => {
@@ -86,52 +93,42 @@ export function PayrollPeriodPicker({
   const selected = periods.find((period) => period.key === value);
   return (
     <div className="space-y-3">
-      <PayrollField label="Calendar year">
-        <input
-          type="number"
-          min={1000}
-          max={9998}
-          value={year}
-          disabled={disabled}
-          aria-invalid={!validYear}
-          className={`${inputClass} ${!validYear ? "border-error" : ""}`}
-          onChange={(event) => {
-            setYear(event.target.value);
-            onClear?.();
-          }}
-        />
-      </PayrollField>
-      {!validYear && (
-        <p role="alert" className="text-xs text-error">
-          Enter a year between 1000 and 9998.
-        </p>
-      )}
-      <PayrollField label="Payroll period">
-        <select
-          value={value}
-          disabled={disabled || !current || Boolean(current.error) || !validYear}
-          aria-invalid={Boolean(error)}
-          className={`${inputClass} cursor-pointer ${error ? "border-error" : ""}`}
-          onChange={(event) => {
-            const period = periods.find((item) => item.key === event.target.value);
-            if (period) onChange(period);
-            else onClear?.();
-          }}
-        >
-          <option value="">Select a configured period</option>
-          {value && !selected && <option value={value}>{value} (saved selection)</option>}
-          {periods.map((period) => (
-            <option key={period.key} value={period.key}>
-              {period.start} – {period.end} · Pay {period.payDate}
-            </option>
-          ))}
-        </select>
-      </PayrollField>
-      {error && (
-        <p role="alert" className="text-xs text-error">
-          {error}
-        </p>
-      )}
+      <DhritiNumberField
+        label="Calendar year"
+        size="sm"
+        min={1000}
+        max={9998}
+        value={year}
+        disabled={disabled}
+        error={!validYear ? "Enter a year between 1000 and 9998." : undefined}
+        onChange={(value) => {
+          setYear(value);
+          onClear?.();
+        }}
+      />
+      <DhritiSelectMenu
+        label="Payroll period"
+        size="sm"
+        value={value || null}
+        open={periodOpen}
+        onOpenChange={setPeriodOpen}
+        options={[
+          ...(value && !selected ? [{ value, label: `${value} (saved selection)` }] : []),
+          ...periods.map((period) => ({
+            value: period.key,
+            label: `${period.start} – ${period.end} · Pay ${period.payDate}`,
+          })),
+        ]}
+        clearable
+        placeholder="Select a configured period"
+        disabled={disabled || !current || Boolean(current.error) || !validYear}
+        error={error}
+        onChange={(next) => {
+          const period = periods.find((item) => item.key === next);
+          if (period) onChange(period);
+          else onClear?.();
+        }}
+      />
       {!disabled && validYear && !current && (
         <p role="status" className="text-xs text-text-secondary">
           Loading payroll calendar...
@@ -264,24 +261,15 @@ export function PayrollRunDecisionForm({
           The draft and reason remain in history. Create a replacement run after correcting its inputs. Approved or
           processed payroll cannot be closed here.
         </p>
-        <div>
-          <PayrollField label="Reason">
-            <textarea
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              disabled={busy}
-              aria-invalid={Boolean(fieldError)}
-              aria-describedby={fieldError ? "payroll-decision-reason-error" : undefined}
-              className={`${inputClass} ${fieldError ? "border-error" : ""}`}
-              maxLength={1000}
-            />
-          </PayrollField>
-          {fieldError && (
-            <p id="payroll-decision-reason-error" role="alert" className="mt-1 text-xs text-error">
-              {fieldError}
-            </p>
-          )}
-        </div>
+        <DhritiTextareaField
+          label="Reason"
+          size="sm"
+          value={reason}
+          onChange={setReason}
+          disabled={busy}
+          error={fieldError}
+          maxLength={1000}
+        />
         {error && (
           <p role="alert" className="text-sm text-error">
             {error}
@@ -348,6 +336,9 @@ export function PayrollForm({
     { code: "ALLOWANCE", name: "Allowance", type: "EARNING", calculation: "REMAINDER", value: "0" },
   ]);
   const [verified, setVerified] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<Record<string, boolean>>({});
+  const [dateOpen, setDateOpen] = useState<Record<string, boolean>>({});
+  const [dateMonths, setDateMonths] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -366,39 +357,71 @@ export function PayrollForm({
   };
   const variableProfile = data.profiles.find((profile) => profile.id === values.profileId);
   const nonMonthlyInput = kind === "variable" && variableProfile && variableProfile.frequency !== "MONTHLY";
+  const setMenuIsOpen = (key: string, open: boolean) => setMenuOpen((current) => ({ ...current, [key]: open }));
+  const setDateIsOpen = (key: string, open: boolean) => setDateOpen((current) => ({ ...current, [key]: open }));
+  const setDateMonth = (key: string, month: string) => setDateMonths((current) => ({ ...current, [key]: month }));
+  const dateField = (key: string, label: string, monthOnly = false) => {
+    const storedValue = values[key];
+    const month = dateMonths[key] ?? (storedValue ? storedValue.slice(0, 7) : new Date().toISOString().slice(0, 7));
+    return (
+      <DhritiDateField
+        key={key}
+        id={key}
+        label={label}
+        size="sm"
+        clearable
+        mode={monthOnly ? "month" : "date"}
+        value={storedValue}
+        month={month}
+        onMonthChange={(next) => setDateMonth(key, next)}
+        open={Boolean(dateOpen[key])}
+        onOpenChange={(open) => {
+          setDateIsOpen(key, open);
+          if (open && storedValue) setDateMonth(key, storedValue.slice(0, 7));
+        }}
+        error={errors[key]}
+        onChange={(next) => update(key, next)}
+      />
+    );
+  };
   const field = (key: string, label: string, type = "text", options?: { id: string; name: string }[]) => (
     <div key={key}>
-      <PayrollField label={label}>
-        {options ? (
-          <select
-            aria-label={label}
-            value={values[key]}
-            onChange={(event) => update(key, event.target.value)}
-            aria-invalid={Boolean(errors[key])}
-            className={`${inputClass} cursor-pointer ${errors[key] ? "border-error" : ""}`}
-          >
-            <option value="">Select...</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.name}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            aria-label={label}
-            type={type}
-            value={values[key]}
-            onChange={(event) => update(key, event.target.value)}
-            aria-invalid={Boolean(errors[key])}
-            className={`${inputClass} ${errors[key] ? "border-error" : ""}`}
-          />
-        )}
-      </PayrollField>
-      {errors[key] && (
-        <p role="alert" className="mt-1 text-xs text-error">
-          {errors[key]}
-        </p>
+      {options ? (
+        <DhritiSelectMenu
+          id={key}
+          label={label}
+          size="sm"
+          value={values[key] || null}
+          onChange={(value) => update(key, value ?? "")}
+          open={Boolean(menuOpen[key])}
+          onOpenChange={(open) => setMenuIsOpen(key, open)}
+          options={options.map((option) => ({ value: option.id, label: option.name }))}
+          clearable
+          placeholder="Select..."
+          error={errors[key]}
+        />
+      ) : type === "date" ? (
+        dateField(key, label)
+      ) : type === "month" ? (
+        dateField(key, label, true)
+      ) : type === "number" ? (
+        <DhritiNumberField
+          id={key}
+          label={label}
+          size="sm"
+          value={values[key]}
+          onChange={(value) => update(key, value)}
+          error={errors[key]}
+        />
+      ) : (
+        <DhritiTextField
+          id={key}
+          label={label}
+          size="sm"
+          value={values[key]}
+          onChange={(value) => update(key, value)}
+          error={errors[key]}
+        />
       )}
     </div>
   );
@@ -668,14 +691,13 @@ export function PayrollForm({
                     CURRENCY_OPTIONS.map((currency) => ({ id: currency.code, name: currency.name })),
                   )}
                 </div>
-                <PayrollField label="Currency decimal places">
-                  <input
-                    aria-label="Currency decimal places"
-                    className={inputClass}
-                    value={values.minorUnits}
-                    readOnly
-                  />
-                </PayrollField>
+                <DhritiTextField
+                  label="Currency decimal places"
+                  size="sm"
+                  value={values.minorUnits}
+                  onChange={() => {}}
+                  readOnly
+                />
                 <p className="text-xs text-text-secondary">
                   Decimal places follow the selected currency automatically.
                 </p>
@@ -710,15 +732,11 @@ export function PayrollForm({
                   components over each month&apos;s calendar days, not monthly salary per pay period. Country statutory
                   rates are not preloaded.
                 </p>
-                <label className="flex items-start gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    className="mt-1 cursor-pointer accent-brand"
-                    checked={verified}
-                    onChange={(event) => setVerified(event.target.checked)}
-                  />
-                  I confirm the intended payroll rules have been independently verified for this jurisdiction.
-                </label>
+                <DhritiCheckboxField
+                  label="I confirm the intended payroll rules have been independently verified for this jurisdiction."
+                  checked={verified}
+                  onChange={setVerified}
+                />
               </>
             )}
             {kind === "structure" && (
@@ -747,103 +765,76 @@ export function PayrollForm({
                         </button>
                       </div>
                       <div className="grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <PayrollField label="Code">
-                            <input
-                              aria-label={`Component ${index + 1} code`}
-                              aria-invalid={Boolean(errors[`component.${index}.code`])}
-                              className={`${inputClass} ${errors[`component.${index}.code`] ? "border-error" : ""}`}
-                              value={component.code}
-                              onChange={(event) => edit({ code: event.target.value.toUpperCase() })}
-                            />
-                          </PayrollField>
-                          {errors[`component.${index}.code`] && (
-                            <p role="alert" className="mt-1 text-xs text-error">
-                              {errors[`component.${index}.code`]}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <PayrollField label="Name">
-                            <input
-                              aria-label={`Component ${index + 1} name`}
-                              aria-invalid={Boolean(errors[`component.${index}.name`])}
-                              className={`${inputClass} ${errors[`component.${index}.name`] ? "border-error" : ""}`}
-                              value={component.name}
-                              onChange={(event) => edit({ name: event.target.value })}
-                            />
-                          </PayrollField>
-                          {errors[`component.${index}.name`] && (
-                            <p role="alert" className="mt-1 text-xs text-error">
-                              {errors[`component.${index}.name`]}
-                            </p>
-                          )}
-                        </div>
-                        <PayrollField label="Type">
-                          <select
-                            className={`${inputClass} cursor-pointer`}
-                            value={component.type}
-                            onChange={(event) => edit({ type: event.target.value as SalaryComponent["type"] })}
-                          >
-                            <option value="EARNING">Earning</option>
-                            <option value="DEDUCTION">Deduction</option>
-                            <option value="EMPLOYER">Employer contribution</option>
-                          </select>
-                        </PayrollField>
-                        <PayrollField label="Calculation">
-                          <select
-                            className={`${inputClass} cursor-pointer`}
-                            value={component.calculation}
-                            onChange={(event) =>
-                              edit({ calculation: event.target.value as SalaryComponent["calculation"] })
-                            }
-                          >
-                            <option value="FIXED">Fixed amount</option>
-                            <option value="PERCENT_GROSS">% of gross</option>
-                            <option value="PERCENT_COMPONENT">% of earlier component</option>
-                            <option value="REMAINDER">Remaining gross</option>
-                          </select>
-                        </PayrollField>
+                        <DhritiTextField
+                          label={`Component ${index + 1} code`}
+                          size="sm"
+                          value={component.code}
+                          onChange={(value) => edit({ code: value.toUpperCase() })}
+                          error={errors[`component.${index}.code`]}
+                        />
+                        <DhritiTextField
+                          label={`Component ${index + 1} name`}
+                          size="sm"
+                          value={component.name}
+                          onChange={(value) => edit({ name: value })}
+                          error={errors[`component.${index}.name`]}
+                        />
+                        <DhritiSelectMenu
+                          label="Type"
+                          size="sm"
+                          value={component.type}
+                          onChange={(value) => {
+                            if (value) edit({ type: value as SalaryComponent["type"] });
+                          }}
+                          options={[
+                            { value: "EARNING", label: "Earning" },
+                            { value: "DEDUCTION", label: "Deduction" },
+                            { value: "EMPLOYER", label: "Employer contribution" },
+                          ]}
+                          open={Boolean(menuOpen[`component.${index}.type`])}
+                          onOpenChange={(open) => setMenuIsOpen(`component.${index}.type`, open)}
+                        />
+                        <DhritiSelectMenu
+                          label="Calculation"
+                          size="sm"
+                          value={component.calculation}
+                          onChange={(value) => {
+                            if (value) edit({ calculation: value as SalaryComponent["calculation"] });
+                          }}
+                          options={[
+                            { value: "FIXED", label: "Fixed amount" },
+                            { value: "PERCENT_GROSS", label: "% of gross" },
+                            { value: "PERCENT_COMPONENT", label: "% of earlier component" },
+                            { value: "REMAINDER", label: "Remaining gross" },
+                          ]}
+                          open={Boolean(menuOpen[`component.${index}.calculation`])}
+                          onOpenChange={(open) => setMenuIsOpen(`component.${index}.calculation`, open)}
+                        />
                         {component.calculation !== "REMAINDER" && (
-                          <div>
-                            <PayrollField label="Amount / percentage">
-                              <input
-                                aria-invalid={Boolean(errors[`component.${index}.value`])}
-                                className={`${inputClass} ${errors[`component.${index}.value`] ? "border-error" : ""}`}
-                                value={component.value}
-                                onChange={(event) => edit({ value: event.target.value })}
-                              />
-                            </PayrollField>
-                            {errors[`component.${index}.value`] && (
-                              <p role="alert" className="mt-1 text-xs text-error">
-                                {errors[`component.${index}.value`]}
-                              </p>
-                            )}
-                          </div>
+                          <DhritiTextField
+                            label="Amount / percentage"
+                            size="sm"
+                            value={component.value}
+                            onChange={(value) => edit({ value })}
+                            error={errors[`component.${index}.value`]}
+                          />
                         )}
                         {component.calculation === "PERCENT_COMPONENT" && (
-                          <div>
-                            <PayrollField label="Basis component">
-                              <select
-                                aria-invalid={Boolean(errors[`component.${index}.basis`])}
-                                className={`${inputClass} cursor-pointer ${errors[`component.${index}.basis`] ? "border-error" : ""}`}
-                                value={component.basis ?? ""}
-                                onChange={(event) => edit({ basis: event.target.value })}
-                              >
-                                <option value="">Select basis</option>
-                                {components.slice(0, index).map((basis) => (
-                                  <option key={basis.code} value={basis.code}>
-                                    {basis.code}
-                                  </option>
-                                ))}
-                              </select>
-                            </PayrollField>
-                            {errors[`component.${index}.basis`] && (
-                              <p role="alert" className="mt-1 text-xs text-error">
-                                {errors[`component.${index}.basis`]}
-                              </p>
-                            )}
-                          </div>
+                          <DhritiSelectMenu
+                            label="Basis component"
+                            size="sm"
+                            value={component.basis ?? null}
+                            onChange={(value) => edit({ basis: value ?? "" })}
+                            options={components.slice(0, index).map((basis) => ({
+                              value: basis.code,
+                              label: basis.code,
+                            }))}
+                            clearable
+                            open={Boolean(menuOpen[`component.${index}.basis`])}
+                            onOpenChange={(open) => setMenuIsOpen(`component.${index}.basis`, open)}
+                            placeholder="Select basis"
+                            error={errors[`component.${index}.basis`]}
+                          />
                         )}
                       </div>
                     </div>

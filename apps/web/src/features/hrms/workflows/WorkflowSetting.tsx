@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { Archive, ClipboardList, Plus, Rocket, Trash2, X } from "lucide-react";
+import { DhritiNumberField, DhritiSelectMenu, DhritiTextareaField, DhritiTextField } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -262,6 +263,7 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(Boolean(workflowId));
   const [saving, setSaving] = useState(false);
+  const [openField, setOpenField] = useState<string | null>(null);
 
   useEffect(() => {
     if (!organizationId) return;
@@ -313,6 +315,7 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
       ...current,
       stages: current.stages.map((stage, stageIndex) => (stageIndex === index ? { ...stage, [field]: value } : stage)),
     }));
+    setErrors((current) => ({ ...current, [`${field}-${index}`]: "" }));
   };
 
   const addStage = () => {
@@ -371,6 +374,11 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
     if (!form.name.trim()) next.name = "Workflow name is required.";
     if (form.stages.length === 0) next.stages = "Add at least one stage.";
     if (form.stages.some((stage) => !stage.name.trim())) next.stages = "Every stage needs a name.";
+    // These constraints were previously enforced by native number inputs.
+    form.stages.forEach((stage, index) => {
+      if (stage.requiredApprovals !== undefined && (!Number.isInteger(stage.requiredApprovals) || stage.requiredApprovals < 1)) next[`requiredApprovals-${index}`] = "Enter a whole number of 1 or more.";
+      if (stage.slaHours != null && (!Number.isInteger(stage.slaHours) || stage.slaHours < 1)) next[`slaHours-${index}`] = "Enter a whole number of 1 or more.";
+    });
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -503,33 +511,12 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
           Loading workflow...
         </p>
       ) : (
-        <form onSubmit={save} className="space-y-5">
+        <form noValidate onSubmit={save} className="space-y-5">
           <section className="rounded-lg border border-border bg-surface p-5 shadow-sm">
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                Workflow name <span className="text-error">*</span>
-              </span>
-              <input
-                value={form.name}
-                disabled={!canEdit}
-                onChange={(event) => {
-                  setForm((current) => ({ ...current, name: event.target.value }));
-                  setErrors((current) => ({ ...current, name: "" }));
-                }}
-                className={`w-full rounded-md border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70 ${errors.name ? "border-error" : "border-border"}`}
-              />
-              {errors.name && <span className="mt-1 block text-xs text-error">{errors.name}</span>}
-            </label>
-            <label className="mt-5 block">
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">Description</span>
-              <textarea
-                rows={3}
-                value={form.description}
-                disabled={!canEdit}
-                onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-                className="w-full resize-y rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70"
-              />
-            </label>
+            <DhritiTextField label="Workflow name" required value={form.name} disabled={!canEdit} onChange={(value) => { setForm((current) => ({ ...current, name: value })); setErrors((current) => ({ ...current, name: "" })); }} error={errors.name} />
+            <div className="mt-5">
+              <DhritiTextareaField label="Description" rows={3} value={form.description ?? ""} disabled={!canEdit} onChange={(value) => setForm((current) => ({ ...current, description: value }))} />
+            </div>
           </section>
 
           <section className="rounded-lg border border-border bg-surface shadow-sm">
@@ -555,13 +542,9 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-muted text-xs font-bold text-brand">
                       {index + 1}
                     </span>
-                    <input
-                      value={stage.name}
-                      disabled={!canEdit}
-                      onChange={(event) => updateStage(index, event.target.value)}
-                      className={`min-w-0 flex-1 rounded-md border bg-surface px-3 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70 ${errors.stages ? "border-error" : "border-border"}`}
-                      aria-label={`Stage ${index + 1} name`}
-                    />
+                    <div className="min-w-0 flex-1">
+                      <DhritiTextField label={`Stage ${index + 1} name`} showLabel={false} required value={stage.name} disabled={!canEdit} onChange={(value) => updateStage(index, value)} error={!stage.name.trim() ? errors.stages : undefined} />
+                    </div>
                     {canEdit && form.stages.length > 1 && (
                       <button
                         type="button"
@@ -574,72 +557,15 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
                     )}
                   </div>
                   <div className="ml-10 mt-3 grid gap-3 md:grid-cols-4">
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-text-secondary">Stage type</span>
-                      <select
-                        value={stage.type}
-                        disabled={!canEdit}
-                        onChange={(event) =>
-                          updateStageConfig(index, "type", event.target.value as HrmsWorkflowStage["type"])
-                        }
-                        className="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        <option value="APPROVAL">Approval</option>
-                        <option value="TASK">Task</option>
-                        <option value="AUTOMATION">Automation</option>
-                        <option value="CONDITION">Condition</option>
-                        <option value="PARALLEL_GATE">Parallel gate</option>
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-text-secondary">Assignee rule</span>
-                      <select
-                        value={stage.assigneeRule?.kind}
-                        disabled={!canEdit}
-                        onChange={(event) =>
-                          updateStageConfig(index, "assigneeRule", {
-                            kind: event.target.value as NonNullable<HrmsWorkflowStage["assigneeRule"]>["kind"],
-                          })
-                        }
-                        className="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        <option value="INITIATOR">Initiator</option>
-                      </select>
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-text-secondary">Required approvals</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={stage.requiredApprovals ?? 1}
-                        disabled={!canEdit}
-                        onChange={(event) => updateStageConfig(index, "requiredApprovals", Number(event.target.value))}
-                        className="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70"
-                      />
-                    </label>
-                    <label className="block">
-                      <span className="mb-1 block text-xs font-semibold text-text-secondary">SLA (hours)</span>
-                      <input
-                        type="number"
-                        min="1"
-                        value={stage.slaHours ?? ""}
-                        disabled={!canEdit}
-                        onChange={(event) =>
-                          updateStageConfig(
-                            index,
-                            "slaHours",
-                            event.target.value ? Number(event.target.value) : undefined,
-                          )
-                        }
-                        className="w-full rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70"
-                        placeholder="Optional"
-                      />
-                    </label>
+                    <DhritiSelectMenu label="Stage type" value={stage.type ?? null} disabled={!canEdit} onChange={(value) => { if (value) updateStageConfig(index, "type", value as HrmsWorkflowStage["type"]); }} options={[{ value: "APPROVAL", label: "Approval" }, { value: "TASK", label: "Task" }, { value: "AUTOMATION", label: "Automation" }, { value: "CONDITION", label: "Condition" }, { value: "PARALLEL_GATE", label: "Parallel gate" }]} open={openField === `type-${stage.id}`} onOpenChange={(open) => setOpenField(open ? `type-${stage.id}` : null)} />
+                    <DhritiSelectMenu label="Assignee rule" value={stage.assigneeRule?.kind ?? null} disabled={!canEdit} onChange={(value) => { if (value) updateStageConfig(index, "assigneeRule", { kind: value as NonNullable<HrmsWorkflowStage["assigneeRule"]>["kind"] }); }} options={[{ value: "INITIATOR", label: "Initiator" }]} open={openField === `assignee-${stage.id}`} onOpenChange={(open) => setOpenField(open ? `assignee-${stage.id}` : null)} />
+                    <DhritiNumberField label="Required approvals" error={errors[`requiredApprovals-${index}`]} min={1} value={String(stage.requiredApprovals ?? 1)} disabled={!canEdit} onChange={(value) => updateStageConfig(index, "requiredApprovals", Number(value))} />
+                    <DhritiNumberField label="SLA (hours)" error={errors[`slaHours-${index}`]} min={1} value={stage.slaHours == null ? "" : String(stage.slaHours)} disabled={!canEdit} onChange={(value) => updateStageConfig(index, "slaHours", value ? Number(value) : undefined)} placeholder="Optional" />
                   </div>
                 </li>
               ))}
             </ol>
-            {errors.stages && <p className="px-5 pb-4 text-xs text-error">{errors.stages}</p>}
+            {errors.stages && form.stages.length === 0 && <p className="px-5 pb-4 text-xs text-error">{errors.stages}</p>}
           </section>
 
           <section className="rounded-lg border border-border bg-surface shadow-sm">
@@ -664,22 +590,7 @@ export function WorkflowDefinitionEditor({ workflowId }: { workflowId?: string }
                         <span className="px-2 text-text-muted">→</span>
                         <span className="font-semibold text-text-primary">{to}</span>
                       </p>
-                      <label className="flex items-center gap-2 text-xs font-semibold text-text-secondary">
-                        Action
-                        <select
-                          value={transition.action ?? "COMPLETE"}
-                          disabled={!canEdit}
-                          onChange={(event) =>
-                            updateTransition(index, event.target.value as HrmsWorkflowTransition["action"])
-                          }
-                          className="rounded-md border border-border bg-surface px-2.5 py-2 text-sm text-text-primary outline-none focus:border-brand disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                          <option value="APPROVE">Approve</option>
-                          <option value="REJECT">Reject</option>
-                          <option value="COMPLETE">Complete</option>
-                          <option value="SKIP">Skip</option>
-                        </select>
-                      </label>
+                      <DhritiSelectMenu label="Action" value={transition.action ?? "COMPLETE"} disabled={!canEdit} onChange={(value) => { if (value) updateTransition(index, value as HrmsWorkflowTransition["action"]); }} options={[{ value: "APPROVE", label: "Approve" }, { value: "REJECT", label: "Reject" }, { value: "COMPLETE", label: "Complete" }, { value: "SKIP", label: "Skip" }]} open={openField === `transition-${index}`} onOpenChange={(open) => setOpenField(open ? `transition-${index}` : null)} />
                     </li>
                   );
                 })}

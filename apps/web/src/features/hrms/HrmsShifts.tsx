@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Clock3, Pencil, Trash2 } from "lucide-react";
+import { DhritiCheckboxField, DhritiSelectMenu, DhritiTextField, DhritiTimeField } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import { hrmsService, type HrmsShift } from "@/services/hrms.service";
@@ -41,6 +42,9 @@ function ShiftDrawer({
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [zoneOpen, setZoneOpen] = useState(false);
+  const [zoneSearch, setZoneSearch] = useState("");
+  const [openTime, setOpenTime] = useState<"start" | "end" | null>(null);
 
   const update = <K extends keyof FormValues>(field: K, value: FormValues[K]) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -73,10 +77,6 @@ function ShiftDrawer({
     }
   };
 
-  const fieldClass = (field: keyof FormValues) =>
-    `w-full rounded-md border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand ${
-      errors[field] ? "border-error" : "border-border"
-    }`;
 
   return (
     <div className="fixed inset-0 z-50 bg-text-primary/35" onClick={onClose}>
@@ -91,7 +91,7 @@ function ShiftDrawer({
           <h2 className="font-display text-lg font-bold text-text-primary">{shift ? "Edit" : "Add"} shift</h2>
           <p className="mt-1 text-xs text-text-muted">An end time earlier than the start time spans midnight.</p>
         </div>
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
           <button type="submit" tabIndex={-1} aria-hidden="true" className="sr-only" />
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             {apiError && (
@@ -99,70 +99,14 @@ function ShiftDrawer({
                 {apiError}
               </p>
             )}
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                Shift name <span className="text-error">*</span>
-              </span>
-              <input
-                value={values.name}
-                onChange={(event) => update("name", event.target.value)}
-                className={fieldClass("name")}
-                autoFocus
-              />
-              {errors.name && <span className="mt-1 block text-xs text-error">{errors.name}</span>}
-            </label>
+            <DhritiTextField label="Shift name" required value={values.name} onChange={(value) => update("name", value)} error={errors.name} />
             <div className="grid grid-cols-2 gap-4">
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                  Starts <span className="text-error">*</span>
-                </span>
-                <input
-                  type="time"
-                  value={values.startTime}
-                  onChange={(event) => update("startTime", event.target.value)}
-                  className={fieldClass("startTime")}
-                />
-                {errors.startTime && <span className="mt-1 block text-xs text-error">{errors.startTime}</span>}
-              </label>
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                  Ends <span className="text-error">*</span>
-                </span>
-                <input
-                  type="time"
-                  value={values.endTime}
-                  onChange={(event) => update("endTime", event.target.value)}
-                  className={fieldClass("endTime")}
-                />
-                {errors.endTime && <span className="mt-1 block text-xs text-error">{errors.endTime}</span>}
-              </label>
+              <DhritiTimeField label="Starts" required value={values.startTime} onChange={(value) => update("startTime", value)} error={errors.startTime} minuteStep={1} open={openTime === "start"} onOpenChange={(open) => setOpenTime(open ? "start" : null)} />
+              <DhritiTimeField label="Ends" required value={values.endTime} onChange={(value) => update("endTime", value)} error={errors.endTime} minuteStep={1} open={openTime === "end"} onOpenChange={(open) => setOpenTime(open ? "end" : null)} />
             </div>
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-                Time zone <span className="text-error">*</span>
-              </span>
-              <input
-                list="shift-time-zones"
-                value={values.timeZone}
-                onChange={(event) => update("timeZone", event.target.value)}
-                className={fieldClass("timeZone")}
-              />
-              <datalist id="shift-time-zones">
-                {timeZones().map((zone) => (
-                  <option key={zone} value={zone} />
-                ))}
-              </datalist>
-              {errors.timeZone && <span className="mt-1 block text-xs text-error">{errors.timeZone}</span>}
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm font-semibold text-text-primary">
-              <input
-                type="checkbox"
-                checked={values.isActive}
-                onChange={(event) => update("isActive", event.target.checked)}
-                className="cursor-pointer"
-              />
-              Active
-            </label>
+            <DhritiTextField label="Time zone" required value={values.timeZone} onChange={(value) => update("timeZone", value)} error={errors.timeZone} />
+            <DhritiSelectMenu label="Time zone suggestions" value={values.timeZone || null} onChange={(value) => { if (value) update("timeZone", value); }} options={timeZones().map((zone) => ({ value: zone, label: zone }))} open={zoneOpen} onOpenChange={setZoneOpen} search={zoneSearch} onSearchChange={setZoneSearch} />
+            <DhritiCheckboxField label="Active" checked={values.isActive} onChange={(checked) => update("isActive", checked)} />
           </div>
           <div className="flex justify-end gap-3 border-t border-border px-6 py-4">
             <Button variant="secondary" onClick={onClose} disabled={saving}>

@@ -6,7 +6,6 @@ import {
   ClearFieldButton,
   FieldFrame,
   fieldInputClass,
-  fieldMenuClass,
   fieldSizes,
   fieldSurface,
   moveMenuFocus,
@@ -14,6 +13,7 @@ import {
   useFieldMenu,
   type FieldPresentationProps,
 } from "./field-primitives";
+import { FieldPopover } from "./field-popover";
 
 export interface FieldOption {
   value: string;
@@ -49,7 +49,8 @@ export function DhritiSelectMenu({
   const identity = useFieldIdentity(props);
   const size = fieldSizes[props.size ?? "md"];
   const blocked = props.disabled || props.readOnly;
-  const root = useFieldMenu(open, onOpenChange, props.disabled, props.readOnly);
+  const panel = useRef<HTMLDivElement>(null);
+  const root = useFieldMenu(open, onOpenChange, props.disabled, props.readOnly, panel);
   const trigger = useRef<HTMLButtonElement>(null);
   const selected = options.find((option) => option.value === value);
   const filtered =
@@ -59,7 +60,7 @@ export function DhritiSelectMenu({
           `${option.label} ${option.description ?? ""}`.toLowerCase().includes(search.toLowerCase()),
         );
   return (
-    <FieldFrame {...props} id={identity.id}>
+    <FieldFrame {...props} id={identity.id} labelActivatesControl={false}>
       <div
         ref={root}
         className="relative"
@@ -71,11 +72,17 @@ export function DhritiSelectMenu({
           } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
             event.preventDefault();
             if (!open && !blocked) onOpenChange(true);
-            else moveMenuFocus(root, event.key);
+            else moveMenuFocus(panel, event.key);
           }
         }}
       >
-        <div className={`${fieldSurface(props, open && !blocked)} flex items-center gap-2 ${size.padding}`}>
+        <div
+          className={`${fieldSurface(props, open && !blocked)} flex cursor-pointer items-center gap-2 ${size.padding}`}
+          onClick={(event) => {
+            if (!blocked && event.target instanceof Element && !event.target.closest("button"))
+              trigger.current?.click();
+          }}
+        >
           <button
             ref={trigger}
             {...identity.input}
@@ -105,7 +112,7 @@ export function DhritiSelectMenu({
           )}
         </div>
         {open && !blocked && (
-          <div className={fieldMenuClass}>
+          <FieldPopover anchor={root} panel={panel} matchWidth>
             {onSearchChange && (
               <div className="border-b border-border p-2">
                 <input
@@ -147,7 +154,7 @@ export function DhritiSelectMenu({
                 </button>
               ))}
             </div>
-          </div>
+          </FieldPopover>
         )}
       </div>
     </FieldFrame>

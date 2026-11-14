@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { DhritiCheckboxField, DhritiNumberField, DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 
 import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -46,10 +47,6 @@ const emptyForm: Form = {
 };
 
 const message = (error: unknown) => (error instanceof Error ? error.message : "Unable to complete this request.");
-const inputClass = (invalid: boolean) =>
-  `mt-1 w-full rounded-md border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand ${
-    invalid ? "border-error" : "border-border"
-  }`;
 
 function LeaveTypeDialog({
   initial,
@@ -64,6 +61,7 @@ function LeaveTypeDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const update = <K extends keyof Form>(key: K, value: Form[K]) => {
     setForm((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: "" }));
@@ -74,8 +72,11 @@ function LeaveTypeDialog({
     const next: Record<string, string> = {};
     if (!form.name.trim()) next.name = "Name is required.";
     if (!/^[A-Z0-9_]{2,20}$/.test(form.code)) next.code = "Use 2–20 capital letters, digits or underscores.";
+    // With noValidate, retain the native number controls' half-day step constraint.
     if (!(Number(form.annualDays) >= 0)) next.annualDays = "Enter 0 or more.";
+    else if (!form.isCompOff && !Number.isInteger(Number(form.annualDays) * 2)) next.annualDays = "Use half-day increments.";
     if (!(Number(form.carryForwardDays) >= 0)) next.carryForwardDays = "Enter 0 or more.";
+    else if (!Number.isInteger(Number(form.carryForwardDays) * 2)) next.carryForwardDays = "Use half-day increments.";
     setErrors(next);
     if (Object.keys(next).length) return;
     setSaving(true);
@@ -89,10 +90,10 @@ function LeaveTypeDialog({
     }
   };
 
-  const error = (key: string) => errors[key] && <p className="mt-1 text-xs text-error">{errors[key]}</p>;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/30 p-4">
       <form
+        noValidate
         onSubmit={submit}
         role="dialog"
         aria-modal="true"
@@ -106,70 +107,20 @@ function LeaveTypeDialog({
           </button>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block text-sm font-medium text-text-secondary">
-            Name
-            <input value={form.name} onChange={(e) => update("name", e.target.value)} className={inputClass(!!errors.name)} />
-            {error("name")}
-          </label>
-          <label className="block text-sm font-medium text-text-secondary">
-            Code
-            <input
-              value={form.code}
-              onChange={(e) => update("code", e.target.value.toUpperCase())}
-              className={inputClass(!!errors.code)}
-            />
-            {error("code")}
-          </label>
-          <label className="block text-sm font-medium text-text-secondary">
-            Category
-            <select value={form.category} onChange={(e) => update("category", e.target.value)} className={`${inputClass(false)} cursor-pointer`}>
-              {categories.map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-sm font-medium text-text-secondary">
-            Days per year
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              disabled={form.isCompOff}
-              value={form.annualDays}
-              onChange={(e) => update("annualDays", e.target.value)}
-              className={inputClass(!!errors.annualDays)}
-            />
-            {error("annualDays")}
-            <span className="mt-1 block text-xs text-text-muted">0 means unlimited.</span>
-          </label>
-          <label className="block text-sm font-medium text-text-secondary">
-            Carry-forward days
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              value={form.carryForwardDays}
-              onChange={(e) => update("carryForwardDays", e.target.value)}
-              className={inputClass(!!errors.carryForwardDays)}
-            />
-            {error("carryForwardDays")}
-          </label>
+          <DhritiTextField label="Name" required value={form.name} onChange={(value) => update("name", value)} error={errors.name} />
+          <DhritiTextField label="Code" required value={form.code} onChange={(value) => update("code", value.toUpperCase())} error={errors.code} />
+          <DhritiSelectMenu label="Category" value={form.category} onChange={(value) => update("category", value ?? "")} options={categories.map(([value, label]) => ({ value, label }))} open={categoryOpen} onOpenChange={setCategoryOpen} />
+          <DhritiNumberField label="Days per year" min={0} step={0.5} disabled={form.isCompOff} value={form.annualDays} onChange={(value) => update("annualDays", value)} error={errors.annualDays} helperText="0 means unlimited." />
+          <DhritiNumberField label="Carry-forward days" min={0} step={0.5} value={form.carryForwardDays} onChange={(value) => update("carryForwardDays", value)} error={errors.carryForwardDays} />
         </div>
-        <div className="grid gap-2 text-sm text-text-secondary sm:grid-cols-2">
-          {(
-            [
-              ["isPaid", "Paid leave"],
-              ["allowHalfDay", "Allow half days"],
-              ["isCompOff", "Balance comes from approved comp-off"],
-              ["isActive", "Active"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="flex cursor-pointer items-center gap-2">
-              <input type="checkbox" checked={form[key]} onChange={(e) => update(key, e.target.checked)} className="cursor-pointer" />
-              {label}
-            </label>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {([
+            ["isPaid", "Paid leave"],
+            ["allowHalfDay", "Allow half days"],
+            ["isCompOff", "Balance comes from approved comp-off"],
+            ["isActive", "Active"],
+          ] as const).map(([key, label]) => (
+            <DhritiCheckboxField key={key} label={label} checked={form[key]} onChange={(checked) => update(key, checked)} />
           ))}
         </div>
         {apiError && <p role="alert" className="text-sm text-error">{apiError}</p>}

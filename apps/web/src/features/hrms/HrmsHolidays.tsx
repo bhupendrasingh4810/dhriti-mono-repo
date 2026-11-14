@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Download, History, Mail, Trash2, Upload, X } from "lucide-react";
+import { DhritiFileInput, DhritiRadioField, DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -72,10 +73,10 @@ function HolidayDialog({
   const [nameError, setNameError] = useState("");
   const [apiError, setApiError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
 
-  const pickImage = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const pickImage = async (files: File[]) => {
+    const file = files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return setApiError("Please choose an image file.");
     try {
@@ -136,31 +137,10 @@ function HolidayDialog({
               </button>
             </div>
           )}
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-text-primary">
-              Holiday name <span className="text-error">*</span>
-            </span>
-            <input
-              autoFocus
-              value={name}
-              onChange={(event) => {
-                setName(event.target.value);
-                setNameError("");
-              }}
-              onKeyDown={(event) => event.key === "Enter" && submit()}
-              className={`w-full rounded-md border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand ${nameError ? "border-error" : "border-border"}`}
-            />
-            {nameError && <span className="mt-1 block text-xs text-error">{nameError}</span>}
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block text-sm font-semibold text-text-primary">Location</span>
-            <select value={workLocationId} onChange={(event) => setWorkLocationId(event.target.value)} className="w-full cursor-pointer rounded-md border border-border bg-surface px-3 py-2.5 text-sm text-text-primary outline-none focus:border-brand">
-              <option value="">All locations</option>
-              {locations.map((location) => (
-                <option key={location.id} value={location.id}>{location.name}</option>
-              ))}
-            </select>
-          </label>
+          <div onKeyDown={(event) => { if (event.key === "Enter" && event.target instanceof HTMLInputElement) submit(); }}>
+            <DhritiTextField label="Holiday name" required value={name} onChange={(value) => { setName(value); setNameError(""); }} error={nameError} />
+          </div>
+          <DhritiSelectMenu label="Location" value={workLocationId} onChange={(value) => setWorkLocationId(value ?? "")} options={[{ value: "", label: "All locations" }, ...locations.map((location) => ({ value: location.id, label: location.name }))]} open={locationOpen} onOpenChange={setLocationOpen} />
           <fieldset>
             <legend className="mb-1.5 text-sm font-semibold text-text-primary">Duration</legend>
             <div className="flex gap-4 text-sm text-text-primary">
@@ -168,10 +148,7 @@ function HolidayDialog({
                 ["Full day", false],
                 ["Half day", true],
               ].map(([label, value]) => (
-                <label key={String(label)} className="flex cursor-pointer items-center gap-2">
-                  <input type="radio" name="holiday-duration" checked={isHalfDay === value} onChange={() => setIsHalfDay(Boolean(value))} className="cursor-pointer" />
-                  {String(label)}
-                </label>
+                <DhritiRadioField key={String(label)} label={String(label)} name="holiday-duration" checked={isHalfDay === value} onChange={() => setIsHalfDay(Boolean(value))} />
               ))}
             </div>
           </fieldset>
@@ -184,10 +161,7 @@ function HolidayDialog({
                 </button>
               </div>
             ) : (
-              <label className="flex h-20 cursor-pointer items-center justify-center rounded-md border border-dashed border-border text-sm text-text-secondary hover:border-brand">
-                Click to upload an image
-                <input type="file" accept="image/*" onChange={(event) => void pickImage(event)} className="sr-only" />
-              </label>
+              <DhritiFileInput label="Background image" showLabel={false} value={[]} onChange={(files) => void pickImage(files)} accept="image/*" actionLabel="Click to upload an image" />
             )}
           </div>
         </div>

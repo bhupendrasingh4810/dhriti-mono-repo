@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { DhritiSelectMenu } from "@dhriti/ui";
 import { payrollService } from "@/services/payroll.service";
 import { Button } from "./components/ui-primitives";
-import { PayrollField, PayrollPeriodPicker, frequencyLabel } from "./payroll-forms";
+import { PayrollPeriodPicker, frequencyLabel } from "./payroll-forms";
 import { PayrollTable } from "./payroll-tables";
-import { date, inputClass, type PayrollSectionProps } from "./payroll-shared";
+import { date, type PayrollSectionProps } from "./payroll-shared";
 
 export function PayrollConfiguration({
   data,
@@ -17,6 +18,7 @@ export function PayrollConfiguration({
 }: Pick<PayrollSectionProps, "data" | "organizationId" | "can" | "busy" | "action" | "setForm">) {
   const [calendarProfileId, setCalendarProfileId] = useState("");
   const [calendarPeriod, setCalendarPeriod] = useState("");
+  const [calendarProfileOpen, setCalendarProfileOpen] = useState(false);
   return (
     <>
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
@@ -79,23 +81,23 @@ export function PayrollConfiguration({
       {data.profiles.length > 0 && (
         <section className="mt-4 space-y-3 rounded-lg border border-border p-4" aria-label="Payroll calendar">
           <h3 className="text-sm font-semibold">Payroll calendar</h3>
-          <PayrollField label="Calendar pay group">
-            <select
-              className={inputClass}
-              value={calendarProfileId}
-              onChange={(event) => {
-                setCalendarProfileId(event.target.value);
+          <DhritiSelectMenu
+            label="Calendar pay group"
+            size="sm"
+            value={calendarProfileId || null}
+            open={calendarProfileOpen}
+            onOpenChange={setCalendarProfileOpen}
+            options={data.profiles.map((profile) => ({
+              value: profile.id,
+              label: `${profile.name} · ${frequencyLabel(profile.frequency)}`,
+            }))}
+            clearable
+            placeholder="Select a pay group to view its calendar"
+            onChange={(value) => {
+                setCalendarProfileId(value ?? "");
                 setCalendarPeriod("");
               }}
-            >
-              <option value="">Select a pay group to view its calendar</option>
-              {data.profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name} · {frequencyLabel(profile.frequency)}
-                </option>
-              ))}
-            </select>
-          </PayrollField>
+          />
           {data.profiles
             .filter((profile) => profile.id === calendarProfileId)
             .map((profile) => (

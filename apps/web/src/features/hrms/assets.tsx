@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -37,6 +38,7 @@ function AssetDrawer({ asset, employees, onClose, onSave }: {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({});
   const [saving, setSaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState<Record<string, boolean>>({});
   const change = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((current) => ({ ...current, [key]: value }));
     if (key === "name" || key === "serialNumber" || key === "customCategory" || key === "assignedEmployeeId") {
@@ -57,15 +59,76 @@ function AssetDrawer({ asset, employees, onClose, onSave }: {
   };
   return <div className="fixed inset-0 z-50 bg-text-primary/35" onClick={onClose}>
     <aside role="dialog" aria-modal="true" aria-label={asset ? "Edit asset" : "Add asset"} onClick={(event) => event.stopPropagation()} className="ml-auto flex h-full w-full max-w-xl flex-col bg-surface shadow-2xl">
-      <form className="flex h-full flex-col" onSubmit={submit}>
+      <form className="flex h-full flex-col" noValidate onSubmit={submit}>
         <div className="flex items-center justify-between border-b border-border px-6 py-4"><div><h2 className="font-display text-lg font-bold text-text-primary">{asset ? "Edit asset" : "Add asset"}</h2><p className="mt-1 text-xs text-text-muted">Asset assignment is enforced by the organization policy.</p></div><button type="button" onClick={onClose} className="cursor-pointer rounded-md p-2 text-text-muted hover:bg-surface-raised"><Icon name="close" /></button></div>
         <div className="flex-1 space-y-4 overflow-y-auto p-6">
           {error && <p role="alert" className="rounded-md border border-error bg-surface-raised p-3 text-sm text-error">{error}</p>}
-          <label className="block text-sm font-semibold text-text-primary">Asset name <span className="text-error">*</span><input value={values.name} onChange={(event) => change("name", event.target.value)} aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? "asset-name-error" : undefined} className={`mt-1.5 w-full rounded-md border bg-surface px-3 py-2.5 font-normal outline-none focus:border-brand ${fieldErrors.name ? "border-error" : "border-border"}`} />{fieldErrors.name && <span id="asset-name-error" role="alert" className="mt-1 text-xs font-normal text-error">{fieldErrors.name}</span>}</label>
-          <label className="block text-sm font-semibold text-text-primary">Serial number <span className="text-error">*</span><input value={values.serialNumber} onChange={(event) => change("serialNumber", event.target.value)} aria-invalid={Boolean(fieldErrors.serialNumber)} aria-describedby={fieldErrors.serialNumber ? "asset-serial-number-error" : undefined} className={`mt-1.5 w-full rounded-md border bg-surface px-3 py-2.5 font-normal outline-none focus:border-brand ${fieldErrors.serialNumber ? "border-error" : "border-border"}`} />{fieldErrors.serialNumber && <span id="asset-serial-number-error" role="alert" className="mt-1 text-xs font-normal text-error">{fieldErrors.serialNumber}</span>}</label>
-          <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold text-text-primary">Category<select value={values.type} onChange={(event) => change("type", event.target.value as HrmsAssetType)} className="mt-1.5 w-full cursor-pointer rounded-md border border-border bg-surface px-3 py-2.5 font-normal"><>{categories.map(([value, name]) => <option key={value} value={value}>{name}</option>)}</></select></label><label className="text-sm font-semibold text-text-primary">Condition<select value={values.condition} onChange={(event) => change("condition", event.target.value as HrmsAssetCondition)} className="mt-1.5 w-full cursor-pointer rounded-md border border-border bg-surface px-3 py-2.5 font-normal">{conditions.map((value) => <option key={value} value={value}>{label(value)}</option>)}</select></label></div>
-          {values.type === "OTHER" && <label className="block text-sm font-semibold text-text-primary">Custom category <span className="text-error">*</span><input value={values.customCategory} onChange={(event) => change("customCategory", event.target.value)} aria-invalid={Boolean(fieldErrors.customCategory)} aria-describedby={fieldErrors.customCategory ? "asset-custom-category-error" : undefined} className={`mt-1.5 w-full rounded-md border bg-surface px-3 py-2.5 font-normal outline-none focus:border-brand ${fieldErrors.customCategory ? "border-error" : "border-border"}`} />{fieldErrors.customCategory && <span id="asset-custom-category-error" role="alert" className="mt-1 text-xs font-normal text-error">{fieldErrors.customCategory}</span>}</label>}
-          <div className="grid gap-4 sm:grid-cols-2"><label className="text-sm font-semibold text-text-primary">Status<select value={values.status} onChange={(event) => change("status", event.target.value as HrmsAssetStatus)} className="mt-1.5 w-full cursor-pointer rounded-md border border-border bg-surface px-3 py-2.5 font-normal">{statuses.map((value) => <option key={value} value={value}>{label(value)}</option>)}</select></label><label className="text-sm font-semibold text-text-primary">Assigned to<select value={values.assignedEmployeeId} onChange={(event) => change("assignedEmployeeId", event.target.value)} aria-invalid={Boolean(fieldErrors.assignedEmployeeId)} aria-describedby={fieldErrors.assignedEmployeeId ? "asset-assignee-error" : undefined} className={`mt-1.5 w-full cursor-pointer rounded-md border bg-surface px-3 py-2.5 font-normal ${fieldErrors.assignedEmployeeId ? "border-error" : "border-border"}`}><option value="">Unassigned</option>{employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.user.name} · {employee.employeeNumber}</option>)}</select>{fieldErrors.assignedEmployeeId && <span id="asset-assignee-error" role="alert" className="mt-1 block text-xs font-normal text-error">{fieldErrors.assignedEmployeeId}</span>}</label></div>
+          <DhritiTextField label="Asset name" id="asset-name" required value={values.name} onChange={(value) => change("name", value)} error={fieldErrors.name} />
+          <DhritiTextField label="Serial number" id="asset-serial-number" required value={values.serialNumber} onChange={(value) => change("serialNumber", value)} error={fieldErrors.serialNumber} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DhritiSelectMenu
+              label="Category"
+              size="md"
+              value={values.type}
+              onChange={(value) => {
+                if (value) change("type", value as HrmsAssetType);
+              }}
+              options={categories.map(([value, name]) => ({ value, label: name }))}
+              open={Boolean(menuOpen.type)}
+              onOpenChange={(open) => setMenuOpen((current) => ({ ...current, type: open }))}
+            />
+            <DhritiSelectMenu
+              label="Condition"
+              size="md"
+              value={values.condition}
+              onChange={(value) => {
+                if (value) change("condition", value as HrmsAssetCondition);
+              }}
+              options={conditions.map((value) => ({ value, label: label(value) }))}
+              open={Boolean(menuOpen.condition)}
+              onOpenChange={(open) => setMenuOpen((current) => ({ ...current, condition: open }))}
+            />
+          </div>
+          {values.type === "OTHER" && (
+            <DhritiTextField
+              label="Custom category"
+              id="asset-custom-category"
+              required
+              value={values.customCategory}
+              onChange={(value) => change("customCategory", value)}
+              error={fieldErrors.customCategory}
+            />
+          )}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <DhritiSelectMenu
+              label="Status"
+              size="md"
+              value={values.status}
+              onChange={(value) => {
+                if (value) change("status", value as HrmsAssetStatus);
+              }}
+              options={statuses.map((value) => ({ value, label: label(value) }))}
+              open={Boolean(menuOpen.status)}
+              onOpenChange={(open) => setMenuOpen((current) => ({ ...current, status: open }))}
+            />
+            <DhritiSelectMenu
+              label="Assigned to"
+              size="md"
+              value={values.assignedEmployeeId}
+              onChange={(value) => change("assignedEmployeeId", value ?? "")}
+              options={[
+                { value: "", label: "Unassigned" },
+                ...employees.map((employee) => ({
+                  value: employee.id,
+                  label: `${employee.user.name} · ${employee.employeeNumber}`,
+                })),
+              ]}
+              open={Boolean(menuOpen.assignedEmployeeId)}
+              onOpenChange={(open) => setMenuOpen((current) => ({ ...current, assignedEmployeeId: open }))}
+              required={values.status === "ASSIGNED"}
+              error={fieldErrors.assignedEmployeeId}
+            />
+          </div>
         </div>
         <div className="flex justify-end gap-3 border-t border-border px-6 py-4"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={saving} onClick={() => void submit()}>{saving ? "Saving…" : "Save asset"}</Button></div>
       </form>

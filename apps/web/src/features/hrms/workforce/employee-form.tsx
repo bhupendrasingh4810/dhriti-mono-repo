@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { DhritiDateField, DhritiSelectMenu, DhritiTextField, type FieldOption } from "@dhriti/ui";
 
 import type { HrmsEmployee, HrmsEmployeeOptions } from "@/services/hrms.service";
 import { Button, Icon } from "../components/ui-primitives";
@@ -21,26 +22,6 @@ type FormValues = {
 };
 
 type Errors = Partial<Record<"userId" | "employeeNumber" | "status", string>>;
-
-const fieldClass = (invalid: boolean) =>
-  `w-full rounded-md border bg-white px-3 py-2 text-sm outline-none transition focus:ring-2 ${
-    invalid ? "border-error focus:ring-error/10" : "border-border focus:border-brand focus:ring-brand/10"
-  }`;
-
-function Field({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: ReactNode }) {
-  return (
-    <label className="block text-sm font-medium text-text-primary">
-      {label}
-      {required && <span className="text-error"> *</span>}
-      <div className="mt-1.5">{children}</div>
-      {error && (
-        <p role="alert" className="mt-1 text-xs font-normal text-error">
-          {error}
-        </p>
-      )}
-    </label>
-  );
-}
 
 /**
  * Create/edit form for an employee. Members are only selectable on create (an employee is always an
@@ -72,7 +53,26 @@ export function EmployeeForm({
   const [errors, setErrors] = useState<Errors>({});
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [openField, setOpenField] = useState<keyof FormValues | null>(null);
+  const [joiningMonth, setJoiningMonth] = useState(() => employee?.startDate?.slice(0, 7) ?? new Date().toISOString().slice(0, 7));
   const set = (key: keyof FormValues, value: string) => setValues((current) => ({ ...current, [key]: value }));
+  // The form owns menu state and nullable options; shared fields only emit selection changes.
+  const selectField = (key: keyof FormValues, label: string, items: FieldOption[], emptyLabel?: string) => (
+    <DhritiSelectMenu
+      label={label}
+      required={key === "userId" || key === "status"}
+      error={key === "userId" || key === "status" ? errors[key] : undefined}
+      value={values[key] || null}
+      onChange={(value) => {
+        if (key === "departmentId") setValues((current) => ({ ...current, departmentId: value ?? "", designationId: "" }));
+        else set(key, value ?? "");
+      }}
+      open={openField === key}
+      onOpenChange={(open) => setOpenField(open ? key : null)}
+      placeholder={emptyLabel ?? "Select a member"}
+      options={emptyLabel ? [{ value: "", label: emptyLabel }, ...items] : items}
+    />
+  );
 
   const designations = useMemo(
     () =>
@@ -135,100 +135,21 @@ export function EmployeeForm({
         </div>
         <div className="grid gap-4 overflow-y-auto p-6 sm:grid-cols-2">
           {employee ? (
-            <Field label="Member">
-              <input disabled value={`${employee.user.name} (${employee.user.email})`} className={fieldClass(false)} />
-            </Field>
+            <DhritiTextField label="Member" disabled value={`${employee.user.name} (${employee.user.email})`} onChange={() => {}} />
           ) : (
-            <Field label="Member" required error={errors.userId}>
-              <select value={values.userId} onChange={(e) => set("userId", e.target.value)} className={`${fieldClass(!!errors.userId)} cursor-pointer`}>
-                <option value="">Select a member</option>
-                {options.members.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} ({member.email})
-                  </option>
-                ))}
-              </select>
-            </Field>
+            selectField("userId", "Member", options.members.map((member) => ({ value: member.id, label: `${member.name} (${member.email})` })))
           )}
-          <Field label="Employee number" required error={errors.employeeNumber}>
-            <input value={values.employeeNumber} onChange={(e) => set("employeeNumber", e.target.value)} className={fieldClass(!!errors.employeeNumber)} />
-          </Field>
-          <Field label="Status" required error={errors.status}>
-            <select value={values.status} onChange={(e) => set("status", e.target.value)} className={`${fieldClass(!!errors.status)} cursor-pointer`}>
-              {Object.entries(statusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Employment type">
-            <select value={values.employmentType} onChange={(e) => set("employmentType", e.target.value)} className={`${fieldClass(false)} cursor-pointer`}>
-              <option value="">Not specified</option>
-              {options.employmentTypes.map((item) => (
-                <option key={item.id} value={item.name}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Work location">
-            <select value={values.workLocationId} onChange={(e) => set("workLocationId", e.target.value)} className={`${fieldClass(false)} cursor-pointer`}>
-              <option value="">Not specified</option>
-              {options.locations.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Shift">
-            <select value={values.shiftId} onChange={(e) => set("shiftId", e.target.value)} className={`${fieldClass(false)} cursor-pointer`}>
-              <option value="">No shift</option>
-              {(options.shifts ?? []).map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name} ({formatShiftRange(item)})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Department">
-            <select
-              value={values.departmentId}
-              onChange={(e) => setValues((current) => ({ ...current, departmentId: e.target.value, designationId: "" }))}
-              className={`${fieldClass(false)} cursor-pointer`}
-            >
-              <option value="">Not specified</option>
-              {options.departments.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Designation">
-            <select value={values.designationId} onChange={(e) => set("designationId", e.target.value)} className={`${fieldClass(false)} cursor-pointer`}>
-              <option value="">Not specified</option>
-              {designations.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Reporting manager">
-            <select value={values.reportingManagerId} onChange={(e) => set("reportingManagerId", e.target.value)} className={`${fieldClass(false)} cursor-pointer`}>
-              <option value="">No manager</option>
-              {managers.map((manager) => (
-                <option key={manager.id} value={manager.id}>
-                  {manager.user.name} ({manager.employeeNumber})
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Date of joining">
-            <input type="date" value={values.startDate} onChange={(e) => set("startDate", e.target.value)} className={fieldClass(false)} />
-          </Field>
+          <DhritiTextField label="Employee number" required error={errors.employeeNumber} value={values.employeeNumber} onChange={(value) => set("employeeNumber", value)} />
+          {selectField("status", "Status", Object.entries(statusLabels).map(([value, label]) => ({ value, label })))}
+          {selectField("employmentType", "Employment type", options.employmentTypes.map((item) => ({ value: item.name, label: item.name })), "Not specified")}
+          {selectField("workLocationId", "Work location", options.locations.map((item) => ({ value: item.id, label: item.name })), "Not specified")}
+          {selectField("shiftId", "Shift", (options.shifts ?? []).map((item) => ({ value: item.id, label: `${item.name} (${formatShiftRange(item)})` })), "No shift")}
+          {selectField("departmentId", "Department", options.departments.map((item) => ({ value: item.id, label: item.name })), "Not specified")}
+          {selectField("designationId", "Designation", designations.map((item) => ({ value: item.id, label: item.name })), "Not specified")}
+          {selectField("reportingManagerId", "Reporting manager", managers.map((manager) => ({ value: manager.id, label: `${manager.user.name} (${manager.employeeNumber})` })), "No manager")}
+          <DhritiDateField label="Date of joining" value={values.startDate} onChange={(value) => set("startDate", value)}
+            month={joiningMonth} onMonthChange={setJoiningMonth} open={openField === "startDate"}
+            onOpenChange={(open) => setOpenField(open ? "startDate" : null)} placeholder="Select joining date" clearable />
         </div>
         {formError && (
           <p role="alert" className="border-t border-border bg-red-50 px-6 py-2 text-sm text-error">

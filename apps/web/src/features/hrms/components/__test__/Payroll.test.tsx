@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { usePathname } from "next/navigation";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { HrmsPayroll as PayrollWorkspaceView } from "../../payroll";
@@ -188,6 +189,80 @@ async function startPayroll() {
   const button = screen.getByRole("button", { name: "Start payroll run" });
   await waitFor(() => expect(button).toBeEnabled());
   fireEvent.click(button);
+}
+
+function fieldRoot(label: string, root: HTMLElement = document.body) {
+  const fieldLabel = within(root).getByText(label, { selector: "label" });
+  if (!fieldLabel.parentElement) throw new Error(`Missing field container for ${label}`);
+  return fieldLabel.parentElement;
+}
+
+function fieldButton(label: string, root: HTMLElement = document.body) {
+  const control = fieldRoot(label, root).querySelector<HTMLButtonElement>("button[aria-haspopup]");
+  if (!control) throw new Error(`Missing picker button for ${label}`);
+  return control;
+}
+
+async function selectField(label: string, option: string | RegExp, root: HTMLElement = document.body) {
+  await userEvent.click(fieldButton(label, root));
+  await userEvent.click(await screen.findByRole("option", { name: option }));
+}
+
+async function selectDateField(label: string, value: string, root: HTMLElement = document.body) {
+  await userEvent.click(fieldButton(label, root));
+  await waitFor(() => expect(fieldButton(label, root)).toHaveAttribute("aria-expanded", "true"));
+  await screen.findByRole("grid");
+  if (screen.getByRole("grid").querySelector("[data-period]")) {
+    const requestedYear = Number(value.slice(0, 4));
+    while (Number(screen.getByRole("grid").getAttribute("aria-label")) !== requestedYear) {
+      const displayedYear = Number(screen.getByRole("grid").getAttribute("aria-label"));
+      await userEvent.click(
+        screen.getByRole("button", { name: requestedYear > displayedYear ? "Next year" : "Previous year" }),
+      );
+    }
+    const label = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+      new Date(`${value.slice(0, 7)}-01T12:00:00Z`),
+    );
+    await userEvent.click(screen.getByRole("button", { name: label }));
+    return;
+  }
+  const requestedMonth = value.slice(0, 7);
+  while (screen.getByRole("grid").getAttribute("aria-label") !== dateMonthLabel(requestedMonth)) {
+    const displayedMonth = screen.getByRole("grid").getAttribute("aria-label") ?? "";
+    const monthParts = /^([A-Za-z]+) (\d{4})$/.exec(displayedMonth);
+    if (!monthParts) throw new Error(`Unexpected calendar month label: ${displayedMonth}`);
+    const displayed = new Date(`${monthParts[1]} 1, ${monthParts[2]}`);
+    const requested = new Date(`${requestedMonth}-01T00:00:00Z`);
+    await userEvent.click(
+      screen.getByRole("button", { name: requested > displayed ? "Next month" : "Previous month" }),
+    );
+  }
+  const date = new Date(`${value}T12:00:00Z`);
+  const accessibleDate = new Intl.DateTimeFormat("en-GB", {
+    dateStyle: "full",
+    timeZone: "UTC",
+  }).format(date);
+  await userEvent.click(screen.getByRole("button", { name: accessibleDate }));
+}
+
+function dateMonthLabel(month: string) {
+  return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(`${month}-01T00:00:00Z`),
+  );
+}
+
+function expectDateField(label: string, value: string, root: HTMLElement = document.body) {
+  const displayed = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T12:00:00Z`));
+  expect(fieldButton(label, root)).toHaveTextContent(displayed);
+}
+
+function expectFieldError(label: string, root: HTMLElement = document.body) {
+  expect(fieldRoot(label, root).querySelector(".border-error")).not.toBeNull();
 }
 
 beforeAll(() => {
@@ -387,11 +462,15 @@ describe("payroll calendars", () => {
       await screen.findByText("1 employees");
       await startPayroll();
       const dialog = screen.getByRole("dialog", { name: "Start payroll run" });
-      await waitFor(() => expect(within(dialog).getByLabelText("Payroll period")).toBeEnabled());
-      fireEvent.change(within(dialog).getByLabelText("Payroll period"), { target: { value: selectedPeriod.key } });
-      expect(within(dialog).getByLabelText("Pay date")).toHaveValue(selectedPeriod.payDate);
-      expect(within(dialog).getByLabelText("Proration policy")).toBeDisabled();
-      expect(within(dialog).queryByRole("option", { name: "Full-month only (legacy)" })).not.toBeInTheDocument();
+      await waitFor(() => expect(fieldButton("Payroll period", dialog)).toBeEnabled());
+      await selectField(
+        "Payroll period",
+        `${selectedPeriod.start} – ${selectedPeriod.end} · Pay ${selectedPeriod.payDate}`,
+        dialog,
+      );
+      expectDateField("Pay date", selectedPeriod.payDate, dialog);
+      expect(fieldButton("Proration policy", dialog)).toBeDisabled();
+      expect(screen.queryByRole("option", { name: "Full-month only (legacy)" })).not.toBeInTheDocument();
       fireEvent.click(within(dialog).getByRole("button", { name: "Next" }));
       await waitFor(() =>
         expect(payrollService.preview).toHaveBeenCalledWith("org-a", {
@@ -431,10 +510,10 @@ describe("payroll calendars", () => {
     await screen.findByText("1 employees");
     fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     fireEvent.click(screen.getByRole("button", { name: "Review" }));
-    expect(screen.getByLabelText("Payroll period")).toHaveValue(period.key);
-    expect(screen.getByLabelText("Payroll period")).toBeDisabled();
-    expect(screen.getByLabelText("Pay date")).toHaveValue(period.payDate);
-    expect(screen.getByLabelText("Proration policy")).toHaveValue("CALENDAR_DAYS");
+    expect(fieldButton("Payroll period")).toHaveTextContent(`${period.key} (saved selection)`);
+    expect(fieldButton("Payroll period")).toBeDisabled();
+    expectDateField("Pay date", period.payDate);
+    expect(fieldButton("Proration policy")).toHaveTextContent("Calendar-day monthly allocation");
     expect(payrollService.calendar).not.toHaveBeenCalled();
   });
   it("shows the saved calendar basis in payslips and appends real dates and allocation to register exports", async () => {
@@ -518,7 +597,7 @@ describe("payroll calendars", () => {
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
     fireEvent.click(screen.getByRole("link", { name: "Configuration" }));
-    fireEvent.change(screen.getByLabelText("Calendar pay group"), { target: { value: profile.id } });
+    await selectField("Calendar pay group", `${profile.name} · Monthly`);
     const table = await screen.findByRole("table", { name: "Payroll calendar" });
     await waitFor(() => expect(within(table).getByText("2026-11-10")).toBeInTheDocument());
     expect(screen.getByRole("region", { name: "Payroll calendar table" })).toHaveClass("overflow-auto");
@@ -529,14 +608,14 @@ describe("payroll calendars", () => {
     vi.mocked(payrollService.calendar).mockRejectedValueOnce(new Error("Calendar unavailable"));
     render(<PayrollPeriodPicker organizationId="org-a" profile={weekly} value="" onChange={vi.fn()} />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Calendar unavailable");
-    expect(screen.getByLabelText("Payroll period")).toBeDisabled();
+    expect(fieldButton("Payroll period")).toBeDisabled();
     vi.mocked(payrollService.calendar).mockResolvedValueOnce([period]);
     fireEvent.click(screen.getByRole("button", { name: "Retry calendar" }));
-    await waitFor(() => expect(screen.getByLabelText("Payroll period")).toBeEnabled());
+    await waitFor(() => expect(fieldButton("Payroll period")).toBeEnabled());
     fireEvent.change(screen.getByLabelText("Calendar year"), { target: { value: "999" } });
-    expect(screen.getByLabelText("Calendar year")).toHaveClass("border-error");
+    expectFieldError("Calendar year");
     expect(screen.getByText("Enter a year between 1000 and 9998.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Payroll period")).toBeDisabled();
+    expect(fieldButton("Payroll period")).toBeDisabled();
   });
   it("does not display a late calendar response after the tenant changes", async () => {
     let resolveOld!: (value: (typeof period)[]) => void;
@@ -559,14 +638,14 @@ describe("payroll calendars", () => {
     const complete = vi.fn();
     render(<PayrollForm kind="profile" organizationId="org-a" data={workspace} close={vi.fn()} complete={complete} />);
     fireEvent.change(screen.getByLabelText("Profile name"), { target: { value: "Weekly India" } });
-    fireEvent.change(screen.getByLabelText("Pay frequency"), { target: { value: "WEEKLY" } });
-    fireEvent.change(screen.getByLabelText("Effective from"), { target: { value: "2026-01-05" } });
+    await selectField("Pay frequency", "Weekly");
+    await selectDateField("Effective from", "2026-01-05");
     fireEvent.change(screen.getByLabelText("Pay-date offset (calendar days)"), { target: { value: "61" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByLabelText("Calendar anchor (cycle start)")).toHaveClass("border-error");
-    expect(screen.getByLabelText("Pay-date offset (calendar days)")).toHaveClass("border-error");
+    expectFieldError("Calendar anchor (cycle start)");
+    expectFieldError("Pay-date offset (calendar days)");
     expect(payrollService.profile).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText("Calendar anchor (cycle start)"), { target: { value: "2026-01-05" } });
+    await selectDateField("Calendar anchor (cycle start)", "2026-01-05");
     fireEvent.change(screen.getByLabelText("Pay-date offset (calendar days)"), { target: { value: "2" } });
     vi.mocked(payrollService.profile).mockResolvedValueOnce({});
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -595,10 +674,12 @@ describe("payroll calendars", () => {
       ["Amount per period", "100"],
     ]) {
       // The amount label changes only after selecting the profile.
-      fireEvent.change(screen.getByLabelText(label), { target: { value } });
+      if (label === "Employee") await selectField(label, "E001 · Payroll Employee");
+      else if (label === "Payroll profile") await selectField(label, "India payroll");
+      else fireEvent.change(screen.getByLabelText(label), { target: { value } });
     }
-    await waitFor(() => expect(screen.getByLabelText("Payroll period")).toBeEnabled());
-    fireEvent.change(screen.getByLabelText("Payroll period"), { target: { value: period.key } });
+    await waitFor(() => expect(fieldButton("Payroll period")).toBeEnabled());
+    await selectField("Payroll period", `${period.start} – ${period.end} · Pay ${period.payDate}`);
     vi.mocked(payrollService.variableInput).mockResolvedValueOnce({});
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
@@ -630,9 +711,23 @@ describe("payroll calendars", () => {
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
     await startPayroll();
-    fireEvent.change(screen.getByLabelText("Payroll period"), { target: { value: "2026-11" } });
+    await selectDateField("Payroll period", "2026-11-01");
     fireEvent.click(screen.getByRole("button", { name: "Use scheduled pay date" }));
-    await waitFor(() => expect(screen.getByLabelText("Pay date")).toHaveValue("2026-12-03"));
+    await waitFor(() => expectDateField("Pay date", "2026-12-03"));
+  });
+  it("clears stale pay dates when the monthly period changes and allows date fields to be cleared", async () => {
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    await screen.findByText("1 employees");
+    await startPayroll();
+    await selectDateField("Pay date", "2026-11-30");
+    expectDateField("Pay date", "2026-11-30");
+    await selectDateField("Payroll period", "2026-12-01");
+    expect(fieldButton("Pay date")).toHaveTextContent(/^$/);
+    await selectDateField("Pay date", "2026-12-31");
+    await userEvent.click(screen.getByRole("button", { name: "Clear Pay date" }));
+    expect(fieldButton("Pay date")).toHaveTextContent(/^$/);
+    await userEvent.click(screen.getByRole("button", { name: "Clear Payroll period" }));
+    expect(fieldButton("Payroll period")).toHaveTextContent(/^$/);
   });
 });
 
@@ -686,22 +781,29 @@ describe("payroll workspace", () => {
   it("requires a source reason, validates hours as one month and sends explicit decimal inputs", async () => {
     const complete = vi.fn();
     render(<PayrollForm kind="variable" organizationId="org-a" data={workspace} close={vi.fn()} complete={complete} />);
-    const set = (label: string, value: string) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-    set("Employee", "employee-a");
-    set("Payroll profile", profile.id);
-    set("Input name", "Overtime");
-    set("Calculation", "HOURS");
-    set("Approved hours", "10.5");
-    set("Hourly rate", "125.25");
-    set("Rate multiplier", "1.5");
-    set("Start month", "2026-11");
-    set("End month (inclusive)", "2026-12");
+    const set = async (label: string, value: string) => {
+      if (label === "Employee") await selectField(label, "E001 · Payroll Employee");
+      else if (label === "Payroll profile") await selectField(label, "India payroll");
+      else if (label === "Calculation") await selectField(label, "Hours × rate × multiplier");
+      else if (label === "Start month" || label === "End month (inclusive)")
+        await selectDateField(label, `${value}-01`);
+      else fireEvent.change(screen.getByLabelText(label), { target: { value } });
+    };
+    await set("Employee", "employee-a");
+    await set("Payroll profile", profile.id);
+    await set("Input name", "Overtime");
+    await set("Calculation", "HOURS");
+    await set("Approved hours", "10.5");
+    await set("Hourly rate", "125.25");
+    await set("Rate multiplier", "1.5");
+    await set("Start month", "2026-11");
+    await set("End month (inclusive)", "2026-12");
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByLabelText("Reason / source reference")).toHaveClass("border-error");
+    expect(screen.getByLabelText("Reason / source reference").closest(".border-error")).not.toBeNull();
     expect(screen.getByText("Hours must apply to a single month.")).toBeInTheDocument();
     expect(payrollService.variableInput).not.toHaveBeenCalled();
-    set("End month (inclusive)", "2026-11");
-    set("Reason / source reference", "Approved timesheet TS-100");
+    await set("End month (inclusive)", "2026-11");
+    await set("Reason / source reference", "Approved timesheet TS-100");
     vi.mocked(payrollService.variableInput).mockResolvedValueOnce({});
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(complete).toHaveBeenCalledOnce());
@@ -841,12 +943,12 @@ describe("payroll workspace", () => {
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
     await startPayroll();
-    expect(screen.getByLabelText("Proration policy")).toHaveValue("CALENDAR_DAYS");
+    expect(fieldButton("Proration policy")).toHaveTextContent("Calendar days in pay period");
     fireEvent.click(screen.getByRole("button", { name: "Close payroll run" }));
     fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     fireEvent.click(screen.getByRole("button", { name: "Review" }));
-    expect(screen.getByLabelText("Proration policy")).toHaveValue("NONE");
-    expect(screen.getByLabelText("Proration policy")).toBeDisabled();
+    expect(fieldButton("Proration policy")).toHaveTextContent("Full-month only (legacy)");
+    expect(fieldButton("Proration policy")).toBeDisabled();
   });
 
   it.each(["Cancel", "Reject"] as const)(
@@ -1050,10 +1152,10 @@ describe("payroll workspace", () => {
     }
     fireEvent.click(within(dialog).getByRole("button", { name: "Next" }));
     expect(within(dialog).getByText("Pay date is required.")).toBeInTheDocument();
-    expect(within(dialog).getByLabelText("Pay date")).toHaveClass("border-error");
-    fireEvent.change(within(dialog).getByLabelText("Payroll period"), { target: { value: "2026-11" } });
-    fireEvent.change(within(dialog).getByLabelText("Pay date"), { target: { value: "2026-11-30" } });
-    fireEvent.change(within(dialog).getByLabelText("Employee scope"), { target: { value: "dept-a" } });
+    expectFieldError("Pay date", dialog);
+    await selectDateField("Payroll period", "2026-11-01", dialog);
+    await selectDateField("Pay date", "2026-11-30", dialog);
+    await selectField("Employee scope", "Engineering", dialog);
     fireEvent.click(within(dialog).getByRole("button", { name: "Next" }));
     await waitFor(() =>
       expect(payrollService.preview).toHaveBeenCalledWith(
@@ -1074,7 +1176,7 @@ describe("payroll workspace", () => {
     render(<HrmsPayroll onToast={toast} />);
     await screen.findByText("1 employees");
     await startPayroll();
-    fireEvent.change(screen.getByLabelText("Pay date"), { target: { value: "2026-11-30" } });
+    await selectDateField("Pay date", "2026-11-30");
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() =>
       expect(payrollService.run).toHaveBeenCalledWith("org-a", expect.objectContaining({ payDate: "2026-11-30" })),
@@ -1149,25 +1251,26 @@ describe("payroll forms and tables", () => {
         complete={complete}
       />,
     );
-    const country = screen.getByRole("combobox", { name: "Country" });
-    const currency = screen.getByRole("combobox", { name: "Currency" });
-    expect(country).toHaveValue("IN");
-    expect(within(country).getByRole("option", { name: "United Arab Emirates (AE)" })).toBeInTheDocument();
-    expect(within(country).getByRole("option", { name: "Germany (DE)" })).toBeInTheDocument();
-    expect(currency).toHaveValue("INR");
-    const location = screen.getByRole("combobox", { name: "Work location (optional)" });
-    fireEvent.change(location, { target: { value: "bengaluru" } });
-    fireEvent.change(country, { target: { value: "AE" } });
-    expect(location).toHaveValue("");
-    expect(within(location).queryByRole("option", { name: "Bengaluru" })).not.toBeInTheDocument();
-    expect(within(location).getByRole("option", { name: "Dubai" })).toBeInTheDocument();
-    expect(currency).toHaveValue("INR");
+    const country = fieldButton("Country");
+    const currency = fieldButton("Currency");
+    expect(country).toHaveTextContent("India (IN)");
+    expect(currency).toHaveTextContent(/^INR -/);
+    await userEvent.click(country);
+    expect(await screen.findByRole("option", { name: "United Arab Emirates (AE)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Germany (DE)" })).toBeInTheDocument();
+    await selectField("Work location (optional)", "Bengaluru");
+    await selectField("Country", "United Arab Emirates (AE)");
+    expect(fieldButton("Work location (optional)")).toHaveTextContent("Select...");
+    expect(currency).toHaveTextContent(/^INR -/);
+    await userEvent.click(fieldButton("Work location (optional)"));
+    expect(screen.queryByRole("option", { name: "Bengaluru" })).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "Dubai" })).toBeInTheDocument();
     for (const [code, precision] of [
       ["JPY", "0"],
       ["KWD", "3"],
       ["AED", "2"],
     ]) {
-      fireEvent.change(currency, { target: { value: code } });
+      await selectField("Currency", new RegExp(`^${code} -`));
       expect(screen.getByLabelText("Currency decimal places")).toHaveValue(precision);
     }
     expect(screen.getByLabelText("Currency decimal places")).toHaveAttribute("readonly");
@@ -1187,36 +1290,36 @@ describe("payroll forms and tables", () => {
     expect(complete).toHaveBeenCalledOnce();
   });
 
-  it("uses the same currency dropdown for claims and shows missing selections inline", () => {
+  it("uses the same currency dropdown for claims and shows missing selections inline", async () => {
     render(<PayrollForm kind="claim" data={workspace} organizationId="org-a" close={vi.fn()} complete={vi.fn()} />);
-    const currency = screen.getByRole("combobox", { name: "Currency" });
-    fireEvent.change(currency, { target: { value: "USD" } });
-    expect(currency).toHaveValue("USD");
-    fireEvent.change(currency, { target: { value: "" } });
+    const currency = fieldButton("Currency");
+    await selectField("Currency", /^USD -/);
+    expect(currency).toHaveTextContent(/^USD -/);
+    fireEvent.click(within(fieldRoot("Currency")).getByRole("button", { name: "Clear Currency" }));
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(currency).toHaveAttribute("aria-invalid", "true");
-    expect(currency).toHaveClass("border-error");
-    expect(currency.closest("div")?.querySelector('[role="alert"]')).toHaveTextContent("This field is required.");
+    expectFieldError("Currency");
+    expect(fieldRoot("Currency").querySelector('[role="alert"]')).toHaveTextContent("This field is required.");
   });
 
   it("marks every missing required claim field inline and never calls the API with invalid data", () => {
     render(<PayrollForm kind="claim" data={workspace} organizationId="org-a" close={vi.fn()} complete={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     for (const name of ["Employee", "Expense description", "Amount", "Receipt / document reference"]) {
-      expect(screen.getByLabelText(name)).toHaveClass("border-error");
+      expectFieldError(name);
       expect(screen.getByLabelText(name)).toHaveAttribute("aria-invalid", "true");
     }
     expect(screen.getAllByRole("alert").length).toBeGreaterThan(3);
     expect(payrollService.claim).not.toHaveBeenCalled();
   });
 
-  it("validates component fields inline before creating structures", () => {
+  it("validates component fields inline before creating structures", async () => {
     render(<PayrollForm kind="structure" data={workspace} organizationId="org-a" close={vi.fn()} complete={vi.fn()} />);
     fireEvent.change(screen.getByLabelText("Structure name"), { target: { value: "India salary" } });
-    fireEvent.change(screen.getByLabelText("Payroll profile"), { target: { value: "profile-a" } });
+    await selectField("Payroll profile", "India payroll");
     fireEvent.change(screen.getByLabelText("Component 1 name"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(screen.getByLabelText("Component 1 name")).toHaveClass("border-error");
+    expectFieldError("Component 1 name");
     expect(screen.getByText("Component name is required.")).toBeInTheDocument();
     expect(payrollService.structure).not.toHaveBeenCalled();
   });
@@ -1227,8 +1330,8 @@ describe("payroll forms and tables", () => {
     render(
       <PayrollForm kind="assignment" data={workspace} organizationId="org-a" close={vi.fn()} complete={complete} />,
     );
-    fireEvent.change(screen.getByLabelText("Employee"), { target: { value: "employee-a" } });
-    fireEvent.change(screen.getByLabelText("Salary structure"), { target: { value: "structure-a" } });
+    await selectField("Employee", "E001 · Payroll Employee");
+    await selectField("Salary structure", "Standard salary · INR");
     fireEvent.change(screen.getByLabelText("Monthly gross"), { target: { value: "12345.50" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Backdated arrears unsupported");

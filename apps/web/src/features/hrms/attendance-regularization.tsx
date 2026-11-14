@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import dayjs from "dayjs";
+import { DhritiSelectMenu } from "@dhriti/ui";
 
 import { TimeField } from "./components/date-fields";
 import { Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
@@ -356,6 +357,7 @@ export function RegularizationList({
   onDecide?: (request: HrmsAttendanceRegularization, status: "APPROVED" | "REJECTED", note: string) => Promise<void>;
 }) {
   const [status, setStatus] = useState<"" | HrmsRegularizationStatus>("");
+  const [statusOpen, setStatusOpen] = useState(false);
   const [order, setOrder] = useState<"asc" | "desc">("desc");
   const [pageSize, setPageSize] = useState(10);
   const [page, setPage] = useState(1);
@@ -376,22 +378,22 @@ export function RegularizationList({
         title={title}
         subtitle={subtitle}
         action={
-          <select
-            aria-label="Filter by status"
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value as "" | HrmsRegularizationStatus);
+          <DhritiSelectMenu
+            label="Filter by status"
+            showLabel={false}
+            value={status || null}
+            placeholder="All statuses"
+            onChange={(value) => {
+              setStatus(statuses.find((item) => item === value) ?? "");
               setPage(1);
             }}
-            className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-sm"
-          >
-            <option value="">All statuses</option>
-            {statuses.map((item) => (
-              <option key={item} value={item}>
-                {regularizationStatusLabels[item]}
-              </option>
-            ))}
-          </select>
+            open={statusOpen}
+            onOpenChange={setStatusOpen}
+            options={[
+              { value: "", label: "All statuses" },
+              ...statuses.map((value) => ({ value, label: regularizationStatusLabels[value] })),
+            ]}
+          />
         }
       />
       <div className="min-h-0 flex-1 overflow-auto">
@@ -433,7 +435,9 @@ export function RegularizationList({
                 <td className="max-w-xs truncate px-5 py-4 text-sm text-text-secondary" title={item.reason}>
                   {item.reason}
                 </td>
-                <td className="px-5 py-4 text-sm text-text-secondary">{dayjs(item.createdAt).format("D MMM YYYY, HH:mm")}</td>
+                <td className="px-5 py-4 text-sm text-text-secondary">
+                  {dayjs(item.createdAt).format("D MMM YYYY, HH:mm")}
+                </td>
                 <td className="px-5 py-4" title={item.decisionNote ?? undefined}>
                   <Badge tone={tone[item.status]}>{regularizationStatusLabels[item.status]}</Badge>
                 </td>
@@ -506,22 +510,24 @@ export function Pagination({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const [sizeOpen, setSizeOpen] = useState(false);
   const button =
     "cursor-pointer rounded-md p-1.5 text-text-muted hover:bg-surface-raised disabled:cursor-not-allowed disabled:opacity-40";
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-4 border-t border-border p-4 text-sm text-text-secondary">
-      <label className="flex items-center gap-2">
-        Rows per page:
-        <select
-          value={pageSize}
-          onChange={(event) => onPageSize(Number(event.target.value))}
-          className="cursor-pointer border-0 bg-transparent font-semibold text-text-primary outline-none"
-        >
-          {[10, 20, 50].map((size) => (
-            <option key={size}>{size}</option>
-          ))}
-        </select>
-      </label>
+      <div className="flex items-center gap-2">
+        <span>Rows per page:</span>
+        <DhritiSelectMenu
+          label="Rows per page"
+          showLabel={false}
+          size="sm"
+          value={String(pageSize)}
+          onChange={(value) => onPageSize(Number(value))}
+          open={sizeOpen}
+          onOpenChange={setSizeOpen}
+          options={[10, 20, 50].map((size) => ({ value: String(size), label: String(size) }))}
+        />
+      </div>
       <span>{range}</span>
       <div className="flex items-center gap-1">
         <button type="button" aria-label="Previous page" disabled={!canPrev} onClick={onPrev} className={button}>

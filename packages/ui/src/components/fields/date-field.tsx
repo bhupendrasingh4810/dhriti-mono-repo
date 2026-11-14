@@ -6,7 +6,9 @@ import { fieldActionClass } from "./field-primitives";
 import { PickerShell, type FieldPickerProps } from "./picker-shell";
 
 export interface DhritiDateFieldProps extends FieldPickerProps {
-  /** YYYY-MM. Navigation is controlled separately from the selected YYYY-MM-DD value. */
+  /** Selected value and bounds use YYYY-MM-DD, YYYY-MM, or YYYY for the chosen mode. */
+  mode?: "date" | "month" | "year";
+  /** YYYY-MM navigation anchor, controlled independently of selection in every mode. */
   month: string;
   onMonthChange: (month: string) => void;
   min?: string;
@@ -36,6 +38,191 @@ function addDays(date: Date, days: number) {
 }
 
 export function DhritiDateField({
+  mode = "date",
+  month,
+  onMonthChange,
+  min,
+  max,
+  locale = "en-GB",
+  weekStartsOn = 0,
+  ...props
+}: DhritiDateFieldProps) {
+  if (!["date", "month", "year"].includes(mode))
+    throw new RangeError("DhritiDateField mode must be date, month, or year.");
+  if (mode !== "date") {
+    return (
+      <PeriodPicker
+        {...props}
+        mode={mode}
+        month={month}
+        onMonthChange={onMonthChange}
+        min={min}
+        max={max}
+        locale={locale}
+      />
+    );
+  }
+  return (
+    <DayPicker
+      {...props}
+      month={month}
+      onMonthChange={onMonthChange}
+      min={min}
+      max={max}
+      locale={locale}
+      weekStartsOn={weekStartsOn}
+    />
+  );
+}
+
+function PeriodPicker({
+  mode,
+  month,
+  onMonthChange,
+  min,
+  max,
+  locale = "en-GB",
+  ...props
+}: DhritiDateFieldProps & { mode: "month" | "year" }) {
+  const first = parseDate(`${month}-01`);
+  const parse = (value: string) => {
+    if (!(mode === "month" ? /^\d{4}-\d{2}$/ : /^\d{4}$/).test(value)) {
+      throw new RangeError(
+        `DhritiDateField ${mode} mode requires valid ${mode === "month" ? "YYYY-MM" : "YYYY"} values.`,
+      );
+    }
+    return parseDate(mode === "month" ? `${value}-01` : `${value}-01-01`);
+  };
+  const selected = props.value ? parse(props.value) : null;
+  if (min) parse(min);
+  if (max) parse(max);
+  if (min && max && min > max) throw new RangeError("DhritiDateField min must not be after max.");
+  const year = first.getUTCFullYear();
+  const start = mode === "month" ? year : Math.floor(year / 12) * 12;
+  const padYear = (value: number) => String(value).padStart(4, "0");
+  const values = Array.from({ length: mode === "month" ? 12 : Math.min(12, 10000 - start) }, (_, index) =>
+    mode === "month" ? `${padYear(year)}-${String(index + 1).padStart(2, "0")}` : padYear(start + index),
+  );
+  const allowed = (value: string) => (!min || value >= min) && (!max || value <= max);
+  const preferred = values.includes(props.value) && allowed(props.value) ? props.value : values.find(allowed);
+  const grid = useRef<HTMLDivElement>(null);
+  const pendingFocus = useRef<string | null>(null);
+  const format = (date: Date, options: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat(locale, { ...options, timeZone: "UTC" }).format(date);
+  const previousYear = mode === "month" ? year - 1 : start - 12;
+  const nextYear = mode === "month" ? year + 1 : start + 12;
+  const lowerYear = min ? parse(min).getUTCFullYear() : 0;
+  const upperYear = max ? parse(max).getUTCFullYear() : 9999;
+  const heading = mode === "month" ? padYear(year) : `${padYear(start)} – ${padYear(start + values.length - 1)}`;
+  return (
+    <PickerShell
+      {...props}
+      widthClass="w-field-calendar"
+      icon={<CalendarDays className="size-4" aria-hidden="true" />}
+      pickerLabel={`${props.label} ${mode} picker`}
+      displayValue={
+        selected ? format(selected, mode === "month" ? { month: "long", year: "numeric" } : { year: "numeric" }) : ""
+      }
+      onOpen={() => {
+        if (props.value) onMonthChange(mode === "month" ? props.value : `${props.value}-01`);
+      }}
+    >
+      <div className="p-3">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p aria-live="polite" className="text-sm font-semibold text-text-primary">
+            {heading}
+          </p>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              aria-label={mode === "month" ? "Previous year" : "Previous years"}
+              disabled={previousYear < 0 || (mode === "month" ? previousYear : start - 1) < lowerYear}
+              className={`${fieldActionClass} p-2`}
+              onClick={() => onMonthChange(`${padYear(previousYear)}-01`)}
+            >
+              <ChevronLeft className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              aria-label={mode === "month" ? "Next year" : "Next years"}
+              disabled={nextYear > 9999 || nextYear > upperYear}
+              className={`${fieldActionClass} p-2`}
+              onClick={() => onMonthChange(`${padYear(nextYear)}-01`)}
+            >
+              <ChevronRight className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+        <div ref={grid} role="grid" aria-label={heading}>
+          {Array.from({ length: Math.ceil(values.length / 3) }, (_, row) => (
+            <div key={row} role="row" className="grid grid-cols-3 gap-2">
+              {values.slice(row * 3, row * 3 + 3).map((value) => (
+                <div key={value} role="gridcell" aria-selected={props.value === value} className="py-1">
+                  <button
+                    type="button"
+                    data-picker-option
+                    data-picker-close
+                    data-period={value}
+                    data-picker-initial={preferred === value ? "" : undefined}
+                    ref={(node) => {
+                      if (node && pendingFocus.current === value) {
+                        node.focus();
+                        pendingFocus.current = null;
+                      }
+                    }}
+                    disabled={!allowed(value)}
+                    tabIndex={preferred === value ? 0 : -1}
+                    aria-label={mode === "month" ? format(parse(value), { month: "long", year: "numeric" }) : value}
+                    className={`${fieldActionClass} w-full rounded-md py-3 text-xs ${props.value === value ? "bg-brand text-text-inverse hover:bg-brand-dark hover:text-text-inverse" : "text-text-primary hover:bg-background"}`}
+                    onClick={() => {
+                      props.onChange(value);
+                      props.onOpenChange(false);
+                    }}
+                    onKeyDown={(event) => {
+                      const index = values.indexOf(value);
+                      const directions: Record<string, number> = {
+                        ArrowLeft: -1,
+                        ArrowRight: 1,
+                        ArrowUp: -3,
+                        ArrowDown: 3,
+                      };
+                      const delta = directions[event.key];
+                      const targetIndex =
+                        event.key === "Home"
+                          ? index - (index % 3)
+                          : event.key === "End"
+                            ? Math.min(index - (index % 3) + 2, values.length - 1)
+                            : delta === undefined
+                              ? null
+                              : index + delta;
+                      if (targetIndex === null) return;
+                      event.preventDefault();
+                      const date = parse(value);
+                      if (mode === "month") date.setUTCMonth(date.getUTCMonth() + targetIndex - index);
+                      else date.setUTCFullYear(date.getUTCFullYear() + targetIndex - index);
+                      if (date.getUTCFullYear() < 0 || date.getUTCFullYear() > 9999) return;
+                      const target = dateString(date).slice(0, mode === "month" ? 7 : 4);
+                      if (!allowed(target)) return;
+                      if (values.includes(target))
+                        grid.current?.querySelector<HTMLButtonElement>(`[data-period="${target}"]`)?.focus();
+                      else {
+                        pendingFocus.current = target;
+                        onMonthChange(dateString(date).slice(0, 7));
+                      }
+                    }}
+                  >
+                    {mode === "month" ? format(parse(value), { month: "short" }) : value}
+                  </button>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </PickerShell>
+  );
+}
+function DayPicker({
   month,
   onMonthChange,
   min,

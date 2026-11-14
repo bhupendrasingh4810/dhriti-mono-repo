@@ -13,3 +13,5 @@ export * from "./date-field";
 export * from "./textarea-field";
 export * from "./file-field";
 export * from "./time-field";
+export * from "./search-field";
+export * from "./choice-fields";

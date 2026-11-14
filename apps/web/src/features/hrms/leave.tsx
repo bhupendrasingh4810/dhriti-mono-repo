@@ -6,6 +6,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { DhritiSearchField, DhritiSelectMenu } from "@dhriti/ui";
 
 import { useAppSettingsState } from "@/features/settings/use-app-settings";
 import { useAuth } from "@/hooks/use-auth";
@@ -61,7 +62,9 @@ function BalancesCard({ balances }: { balances: HrmsLeaveBalance[] }) {
                 {balance.unlimited ? "" : ` · of ${balance.entitled} (${balance.annualDays}/yr, credited monthly)`}
               </p>
             </div>
-            <span className="shrink-0 text-lg font-bold text-text-primary">{balance.available === null ? "∞" : balance.available}</span>
+            <span className="shrink-0 text-lg font-bold text-text-primary">
+              {balance.available === null ? "∞" : balance.available}
+            </span>
           </li>
         ))}
       </ul>
@@ -80,7 +83,9 @@ function HolidaysCard() {
           const day = dayjs(holiday.date.slice(0, 10));
           return (
             <li key={holiday.id} className="flex items-center gap-3 p-4">
-              <div className={`rounded-md px-3 py-2 text-center ${index === 0 ? "bg-brand-muted text-brand" : "bg-slate-100 text-text-secondary"}`}>
+              <div
+                className={`rounded-md px-3 py-2 text-center ${index === 0 ? "bg-brand-muted text-brand" : "bg-slate-100 text-text-secondary"}`}
+              >
                 <p className="text-lg font-bold">{day.format("DD")}</p>
                 <p className="text-[9px] font-bold">{day.format("MMM").toUpperCase()}</p>
               </div>
@@ -106,6 +111,7 @@ function TeamCalendar({ refreshKey, onPickDate }: { refreshKey: number; onPickDa
   const { user } = useAuth();
   const organizationId = user?.organization?.id;
   const [mode, setMode] = useState<"month" | "week">("month");
+  const [modeOpen, setModeOpen] = useState(false);
   const [anchor, setAnchor] = useState(() => dayjs());
   const [items, setItems] = useState<HrmsTeamLeave[]>([]);
 
@@ -135,9 +141,14 @@ function TeamCalendar({ refreshKey, onPickDate }: { refreshKey: number; onPickDa
   }, [organizationId, from, to, refreshKey]);
 
   const step = (direction: 1 | -1) => setAnchor((current) => current.add(direction, mode));
-  const subtitle = mode === "month" ? anchor.format("MMMM YYYY") : `${cells[0]?.format("D MMM")} – ${cells[6]?.format("D MMM YYYY")}`;
+  const subtitle =
+    mode === "month" ? anchor.format("MMMM YYYY") : `${cells[0]?.format("D MMM")} – ${cells[6]?.format("D MMM YYYY")}`;
   const onLeave = (day: Dayjs) =>
-    items.filter((item) => !day.isBefore(dayjs(item.startDate.slice(0, 10)), "day") && !day.isAfter(dayjs(item.endDate.slice(0, 10)), "day"));
+    items.filter(
+      (item) =>
+        !day.isBefore(dayjs(item.startDate.slice(0, 10)), "day") &&
+        !day.isAfter(dayjs(item.endDate.slice(0, 10)), "day"),
+    );
 
   return (
     <Card>
@@ -146,16 +157,37 @@ function TeamCalendar({ refreshKey, onPickDate }: { refreshKey: number; onPickDa
         subtitle={subtitle}
         action={
           <div className="flex items-center gap-2">
-            <button type="button" aria-label="Previous" onClick={() => step(-1)} className="cursor-pointer rounded-md border border-border p-1.5 text-text-muted hover:bg-surface-raised">
+            <button
+              type="button"
+              aria-label="Previous"
+              onClick={() => step(-1)}
+              className="cursor-pointer rounded-md border border-border p-1.5 text-text-muted hover:bg-surface-raised"
+            >
               <Icon name="chevron" size={14} className="rotate-180" />
             </button>
-            <button type="button" aria-label="Next" onClick={() => step(1)} className="cursor-pointer rounded-md border border-border p-1.5 text-text-muted hover:bg-surface-raised">
+            <button
+              type="button"
+              aria-label="Next"
+              onClick={() => step(1)}
+              className="cursor-pointer rounded-md border border-border p-1.5 text-text-muted hover:bg-surface-raised"
+            >
               <Icon name="chevron" size={14} />
             </button>
-            <select value={mode} onChange={(event) => setMode(event.target.value as "month" | "week")} className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs">
-              <option value="month">Month</option>
-              <option value="week">Week</option>
-            </select>
+            <DhritiSelectMenu
+              label="Calendar view"
+              showLabel={false}
+              size="sm"
+              value={mode}
+              onChange={(value) => {
+                if (value === "month" || value === "week") setMode(value);
+              }}
+              open={modeOpen}
+              onOpenChange={setModeOpen}
+              options={[
+                { value: "month", label: "Month" },
+                { value: "week", label: "Week" },
+              ]}
+            />
           </div>
         }
       />
@@ -174,16 +206,30 @@ function TeamCalendar({ refreshKey, onPickDate }: { refreshKey: number; onPickDa
                 key={day.format("YYYY-MM-DD")}
                 title="Double-click to apply leave"
                 onDoubleClick={() => onPickDate(day)}
-                className={`min-h-20 cursor-pointer select-none bg-white p-2 hover:bg-surface-raised ${outside ? "text-slate-300" : "text-text-primary"}`}>
-                <span className={`text-xs font-semibold ${day.isSame(dayjs(), "day") ? "text-brand" : ""}`}>{day.date()}</span>
+                className={`min-h-20 cursor-pointer select-none bg-white p-2 hover:bg-surface-raised ${outside ? "text-slate-300" : "text-text-primary"}`}
+              >
+                <span className={`text-xs font-semibold ${day.isSame(dayjs(), "day") ? "text-brand" : ""}`}>
+                  {day.date()}
+                </span>
                 {people.length > 0 && (
                   <div className="mt-2 flex -space-x-1">
                     {people.slice(0, 3).map((item, index) => (
                       <span key={item.id} title={`${item.employee.user.name} · ${item.type?.name ?? "Leave"}`}>
-                        <Avatar initials={item.employee.user.name.split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase()} index={index + day.date()} size="sm" />
+                        <Avatar
+                          initials={item.employee.user.name
+                            .split(" ")
+                            .map((part) => part[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                          index={index + day.date()}
+                          size="sm"
+                        />
                       </span>
                     ))}
-                    {people.length > 3 && <span className="pl-2 text-[10px] font-semibold text-text-muted">+{people.length - 3}</span>}
+                    {people.length > 3 && (
+                      <span className="pl-2 text-[10px] font-semibold text-text-muted">+{people.length - 3}</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -239,23 +285,36 @@ function MyRequests({
         {rows.map((row) => {
           const open = row.request.status === "PENDING" || row.request.status === "NEEDS_INFO";
           return (
-            <li key={`${row.kind}-${row.request.id}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+            <li
+              key={`${row.kind}-${row.request.id}`}
+              className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+            >
               <div className="min-w-0">
                 <p className="font-semibold text-text-primary">
                   {row.kind === "leave" ? (row.request.type?.name ?? "Leave") : "Comp off"} ·{" "}
-                  {row.kind === "leave" ? fmtRange(row.request.startDate, row.request.endDate) : fmtRange(row.request.workedDate, row.request.workedEndDate ?? row.request.workedDate)}
+                  {row.kind === "leave"
+                    ? fmtRange(row.request.startDate, row.request.endDate)
+                    : fmtRange(row.request.workedDate, row.request.workedEndDate ?? row.request.workedDate)}
                 </p>
                 <p className="text-xs text-text-muted">
                   {row.kind === "leave" ? row.request.totalDays : row.request.days} day(s)
-                  {row.request.moreInfoNote && row.request.status === "NEEDS_INFO" ? ` · Info requested: ${row.request.moreInfoNote}` : ""}
+                  {row.request.moreInfoNote && row.request.status === "NEEDS_INFO"
+                    ? ` · Info requested: ${row.request.moreInfoNote}`
+                    : ""}
                 </p>
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge status={row.request.status} />
                 {row.request.status === "NEEDS_INFO" && (
-                  <Button variant="secondary" onClick={() => onReply(row as ReviewTarget)}>Reply</Button>
+                  <Button variant="secondary" onClick={() => onReply(row as ReviewTarget)}>
+                    Reply
+                  </Button>
                 )}
-                {open && <Button variant="secondary" onClick={() => void cancel(row)}>Cancel</Button>}
+                {open && (
+                  <Button variant="secondary" onClick={() => void cancel(row)}>
+                    Cancel
+                  </Button>
+                )}
               </div>
             </li>
           );
@@ -297,6 +356,8 @@ function RequestsTab({
   const [leave, setLeave] = useState<HrmsLeaveCenterRequest[]>([]);
   const [compOff, setCompOff] = useState<HrmsCompOffRequest[]>([]);
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [openFilter, setOpenFilter] = useState<"kind" | "status" | null>(null);
   const [status, setStatus] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("created");
   const [order, setOrder] = useState<"asc" | "desc">("desc");
@@ -334,27 +395,53 @@ function RequestsTab({
     const open = target.request.status === "PENDING" || target.request.status === "NEEDS_INFO";
     if (!open) {
       return (
-        <button type="button" onClick={() => onReview(target)} className="cursor-pointer rounded-md bg-slate-100 px-2 py-2 text-xs font-semibold text-text-secondary">
+        <button
+          type="button"
+          onClick={() => onReview(target)}
+          className="cursor-pointer rounded-md bg-slate-100 px-2 py-2 text-xs font-semibold text-text-secondary"
+        >
           Details
         </button>
       );
     }
     return (
       <div className="flex gap-1">
-        <button type="button" onClick={() => void approve(target)} className="cursor-pointer rounded-md bg-brand-muted p-2 text-brand" title="Approve" aria-label="Approve">
+        <button
+          type="button"
+          onClick={() => void approve(target)}
+          className="cursor-pointer rounded-md bg-brand-muted p-2 text-brand"
+          title="Approve"
+          aria-label="Approve"
+        >
           <Icon name="check" size={15} />
         </button>
-        <button type="button" onClick={() => onReview(target)} className="cursor-pointer rounded-md bg-red-50 p-2 text-error" title="Reject" aria-label="Reject">
+        <button
+          type="button"
+          onClick={() => onReview(target)}
+          className="cursor-pointer rounded-md bg-red-50 p-2 text-error"
+          title="Reject"
+          aria-label="Reject"
+        >
           <Icon name="close" size={15} />
         </button>
-        <button type="button" onClick={() => onReview(target)} className="cursor-pointer rounded-md bg-blue-50 px-2 text-xs font-semibold text-info">
+        <button
+          type="button"
+          onClick={() => onReview(target)}
+          className="cursor-pointer rounded-md bg-blue-50 px-2 text-xs font-semibold text-info"
+        >
           More info
         </button>
       </div>
     );
   };
 
-  const initials = (name?: string) => (name ?? "?").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
+  const initials = (name?: string) =>
+    (name ?? "?")
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
   const employeeCell = (name: string | undefined, index: number) => (
     <td className="px-5 py-4">
       <div className="flex items-center gap-3">
@@ -365,9 +452,24 @@ function RequestsTab({
   );
   const columns: Array<{ key: SortKey; label: string }> =
     kind === "leave"
-      ? [{ key: "employee", label: "Employee" }, { key: "type", label: "Leave type" }, { key: "date", label: "Dates" }, { key: "days", label: "Duration" }, { key: "created", label: "Requested" }, { key: "status", label: "Status" }]
-      : [{ key: "employee", label: "Employee" }, { key: "type", label: "Request" }, { key: "date", label: "Day worked" }, { key: "days", label: "Credit" }, { key: "created", label: "Requested" }, { key: "status", label: "Status" }];
-  const count = (items: Array<{ status: string }>) => items.filter((item) => item.status === "PENDING" || item.status === "NEEDS_INFO").length;
+      ? [
+          { key: "employee", label: "Employee" },
+          { key: "type", label: "Leave type" },
+          { key: "date", label: "Dates" },
+          { key: "days", label: "Duration" },
+          { key: "created", label: "Requested" },
+          { key: "status", label: "Status" },
+        ]
+      : [
+          { key: "employee", label: "Employee" },
+          { key: "type", label: "Request" },
+          { key: "date", label: "Day worked" },
+          { key: "days", label: "Credit" },
+          { key: "created", label: "Requested" },
+          { key: "status", label: "Status" },
+        ];
+  const count = (items: Array<{ status: string }>) =>
+    items.filter((item) => item.status === "PENDING" || item.status === "NEEDS_INFO").length;
 
   const rows: RequestRow[] = useMemo(
     () =>
@@ -400,17 +502,23 @@ function RequestsTab({
   );
 
   const visible = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    const term = query.trim().toLowerCase();
     const filtered = rows.filter(
-      (row) => (!status || row.status === status) && (!term || `${row.employee} ${row.type}`.toLowerCase().includes(term)),
+      (row) =>
+        (!status || row.status === status) && (!term || `${row.employee} ${row.type}`.toLowerCase().includes(term)),
     );
     const direction = order === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
       const left = a[sortKey];
       const right = b[sortKey];
-      return direction * (typeof left === "number" && typeof right === "number" ? left - right : String(left).localeCompare(String(right)));
+      return (
+        direction *
+        (typeof left === "number" && typeof right === "number"
+          ? left - right
+          : String(left).localeCompare(String(right)))
+      );
     });
-  }, [rows, search, status, sortKey, order]);
+  }, [rows, query, status, sortKey, order]);
 
   const pageCount = Math.max(Math.ceil(visible.length / pageSize), 1);
   const current = Math.min(page, pageCount);
@@ -431,49 +539,64 @@ function RequestsTab({
         title={kind === "leave" ? "Leave requests" : "Comp-off requests"}
         subtitle="Review, approve, reject, or request more information"
         action={
-          <select
+          <DhritiSelectMenu
+            label="Request type"
+            showLabel={false}
+            size="sm"
             value={kind}
-            onChange={(event) => {
-              setKind(event.target.value as "leave" | "compOff");
+            onChange={(value) => {
+              if (value !== "leave" && value !== "compOff") return;
+              setKind(value);
               setPage(1);
             }}
-            className="cursor-pointer rounded-md border border-border px-3 py-1.5 text-xs"
-          >
-            <option value="leave">Leave requests ({count(leave)} open)</option>
-            <option value="compOff">Comp-off requests ({count(compOff)} open)</option>
-          </select>
+            open={openFilter === "kind"}
+            onOpenChange={(open) => setOpenFilter(open ? "kind" : null)}
+            options={[
+              { value: "leave", label: `Leave requests (${count(leave)} open)` },
+              { value: "compOff", label: `Comp-off requests (${count(compOff)} open)` },
+            ]}
+          />
         }
       />
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-5 pb-3">
-        <label className="flex min-w-[14rem] flex-1 items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm focus-within:border-brand">
-          <Icon name="search" size={16} className="text-text-muted" />
-          <input
+      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-border px-5 py-3">
+        <div className="min-w-56 flex-1">
+          <DhritiSearchField
+            label="Search requests"
+            showLabel={false}
             value={search}
-            onChange={(event) => {
-              setSearch(event.target.value);
+            onChange={setSearch}
+            onSearch={(value) => {
+              setQuery(value);
               setPage(1);
             }}
             placeholder="Search by employee or type"
-            aria-label="Search requests"
-            className="w-full bg-transparent outline-none"
           />
-        </label>
-        <select
-          value={status}
-          onChange={(event) => {
-            setStatus(event.target.value);
+        </div>
+        <DhritiSelectMenu
+          label="Filter by status"
+          showLabel={false}
+          value={status || null}
+          placeholder="All statuses"
+          onChange={(value) => {
+            setStatus(value ?? "");
             setPage(1);
           }}
-          aria-label="Filter by status"
-          className="cursor-pointer rounded-md border border-border bg-surface px-3 py-2 text-sm"
-        >
-          <option value="">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="NEEDS_INFO">Needs info</option>
-          <option value="APPROVED">Approved</option>
-          <option value="REJECTED">Rejected</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
+          open={openFilter === "status"}
+          onOpenChange={(open) => setOpenFilter(open ? "status" : null)}
+          options={[
+            { value: "", label: "All statuses" },
+            ...(["PENDING", "NEEDS_INFO", "APPROVED", "REJECTED", "CANCELLED"] as const).map((value) => ({
+              value,
+              label: {
+                PENDING: "Pending",
+                NEEDS_INFO: "Needs info",
+                APPROVED: "Approved",
+                REJECTED: "Rejected",
+                CANCELLED: "Cancelled",
+              }[value],
+            })),
+          ]}
+        />
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full min-w-[900px] text-left">
@@ -481,7 +604,12 @@ function RequestsTab({
             <tr>
               {columns.map((column) => (
                 <th key={column.key} className="px-5 py-3 text-xs font-semibold uppercase text-text-muted">
-                  <button type="button" onClick={() => toggleSort(column.key)} className="inline-flex cursor-pointer items-center gap-1 uppercase" aria-label={`Sort by ${column.label}`}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(column.key)}
+                    className="inline-flex cursor-pointer items-center gap-1 uppercase"
+                    aria-label={`Sort by ${column.label}`}
+                  >
                     {column.label}
                     <Icon name="sort" size={14} className={sortKey === column.key ? "text-brand" : undefined} />
                   </button>
@@ -492,7 +620,11 @@ function RequestsTab({
           </thead>
           <tbody className="divide-y divide-border">
             {pageRows.length === 0 && (
-              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-text-muted">No requests.</td></tr>
+              <tr>
+                <td colSpan={7} className="px-5 py-8 text-center text-sm text-text-muted">
+                  No requests.
+                </td>
+              </tr>
             )}
             {pageRows.map((row, index) => (
               <tr key={row.id} className="hover:bg-slate-50">
@@ -501,7 +633,9 @@ function RequestsTab({
                 <td className="px-5 py-4 text-sm text-text-secondary">{row.dates}</td>
                 <td className="px-5 py-4 text-sm">{row.duration}</td>
                 <td className="px-5 py-4 text-sm text-text-secondary">{dayjs(row.created).format("D MMM, h:mm A")}</td>
-                <td className="px-5 py-4"><StatusBadge status={row.status} /></td>
+                <td className="px-5 py-4">
+                  <StatusBadge status={row.status} />
+                </td>
                 <td className="px-5 py-4">{actions(row.target)}</td>
               </tr>
             ))}
@@ -531,7 +665,10 @@ function PoliciesTab({ types, canManage }: { types: HrmsLeaveType[]; canManage: 
   const rules: Array<[string, string]> = settings
     ? [
         ["Minimum notice", settings.leaveMinNoticeDays ? `${settings.leaveMinNoticeDays} day(s) before start` : "None"],
-        ["Back-dating", settings.leaveBackdateLimitDays === null ? "No limit" : `Up to ${settings.leaveBackdateLimitDays} day(s)`],
+        [
+          "Back-dating",
+          settings.leaveBackdateLimitDays === null ? "No limit" : `Up to ${settings.leaveBackdateLimitDays} day(s)`,
+        ],
         ["Max days per request", settings.maxLeaveRequestDays ? String(settings.maxLeaveRequestDays) : "No limit"],
         ["Half-day leave", settings.allowHalfDayLeave ? "Allowed" : "Not allowed"],
         ["Apply on behalf of others", settings.leaveOnBehalfEnabled ? "Enabled for HR/admins" : "Disabled"],
@@ -552,15 +689,19 @@ function PoliciesTab({ types, canManage }: { types: HrmsLeaveType[]; canManage: 
             </tr>
           </thead>
           <tbody>
-            {types.filter((t) => t.isActive).map((type) => (
-              <tr key={type.id} className="border-t border-border">
-                <td className="px-4 py-2.5 font-medium text-text-primary">{type.name}</td>
-                <td className="px-4 py-2.5">{type.isCompOff ? "Earned" : type.annualDays === 0 ? "Unlimited" : type.annualDays}</td>
-                <td className="px-4 py-2.5">{type.carryForwardDays}</td>
-                <td className="px-4 py-2.5">{type.isPaid ? "Yes" : "No"}</td>
-                <td className="px-4 py-2.5">{type.allowHalfDay ? "Yes" : "No"}</td>
-              </tr>
-            ))}
+            {types
+              .filter((t) => t.isActive)
+              .map((type) => (
+                <tr key={type.id} className="border-t border-border">
+                  <td className="px-4 py-2.5 font-medium text-text-primary">{type.name}</td>
+                  <td className="px-4 py-2.5">
+                    {type.isCompOff ? "Earned" : type.annualDays === 0 ? "Unlimited" : type.annualDays}
+                  </td>
+                  <td className="px-4 py-2.5">{type.carryForwardDays}</td>
+                  <td className="px-4 py-2.5">{type.isPaid ? "Yes" : "No"}</td>
+                  <td className="px-4 py-2.5">{type.allowHalfDay ? "Yes" : "No"}</td>
+                </tr>
+              ))}
           </tbody>
         </table>
       </Card>
@@ -576,8 +717,12 @@ function PoliciesTab({ types, canManage }: { types: HrmsLeaveType[]; canManage: 
         </dl>
         {canManage && slug && (
           <div className="flex flex-wrap gap-3 border-t border-border p-4 text-sm font-semibold text-brand">
-            <Link href={`/${slug}/hrms/settings/leave-types`} className="cursor-pointer hover:underline">Manage leave types</Link>
-            <Link href={`/${slug}/hrms/settings`} className="cursor-pointer hover:underline">Leave rules</Link>
+            <Link href={`/${slug}/hrms/settings/leave-types`} className="cursor-pointer hover:underline">
+              Manage leave types
+            </Link>
+            <Link href={`/${slug}/hrms/settings`} className="cursor-pointer hover:underline">
+              Leave rules
+            </Link>
           </div>
         )}
       </Card>
@@ -659,7 +804,11 @@ export function HrmsLeave({ onToast }: { onToast: (message: string) => void }) {
     reload();
   };
 
-  const tabs: Array<[TabId, string]> = [["dashboard", "Dashboard"], ["requests", "Requests"], ["policies", "Leave Policies"]];
+  const tabs: Array<[TabId, string]> = [
+    ["dashboard", "Dashboard"],
+    ["requests", "Requests"],
+    ["policies", "Leave Policies"],
+  ];
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -680,12 +829,23 @@ export function HrmsLeave({ onToast }: { onToast: (message: string) => void }) {
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setDialog("compOff")}>Request comp off</Button>
-            <Button onClick={() => { setPickedDate(null); setDialog("leave"); }}><Icon name="plus" size={14} /> Apply leave</Button>
+            <Button variant="secondary" onClick={() => setDialog("compOff")}>
+              Request comp off
+            </Button>
+            <Button
+              onClick={() => {
+                setPickedDate(null);
+                setDialog("leave");
+              }}
+            >
+              <Icon name="plus" size={14} /> Apply leave
+            </Button>
           </div>
         </div>
 
-        <div className={`min-h-0 flex-1 pt-4 ${tab === "requests" ? "" : tab === "dashboard" ? "overflow-y-auto xl:overflow-hidden" : "overflow-y-auto"}`}>
+        <div
+          className={`min-h-0 flex-1 pt-4 ${tab === "requests" ? "" : tab === "dashboard" ? "overflow-y-auto xl:overflow-hidden" : "overflow-y-auto"}`}
+        >
           {tab === "dashboard" && (
             <div className="grid gap-5 xl:h-full xl:grid-cols-[1fr_340px]">
               <div className="min-w-0 xl:overflow-y-auto">
@@ -700,11 +860,19 @@ export function HrmsLeave({ onToast }: { onToast: (message: string) => void }) {
               <div className="space-y-5 xl:min-h-0 xl:overflow-y-auto">
                 <BalancesCard balances={balances} />
                 <HolidaysCard />
-                <MyRequests leave={myLeave} compOff={myCompOff} onChanged={reload} onReply={setReply} onToast={onToast} />
+                <MyRequests
+                  leave={myLeave}
+                  compOff={myCompOff}
+                  onChanged={reload}
+                  onReply={setReply}
+                  onToast={onToast}
+                />
               </div>
             </div>
           )}
-          {tab === "requests" && <RequestsTab refreshKey={refreshKey} onReview={setReview} onChanged={reload} onToast={onToast} />}
+          {tab === "requests" && (
+            <RequestsTab refreshKey={refreshKey} onReview={setReview} onChanged={reload} onToast={onToast} />
+          )}
           {tab === "policies" && <PoliciesTab types={types} canManage={canManage} />}
         </div>
 
@@ -722,7 +890,9 @@ export function HrmsLeave({ onToast }: { onToast: (message: string) => void }) {
             onDone={done}
           />
         )}
-        {dialog === "compOff" && <CompOffDialog employees={onBehalf ? employees : null} onClose={() => setDialog(null)} onDone={done} />}
+        {dialog === "compOff" && (
+          <CompOffDialog employees={onBehalf ? employees : null} onClose={() => setDialog(null)} onDone={done} />
+        )}
         {review && <ReviewDialog target={review} onClose={() => setReview(null)} onDone={done} />}
         {reply && <ReplyDialog target={reply} onClose={() => setReply(null)} onDone={done} />}
       </div>

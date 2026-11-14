@@ -7,13 +7,13 @@ import {
   FieldFrame,
   fieldActionClass,
   fieldInputClass,
-  fieldMenuClass,
   fieldSurface,
   moveMenuFocus,
   useFieldIdentity,
   useFieldMenu,
   type FieldPresentationProps,
 } from "./field-primitives";
+import { FieldPopover } from "./field-popover";
 import type { FieldOption } from "./select-fields";
 
 export interface FieldOptionGroup {
@@ -115,7 +115,8 @@ function ComboboxShell({
   hierarchy?: boolean;
 }) {
   const identity = useFieldIdentity(props);
-  const root = useFieldMenu(props.open, props.onOpenChange, props.disabled, props.readOnly);
+  const panel = useRef<HTMLDivElement>(null);
+  const root = useFieldMenu(props.open, props.onOpenChange, props.disabled, props.readOnly, panel);
   const input = useRef<HTMLInputElement>(null);
   const blocked = props.disabled || props.readOnly;
   const controls = `${identity.id}-options`;
@@ -123,7 +124,7 @@ function ComboboxShell({
     (value) => options.find((option) => option.value === value) ?? { value, label: value },
   );
   return (
-    <FieldFrame {...props} id={identity.id}>
+    <FieldFrame {...props} id={identity.id} labelActivatesControl={false}>
       <div
         ref={root}
         className="relative"
@@ -135,7 +136,7 @@ function ComboboxShell({
           } else if (["ArrowDown", "ArrowUp"].includes(event.key)) {
             event.preventDefault();
             if (!props.open && !blocked) props.onOpenChange(true);
-            else moveMenuFocus(root, event.key);
+            else moveMenuFocus(panel, event.key);
           }
         }}
       >
@@ -184,9 +185,6 @@ function ComboboxShell({
             onChange={(event) => {
               if (!blocked) onSearchChange?.(event.target.value);
             }}
-            onFocus={() => {
-              if (!blocked) props.onOpenChange(true);
-            }}
             onClick={(event) => {
               event.stopPropagation();
               if (!blocked) props.onOpenChange(true);
@@ -215,7 +213,7 @@ function ComboboxShell({
           )}
         </div>
         {props.open && !blocked && (
-          <div className={fieldMenuClass}>
+          <FieldPopover anchor={root} panel={panel} matchWidth>
             <div
               id={controls}
               role={hierarchy ? "tree" : "listbox"}
@@ -241,7 +239,7 @@ function ComboboxShell({
                 </button>
               </div>
             )}
-          </div>
+          </FieldPopover>
         )}
       </div>
     </FieldFrame>
