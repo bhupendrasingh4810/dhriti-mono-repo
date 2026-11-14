@@ -1,10 +1,5 @@
-"use client";
-
-import { useHrmsToast } from "../layout";
-import { HrmsPayroll } from "@/features/hrms/payroll";
+import { PayrollPage } from "@/features/hrms/payroll-page";
 
 export default function Page() {
-  const onToast = useHrmsToast();
-
-  return <HrmsPayroll onToast={onToast} />;
+  return <PayrollPage section="Dashboard" />;
 }

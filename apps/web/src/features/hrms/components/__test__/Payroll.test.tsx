@@ -1,6 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { usePathname } from "next/navigation";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { HrmsPayroll } from "../../payroll";
+import { HrmsPayroll as PayrollWorkspaceView } from "../../payroll";
+import { PayrollLayout, payrollSections } from "../../payroll-layout";
 import { PayrollForm, PayrollPeriodPicker } from "../../payroll-forms";
 import { PayrollTable, downloadPayrollCsv } from "../../payroll-tables";
 import {
@@ -11,6 +13,42 @@ import {
 } from "@/services/payroll.service";
 
 const auth = vi.hoisted(() => ({ organizationId: "org-a", manage: true }));
+const navigation = vi.hoisted(() => ({
+  path: "/test/hrms/payroll",
+  listeners: new Set<() => void>(),
+  navigate(path: string) {
+    this.path = path;
+    this.listeners.forEach((listener) => listener());
+  },
+}));
+vi.mock("next/navigation", async () => {
+  const { useSyncExternalStore } = await import("react");
+  return {
+    useParams: () => ({ organizationSlug: "test" }),
+    usePathname: () =>
+      useSyncExternalStore(
+        (listener) => {
+          navigation.listeners.add(listener);
+          return () => navigation.listeners.delete(listener);
+        },
+        () => navigation.path,
+      ),
+  };
+});
+vi.mock("next/link", () => ({
+  default: ({ href, children, ...props }: React.ComponentProps<"a"> & { href: string }) => (
+    <a
+      {...props}
+      href={href}
+      onClick={(event) => {
+        event.preventDefault();
+        navigation.navigate(href);
+      }}
+    >
+      {children}
+    </a>
+  ),
+}));
 vi.mock("@/hooks/use-auth", () => ({ useAuth: () => ({ user: { organization: { id: auth.organizationId } } }) }));
 vi.mock("@/hooks/use-permissions", () => ({ usePermissions: () => ({ can: () => auth.manage }) }));
 vi.mock("@/services/payroll.service", () => ({
@@ -132,6 +170,24 @@ const workspace: PayrollWorkspace = {
   departments: [{ id: "dept-a", name: "Engineering" }],
   records: [],
 };
+
+function HrmsPayroll({ onToast }: { onToast: (message: string) => void }) {
+  const path = usePathname();
+  const section = payrollSections.find(({ path: suffix }) => path === `/test/hrms/payroll${suffix ? `/${suffix}` : ""}`);
+  if (!section) throw new Error(`Unknown payroll route: ${path}`);
+  return (
+    <PayrollLayout>
+      <PayrollWorkspaceView onToast={onToast} section={section.label} />
+    </PayrollLayout>
+  );
+}
+
+async function startPayroll() {
+  const button = screen.getByRole("button", { name: "Start payroll run" });
+  await waitFor(() => expect(button).toBeEnabled());
+  fireEvent.click(button);
+}
+
 beforeAll(() => {
   // jsdom does not implement native modal dialog focus management.
   Object.defineProperties(HTMLDialogElement.prototype, {
@@ -151,6 +207,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   vi.resetAllMocks();
+  navigation.path = "/test/hrms/payroll";
   auth.organizationId = "org-a";
   auth.manage = true;
   vi.mocked(payrollService.workspace).mockResolvedValue(workspace);
@@ -195,7 +252,7 @@ describe("payroll calendars", () => {
       vi.mocked(payrollService.calendar).mockResolvedValue([selectedPeriod]);
       render(<HrmsPayroll onToast={vi.fn()} />);
       await screen.findByText("1 employees");
-      fireEvent.click(screen.getByRole("button", { name: "Start payroll run" }));
+      await startPayroll();
       const dialog = screen.getByRole("dialog", { name: "Start payroll run" });
       await waitFor(() => expect(within(dialog).getByLabelText("Payroll period")).toBeEnabled());
       fireEvent.change(within(dialog).getByLabelText("Payroll period"), { target: { value: selectedPeriod.key } });
@@ -239,7 +296,7 @@ describe("payroll calendars", () => {
     });
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("tab", { name: "Run payroll" }));
+    fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     fireEvent.click(screen.getByRole("button", { name: "Review" }));
     expect(screen.getByLabelText("Payroll period")).toHaveValue(period.key);
     expect(screen.getByLabelText("Payroll period")).toBeDisabled();
@@ -300,7 +357,7 @@ describe("payroll calendars", () => {
     try {
       render(<HrmsPayroll onToast={vi.fn()} />);
       await screen.findByText("1 employees");
-      fireEvent.click(screen.getByRole("tab", { name: "Payslips" }));
+      fireEvent.click(screen.getByRole("link", { name: "Payslips" }));
       fireEvent.click(screen.getByRole("button", { name: "Export payroll register" }));
       const reader = new FileReader();
       const csv = await new Promise<string>((resolve) => {
@@ -327,7 +384,7 @@ describe("payroll calendars", () => {
     vi.mocked(payrollService.calendar).mockResolvedValue([period]);
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("tab", { name: "Configuration" }));
+    fireEvent.click(screen.getByRole("link", { name: "Configuration" }));
     fireEvent.change(screen.getByLabelText("Calendar pay group"), { target: { value: profile.id } });
     const table = await screen.findByRole("table", { name: "Payroll calendar" });
     await waitFor(() => expect(within(table).getByText("2026-11-10")).toBeInTheDocument());
@@ -439,7 +496,7 @@ describe("payroll calendars", () => {
     ]);
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("button", { name: "Start payroll run" }));
+    await startPayroll();
     fireEvent.change(screen.getByLabelText("Payroll period"), { target: { value: "2026-11" } });
     fireEvent.click(screen.getByRole("button", { name: "Use scheduled pay date" }));
     await waitFor(() => expect(screen.getByLabelText("Pay date")).toHaveValue("2026-12-03"));
@@ -475,7 +532,7 @@ describe("payroll workspace", () => {
     const toast = vi.fn();
     render(<HrmsPayroll onToast={toast} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("tab", { name: "Employee salary" }));
+    fireEvent.click(screen.getByRole("link", { name: "Employee salary" }));
     expect(screen.getByRole("table", { name: "Employee salary" })).toBeInTheDocument();
     expect(
       within(screen.getByRole("table", { name: "Variable pay inputs" })).getByText("Performance bonus"),
@@ -580,7 +637,7 @@ describe("payroll workspace", () => {
     try {
       render(<HrmsPayroll onToast={vi.fn()} />);
       await screen.findByText("1 employees");
-      fireEvent.click(screen.getByRole("tab", { name: "Reports" }));
+      fireEvent.click(screen.getByRole("link", { name: "Reports" }));
       const report = screen.getByRole("table", { name: "Reports" });
       expect(within(report).getByRole("columnheader", { name: /Gross change/ })).toBeInTheDocument();
       expect(within(report).getByText("1000.00 (12.35%)")).toBeInTheDocument();
@@ -627,7 +684,7 @@ describe("payroll workspace", () => {
     try {
       render(<HrmsPayroll onToast={vi.fn()} />);
       await screen.findByText("1 employees");
-      fireEvent.click(screen.getByRole("tab", { name: "Payslips" }));
+      fireEvent.click(screen.getByRole("link", { name: "Payslips" }));
       expect(screen.getByText("19 / 30")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Export payroll register" }));
       const reader = new FileReader();
@@ -650,10 +707,10 @@ describe("payroll workspace", () => {
     vi.mocked(payrollService.workspace).mockResolvedValue({ ...workspace, runs: [{ ...run, status: "DRAFT" }] });
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("button", { name: "Start payroll run" }));
+    await startPayroll();
     expect(screen.getByLabelText("Proration policy")).toHaveValue("CALENDAR_DAYS");
     fireEvent.click(screen.getByRole("button", { name: "Close payroll run" }));
-    fireEvent.click(screen.getByRole("tab", { name: "Run payroll" }));
+    fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     fireEvent.click(screen.getByRole("button", { name: "Review" }));
     expect(screen.getByLabelText("Proration policy")).toHaveValue("NONE");
     expect(screen.getByLabelText("Proration policy")).toBeDisabled();
@@ -666,7 +723,7 @@ describe("payroll workspace", () => {
       const toast = vi.fn();
       render(<HrmsPayroll onToast={toast} />);
       await screen.findByText("1 employees");
-      fireEvent.click(screen.getByRole("tab", { name: "Run payroll" }));
+      fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
       fireEvent.click(screen.getByRole("button", { name: `${label} draft` }));
       const dialog = screen.getByRole("dialog", { name: `${label} payroll draft` });
       fireEvent.click(within(dialog).getByRole("button", { name: `${label} payroll draft` }));
@@ -700,7 +757,7 @@ describe("payroll workspace", () => {
     });
     render(<HrmsPayroll onToast={vi.fn()} />);
     await waitFor(() => expect(screen.getByRole("button", { name: "Start payroll run" })).toBeEnabled());
-    fireEvent.click(screen.getByRole("tab", { name: "Run payroll" }));
+    fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     expect(screen.getByText("CANCELLED")).toBeInTheDocument();
     expect(screen.getByText("Incorrect salary")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel draft" })).not.toBeInTheDocument();
@@ -711,11 +768,13 @@ describe("payroll workspace", () => {
   it("keeps every tab's full-width content below, not inside, the wrapping navigation header", async () => {
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    const navigation = screen.getByRole("tablist", { name: "Payroll sections" });
+    const navigation = screen.getByRole("navigation", { name: "Payroll sections" });
     const header = navigation.parentElement!;
     const start = screen.getByRole("button", { name: "Start payroll run" });
     expect(header).toContainElement(start);
-    expect(header).toHaveClass("flex", "flex-wrap");
+    expect(header).toHaveClass("sticky", "top-0", "bg-background", "flex", "flex-wrap");
+    expect(navigation).toHaveClass("flex-wrap");
+    expect(navigation).not.toHaveClass("overflow-x-auto");
     const tablesByTab = [
       ["Dashboard", ["Payroll run checklist"]],
       ["Configuration", ["Payroll profiles"]],
@@ -727,15 +786,16 @@ describe("payroll workspace", () => {
       ["Reports", ["Reports"]],
     ] as const;
     for (const [tab, tables] of tablesByTab) {
-      fireEvent.click(screen.getByRole("tab", { name: tab }));
-      const panel = screen.getByRole("tabpanel", { name: tab });
-      expect(panel.parentElement).toBe(header.parentElement);
-      expect(header.nextElementSibling).toBe(panel);
+      fireEvent.click(screen.getByRole("link", { name: tab }));
+      const panel = screen.getByRole("region", { name: tab });
+      expect(panel.parentElement?.parentElement).toBe(header.parentElement);
+      expect(header.nextElementSibling).toBe(panel.parentElement);
       expect(header).not.toContainElement(panel);
       expect(panel).not.toContainElement(start);
       expect(panel).toHaveClass("w-full", "min-w-0");
       expect(panel).not.toHaveClass("flex", "flex-wrap");
       expect(panel).toContainElement(screen.getByText("Total payout"));
+      expect(screen.getByText("Total payout").closest("section")).toHaveClass("p-3");
       for (const label of tables) {
         const table = within(panel).getByRole("table", { name: label });
         const scroll = within(panel).getByRole("region", { name: `${label} table` });
@@ -746,24 +806,34 @@ describe("payroll workspace", () => {
     }
   });
 
-  it("supports keyboard navigation through workflow-ordered tabs", async () => {
+  it("uses addressable navigation links and marks the active page", async () => {
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    const dashboard = screen.getByRole("tab", { name: "Dashboard" });
-    fireEvent.keyDown(dashboard, { key: "ArrowRight" });
-    const configuration = screen.getByRole("tab", { name: "Configuration" });
-    expect(configuration).toHaveAttribute("aria-selected", "true");
-    expect(configuration).toHaveFocus();
-    expect(screen.getByRole("tabpanel", { name: "Configuration" })).toBeInTheDocument();
-    fireEvent.keyDown(configuration, { key: "End" });
-    const reports = screen.getByRole("tab", { name: "Reports" });
-    expect(reports).toHaveFocus();
-    fireEvent.keyDown(reports, { key: "ArrowRight" });
-    expect(dashboard).toHaveFocus();
-    fireEvent.keyDown(dashboard, { key: "ArrowLeft" });
-    expect(reports).toHaveFocus();
-    fireEvent.keyDown(reports, { key: "Home" });
-    expect(dashboard).toHaveFocus();
+    const dashboard = screen.getByRole("link", { name: "Dashboard" });
+    const configuration = screen.getByRole("link", { name: "Configuration" });
+    expect(dashboard).toHaveAttribute("href", "/test/hrms/payroll");
+    expect(dashboard).toHaveAttribute("aria-current", "page");
+    expect(configuration).toHaveAttribute("href", "/test/hrms/payroll/configuration");
+    fireEvent.click(configuration);
+    expect(configuration).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("region", { name: "Configuration" })).toBeInTheDocument();
+    fireEvent.click(dashboard);
+    expect(dashboard).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("region", { name: "Dashboard" })).toBeInTheDocument();
+  });
+
+  it("opens a payroll section directly and exposes every section URL", async () => {
+    navigation.path = "/test/hrms/payroll/reports";
+    render(<HrmsPayroll onToast={vi.fn()} />);
+    await screen.findByText("1 employees");
+    expect(screen.getByRole("region", { name: "Reports" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reports" })).toHaveAttribute("aria-current", "page");
+    for (const { label, path } of payrollSections) {
+      expect(screen.getByRole("link", { name: label })).toHaveAttribute(
+        "href",
+        `/test/hrms/payroll${path ? `/${path}` : ""}`,
+      );
+    }
   });
 
   it("preserves original tabs, dashboard cards and checklist without demo payroll values", async () => {
@@ -780,15 +850,15 @@ describe("payroll workspace", () => {
       "Reports",
     ];
     expect(
-      within(screen.getByRole("tablist", { name: "Payroll sections" }))
-        .getAllByRole("tab")
+      within(screen.getByRole("navigation", { name: "Payroll sections" }))
+        .getAllByRole("link")
         .map((tab) => tab.textContent),
     ).toEqual(tabOrder);
     for (const name of tabOrder) {
-      expect(screen.getByRole("tab", { name })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name })).toBeInTheDocument();
     }
-    expect(screen.getByRole("tab", { name: "Dashboard" })).toHaveClass("rounded-md", "bg-brand/10", "text-brand");
-    expect(screen.getByRole("tabpanel", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toHaveClass("rounded-md", "bg-brand/10", "text-brand");
+    expect(screen.getByRole("region", { name: "Dashboard" })).toBeInTheDocument();
     for (const name of [
       "Total payout",
       "Payroll status",
@@ -817,10 +887,10 @@ describe("payroll workspace", () => {
       ["Run payroll", "India payroll"],
       ["Configuration", "India payroll"],
     ]) {
-      fireEvent.click(screen.getByRole("tab", { name: tab }));
+      fireEvent.click(screen.getByRole("link", { name: tab }));
       expect(screen.getAllByText(content).length).toBeGreaterThan(0);
     }
-    fireEvent.click(screen.getByRole("tab", { name: "Payslips" }));
+    fireEvent.click(screen.getByRole("link", { name: "Payslips" }));
     fireEvent.click(screen.getByRole("button", { name: "View payslip" }));
     expect(screen.getByRole("dialog", { name: "Payslip" })).toHaveTextContent("Configured deduction");
     expect(
@@ -840,7 +910,7 @@ describe("payroll workspace", () => {
   it("keeps all six drawer steps, validates required dates, and uses the selected department in preview", async () => {
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("button", { name: "Start payroll run" }));
+    await startPayroll();
     const dialog = screen.getByRole("dialog", { name: "Start payroll run" });
     for (const name of ["Period & scope", "Validate inputs", "Salary review", "Exceptions", "Approvals", "Process"]) {
       expect(within(dialog).getByText(name)).toBeInTheDocument();
@@ -870,7 +940,7 @@ describe("payroll workspace", () => {
     const toast = vi.fn();
     render(<HrmsPayroll onToast={toast} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("button", { name: "Start payroll run" }));
+    await startPayroll();
     fireEvent.change(screen.getByLabelText("Pay date"), { target: { value: "2026-11-30" } });
     fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
     await waitFor(() =>
@@ -884,7 +954,7 @@ describe("payroll workspace", () => {
     vi.mocked(payrollService.workspace).mockResolvedValue({ ...workspace, runs: [{ ...run, status: "APPROVED" }] });
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("tab", { name: "Run payroll" }));
+    fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     fireEvent.click(screen.getByRole("button", { name: "Review" }));
     const dialog = screen.getByRole("dialog", { name: "Start payroll run" });
     for (const step of ["Validate inputs", "Salary review", "Exceptions", "Approvals", "Process"]) {
@@ -904,7 +974,7 @@ describe("payroll workspace", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
-    fireEvent.click(screen.getByRole("tab", { name: "Run payroll" }));
+    fireEvent.click(screen.getByRole("link", { name: "Run payroll" }));
     fireEvent.click(screen.getByRole("button", { name: "Initiate bank payment (sandbox)" }));
     expect(payrollService.sandbox).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
@@ -918,7 +988,7 @@ describe("payroll workspace", () => {
     const { rerender } = render(<HrmsPayroll onToast={vi.fn()} />);
     await screen.findByText("1 employees");
     expect(screen.getByRole("button", { name: "Start payroll run" })).toBeDisabled();
-    fireEvent.click(screen.getByRole("tab", { name: "Salary structures" }));
+    fireEvent.click(screen.getByRole("link", { name: "Salary structures" }));
     expect(screen.getByRole("button", { name: "Add salary structure" })).toBeDisabled();
     auth.organizationId = "org-b";
     vi.mocked(payrollService.workspace).mockResolvedValue({ ...workspace, runs: [], structures: [] });

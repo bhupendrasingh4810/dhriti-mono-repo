@@ -1,5 +1,10 @@
 # HRMS payroll
 
+The payroll dashboard remains at `/{organizationSlug}/hrms/payroll`. Configuration,
+salary structures, employee salary, reimbursements, run payroll, payslips, and reports
+have their own shareable routes beneath it. The shared payroll navigation and start-run
+action are available on every section.
+
 ## User guide: a complete worked example
 
 Payroll is a configurable foundation, not a complete country-compliance or banking
@@ -25,7 +30,7 @@ No bank, accounting, or EOR provider has been selected.
 | 8 | Versioned country/subnational compliance packs, filings/year-end output, provider/EOR coordination and explicit-FX consolidation | Pending; requires authoritative rules and qualified local validation |
 | 9 | Provider-backed payment verification, individual transfer results, idempotent retries and reconciliation | Pending; real transfers/filings cannot run while providers are unconnected |
 
-Preserve the existing tabs and features throughout. Completed stages do not imply
+Preserve the existing sections and features throughout. Completed stages do not imply
 later-stage functionality exists. Bank secrets must not be stored in plaintext or
 returned in full by list APIs. Format validity, manual document review, provider
 ownership verification, and settlement are separate states; never simulate verified
@@ -33,7 +38,7 @@ ownership or a successful live transfer.
 
 ### Payroll calendars: monthly, weekly, every two weeks and twice monthly
 
-This phase adds configurable calendars without removing any existing payroll tabs,
+This phase adds configurable calendars without removing any existing payroll sections,
 tables or workflow steps. Existing profiles remain MONTHLY, with no anchor and a
 zero-day pay-date offset. Existing approved/processed snapshots are not migrated
 or recalculated; saved monthly drafts retain their saved proration policy.
