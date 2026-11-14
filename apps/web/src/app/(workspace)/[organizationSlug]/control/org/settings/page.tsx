@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useState } from "react";
 import { useParams } from "next/navigation";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
 import { controlOrganizationService } from "@/services/control.service";
+import { OrganizationBankAccounts } from "@/features/settings/OrganizationBankAccounts";
 
 export default function OrgSettings() {
   const { organizationSlug } = useParams<{ organizationSlug: string }>();
@@ -173,6 +174,8 @@ export default function OrgSettings() {
             </button>
           </div>
         </div>
+
+        <OrganizationBankAccounts />
 
         {/* Plan */}
         <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #e2e8f0", padding: 24 }}>

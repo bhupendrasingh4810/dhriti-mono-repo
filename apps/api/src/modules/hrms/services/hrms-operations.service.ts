@@ -4,12 +4,12 @@ import {
   type AssetCondition,
   LeaveStatus,
   PayrollStatus,
+  Prisma,
   ReviewStatus,
   TrainingEnrollmentStatus,
   TrainingStatus,
   type AssetType,
   type LeaveType,
-  type Prisma,
   type ReviewType,
   type TrainingType,
 } from "@prisma/client";
@@ -220,8 +220,17 @@ export class HrmsOperationsService {
   ) {
     await this.requireActiveEmployee(organizationId, input.employeeId);
     this.assertDateRange(input.periodStart, input.periodEnd);
-    const record = await this.prisma.hrmsPayrollRecord
-      .create({
+    const record = await this.prisma.$transaction(async (tx) => {
+      // Protect locked run payroll even when a legacy caller uses a different free-text period label.
+      const overlapping = await tx.hrmsPayrollRecord.findFirst({
+        where: { organizationId, employeeId: input.employeeId, runId: { not: null },
+          periodStart: { lte: new Date(input.periodEnd) }, periodEnd: { gte: new Date(input.periodStart) } },
+        select: { id: true },
+      });
+      if (overlapping) {
+        throw new AppError(ErrorCode.VALIDATION_FAILED, "An approved payroll run already covers this employee and date range", HttpStatus.CONFLICT);
+      }
+      return tx.hrmsPayrollRecord.create({
         data: {
           organizationId,
           employeeId: input.employeeId,
@@ -237,13 +246,13 @@ export class HrmsOperationsService {
             (await resolveAppSettings(this.settings, "hrms", organizationId)).defaultPayrollCurrency,
           notes: this.clean(input.notes),
         },
-      })
-      .catch(() => {
-        throw new AppError(
-          ErrorCode.VALIDATION_FAILED,
-          "A payroll record already exists for this employee and period",
-          HttpStatus.CONFLICT,
-        );
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable })
+      .catch((error: unknown) => {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2002" || error.code === "P2034")) {
+          throw new AppError(ErrorCode.VALIDATION_FAILED, "Duplicate or concurrently changed payroll; reload before retrying", HttpStatus.CONFLICT);
+        }
+        throw error;
       });
     return this.auditRecord("hrms.payroll.created", organizationId, actorUserId, record.id, {
       employeeId: input.employeeId,
@@ -253,10 +262,14 @@ export class HrmsOperationsService {
   async approvePayroll(organizationId: string, payrollId: string, actorUserId: string) {
     const existing = await this.prisma.hrmsPayrollRecord.findFirst({
       where: { id: payrollId, organizationId },
-      select: { id: true, status: true },
+      select: { id: true, status: true, runId: true },
     });
     if (!existing) {
       this.notFound();
+    }
+    // Run-owned records inherit the independently approved snapshot and cannot be reapproved through legacy routes.
+    if (existing.runId) {
+      throw new AppError(ErrorCode.VALIDATION_FAILED, "Manage this payroll record through its payroll run", HttpStatus.CONFLICT);
     }
     const record = await this.prisma.$transaction(async (tx) => {
       const payroll = await tx.hrmsPayrollRecord.update({

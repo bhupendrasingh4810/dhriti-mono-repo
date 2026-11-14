@@ -1,14 +1,4 @@
-export const COUNTRY_OPTIONS = [
-  { code: "AU", name: "Australia" },
-  { code: "BR", name: "Brazil" },
-  { code: "CA", name: "Canada" },
-  { code: "DE", name: "Germany" },
-  { code: "IN", name: "India" },
-  { code: "JP", name: "Japan" },
-  { code: "SG", name: "Singapore" },
-  { code: "GB", name: "United Kingdom" },
-  { code: "US", name: "United States" },
-] as const;
+export { COUNTRY_OPTIONS, CURRENCY_OPTIONS } from "@/lib/country-currency-options";
 
 export const TIMEZONE_OPTIONS = [
   "America/Los_Angeles",

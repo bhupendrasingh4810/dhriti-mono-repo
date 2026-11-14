@@ -93,6 +93,13 @@ model Organization {
   pulseSettings             PulseOrganizationSettings?
   notesSettings             NotesOrganizationSettings?
   hrmsSettings              HrmsOrganizationSettings?
+  payrollProfiles           HrmsPayrollProfile[]
+  salaryStructures          HrmsSalaryStructure[]
+  salaryAssignments         HrmsSalaryAssignment[]
+  variablePayInputs         HrmsVariablePayInput[]
+  payrollRuns               HrmsPayrollRun[]
+  expenseClaims             HrmsExpenseClaim[]
+  bankAccounts              OrganizationBankAccount[]
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
   connectUserSearches ConnectUserSearch[]
@@ -108,6 +115,32 @@ model Organization {
   @@index([primaryEmail])
   @@index([billingGstin])
   @@map("organizations")
+}
+
+/// Immutable account details; changes require a replacement account and a new independent review.
+model OrganizationBankAccount {
+  id                    String @id @default(uuid()) @db.Uuid
+  organizationId        String @db.Uuid
+  label                 String
+  accountHolder         String
+  bankName              String
+  countryCode           String @db.VarChar(2)
+  currency              String @db.VarChar(3)
+  accountType           String
+  accountDetailsEncrypted String @db.Text
+  lastFour              String @db.VarChar(4)
+  formatCheck           String
+  reviewStatus          String @default("PENDING")
+  createdById           String @db.Uuid
+  reviewedById          String? @db.Uuid
+  reviewedAt            DateTime?
+  reviewEvidenceEncrypted String? @db.Text
+  archivedAt            DateTime?
+  archivedById          String? @db.Uuid
+  createdAt             DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, createdAt])
+  @@map("organization_bank_accounts")
 }
 
 model OrganizationMember {

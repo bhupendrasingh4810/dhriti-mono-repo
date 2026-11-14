@@ -771,6 +771,9 @@ model HrmsEmployee {
   performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
   conductedPerformanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewReviewer")
   payrollRecords HrmsPayrollRecord[]
+  salaryAssignments HrmsSalaryAssignment[]
+  variablePayInputs HrmsVariablePayInput[]
+  expenseClaims HrmsExpenseClaim[]
   trainingEnrollments HrmsTrainingEnrollment[]
   assignedAssets HrmsAsset[] @relation("HrmsAssetAssignee")
   benefitEnrollments HrmsBenefitEnrollment[]
@@ -1024,6 +1027,7 @@ model HrmsPayrollRecord {
   organizationId String        @db.Uuid
   legacyPayrollRecordId String? @db.Uuid
   employeeId     String        @db.Uuid
+  runId          String?       @db.Uuid
   period         String
   periodStart    DateTime      @db.Date
   periodEnd      DateTime      @db.Date
@@ -1042,11 +1046,154 @@ model HrmsPayrollRecord {
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  run          HrmsPayrollRun? @relation(fields: [runId], references: [id], onDelete: Restrict)
 
   @@unique([employeeId, period])
   @@unique([organizationId, legacyPayrollRecordId])
   @@index([organizationId, status])
+  @@index([runId])
   @@map("hrms_payroll_records")
+}
+
+/// Country profiles are administrator-verified configuration, not bundled statutory compliance.
+model HrmsPayrollProfile {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name           String
+  countryCode    String @db.VarChar(2)
+  currency       String @db.VarChar(3)
+  minorUnits     Int @default(2)
+  frequency      String @default("MONTHLY")
+  /// Anchor is the first day of a weekly/biweekly cycle; dates use UTC calendar days.
+  calendarAnchor DateTime? @db.Date
+  payDateOffset  Int @default(0)
+  employmentModel String @default("EMPLOYEE")
+  workLocationId String? @db.Uuid
+  registration   String?
+  rulesVerified  Boolean @default(false)
+  effectiveFrom  DateTime @db.Date
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  structures HrmsSalaryStructure[]
+  runs HrmsPayrollRun[]
+  variablePayInputs HrmsVariablePayInput[]
+  @@unique([organizationId, name])
+  @@map("hrms_payroll_profiles")
+}
+
+/// Ordered, validated components support fixed and percentage formulas without evaluating arbitrary code.
+model HrmsSalaryStructure {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  profileId      String @db.Uuid
+  name           String
+  components     Json @db.JsonB
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile HrmsPayrollProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  assignments HrmsSalaryAssignment[]
+  @@unique([organizationId, profileId, name])
+  @@map("hrms_salary_structures")
+}
+
+/// Revisions append history; a run snapshots the applicable revision rather than mutating old payslips.
+model HrmsSalaryAssignment {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId     String @db.Uuid
+  structureId    String @db.Uuid
+  monthlyGross   Decimal @db.Decimal(18, 4)
+  effectiveFrom  DateTime @db.Date
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  structure HrmsSalaryStructure @relation(fields: [structureId], references: [id], onDelete: Restrict)
+  @@unique([employeeId, effectiveFrom])
+  @@index([organizationId, effectiveFrom])
+  @@map("hrms_salary_assignments")
+}
+
+model HrmsExpenseClaim {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId     String @db.Uuid
+  title          String
+  amount         Decimal @db.Decimal(18, 4)
+  currency       String @db.VarChar(3)
+  expenseDate    DateTime @db.Date
+  receiptReference String
+  status         String @default("PENDING")
+  approvedById   String? @db.Uuid
+  runId          String? @db.Uuid
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  run HrmsPayrollRun? @relation(fields: [runId], references: [id], onDelete: Restrict)
+  @@index([organizationId, status])
+  @@map("hrms_expense_claims")
+}
+
+/// Approved inputs are immutable: monthly ranges recur by month; other calendars target one exact period.
+model HrmsVariablePayInput {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId     String @db.Uuid
+  profileId      String @db.Uuid
+  name           String
+  type           String
+  calculation    String
+  quantity       Decimal @db.Decimal(18, 4)
+  rate           Decimal @db.Decimal(18, 4)
+  multiplier     Decimal @db.Decimal(8, 4)
+  amount         Decimal @db.Decimal(18, 4)
+  startPeriod    String @db.VarChar(7)
+  endPeriod      String @db.VarChar(7)
+  /// Non-monthly inputs target exactly one canonical period; legacy monthly ranges remain unchanged.
+  targetPeriod   String? @db.VarChar(10)
+  reason         String @db.Text
+  status         String @default("PENDING")
+  createdById    String @db.Uuid
+  decidedById    String? @db.Uuid
+  decidedAt      DateTime?
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  profile HrmsPayrollProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  @@index([organizationId, employeeId, startPeriod], map: "hrms_variable_pay_inputs_organizationId_employeeId_startPeriod_")
+  @@map("hrms_variable_pay_inputs")
+}
+
+/// Persisted gross-to-net snapshots are immutable after approval. Sandbox transfers never mark payroll PAID.
+model HrmsPayrollRun {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  profileId      String @db.Uuid
+  period         String
+  /// ALL or a tenant department UUID; employee/period uniqueness is enforced by payroll records at approval.
+  scopeKey       String @default("ALL")
+  payDate        DateTime @db.Date
+  status         String @default("DRAFT")
+  snapshot       Json @db.JsonB
+  totalNet       Decimal @db.Decimal(18, 4)
+  employeeCount  Int
+  preparedById   String @db.Uuid
+  approvedById   String? @db.Uuid
+  approvedAt     DateTime?
+  processedAt    DateTime?
+  closedById     String? @db.Uuid
+  closedAt       DateTime?
+  closureReason  String?
+  sandboxReference String? @unique
+  sandboxStatus  String?
+  createdAt      DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile HrmsPayrollProfile @relation(fields: [profileId], references: [id], onDelete: Restrict)
+  claims HrmsExpenseClaim[]
+  records HrmsPayrollRecord[]
+  // A partial unique database index permits replacement of CANCELLED/REJECTED drafts without deleting history.
+  @@index([organizationId, profileId, period, scopeKey])
+  @@index([organizationId, status])
+  @@map("hrms_payroll_runs")
 }
 
 model HrmsTraining {
@@ -1830,6 +1977,13 @@ model Organization {
   pulseSettings             PulseOrganizationSettings?
   notesSettings             NotesOrganizationSettings?
   hrmsSettings              HrmsOrganizationSettings?
+  payrollProfiles           HrmsPayrollProfile[]
+  salaryStructures          HrmsSalaryStructure[]
+  salaryAssignments         HrmsSalaryAssignment[]
+  variablePayInputs         HrmsVariablePayInput[]
+  payrollRuns               HrmsPayrollRun[]
+  expenseClaims             HrmsExpenseClaim[]
+  bankAccounts              OrganizationBankAccount[]
   searchIndex   SearchIndex[]
   searchHistory SearchHistory[]
   connectUserSearches ConnectUserSearch[]
@@ -1845,6 +1999,32 @@ model Organization {
   @@index([primaryEmail])
   @@index([billingGstin])
   @@map("organizations")
+}
+
+/// Immutable account details; changes require a replacement account and a new independent review.
+model OrganizationBankAccount {
+  id                    String @id @default(uuid()) @db.Uuid
+  organizationId        String @db.Uuid
+  label                 String
+  accountHolder         String
+  bankName              String
+  countryCode           String @db.VarChar(2)
+  currency              String @db.VarChar(3)
+  accountType           String
+  accountDetailsEncrypted String @db.Text
+  lastFour              String @db.VarChar(4)
+  formatCheck           String
+  reviewStatus          String @default("PENDING")
+  createdById           String @db.Uuid
+  reviewedById          String? @db.Uuid
+  reviewedAt            DateTime?
+  reviewEvidenceEncrypted String? @db.Text
+  archivedAt            DateTime?
+  archivedById          String? @db.Uuid
+  createdAt             DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@index([organizationId, createdAt])
+  @@map("organization_bank_accounts")
 }
 
 model OrganizationMember {

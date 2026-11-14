@@ -27,6 +27,7 @@ import { HrmsLeaveCenterService } from "./services/hrms-leave-center.service";
 import { HrmsLeaveService } from "./services/hrms-leave.service";
 import { HrmsPerformanceReviewService } from "./services/hrms-performance-review.service";
 import { HrmsPayrollService } from "./services/hrms-payroll.service";
+import { HrmsPayrollWorkspaceService } from "./services/hrms-payroll-workspace.service";
 import { HrmsTrainingService } from "./services/hrms-training.service";
 import { HrmsAssetService } from "./services/hrms-asset.service";
 import { HrmsBenefitService } from "./services/hrms-benefit.service";
@@ -53,6 +54,7 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsWorkflowInstanceController,
   ],
   providers: [
+    HrmsPayrollWorkspaceService,
     HrmsEmployeeService,
     HrmsEmployeeImportService,
     HrmsAttendanceService,
