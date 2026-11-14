@@ -108,8 +108,8 @@ export function HrmsWorkforceShell({ children }: { children: ReactNode }) {
     );
   }
   return (
-    <>
-      <nav aria-label="Workforce sections" className="mb-5 flex gap-1 overflow-x-auto border-b border-border">
+    <div className="flex h-full min-h-0 flex-col">
+      <nav aria-label="Workforce sections" className="mb-5 flex shrink-0 gap-1 overflow-x-auto border-b border-border pb-3">
         {tabs.map((item) => {
           const active = pathname === `${base}/${item.href}`;
           return (
@@ -117,14 +117,14 @@ export function HrmsWorkforceShell({ children }: { children: ReactNode }) {
               key={item.href}
               href={`${base}/${item.href}`}
               aria-current={active ? "page" : undefined}
-              className={`shrink-0 cursor-pointer border-b-2 px-3 py-3 text-sm font-semibold ${active ? "border-brand text-brand" : "border-transparent text-text-muted hover:text-text-primary"}`}
+              className={`shrink-0 cursor-pointer rounded-md px-3.5 py-2 text-sm font-semibold ${active ? "bg-brand/10 text-brand" : "text-text-secondary hover:bg-surface-raised"}`}
             >
               {item.label}
             </Link>
           );
         })}
       </nav>
-      {children}
-    </>
+      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+    </div>
   );
 }

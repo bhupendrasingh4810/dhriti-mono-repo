@@ -223,16 +223,16 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <div className="flex h-full min-h-0 flex-col">
         {tabs.length > 1 && (
-          <div className="mb-5 flex shrink-0 gap-1 overflow-x-auto border-b border-border">
+          <div role="tablist" aria-label="Attendance sections" className="mb-4 flex shrink-0 gap-1 overflow-x-auto border-b border-border pb-3">
             {tabs.map((item) => (
               <button
                 key={item}
                 type="button"
+                role="tab"
+                aria-selected={tab === item}
                 onClick={() => setTab(item)}
-                className={`cursor-pointer whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold ${
-                  tab === item
-                    ? "border-brand text-brand"
-                    : "border-transparent text-text-secondary hover:text-text-primary"
+                className={`cursor-pointer whitespace-nowrap rounded-md px-3.5 py-2 text-sm font-semibold ${
+                  tab === item ? "bg-brand/10 text-brand" : "text-text-secondary hover:bg-surface-raised"
                 }`}
               >
                 {item}

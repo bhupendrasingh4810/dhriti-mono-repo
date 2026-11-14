@@ -531,7 +531,9 @@ export class PulseService {
       this.prisma.hrmsHoliday.findMany({
         where: {
           organizationId,
-          date: { gte: from, lt: to },
+          // `date` is a DATE column: Prisma truncates instants to their UTC day, so an exclusive `lt: to` dropped the last
+          // visible day for time zones ahead of UTC. Compare inclusively on UTC days; the client picks the exact day.
+          date: { gte: new Date(from.toISOString().slice(0, 10)), lte: new Date(to.toISOString().slice(0, 10)) },
           // Org-wide holidays plus those for the viewer's work location.
           OR: [{ workLocationId: null }, ...(viewer?.workLocationId ? [{ workLocationId: viewer.workLocationId }] : [])],
         },

@@ -552,6 +552,7 @@ enum LeaveStatus {
   REJECTED
   CANCELLED
   WITHDRAWN
+  NEEDS_INFO
 }
 
 enum ReviewType {
@@ -766,6 +767,7 @@ model HrmsEmployee {
   attendanceRecords HrmsAttendanceRecord[]
   attendanceRegularizations HrmsAttendanceRegularization[]
   leaveRequests HrmsLeaveRequest[]
+  compOffRequests HrmsCompOffRequest[]
   performanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewEmployee")
   conductedPerformanceReviews HrmsPerformanceReview[] @relation("HrmsPerformanceReviewReviewer")
   payrollRecords HrmsPayrollRecord[]
@@ -841,11 +843,22 @@ model HrmsLeaveRequest {
   legacyLeaveRequestId String? @db.Uuid
   employeeId     String      @db.Uuid
   leaveType      LeaveType
+  // Admin-managed type; `leaveType` mirrors its category so Pulse and legacy readers keep working.
+  leaveTypeId    String?     @db.Uuid
   startDate      DateTime    @db.Date
   endDate        DateTime    @db.Date
   totalDays      Float
   reason         String?     @db.Text
   status         LeaveStatus @default(PENDING)
+  // Set when the request was filed by someone else (apply-on-behalf).
+  requestedByUserId String?  @db.Uuid
+  moreInfoNote   String?     @db.Text
+  moreInfoRequestedByUserId String? @db.Uuid
+  moreInfoRequestedAt DateTime?
+  moreInfoReply  String?     @db.Text
+  // Supporting document stored via the shared file service (StoredFile); name is denormalised for display.
+  attachmentFileId String?   @db.Uuid
+  attachmentName String?
   approvedByUserId String?   @db.Uuid
   approvedAt     DateTime?
   rejectedByUserId String?   @db.Uuid
@@ -856,6 +869,7 @@ model HrmsLeaveRequest {
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   employee     HrmsEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type         HrmsLeaveType? @relation(fields: [leaveTypeId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, status])
   @@unique([organizationId, legacyLeaveRequestId])
@@ -1424,6 +1438,62 @@ model HrmsHolidayBroadcast {
   @@map("hrms_holiday_broadcasts")
 }
 
+/// Admin-managed leave type with its yearly entitlement; replaces the fixed LeaveType enum for configuration.
+model HrmsLeaveType {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  code           String
+  // Legacy enum value written to HrmsLeaveRequest.leaveType (consumed by Pulse).
+  category       LeaveType @default(VACATION)
+  annualDays     Float     @default(0)
+  carryForwardDays Float   @default(0)
+  isPaid         Boolean   @default(true)
+  allowHalfDay   Boolean   @default(true)
+  // Balance comes from approved comp-off credits instead of annualDays.
+  isCompOff      Boolean   @default(false)
+  isActive       Boolean   @default(true)
+  sortOrder      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requests     HrmsLeaveRequest[]
+
+  @@unique([organizationId, code])
+  @@map("hrms_leave_types")
+}
+
+/// Request to earn leave credit for working on a day off; approval credits `days` to the comp-off balance.
+model HrmsCompOffRequest {
+  id             String      @id @default(uuid()) @db.Uuid
+  organizationId String      @db.Uuid
+  employeeId     String      @db.Uuid
+  workedDate     DateTime    @db.Date
+  /// Last day worked when the request spans a range; null for a single day.
+  workedEndDate  DateTime?   @db.Date
+  days           Float       @default(1)
+  reason         String?     @db.Text
+  status         LeaveStatus @default(PENDING)
+  requestedByUserId String?  @db.Uuid
+  decidedByUserId String?    @db.Uuid
+  decidedAt      DateTime?
+  decisionReason String?     @db.Text
+  moreInfoNote   String?     @db.Text
+  moreInfoRequestedByUserId String? @db.Uuid
+  moreInfoRequestedAt DateTime?
+  moreInfoReply  String?     @db.Text
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee     HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([employeeId, workedDate])
+  @@map("hrms_comp_off_requests")
+}
+
 
 // prisma/parts/30-nexus.prisma
 
@@ -1713,6 +1783,8 @@ model Organization {
   hrmsAttendanceRecords HrmsAttendanceRecord[]
   hrmsAttendanceRegularizations HrmsAttendanceRegularization[]
   hrmsLeaveRequests HrmsLeaveRequest[]
+  hrmsLeaveTypes    HrmsLeaveType[]
+  hrmsCompOffRequests HrmsCompOffRequest[]
   hrmsPerformanceReviews HrmsPerformanceReview[]
   hrmsPayrollRecords HrmsPayrollRecord[]
   hrmsTrainings HrmsTraining[]
@@ -3165,6 +3237,13 @@ model HrmsOrganizationSettings {
   workingDays             Int[]            @default([1, 2, 3, 4])
   maxLeaveRequestDays     Int?
   allowHalfDayLeave       Boolean          @default(true)
+  leaveOnBehalfEnabled    Boolean          @default(false)
+  leaveMinNoticeDays      Int              @default(0)
+  leaveBackdateLimitDays  Int?
+  birthdayLeaveEnabled    Boolean          @default(false)
+  birthdayLeaveDays       Int              @default(1)
+  optionalLeaveEnabled    Boolean          @default(false)
+  optionalLeaveDays       Int              @default(2)
   defaultAttendanceStatus AttendanceStatus @default(PRESENT)
   defaultPayrollCurrency  String           @default("USD") @db.VarChar(3)
   maxTrainingParticipants Int?

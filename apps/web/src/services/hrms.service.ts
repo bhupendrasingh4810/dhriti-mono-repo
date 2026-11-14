@@ -179,6 +179,77 @@ export interface HrmsLeaveRequest extends ApiEntity {
   employee: { id: string; employeeNumber: string };
 }
 
+export interface HrmsLeaveType extends ApiEntity {
+  name: string;
+  code: string;
+  category: string;
+  annualDays: number;
+  carryForwardDays: number;
+  isPaid: boolean;
+  allowHalfDay: boolean;
+  isCompOff: boolean;
+  isActive: boolean;
+}
+
+export interface HrmsLeaveBalance {
+  typeId: string;
+  name: string;
+  code: string;
+  isPaid: boolean;
+  isCompOff: boolean;
+  allowHalfDay: boolean;
+  unlimited: boolean;
+  /** Accrued so far: annualDays / 12 per credited month, plus carry-forward. */
+  entitled: number;
+  annualDays: number;
+  accruedMonths: number;
+  used: number;
+  pending: number;
+  /** Null when the type is unlimited. */
+  available: number | null;
+}
+
+export type HrmsRequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED" | "WITHDRAWN" | "NEEDS_INFO";
+
+export interface HrmsLeaveCenterRequest extends ApiEntity {
+  employeeId: string;
+  leaveTypeId: string | null;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason: string | null;
+  status: HrmsRequestStatus;
+  rejectionReason: string | null;
+  moreInfoNote: string | null;
+  moreInfoReply: string | null;
+  attachmentFileId: string | null;
+  attachmentName: string | null;
+  type?: { id: string; name: string; code: string } | null;
+  employee?: { id: string; employeeNumber: string; user: { id: string; name: string; avatarUrl: string | null } };
+}
+
+export interface HrmsCompOffRequest extends ApiEntity {
+  employeeId: string;
+  workedDate: string;
+  workedEndDate: string | null;
+  days: number;
+  reason: string | null;
+  status: HrmsRequestStatus;
+  decisionReason: string | null;
+  moreInfoNote: string | null;
+  moreInfoReply: string | null;
+  employee?: { id: string; employeeNumber: string; user: { id: string; name: string; avatarUrl: string | null } };
+}
+
+export interface HrmsTeamLeave {
+  id: string;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  type: { name: string; code: string } | null;
+  employee: { id: string; user: { id: string; name: string; avatarUrl: string | null } };
+}
+
 export interface HrmsLocation extends ApiEntity {
   name: string;
   code: string | null;
@@ -523,6 +594,60 @@ export const hrmsService = {
       ),
   },
   benefits: resource("benefits"),
+  leave: {
+    types: (organizationId: string) => tenantRequest<HrmsLeaveType[]>(organizationId, `${base}/leave/types`),
+    saveType: (organizationId: string, input: Input) =>
+      tenantJsonRequest<HrmsLeaveType, Input>(organizationId, `${base}/leave/types`, "PUT", input),
+    removeType: (organizationId: string, typeId: string) =>
+      tenantRequest<{ deactivated: boolean }>(organizationId, `${base}/leave/types/${pathSegment(typeId)}`, { method: "DELETE" }),
+    balances: (organizationId: string) => tenantRequest<HrmsLeaveBalance[]>(organizationId, `${base}/leave/me/balances`),
+    myRequests: (organizationId: string) => tenantRequest<HrmsLeaveCenterRequest[]>(organizationId, `${base}/leave/me/requests`),
+    myCompOff: (organizationId: string) => tenantRequest<HrmsCompOffRequest[]>(organizationId, `${base}/leave/me/comp-off`),
+    team: (organizationId: string, from: string, to: string) =>
+      tenantRequest<HrmsTeamLeave[]>(organizationId, `${base}/leave/team`, { query: { from, to } }),
+    requests: (organizationId: string) => tenantRequest<HrmsLeaveCenterRequest[]>(organizationId, `${base}/leave/requests`),
+    apply: (organizationId: string, input: Input, onBehalf = false) =>
+      tenantJsonRequest<HrmsLeaveCenterRequest, Input>(
+        organizationId,
+        `${base}/leave/requests${onBehalf ? "/on-behalf" : ""}`,
+        "POST",
+        input,
+      ),
+    cancel: (organizationId: string, id: string) =>
+      tenantRequest<ApiEntity>(organizationId, `${base}/leave/requests/${pathSegment(id)}/cancel`, { method: "POST" }),
+    reply: (organizationId: string, id: string, reply: string) =>
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/reply`, "POST", { reply }),
+    decide: (organizationId: string, id: string, status: "APPROVED" | "REJECTED", reason?: string) =>
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/decision`, "POST", {
+        status,
+        reason,
+      }),
+    requestInfo: (organizationId: string, id: string, note: string) =>
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/request-info`, "POST", {
+        note,
+      }),
+    compOff: (organizationId: string) => tenantRequest<HrmsCompOffRequest[]>(organizationId, `${base}/leave/comp-off`),
+    applyCompOff: (organizationId: string, input: Input, onBehalf = false) =>
+      tenantJsonRequest<HrmsCompOffRequest, Input>(
+        organizationId,
+        `${base}/leave/comp-off${onBehalf ? "/on-behalf" : ""}`,
+        "POST",
+        input,
+      ),
+    cancelCompOff: (organizationId: string, id: string) =>
+      tenantRequest<ApiEntity>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/cancel`, { method: "POST" }),
+    replyCompOff: (organizationId: string, id: string, reply: string) =>
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/reply`, "POST", { reply }),
+    decideCompOff: (organizationId: string, id: string, status: "APPROVED" | "REJECTED", reason?: string) =>
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/decision`, "POST", {
+        status,
+        reason,
+      }),
+    requestCompOffInfo: (organizationId: string, id: string, note: string) =>
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/request-info`, "POST", {
+        note,
+      }),
+  },
   leaveRequests: {
     ...resource("leave-requests"),
     list: (organizationId: string) => tenantRequest<HrmsLeaveRequest[]>(organizationId, `${base}/leave-requests`),

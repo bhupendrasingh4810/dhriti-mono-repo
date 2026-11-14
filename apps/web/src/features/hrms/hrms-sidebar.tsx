@@ -70,11 +70,6 @@ export function HrmsSidebar() {
               >
                 <Icon aria-hidden="true" size={17} />
                 <span>{item.label}</span>
-                {item.label === "Leave" && (
-                  <span className="ml-auto rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold text-text-inverse">
-                    8
-                  </span>
-                )}
               </Link>
             </div>
           );

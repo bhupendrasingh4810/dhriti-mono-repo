@@ -48,6 +48,7 @@ export const NULLABLE_SETTINGS_FIELDS = new Set([
   "maxEventDurationMinutes",
   "maxSharedUsersPerNote",
   "maxLeaveRequestDays",
+  "leaveBackdateLimitDays",
   "maxTrainingParticipants",
   "manualStatus",
   "manualStatusExpiresAt",
@@ -438,6 +439,25 @@ export class UpdateHrmsSettingsDto {
   @Max(APP_SETTINGS_LIMITS.hrms.maxLeaveRequestDays.max)
   maxLeaveRequestDays?: number | null;
   @ApiPropertyOptional() @IsOptional() @IsBoolean() allowHalfDayLeave?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() leaveOnBehalfEnabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.leaveMinNoticeDays.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.leaveMinNoticeDays.max)
+  leaveMinNoticeDays?: number;
+  @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.leaveBackdateLimitDays.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.leaveBackdateLimitDays.max)
+  leaveBackdateLimitDays?: number | null;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() birthdayLeaveEnabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.birthdayLeaveDays.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.birthdayLeaveDays.max)
+  birthdayLeaveDays?: number;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() optionalLeaveEnabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.optionalLeaveDays.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.optionalLeaveDays.max)
+  optionalLeaveDays?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt()
   @Min(APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes.min)
   @Max(APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes.max)

@@ -15,7 +15,6 @@ import { PulseCalendarToolbar } from "./PulseCalendarToolbar";
 import { PulseScheduleGrid } from "./PulseScheduleGrid";
 import { useAuth } from "@/hooks/use-auth";
 import { pulseService, type PulseSchedule } from "@/services/pulse.service";
-import { HolidayReminderBanner } from "@/features/hrms/components/upcoming-holidays";
 import { useMyShift } from "@/features/hrms/use-my-shift";
 import { shiftToHourRange } from "@/features/hrms/shift-format";
 import { useAppSettingsState } from "@/features/settings/use-app-settings";
@@ -116,9 +115,6 @@ export default function PulseCalendar() {
           onToggleCalendar={toggleCalendar}
         />
         <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-background">
-          <div className="empty:hidden px-3 pt-3">
-            <HolidayReminderBanner />
-          </div>
           <PulseCalendarToolbar
             workingWeek={workingWeek}
             onToday={() => setSelectedDate(new Date())}

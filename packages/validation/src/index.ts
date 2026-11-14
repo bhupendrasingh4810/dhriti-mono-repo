@@ -50,6 +50,10 @@ export const APP_SETTINGS_LIMITS = {
   hrms: {
     workingDays: { minItems: 1, maxItems: 7, minDay: 1, maxDay: 7 },
     maxLeaveRequestDays: { min: 1, max: 365 },
+    leaveMinNoticeDays: { min: 0, max: 90 },
+    leaveBackdateLimitDays: { min: 0, max: 365 },
+    birthdayLeaveDays: { min: 1, max: 5 },
+    optionalLeaveDays: { min: 1, max: 30 },
     maxTrainingParticipants: { min: 1, max: 10_000 },
     attendanceClockInWindowMinutes: { min: 0, max: 240 },
     attendanceLateAfterMinutes: { min: 0, max: 480 },

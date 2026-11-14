@@ -5,6 +5,7 @@ import { HrmsAttendanceController } from "./controllers/hrms-attendance.controll
 import { HrmsAttendanceSelfController } from "./controllers/hrms-attendance-self.controller";
 import { HrmsHolidayCalendarController } from "./controllers/hrms-holiday-calendar.controller";
 import { HrmsHolidayController } from "./controllers/hrms-holiday.controller";
+import { HrmsLeaveCenterController } from "./controllers/hrms-leave-center.controller";
 import { HrmsLeaveController } from "./controllers/hrms-leave.controller";
 import { HrmsPerformanceReviewController } from "./controllers/hrms-performance-review.controller";
 import { HrmsPayrollController } from "./controllers/hrms-payroll.controller";
@@ -22,6 +23,7 @@ import { HrmsAttendanceRegularizationService } from "./services/hrms-attendance-
 import { HrmsOperationsService } from "./services/hrms-operations.service";
 import { HrmsHolidayCalendarService } from "./services/hrms-holiday-calendar.service";
 import { HrmsHolidayService } from "./services/hrms-holiday.service";
+import { HrmsLeaveCenterService } from "./services/hrms-leave-center.service";
 import { HrmsLeaveService } from "./services/hrms-leave.service";
 import { HrmsPerformanceReviewService } from "./services/hrms-performance-review.service";
 import { HrmsPayrollService } from "./services/hrms-payroll.service";
@@ -40,6 +42,7 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsHolidayCalendarController,
     HrmsHolidayController,
     HrmsLeaveController,
+    HrmsLeaveCenterController,
     HrmsPerformanceReviewController,
     HrmsPayrollController,
     HrmsTrainingController,
@@ -59,6 +62,7 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsHolidayCalendarService,
     HrmsHolidayService,
     HrmsLeaveService,
+    HrmsLeaveCenterService,
     HrmsPerformanceReviewService,
     HrmsPayrollService,
     HrmsTrainingService,

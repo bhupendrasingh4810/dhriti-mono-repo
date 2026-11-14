@@ -74,13 +74,13 @@ function safeCell(value: string): string {
 }
 
 function cellToText(value: ExcelJS.CellValue): string {
-  if (value === null || value === undefined) return "";
-  if (value instanceof Date) return value.toISOString().slice(0, 10);
+  if (value === null || value === undefined) {return "";}
+  if (value instanceof Date) {return value.toISOString().slice(0, 10);}
   if (typeof value === "object") {
-    if ("result" in value && value.result !== undefined) return cellToText(value.result as ExcelJS.CellValue);
-    if ("richText" in value) return value.richText.map((part) => part.text).join("").trim();
-    if ("text" in value) return String(value.text).trim();
-    if ("error" in value) return "";
+    if ("result" in value && value.result !== undefined) {return cellToText(value.result);}
+    if ("richText" in value) {return value.richText.map((part) => part.text).join("").trim();}
+    if ("text" in value) {return String(value.text).trim();}
+    if ("error" in value) {return "";}
   }
   return String(value).trim();
 }
@@ -134,7 +134,7 @@ export class HrmsEmployeeImportService {
       const wanted = [normalizeHeader(field.label), ...field.aliases];
       const index = normalizedHeaders.findIndex((header, position) => !claimed.has(position) && wanted.includes(header));
       suggestedMapping[field.key] = index >= 0 ? index : null;
-      if (index >= 0) claimed.add(index);
+      if (index >= 0) {claimed.add(index);}
     }
     return {
       format: extension,
@@ -268,7 +268,7 @@ export class HrmsEmployeeImportService {
       const map = new Map<string, T>();
       for (const item of items) {
         map.set(lookupKey(item.name), item);
-        if (item.code) map.set(lookupKey(item.code), item);
+        if (item.code) {map.set(lookupKey(item.code), item);}
       }
       return map;
     };
@@ -291,18 +291,18 @@ export class HrmsEmployeeImportService {
       const email = lookupKey(clean(row.email));
       const employeeNumber = clean(row.employeeNumber);
       let userId: string | undefined;
-      if (!email) fail(row.rowNumber, "Work email is required");
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(row.rowNumber, "Work email is not valid");
-      else if (!memberByEmail.has(email)) fail(row.rowNumber, "No active organization member has this email");
+      if (!email) {fail(row.rowNumber, "Work email is required");}
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {fail(row.rowNumber, "Work email is not valid");}
+      else if (!memberByEmail.has(email)) {fail(row.rowNumber, "No active organization member has this email");}
       else {
         userId = memberByEmail.get(email);
-        if (employeeUserIds.has(userId!)) fail(row.rowNumber, "This member is already an employee");
-        else if (seenEmails.has(email)) fail(row.rowNumber, "Duplicate email in file");
+        if (employeeUserIds.has(userId!)) {fail(row.rowNumber, "This member is already an employee");}
+        else if (seenEmails.has(email)) {fail(row.rowNumber, "Duplicate email in file");}
         seenEmails.add(email);
       }
-      if (!employeeNumber) fail(row.rowNumber, "Employee number is required");
-      else if (employeeNumbers.has(employeeNumber)) fail(row.rowNumber, "Employee number already exists");
-      else if (seenNumbers.has(employeeNumber)) fail(row.rowNumber, "Duplicate employee number in file");
+      if (!employeeNumber) {fail(row.rowNumber, "Employee number is required");}
+      else if (employeeNumbers.has(employeeNumber)) {fail(row.rowNumber, "Employee number already exists");}
+      else if (seenNumbers.has(employeeNumber)) {fail(row.rowNumber, "Duplicate employee number in file");}
       seenNumbers.add(employeeNumber);
 
       const status = clean(row.status) ? clean(row.status).toUpperCase().replace(/[\s-]+/g, "_") : "ACTIVE";
@@ -311,16 +311,16 @@ export class HrmsEmployeeImportService {
       }
       const typeName = clean(row.employmentType);
       const type = typeName ? typeMap.get(lookupKey(typeName)) : undefined;
-      if (typeName && !type) fail(row.rowNumber, `Employment type "${typeName}" is not configured`);
+      if (typeName && !type) {fail(row.rowNumber, `Employment type "${typeName}" is not configured`);}
       const locationName = clean(row.workLocation);
       const location = locationName ? locationMap.get(lookupKey(locationName)) : undefined;
-      if (locationName && !location) fail(row.rowNumber, `Work location "${locationName}" is not configured`);
+      if (locationName && !location) {fail(row.rowNumber, `Work location "${locationName}" is not configured`);}
       const departmentName = clean(row.department);
       const department = departmentName ? departmentMap.get(lookupKey(departmentName)) : undefined;
-      if (departmentName && !department) fail(row.rowNumber, `Department "${departmentName}" is not configured`);
+      if (departmentName && !department) {fail(row.rowNumber, `Department "${departmentName}" is not configured`);}
       const designationName = clean(row.designation);
       const designation = designationName ? designationMap.get(lookupKey(designationName)) : undefined;
-      if (designationName && !designation) fail(row.rowNumber, `Designation "${designationName}" is not configured`);
+      if (designationName && !designation) {fail(row.rowNumber, `Designation "${designationName}" is not configured`);}
       if (designation?.departmentId && department && designation.departmentId !== department.id) {
         fail(row.rowNumber, "Designation belongs to a different department");
       }
@@ -358,7 +358,7 @@ export class HrmsEmployeeImportService {
       changed = false;
       const acceptedNumbers = new Set([...normalized.values()].map((row) => row.employeeNumber));
       for (const row of [...normalized.values()]) {
-        if (!row.managerNumber) continue;
+        if (!row.managerNumber) {continue;}
         if (row.managerNumber === row.employeeNumber) {
           fail(row.rowNumber, "An employee cannot report to themselves");
         } else if (!employeeNumbers.has(row.managerNumber) && !acceptedNumbers.has(row.managerNumber)) {
@@ -373,7 +373,7 @@ export class HrmsEmployeeImportService {
     const managerOf = new Map<string, string | null>(
       employees.map((employee) => [employee.employeeNumber, employee.reportingManager?.employeeNumber ?? null]),
     );
-    for (const row of normalized.values()) managerOf.set(row.employeeNumber, row.managerNumber);
+    for (const row of normalized.values()) {managerOf.set(row.employeeNumber, row.managerNumber);}
     for (const row of [...normalized.values()]) {
       const visited = new Set<string>([row.employeeNumber]);
       let cursor = row.managerNumber;
@@ -400,13 +400,13 @@ export class HrmsEmployeeImportService {
     const workbook = new ExcelJS.Workbook();
     if (extension === "xlsx") {
       // XLSX is a zip container; reject anything else before handing it to the parser.
-      if (buffer.subarray(0, 2).toString("latin1") !== "PK") throw new Error("Not an XLSX file");
+      if (buffer.subarray(0, 2).toString("latin1") !== "PK") {throw new Error("Not an XLSX file");}
       await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     } else {
       await workbook.csv.read(Readable.from(buffer));
     }
     const sheet = workbook.worksheets[0];
-    if (!sheet) return [];
+    if (!sheet) {return [];}
     const table: string[][] = [];
     const width = sheet.columnCount;
     sheet.eachRow({ includeEmpty: true }, (row) => {
@@ -425,7 +425,7 @@ export class HrmsEmployeeImportService {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(sheetName);
     sheet.addRow(headers);
-    for (const row of rows) sheet.addRow(row.map(safeCell));
+    for (const row of rows) {sheet.addRow(row.map(safeCell));}
     if (format === "xlsx") {
       sheet.getRow(1).font = { bold: true };
       sheet.columns.forEach((column) => (column.width = 24));

@@ -211,8 +211,8 @@ export function EmployeeDirectory({
   const selectClass = "cursor-pointer rounded-md border border-border bg-white px-3 py-2 text-sm text-text-secondary";
 
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-4">
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="grid shrink-0 gap-4 md:grid-cols-4">
         {kpis.map(([label, value, meta], index) => (
           <Card key={label} className="p-4">
             <div className="flex items-center justify-between">
@@ -224,7 +224,7 @@ export function EmployeeDirectory({
           </Card>
         ))}
       </div>
-      <Card className="mt-5 overflow-hidden">
+      <Card className="mt-5 flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="flex flex-wrap items-center gap-3 border-b border-border p-4">
           <label className="relative min-w-64 flex-1">
             <Icon name="search" size={16} className="absolute left-3 top-2.5 text-text-muted" />
@@ -281,9 +281,9 @@ export function EmployeeDirectory({
             </button>
           </div>
         )}
-        <div className="overflow-x-auto">
+        <div className="min-h-0 flex-1 overflow-auto">
           <table className="w-full min-w-[900px] border-collapse text-left">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-surface">
               <tr className="bg-slate-50 text-xs font-semibold uppercase tracking-wide text-text-muted">
                 <th className="w-12 px-5 py-3">
                   <input type="checkbox" aria-label="Select all employees on this page" className="cursor-pointer" checked={allOnPageSelected} onChange={togglePage} />
@@ -366,7 +366,7 @@ export function EmployeeDirectory({
             <DirectoryTableSkeleton />
           )}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-4 border-t border-border p-4 text-sm text-text-secondary">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-4 border-t border-border p-4 text-sm text-text-secondary">
           <label className="flex items-center gap-2">
             Rows per page:
             <select
@@ -403,7 +403,7 @@ export function EmployeeDirectory({
           onEdit={() => void openForm(profile)}
         />
       )}
-    </>
+    </div>
   );
 }
 

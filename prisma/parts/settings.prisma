@@ -225,6 +225,13 @@ model HrmsOrganizationSettings {
   workingDays             Int[]            @default([1, 2, 3, 4])
   maxLeaveRequestDays     Int?
   allowHalfDayLeave       Boolean          @default(true)
+  leaveOnBehalfEnabled    Boolean          @default(false)
+  leaveMinNoticeDays      Int              @default(0)
+  leaveBackdateLimitDays  Int?
+  birthdayLeaveEnabled    Boolean          @default(false)
+  birthdayLeaveDays       Int              @default(1)
+  optionalLeaveEnabled    Boolean          @default(false)
+  optionalLeaveDays       Int              @default(2)
   defaultAttendanceStatus AttendanceStatus @default(PRESENT)
   defaultPayrollCurrency  String           @default("USD") @db.VarChar(3)
   maxTrainingParticipants Int?

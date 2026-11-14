@@ -58,16 +58,3 @@ export function UpcomingHolidaysCard() {
     </section>
   );
 }
-
-/** Pulse reminder: a one-line banner for the next holiday when it is within a week. */
-export function HolidayReminderBanner() {
-  const next = useUpcomingHolidays()[0];
-  if (!next || daysAway(next) > 7) return null;
-  const away = daysAway(next);
-  return (
-    <p role="status" className="rounded-md border border-warning bg-warning/10 px-3 py-2 text-sm font-semibold text-warning">
-      {next.name}
-      {next.isHalfDay ? " (half day)" : ""} · {formatDay(next)} · {away <= 0 ? "today" : away === 1 ? "tomorrow" : `in ${away} days`}
-    </p>
-  );
-}

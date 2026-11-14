@@ -321,6 +321,7 @@ enum LeaveStatus {
   REJECTED
   CANCELLED
   WITHDRAWN
+  NEEDS_INFO
 }
 
 enum ReviewType {

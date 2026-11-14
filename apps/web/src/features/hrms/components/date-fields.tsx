@@ -59,20 +59,24 @@ export function DateField({
   onChange,
   minDate,
   maxDate,
+  labelOutside = false,
 }: {
   label: string;
   value: Dayjs;
   onChange: (value: Dayjs) => void;
+  /** Renders the label above the field instead of inside it. */
+  labelOutside?: boolean;
 } & Bounds) {
   const [element, setElement] = useState<HTMLButtonElement | null>(null);
   const [isOpen, setOpen] = useState(false);
   const show = () => setOpen(true);
   const hide = () => setOpen(false);
   return (
-    <>
-      <button type="button" ref={setElement} aria-label={label} aria-haspopup="dialog" onClick={show} className={fieldClass}>
+    <div className={labelOutside ? "min-w-0" : undefined}>
+      {labelOutside && <span className="mb-1 block text-sm font-medium text-text-secondary">{label}</span>}
+      <button type="button" ref={setElement} aria-label={label} aria-haspopup="dialog" onClick={show} className={labelOutside ? `${fieldClass} w-full` : fieldClass}>
         <span>
-          <span className="block text-xs text-text-muted">{label}</span>
+          {!labelOutside && <span className="block text-xs text-text-muted">{label}</span>}
           {value.format("DD MMM YYYY")}
         </span>
         <Icon name="calendar" size={16} className="text-text-muted" />
@@ -91,7 +95,7 @@ export function DateField({
           sx={calendarSx}
         />
       </Popover>
-    </>
+    </div>
   );
 }
 

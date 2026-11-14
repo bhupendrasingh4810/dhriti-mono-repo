@@ -46,6 +46,8 @@ model Organization {
   hrmsAttendanceRecords HrmsAttendanceRecord[]
   hrmsAttendanceRegularizations HrmsAttendanceRegularization[]
   hrmsLeaveRequests HrmsLeaveRequest[]
+  hrmsLeaveTypes    HrmsLeaveType[]
+  hrmsCompOffRequests HrmsCompOffRequest[]
   hrmsPerformanceReviews HrmsPerformanceReview[]
   hrmsPayrollRecords HrmsPayrollRecord[]
   hrmsTrainings HrmsTraining[]

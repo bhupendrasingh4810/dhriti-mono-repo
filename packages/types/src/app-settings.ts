@@ -104,6 +104,18 @@ export type HrmsOrganizationSettings = {
   workingDays: number[];
   maxLeaveRequestDays: number | null;
   allowHalfDayLeave: boolean;
+  /** Lets HR/admins (hrms.leave.manage) file leave or comp-off for another employee. */
+  leaveOnBehalfEnabled: boolean;
+  /** Leave must start at least this many days after it is requested. */
+  leaveMinNoticeDays: number;
+  /** Maximum days a leave may be back-dated (null = no limit). */
+  leaveBackdateLimitDays: number | null;
+  /** Grants a birthday leave type (usable in the employee's birth month). */
+  birthdayLeaveEnabled: boolean;
+  birthdayLeaveDays: number;
+  /** Grants a yearly quota of optional leave (for optional/restricted holidays). */
+  optionalLeaveEnabled: boolean;
+  optionalLeaveDays: number;
   defaultAttendanceStatus: "PRESENT" | "ABSENT" | "LATE" | "HALF_DAY" | "WORK_FROM_HOME" | "ON_LEAVE" | "HOLIDAY";
   defaultPayrollCurrency: string;
   maxTrainingParticipants: number | null;

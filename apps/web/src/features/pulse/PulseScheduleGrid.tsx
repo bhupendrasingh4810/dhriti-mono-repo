@@ -105,9 +105,9 @@ export function PulseScheduleGrid({
         </div>
         {workingWeek.map((date, index) => {
           const dateKey = getDateKey(date);
-          const holidays = showHolidays && !loading ? (schedule?.holidays ?? []).filter((holiday) => isOnDate(holiday.startDate, dateKey)) : [];
+          const holidays = showHolidays && !loading ? (schedule?.holidays ?? []).filter((holiday) => holiday.startDate.slice(0, 10) === dateKey) : [];
           const birthdayEntries = showBirthdays && !loading ? (schedule?.birthdays ?? []).filter((birthday) => isOnDate(birthday.date, dateKey)) : [];
-          const leaves = loading ? [] : (schedule?.leaves ?? []).filter((leave) => isOnDate(leave.startDate, dateKey));
+          const leaves = loading ? [] : (schedule?.leaves ?? []).filter((leave) => leave.startDate.slice(0, 10) <= dateKey && dateKey <= leave.endDate.slice(0, 10));
           const allDayEvents = loading ? [] : calendarEvents.filter((event) => event.isAllDay && isOnDate(event.startsAt, dateKey));
 
           return (
