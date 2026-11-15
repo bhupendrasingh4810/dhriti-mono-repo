@@ -3,10 +3,23 @@
 import { useCallback, useState } from "react";
 import { DhritiAIAssistant, assistantTokens, type DhritiAIMessage, type DhritiAssistantPosition } from "@dhriti/ui";
 
-/** App-owned UI preview. No backend calls or persistence; sending only adds a local user message. */
+const welcomeDismissedKey = "dhriti-ai-welcome-dismissed";
+let welcomeDismissedInMemory = false;
+
+function isWelcomeVisible() {
+  if (typeof window === "undefined") return false;
+  try {
+    return !welcomeDismissedInMemory && window.sessionStorage.getItem(welcomeDismissedKey) !== "1";
+  } catch (error) {
+    console.warn("Unable to read AI assistant welcome session state.", error);
+    return !welcomeDismissedInMemory;
+  }
+}
+
+/** The welcome dismissal lasts for this browser tab's session; preview messages remain local only. */
 export function GlobalAIAssistant() {
   const [open, setOpen] = useState(false);
-  const [welcomeVisible, setWelcomeVisible] = useState(true);
+  const [welcomeVisible, setWelcomeVisible] = useState(isWelcomeVisible);
   const [expanded, setExpanded] = useState(false);
   const [draft, setDraft] = useState("");
   const [messages, setMessages] = useState<DhritiAIMessage[]>([]);
@@ -14,17 +27,31 @@ export function GlobalAIAssistant() {
     right: assistantTokens.viewportMargin,
     bottom: assistantTokens.viewportMargin,
   });
-  const changeOpen = useCallback((next: boolean) => {
-    setOpen(next);
-    if (next) setWelcomeVisible(false);
+  const changeWelcomeVisible = useCallback((visible: boolean) => {
+    setWelcomeVisible(visible);
+    if (!visible) {
+      try {
+        window.sessionStorage.setItem(welcomeDismissedKey, "1");
+      } catch (error) {
+        welcomeDismissedInMemory = true;
+        console.warn("Unable to save AI assistant welcome session state.", error);
+      }
+    }
   }, []);
+  const changeOpen = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (next) changeWelcomeVisible(false);
+    },
+    [changeWelcomeVisible],
+  );
 
   return (
     <DhritiAIAssistant
       open={open}
       onOpenChange={changeOpen}
       welcomeVisible={welcomeVisible}
-      onWelcomeVisibleChange={setWelcomeVisible}
+      onWelcomeVisibleChange={changeWelcomeVisible}
       expanded={expanded}
       onExpandedChange={setExpanded}
       draft={draft}

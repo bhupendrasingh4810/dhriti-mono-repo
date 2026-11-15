@@ -26,6 +26,7 @@ These are remaining-work items; existing foundations do not imply end-to-end com
 - [ ] Replace verbose everyday setup copy with contextual help and progressive disclosure.
 - [ ] Standardize dialogs, drawers, validation, loading/empty/error states, compact pagination and accessible actions; add stories when shared UI changes.
 - [ ] Separate employee self-service, manager worklists and HR administration; avoid presenting placeholder tabs as completed features.
+- [ ] Make the HRMS dashboard customizable: add a header with a top-right Customize cascading menu listing widgets with add/remove icons; let users reorder individual widgets by drag-and-drop or accessible keyboard controls and explicitly Save or Cancel changes. Persist layouts in the user's account per organization across devices. Preserve existing widget visibility and data, support future widget registration and role-based visibility rules, and add the necessary preference API, database migration and tests.
 - [ ] Replace hardcoded dashboard metrics with authorized live aggregations, trends, contextual summaries and actionable drill-downs.
 - [ ] Add executive cross-module summaries, headcount targets, hiring-plan health, registered/unregistered employee counts, worker-type/gender trends and document/asset summaries.
 - [ ] Add manager approvals, team availability and pending-work queues, plus HR onboarding/new-hire/probation/exit queues and an employee task inbox.
@@ -139,6 +140,9 @@ MDM and external device-provider integrations are deferred.
 - [ ] Runtime/browser acceptance and full programme regression once remaining integrations are implemented. Component and rollback-only database tests do not certify every production workflow.
 
 - [ ] Implement ATS requisitions/approvals, hiring collaboration, candidate pipeline, sourcing, tagging, resume uploads/parsing and talent pools.
+- [ ] Validate the recruitment foundation against a migrated database and in the browser: organization administrators can grant/revoke individual manager or interviewer access; managers can create internal draft openings and change their status. The API checks organization scope and revisions and records grant/opening changes in the audit log.
+- [ ] Validate the recruitment candidate foundation and private interviewer feedback against a migrated database and in the browser, including assigned-only access, stage moves and management, rejection, assignment, comments and closed-candidate history. Apply the recruitment migrations only through the approved deployment workflow. The active pipeline currently loads all candidates without pagination.
+- [ ] Recruitment remaining: rich-text job descriptions; opening editing and explicit publication on the platform careers page; public applications; interview scheduling; candidate emails; reviewable offer drafts; and end-to-end permission, delivery, public-access and tenant-isolation validation. Validate the expanded opening form and calculated applicant counts against the migrated database and in the browser.
 - [ ] Add career/internal-job portals, referrals, interviews/calendar coordination, scorecards, offers and candidate pre-onboarding.
 - [ ] Add ATS analytics/custom reports and separately scoped job-board, email, video, assessment, background-check and SSO integrations.
 - [ ] Complete employee HR requests, mobile self-service, learning courses, announcements, recognition, polls and configurable/pulse surveys.

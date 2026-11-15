@@ -34,6 +34,7 @@ vi.mock("@/services/hrms-assets.service", () => ({
   },
 }));
 vi.mock("@/hooks/use-auth", () => ({ useAuth: () => ({ user: { organization: { id: "org" } } }) }));
+vi.mock("next/navigation", () => ({ useParams: () => ({ organizationSlug: "acme" }) }));
 vi.mock("@/hooks/use-permissions", () => ({
   usePermissions: () => ({ can: (key: string) => mocks.permissions.includes(key), loading: false }),
 }));
@@ -87,12 +88,29 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("asset workspace", () => {
+  it("keeps the header and section navigation in the same sticky container", async () => {
+    render(<HrmsAssets onToast={vi.fn()} />);
+    await screen.findByText("Developer laptop");
+    const header = screen.getByRole("heading", { name: "Assets" }).closest("header");
+    const sticky = header?.parentElement;
+    expect(sticky).toHaveClass("sticky", "top-0", "bg-background");
+    expect(sticky).toContainElement(screen.getByRole("navigation", { name: "Asset sections" }));
+    fireEvent.click(screen.getByRole("button", { name: "Categories" }));
+    expect(sticky).toContainElement(screen.getByRole("button", { name: "Categories", current: "page" }));
+  });
+  it("shows a skeleton until the initial inventory loads", async () => {
+    render(<HrmsAssets onToast={vi.fn()} />);
+    expect(screen.getByRole("status", { name: "Loading assets" })).toHaveAttribute("aria-busy", "true");
+    expect(await screen.findByText("Developer laptop")).toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Loading assets" })).not.toBeInTheDocument();
+  });
   it("loads real inventory without fetching the employee directory and keeps query input mounted", async () => {
     render(<HrmsAssets onToast={vi.fn()} />);
     expect(await screen.findByText("Developer laptop")).toBeInTheDocument();
     expect(screen.getByText("Not recorded")).toBeInTheDocument();
     expect(mocks.employees).not.toHaveBeenCalled();
     const search = screen.getByRole("textbox", { name: "Search inventory" });
+    expect(search).toHaveAttribute("placeholder", "Search by name, tag, serial, or holder");
     fireEvent.change(search, { target: { value: "DEV" } });
     expect(screen.getByRole("textbox", { name: "Search inventory" })).toBe(search);
     await waitFor(() => expect(mocks.list).toHaveBeenLastCalledWith("org", expect.objectContaining({ search: "DEV" })));
@@ -101,6 +119,43 @@ describe("asset workspace", () => {
       expect(mocks.list).toHaveBeenLastCalledWith(
         "org",
         expect.objectContaining({ sortBy: "name", sortOrder: "desc" }),
+      ),
+    );
+  });
+  it("keeps the inventory visible without a loader while search refreshes", async () => {
+    render(<HrmsAssets onToast={vi.fn()} />);
+    await screen.findByText("Developer laptop");
+    mocks.list.mockImplementationOnce(() => new Promise(() => {}));
+    fireEvent.change(screen.getByRole("textbox", { name: "Search inventory" }), { target: { value: "DEV" } });
+    await waitFor(() => expect(mocks.list).toHaveBeenLastCalledWith("org", expect.objectContaining({ search: "DEV" })));
+    expect(screen.getByText("Developer laptop")).toBeInTheDocument();
+    expect(screen.queryByText("Refreshing inventory…")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Loading assets" })).not.toBeInTheDocument();
+  });
+  it("keeps all inventory filters usable alongside search", async () => {
+    render(<HrmsAssets onToast={vi.fn()} />);
+    await screen.findByText("Developer laptop");
+    fireEvent.change(screen.getByRole("textbox", { name: "Search inventory" }), { target: { value: "DEV" } });
+    for (const [label, option] of [
+      ["Type", "Laptop"],
+      ["Condition", "Good"],
+      ["Status", "Available"],
+      ["Inventory view", "Archived"],
+    ]) {
+      fireEvent.click(screen.getByRole("button", { name: label }));
+      fireEvent.click(screen.getByRole("option", { name: option }));
+    }
+    await waitFor(() =>
+      expect(mocks.list).toHaveBeenLastCalledWith(
+        "org",
+        expect.objectContaining({
+          search: "DEV",
+          type: "LAPTOP",
+          condition: "GOOD",
+          status: "AVAILABLE",
+          archived: "true",
+          page: 1,
+        }),
       ),
     );
   });
@@ -123,6 +178,7 @@ describe("asset workspace", () => {
     mocks.permissions = ["hrms.asset.read"];
     render(<HrmsAssets onToast={vi.fn()} />);
     expect(screen.getByText(/Asset management is restricted/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to Dashboard" })).toHaveAttribute("href", "/acme/hrms");
     expect(screen.queryByRole("button", { name: "Add asset" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit DEV-001" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Archive DEV-001" })).not.toBeInTheDocument();

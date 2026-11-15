@@ -1935,6 +1935,125 @@ model HrmsCompOffRequest {
   @@index([employeeId, workedDate])
   @@map("hrms_comp_off_requests")
 }
+// Recruitment access is independent of permission groups; only organization administrators manage grants.
+model HrmsRecruitmentGrant {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  userId         String @db.Uuid
+  role           String @db.VarChar(20)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("hrms_recruitment_grants")
+}
+
+model HrmsJobOpening {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  title          String @db.VarChar(200)
+  department     String @db.VarChar(120)
+  location       String @db.VarChar(200)
+  employmentType String @db.VarChar(40)
+  workMode       String @db.VarChar(20)
+  description    String @db.Text
+  companyName    String? @db.VarChar(200)
+  experienceMin  Int?
+  experienceMax  Int?
+  ctcMin         Decimal? @db.Decimal(14, 2)
+  ctcMax         Decimal? @db.Decimal(14, 2)
+  ctcCurrency    String? @db.VarChar(3)
+  ctcPeriod      String? @db.VarChar(20)
+  ctcNotDisclosed Boolean @default(true)
+  postedDate     DateTime? @db.Date
+  openingsCount  Int?
+  highlights     String? @db.Text
+  keySkills      String[] @default([])
+  status         String @default("DRAFT") @db.VarChar(20)
+  createdById    String @db.Uuid
+  revision       Int @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  candidates     HrmsRecruitmentCandidate[]
+  @@unique([organizationId, id])
+  @@index([organizationId, status])
+  @@map("hrms_job_openings")
+}
+
+// Stages and candidates are tenant-scoped; composite foreign keys prevent cross-tenant references.
+model HrmsRecruitmentStage {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name           String @db.VarChar(80)
+  position       Int
+  systemKey      String? @db.VarChar(20)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  candidates     HrmsRecruitmentCandidate[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, name])
+  @@unique([organizationId, systemKey])
+  @@map("hrms_recruitment_stages")
+}
+
+model HrmsRecruitmentCandidate {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  openingId      String @db.Uuid
+  stageId        String @db.Uuid
+  name           String @db.VarChar(200)
+  email          String @db.VarChar(320)
+  phone          String? @db.VarChar(40)
+  assignedUserId String? @db.Uuid
+  interviewerUserId String? @db.Uuid
+  outcome        String? @db.VarChar(20)
+  rejectionReason String? @db.Text
+  revision       Int @default(1)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  opening        HrmsJobOpening @relation(fields: [organizationId, openingId], references: [organizationId, id], onDelete: Restrict)
+  stage          HrmsRecruitmentStage @relation(fields: [organizationId, stageId], references: [organizationId, id], onDelete: Restrict)
+  comments       HrmsRecruitmentComment[]
+  interviewFeedback HrmsRecruitmentInterviewFeedback[]
+
+  @@unique([organizationId, id])
+  @@index([organizationId, stageId, outcome])
+  @@index([organizationId, assignedUserId])
+  @@map("hrms_recruitment_candidates")
+}
+
+// Feedback remains attributed to its author even if the candidate is reassigned.
+model HrmsRecruitmentInterviewFeedback {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  candidateId    String @db.Uuid
+  authorUserId   String @db.Uuid
+  verdict        String @db.VarChar(10)
+  feedback       String @db.Text
+  createdAt      DateTime @default(now())
+  candidate      HrmsRecruitmentCandidate @relation(fields: [organizationId, candidateId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, candidateId, createdAt])
+  @@map("hrms_recruitment_interview_feedback")
+}
+
+model HrmsRecruitmentComment {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  candidateId    String @db.Uuid
+  authorUserId   String @db.Uuid
+  text           String @db.Text
+  createdAt      DateTime @default(now())
+  candidate      HrmsRecruitmentCandidate @relation(fields: [organizationId, candidateId], references: [organizationId, id], onDelete: Cascade)
+
+  @@index([organizationId, candidateId, createdAt])
+  @@map("hrms_recruitment_comments")
+}
 
 
 // prisma/parts/30-nexus.prisma
@@ -2238,6 +2357,10 @@ model Organization {
   hrmsTrainings HrmsTraining[]
   hrmsTrainingEnrollments HrmsTrainingEnrollment[]
   hrmsAssets HrmsAsset[]
+  hrmsRecruitmentGrants HrmsRecruitmentGrant[]
+  hrmsJobOpenings HrmsJobOpening[]
+  hrmsRecruitmentStages HrmsRecruitmentStage[]
+  hrmsRecruitmentCandidates HrmsRecruitmentCandidate[]
   hrmsBenefitEnrollments HrmsBenefitEnrollment[]
   hrmsWorkflowDefinitions HrmsWorkflowDefinition[]
   hrmsWorkflowInstances HrmsWorkflowInstance[]
@@ -2619,6 +2742,7 @@ model User {
   organizationPermissionAssignments OrganizationPermissionGroupAssignment[] @relation("OrganizationPermissionGroupAssignee")
   platformRoleAssignments PlatformUserRoleAssignment[]
   hrmsEmployees HrmsEmployee[]
+  hrmsRecruitmentGrants HrmsRecruitmentGrant[]
   noteFolders   NoteFolder[] @relation("NoteFolderOwner")
   notes         Note[] @relation("NoteOwner")
   notePermissions NotePermission[] @relation("NotePermissionUser")

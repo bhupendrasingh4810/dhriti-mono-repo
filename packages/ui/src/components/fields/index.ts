@@ -15,3 +15,4 @@ export * from "./file-field";
 export * from "./time-field";
 export * from "./search-field";
 export * from "./choice-fields";
+export * from "./switch-field";

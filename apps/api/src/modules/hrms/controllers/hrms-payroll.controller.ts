@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Param,
   ParseIntPipe,
   ParseUUIDPipe,
@@ -19,6 +20,7 @@ import { TenantGuard } from "../../../common/guards/tenant.guard";
 import { CreateHrmsPayrollDto } from "../dto/hrms-operations.dto";
 import { HrmsPayrollService } from "../services/hrms-payroll.service";
 import { HrmsPayrollWorkspaceService } from "../services/hrms-payroll-workspace.service";
+import { HrmsDashboardMetricsService } from "../services/hrms-dashboard-metrics.service";
 import {
   ExpenseClaimDto,
   PayrollProfileDto,
@@ -42,7 +44,14 @@ export class HrmsPayrollController {
   constructor(
     private readonly payroll: HrmsPayrollService,
     private readonly workspace: HrmsPayrollWorkspaceService,
+    private readonly metrics: HrmsDashboardMetricsService,
   ) {}
+  @Get("dashboard/monthly")
+  @Header("Cache-Control", "no-store")
+  @RequireAccess(READ)
+  monthlyDashboard(@CurrentOrganization() org: OrganizationContext) {
+    return this.metrics.payroll(org.organizationId);
+  }
   @Get("workspace")
   @RequireAccess(READ)
   getWorkspace(@CurrentOrganization() org: OrganizationContext) {

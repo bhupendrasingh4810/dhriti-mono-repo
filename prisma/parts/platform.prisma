@@ -49,6 +49,7 @@ model User {
   organizationPermissionAssignments OrganizationPermissionGroupAssignment[] @relation("OrganizationPermissionGroupAssignee")
   platformRoleAssignments PlatformUserRoleAssignment[]
   hrmsEmployees HrmsEmployee[]
+  hrmsRecruitmentGrants HrmsRecruitmentGrant[]
   noteFolders   NoteFolder[] @relation("NoteFolderOwner")
   notes         Note[] @relation("NoteOwner")
   notePermissions NotePermission[] @relation("NotePermissionUser")

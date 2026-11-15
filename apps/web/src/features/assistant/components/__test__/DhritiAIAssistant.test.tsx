@@ -56,6 +56,7 @@ function DhritiAIAssistant({
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear();
   vi.stubGlobal("PointerEvent", MouseEvent);
   Object.defineProperties(HTMLElement.prototype, {
     setPointerCapture: { configurable: true, value: vi.fn() },
@@ -152,6 +153,30 @@ describe("Dhriti AI Assistant", () => {
     fireEvent.click(screen.getByRole("button", { name: "Add message to UI preview" }));
     expect(screen.getByRole("log")).toHaveTextContent("Understand payroll");
     expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("remembers welcome dismissal across remounts in the current tab session", () => {
+    const first = render(<GlobalAIAssistant />);
+    expect(screen.getByRole("complementary", { name: "Assistant welcome" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss assistant welcome" }));
+    first.unmount();
+    const second = render(<GlobalAIAssistant />);
+    expect(screen.queryByRole("complementary", { name: "Assistant welcome" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Dhriti AI Assistant" })).toBeInTheDocument();
+    second.unmount();
+    window.sessionStorage.clear();
+    render(<GlobalAIAssistant />);
+    expect(screen.getByRole("complementary", { name: "Assistant welcome" })).toBeInTheDocument();
+  });
+
+  it("keeps the welcome dismissed after opening and closing the assistant", () => {
+    const first = render(<GlobalAIAssistant />);
+    fireEvent.click(screen.getByRole("button", { name: "Explore with Dhriti AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "Close assistant" }));
+    first.unmount();
+    render(<GlobalAIAssistant />);
+    expect(screen.queryByRole("complementary", { name: "Assistant welcome" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Open Dhriti AI Assistant" })).toBeInTheDocument();
   });
 
   it("does not render a portal during server rendering", () => {

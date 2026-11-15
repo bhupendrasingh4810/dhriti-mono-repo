@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Header, Param, Post, Put, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { RequireAccess } from "../../../common/decorators/access.decorator";
@@ -16,6 +16,7 @@ import {
   UpsertHrmsLeaveTypeDto,
 } from "../dto/hrms-leave-center.dto";
 import { HrmsLeaveCenterService } from "../services/hrms-leave-center.service";
+import { HrmsDashboardMetricsService } from "../services/hrms-dashboard-metrics.service";
 
 const member = { entitlement: "hrms.enabled" } as const;
 const manage = { entitlement: "hrms.enabled", permission: "hrms.leave.manage" } as const;
@@ -31,7 +32,12 @@ const read = { entitlement: "hrms.enabled", permission: "hrms.leave.read" } as c
 @UseGuards(TenantGuard, AccessGuard)
 @Controller("organization/hrms/leave")
 export class HrmsLeaveCenterController {
-  constructor(private readonly leave: HrmsLeaveCenterService) {}
+  constructor(private readonly leave: HrmsLeaveCenterService, private readonly metrics: HrmsDashboardMetricsService) {}
+
+  @Get("dashboard/monthly") @Header("Cache-Control", "no-store") @RequireAccess(read)
+  monthlyDashboard(@CurrentOrganization() org: OrganizationContext) {
+    return this.metrics.leave(org.organizationId);
+  }
 
   @Get("types") @RequireAccess(member)
   types(@CurrentOrganization() org: OrganizationContext) {

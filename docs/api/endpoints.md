@@ -19,6 +19,20 @@ The Connect Socket.IO namespace is `/connect`. Its documented events are in [Rea
 
 TODO Confirm with team: which endpoint families are supported for third-party integrations.
 
+## HRMS dashboard metrics
+
+`GET /organization/hrms/leave/dashboard/monthly` requires `hrms.leave.read`.
+It returns six UTC calendar months of approved leave days through today, using
+stored daily allocations. Legacy full-calendar ranges and single-month totals
+can also be counted exactly; ambiguous legacy requests are omitted and reported
+in `excludedLegacyRequests`.
+
+`GET /organization/hrms/payroll/dashboard/monthly` requires
+`hrms.payroll.read`. It returns six UTC calendar months of approved and paid net
+payroll grouped by pay-date month and currency, including approved future pay
+dates in the current month. Each currency is separate and is not converted.
+Both routes require the HRMS entitlement and an active tenant session.
+
 ## App settings
 
 Each workspace app has its own organization settings model, stored one row per
@@ -247,6 +261,64 @@ order. An empty array restores the default order for that view.
 
 Run the sharing/discovery persistence tests against a local migrated database:
 `cd apps/api && NOTES_DATABASE_TESTS=true node --env-file=.env node_modules/jest/bin/jest.js --runInBand --runTestsByPath src/modules/notes/notes.persistence.spec.ts src/modules/notes/notes-public.persistence.spec.ts`.
+
+## Recruitment foundation
+
+After applying migrations `20261115130000_recruitment_foundation`,
+`20261115140000_recruitment_candidates`, and
+`20261115150000_recruitment_interview_feedback`,
+`20261115210000_recruitment_job_fields`, and
+`20261115220000_recruitment_rejection`, the
+`/organization/hrms/recruitment` routes require an active tenant session and
+the HRMS entitlement. Organization owners and administrators may grant or
+revoke individual `MANAGER` or `INTERVIEWER` access through `grants`; `members`
+provides a paginated active-member search for administrators. Recruitment
+managers can list and create internal `openings` and change an opening's status
+with its current revision. Grant and opening changes are audited.
+
+Opening drafts may additionally record company name, minimum and maximum
+experience in whole years, a CTC range (decimal strings, currency code, and
+monthly or yearly period), a nondisclosure choice, posted date, openings count,
+highlights and key skills. Existing drafts retain null values for unspecified
+fields. CTC nondisclosure controls future public visibility and does not erase
+an internal range; no public job publication is implemented. Posted date is a
+date-only value and does not publish an opening. Applicant counts are derived
+from candidate records rather than entered manually. Job descriptions are
+currently plain text, including line breaks.
+
+Managers can create candidates for open internal openings, assign a hiring person
+and a separate interviewer, move candidates between stages, and record a joined
+or offer-declined outcome from Hired. Managers may reject an active candidate in
+any stage with a nonblank reason and the current revision. Closed candidates
+leave the active board and remain available in history. Hired is the final stage.
+Managers may assign an active, non-deleted HRMS employee whose user and tenant
+membership are active as interviewer. The assigned member alone can
+access `/interviews/:id` and submit passed/failed feedback through
+`/interviews/:id/feedback`; a recruitment grant is not required for this
+assignment. The assignment and revision are checked on feedback submission;
+feedback does not automatically move the candidate. A previously granted
+interviewer role no longer gives access to candidate lists or management APIs.
+The unpaginated `board` endpoint defaults to active candidates;
+`includeClosed=true` includes rejected, joined and offer-declined candidates.
+The legacy paginated `candidates` endpoint defaults to active candidates and
+`scope=closed` returns closed candidates only. Candidate lists return
+the latest interview feedback; candidate details return the latest 100 comments
+and feedback entries. Administrators may add, rename, and reorder pipeline
+stages, and delete custom stages only when no active or historical candidates
+reference them. All default stages are protected from deletion. Applied remains
+first and Hired last; reordering requires the previously observed stage order and
+rejects stale requests.
+
+Opening KPI counts include all manually created candidates. Interviews counts
+active candidates in the Interview stage, not scheduled appointments; Hired
+includes active and joined candidates in Hired but excludes declined offers and
+rejections. The unpaginated board may need virtualization or incremental loading
+for very large organizations.
+
+Openings are not published or accepting applications yet, including when their
+internal status is `OPEN`. Interview scheduling, candidate emails and offer drafts
+are not implemented. The existing platform
+careers endpoints remain separate.
 
 ## Personal and employment profiles
 

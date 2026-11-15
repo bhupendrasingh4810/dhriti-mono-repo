@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { MyAssets } from "./assets";
+import { usePermissions } from "@/hooks/use-permissions";
+import { LeaveDashboardWidget, PayrollDashboardWidget } from "./dashboard-metrics";
 
 import { HrmsStatCard, type HrmsStat } from "./components/hrms-stat-card";
 import { TeamLeaveCalendar } from "./components/team-leave-calendar";
@@ -498,13 +500,21 @@ function ComplianceCard() {
   );
 }
 
-function AdminDashboard({ onToast }: { onToast: (message: string) => void }) {
+function AdminDashboard({ onToast, organizationId }: { onToast: (message: string) => void; organizationId?: string }) {
+  const { can } = usePermissions();
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="xl:col-span-2">
         <WorkforceChart />
       </div>
       <AttendanceBreakdown />
+      {organizationId && (
+        <div className="grid items-start gap-4 md:grid-cols-2 xl:col-span-3 xl:grid-cols-3">
+          <MyAssets key={organizationId} organizationId={organizationId} />
+          {can("hrms.leave.read") && <LeaveDashboardWidget key={`leave:${organizationId}`} organizationId={organizationId} />}
+          {can("hrms.payroll.read") && <PayrollDashboardWidget key={`payroll:${organizationId}`} organizationId={organizationId} />}
+        </div>
+      )}
       <PayrollStatusCard />
       <RecruitmentFunnel />
       <ComplianceCard />
@@ -795,7 +805,11 @@ export function HrmsDashboard({ role, onToast }: { role: Role; onToast: (message
   const organizationId = user?.organization?.id;
   return (
     <>
-      {organizationId && <div className="mb-5 grid items-start gap-4 lg:grid-cols-2"><MyAssets key={organizationId} organizationId={organizationId} /></div>}
+      {organizationId && role !== "HR Admin" && (
+        <div className="mb-5 grid items-start gap-4 lg:grid-cols-2">
+          <MyAssets key={organizationId} organizationId={organizationId} />
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {roleStats[role].map((item) => (
           <HrmsStatCard key={item.label} item={item} />
@@ -809,7 +823,7 @@ export function HrmsDashboard({ role, onToast }: { role: Role; onToast: (message
         ) : role === "Platform Admin" ? (
           <PlatformAdminDashboard onToast={onToast} />
         ) : (
-          <AdminDashboard onToast={onToast} />
+          <AdminDashboard onToast={onToast} organizationId={organizationId} />
         )}
       </div>
     </>

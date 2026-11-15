@@ -14,6 +14,17 @@ Dhriti reusable UI package built on top of MUI and `@dhriti/theme`.
 import { DhritiButton, TaskCard, MessageBubble } from "@dhriti/ui";
 ```
 
+## Breadcrumb
+
+`DhritiBreadcrumb` renders an accessible navigation landmark and ordered trail.
+Pass `items` in navigation order as `{ label, href? }`; the final item is the
+current page and is never a link. Earlier items without an `href` are plain
+text. An empty trail renders nothing. Use `variant="plain"` or
+`separator="chevron"` when the default surface and slash do not fit the page.
+For client-side routing, supply `renderLink(item, className)` and apply the
+provided class to your router link. Loading and error states belong to the
+parent because the breadcrumb performs no data fetching.
+
 Use MUI primitives directly where needed:
 
 ```tsx
@@ -58,6 +69,17 @@ mobile sizing, dark theme, loading, errors, disabled state and parent-supplied
 messages. Attachment uploads remain absent until a backend is integrated.
 
 ## Input fields
+
+`DhritiSwitchField` is a controlled switch using `checked` and `onChange`.
+It supports a visible or hidden accessible label, native form `name`, `value` and
+`required`, helper/error messages, disabled and read-only states. Read-only
+switches remain focusable and participate in form submission but cannot change.
+
+`DhritiButton` supports `primary`, `secondary` and outlined `danger` variants;
+`sm`, `md` and `lg` sizes; and `startIcon` / `endIcon` slots. It defaults to
+`type="button"`; use `type="submit"` for forms. `loading` sets `aria-busy` and
+disables the button while retaining its label. Supply `aria-label` for icon-only
+buttons. Native button attributes and event handlers are forwarded.
 
 `DhritiSearchField` is a controlled text field with a search icon and optional
 clear action. `onChange` updates the parent's visible draft immediately;

@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 import type { AssetCategory } from "@dhriti/types";
 import { useAuth } from "@/hooks/use-auth";
 import { usePermissions } from "@/hooks/use-permissions";
 import { ConfirmationDialog } from "@/components/dialogs/ConfirmationDialog";
 import { hrmsService, type HrmsAsset, type HrmsAssetPage } from "@/services/hrms.service";
-import { Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
+import { Badge, Button, Card, CardTitle, Icon, ListSkeleton } from "./components/ui-primitives";
 import { Pagination } from "./attendance-regularization";
 import { AssetEditor, assetTypes, assetConditions, assetStatuses, assetLabel } from "./asset-editor";
 import { AssetCustodyDialog, AssetHistoryDialog } from "./asset-custody";
@@ -21,16 +23,48 @@ const errorText = (reason: unknown) => (reason instanceof Error ? reason.message
 type Tab = "inventory" | "categories" | "clearance" | "operations";
 type Sort = "name" | "serialNumber" | "condition" | "status";
 
+function AssetPageSkeleton() {
+  return (
+    <div role="status" aria-label="Loading assets" aria-busy="true">
+      <div aria-hidden="true" className="space-y-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }, (_, index) => (
+            <Card key={index} className="space-y-3 p-4">
+              <div className="h-4 w-24 animate-pulse rounded bg-surface-raised" />
+              <div className="h-7 w-16 animate-pulse rounded bg-surface-raised" />
+            </Card>
+          ))}
+        </div>
+        <Card className="overflow-hidden">
+          <div className="border-b border-border p-4">
+            <div className="h-9 w-80 max-w-full animate-pulse rounded bg-surface-raised" />
+          </div>
+          <ListSkeleton />
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export function HrmsAssets({ onToast }: { onToast: (message: string) => void }) {
   const { user } = useAuth();
   const { can, loading } = usePermissions();
-  if (loading) return <p role="status">Checking asset access…</p>;
+  const { organizationSlug } = useParams<{ organizationSlug: string }>();
+  if (loading) return <AssetPageSkeleton />;
   if (!can("hrms.asset.manage"))
     return (
-      <p className="p-4 text-text-secondary">
-        Asset management is restricted. Your assigned equipment and replacement requests are available on your HRMS
-        dashboard.
-      </p>
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-4 text-center">
+        <p className="text-text-secondary">
+          Asset management is restricted. Your assigned equipment and replacement requests are available on your HRMS
+          dashboard.
+        </p>
+        <Link
+          href={`/${organizationSlug}/hrms`}
+          className="inline-flex cursor-pointer items-center justify-center rounded-md bg-brand px-3.5 py-2 text-sm font-semibold text-text-inverse shadow-sm transition hover:bg-brand-dark"
+        >
+          Go to Dashboard
+        </Link>
+      </div>
     );
   const organizationId = user?.organization?.id;
   return organizationId ? (
@@ -148,50 +182,47 @@ function AssetWorkspace({ organizationId, onToast }: { organizationId: string; o
     setSortBy(field);
     setSortOrder(sortBy === field && sortOrder === "asc" ? "desc" : "asc");
   };
-  if (accessLoading) return <p role="status">Checking asset access…</p>;
+  if (accessLoading) return <AssetPageSkeleton />;
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-xl font-bold text-text-primary">Assets</h1>
-        <p className="mt-1 text-sm text-text-secondary">Equipment inventory, employee custody and verified returns.</p>
-      </header>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <nav aria-label="Asset sections" className="flex flex-wrap gap-2">
-          {(
-            [
-              { value: "inventory", label: "Inventory", visible: canRead },
-              { value: "categories", label: "Categories", visible: canRead },
-              { value: "clearance", label: "Asset clearance", visible: canRead },
-              { value: "operations", label: "Operations", visible: canManage },
-            ] as const
-          )
-            .filter((entry) => entry.visible)
-            .map((entry) => (
-              <button
-                key={entry.value}
-                type="button"
-                aria-current={tab === entry.value ? "page" : undefined}
-                className={`cursor-pointer rounded-md px-3 py-2 text-sm font-semibold ${tab === entry.value ? "bg-brand-muted text-brand" : "text-text-secondary hover:bg-surface-raised"}`}
-                onClick={() => setTab(entry.value)}
-              >
-                {entry.label}
-              </button>
-            ))}
-        </nav>
-        {tab === "inventory" && canManage && (
-          <Button icon="plus" onClick={() => setEditing({ asset: null })} disabled={!result?.categories}>
-            Add asset
-          </Button>
-        )}
+      <div className="sticky top-0 z-10 space-y-5 bg-background">
+        <header>
+          <h1 className="text-xl font-bold text-text-primary">Assets</h1>
+          <p className="mt-1 text-sm text-text-secondary">Equipment inventory, employee custody and verified returns.</p>
+        </header>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+          <nav aria-label="Asset sections" className="flex min-w-0 gap-1 overflow-x-auto">
+            {(
+              [
+                { value: "inventory", label: "Inventory", visible: canRead },
+                { value: "categories", label: "Categories", visible: canRead },
+                { value: "clearance", label: "Asset clearance", visible: canRead },
+                { value: "operations", label: "Operations", visible: canManage },
+              ] as const
+            )
+              .filter((entry) => entry.visible)
+              .map((entry) => (
+                <button
+                  key={entry.value}
+                  type="button"
+                  aria-current={tab === entry.value ? "page" : undefined}
+                  className={`shrink-0 cursor-pointer rounded-md px-3.5 py-2 text-sm font-semibold ${tab === entry.value ? "bg-brand/10 text-brand" : "text-text-secondary hover:bg-surface-raised"}`}
+                  onClick={() => setTab(entry.value)}
+                >
+                  {entry.label}
+                </button>
+              ))}
+          </nav>
+          {tab === "inventory" && canManage && (
+            <Button icon="plus" onClick={() => setEditing({ asset: null })} disabled={!result?.categories}>
+              Add asset
+            </Button>
+          )}
+        </div>
       </div>
       {error && (
         <p role="alert" className="text-sm text-error">
           {error}
-        </p>
-      )}
-      {!current && (tab === "inventory" || tab === "categories") && data && (
-        <p role="status" className="text-xs text-text-muted">
-          Refreshing inventory…
         </p>
       )}
       {(tab === "inventory" || tab === "categories") && canRead && (
@@ -206,9 +237,7 @@ function AssetWorkspace({ organizationId, onToast }: { organizationId: string; o
               </Button>
             </div>
           ) : !data ? (
-            <p role="status" className="text-sm text-text-muted">
-              Loading inventory…
-            </p>
+            <AssetPageSkeleton />
           ) : tab === "categories" ? (
             <AssetCategories
               organizationId={organizationId}
@@ -244,43 +273,49 @@ function AssetWorkspace({ organizationId, onToast }: { organizationId: string; o
                   }
                 />
                 <div className="flex flex-wrap items-end gap-3 border-b border-border p-4">
-                  <DhritiTextField
-                    label="Search inventory"
-                    value={query}
-                    onChange={(value) => {
-                      setQuery(value);
-                      setPage(1);
-                    }}
-                  />
-                  {(["type", "condition", "status", "archived"] as const).map((field) => (
-                    <DhritiSelectMenu
-                      key={field}
-                      label={field === "archived" ? "Inventory view" : assetLabel(field)}
-                      value={filters[field]}
-                      options={
-                        field === "archived"
-                          ? [
-                              { value: "false", label: "Active inventory" },
-                              { value: "true", label: "Archived" },
-                            ]
-                          : [
-                              { value: "", label: `All ${field}s` },
-                              ...(field === "type"
-                                ? assetTypes
-                                : field === "condition"
-                                  ? assetConditions
-                                  : assetStatuses
-                              ).map((value) => ({ value, label: assetLabel(value) })),
-                            ]
-                      }
-                      open={open === field}
-                      onOpenChange={(shown) => setOpen(shown ? field : null)}
+                  <div className="w-full sm:w-80 sm:min-w-64 sm:flex-auto">
+                    <DhritiTextField
+                      label="Search inventory"
+                      placeholder="Search by name, tag, serial, or holder"
+                      value={query}
                       onChange={(value) => {
-                        setFilters((current) => ({ ...current, [field]: value ?? "" }));
+                        setQuery(value);
                         setPage(1);
                       }}
                     />
-                  ))}
+                  </div>
+                  <div className="ml-auto grid w-full grid-cols-2 gap-2 sm:w-auto xl:grid-cols-4">
+                    {(["type", "condition", "status", "archived"] as const).map((field) => (
+                      <div key={field} className="sm:w-48">
+                        <DhritiSelectMenu
+                          label={field === "archived" ? "Inventory view" : assetLabel(field)}
+                          value={filters[field]}
+                          options={
+                            field === "archived"
+                              ? [
+                                  { value: "false", label: "Active inventory" },
+                                  { value: "true", label: "Archived" },
+                                ]
+                              : [
+                                  { value: "", label: `All ${field}s` },
+                                  ...(field === "type"
+                                    ? assetTypes
+                                    : field === "condition"
+                                      ? assetConditions
+                                      : assetStatuses
+                                  ).map((value) => ({ value, label: assetLabel(value) })),
+                                ]
+                          }
+                          open={open === field}
+                          onOpenChange={(shown) => setOpen(shown ? field : null)}
+                          onChange={(value) => {
+                            setFilters((current) => ({ ...current, [field]: value ?? "" }));
+                            setPage(1);
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">

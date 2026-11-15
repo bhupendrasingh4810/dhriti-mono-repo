@@ -1,7 +1,11 @@
 import { Module } from "@nestjs/common";
 import { HrmsWorkWeekController } from "./controllers/hrms-work-week.controller";
 import { HrmsWorkWeekService } from "./services/hrms-work-week.service";
+import { HrmsDashboardMetricsService } from "./services/hrms-dashboard-metrics.service";
 import { FileModule } from "../file/file.module";
+import { HrmsRecruitmentController } from "./controllers/hrms-recruitment.controller";
+import { HrmsRecruitmentService } from "./services/hrms-recruitment.service";
+import { HrmsRecruitmentCandidateService } from "./services/hrms-recruitment-candidate.service";
 import {
   HrmsEmployeeDocumentController,
   HrmsDocumentLibraryController,
@@ -50,6 +54,7 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
 @Module({
   imports: [FileModule],
   controllers: [
+    HrmsRecruitmentController,
     HrmsWorkWeekController,
     HrmsDocumentLibraryController,
     HrmsEmployeeDocumentController,
@@ -71,6 +76,9 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsWorkflowInstanceController,
   ],
   providers: [
+    HrmsDashboardMetricsService,
+    HrmsRecruitmentService,
+    HrmsRecruitmentCandidateService,
     HrmsEmployeeFoundationService,
     HrmsWorkWeekService,
     HrmsEmployeeDocumentService,

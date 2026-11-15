@@ -235,22 +235,24 @@ export function EmployeeDirectory({
               placeholder="Search by name, email, number, department…"
             />
           </div>
-          <DhritiSelectMenu
-            label="Filter by department"
-            showLabel={false}
-            value={departmentId || null}
-            placeholder="All departments"
-            onChange={(value) => {
-              setDepartmentId(value ?? "");
-              setPage(1);
-            }}
-            open={openFilter === "department"}
-            onOpenChange={(open) => setOpenFilter(open ? "department" : null)}
-            options={[
-              { value: "", label: "All departments" },
-              ...(options?.departments ?? []).map((department) => ({ value: department.id, label: department.name })),
-            ]}
-          />
+          <div className="w-48">
+            <DhritiSelectMenu
+              label="Filter by department"
+              showLabel={false}
+              value={departmentId || null}
+              placeholder="All departments"
+              onChange={(value) => {
+                setDepartmentId(value ?? "");
+                setPage(1);
+              }}
+              open={openFilter === "department"}
+              onOpenChange={(open) => setOpenFilter(open ? "department" : null)}
+              options={[
+                { value: "", label: "All departments" },
+                ...(options?.departments ?? []).map((department) => ({ value: department.id, label: department.name })),
+              ]}
+            />
+          </div>
           <DhritiSelectMenu
             label="Filter by status"
             showLabel={false}
