@@ -24,6 +24,9 @@ type FormValues = {
   city: string;
   timezone: string;
   departmentId: string;
+  geofenceLatitude: string;
+  geofenceLongitude: string;
+  geofenceRadiusMeters: string;
 };
 
 const emptyValues: FormValues = {
@@ -33,6 +36,9 @@ const emptyValues: FormValues = {
   city: "",
   timezone: "",
   departmentId: "",
+  geofenceLatitude: "",
+  geofenceLongitude: "",
+  geofenceRadiusMeters: "",
 };
 
 function errorMessage(error: unknown) {
@@ -56,7 +62,12 @@ function valuesFor(type: MasterDataType, item?: MasterDataItem): FormValues {
   const base = { ...emptyValues, name: item.name, code: item.code ?? "" };
   if (type === "Locations") {
     const location = item as HrmsLocation;
-    return { ...base, countryCode: location.countryCode, city: location.city ?? "", timezone: location.timezone };
+    return {
+      ...base, countryCode: location.countryCode, city: location.city ?? "", timezone: location.timezone,
+      geofenceLatitude: location.geofenceLatitude == null ? "" : String(location.geofenceLatitude),
+      geofenceLongitude: location.geofenceLongitude == null ? "" : String(location.geofenceLongitude),
+      geofenceRadiusMeters: location.geofenceRadiusMeters == null ? "" : String(location.geofenceRadiusMeters),
+    };
   }
   if (type === "Designations") return { ...base, departmentId: (item as HrmsDesignation).departmentId ?? "" };
   return base;
@@ -143,6 +154,18 @@ function MasterDataDrawer({
     if (type === "Locations") {
       if (!values.countryCode) next.countryCode = "Country code is required.";
       if (!values.timezone) next.timezone = "Timezone is required.";
+      const fields = ["geofenceLatitude", "geofenceLongitude", "geofenceRadiusMeters"] as const;
+      if (fields.some((field) => values[field].trim())) {
+        for (const field of fields) {
+          if (!values[field].trim()) next[field] = "All three geofence fields are required.";
+        }
+        const latitude = Number(values.geofenceLatitude);
+        const longitude = Number(values.geofenceLongitude);
+        const radius = Number(values.geofenceRadiusMeters);
+        if (!Number.isFinite(latitude) || Math.abs(latitude) > 90) next.geofenceLatitude = "Latitude must be between -90 and 90.";
+        if (!Number.isFinite(longitude) || Math.abs(longitude) > 180) next.geofenceLongitude = "Longitude must be between -180 and 180.";
+        if (!Number.isInteger(radius) || radius < 1 || radius > 100000) next.geofenceRadiusMeters = "Radius must be a whole number between 1 and 100000 meters.";
+      }
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -208,6 +231,13 @@ function MasterDataDrawer({
               <>
                 <DhritiSelectMenu label="Country code" required value={values.countryCode || null} onChange={(value) => update("countryCode", value ?? "")} error={errors.countryCode} placeholder="Select a country" options={COUNTRY_OPTIONS.map((country) => ({ value: country.code, label: `${country.name} - (${country.code})` }))} open={openField === "country"} onOpenChange={(open) => setOpenField(open ? "country" : null)} />
                 <DhritiTextField label="City" value={values.city} onChange={(value) => update("city", value)} />
+                <fieldset className="space-y-3">
+                  <legend className="text-sm font-semibold text-text-primary">Office geofence</legend>
+                  <p className="text-xs text-text-muted">Optional until GPS enforcement is enabled in HRMS settings. Enter all three values, or clear all three to remove the fence.</p>
+                  <DhritiTextField label="Latitude" value={values.geofenceLatitude} onChange={(value) => update("geofenceLatitude", value)} error={errors.geofenceLatitude} />
+                  <DhritiTextField label="Longitude" value={values.geofenceLongitude} onChange={(value) => update("geofenceLongitude", value)} error={errors.geofenceLongitude} />
+                  <DhritiTextField label="Radius (meters)" value={values.geofenceRadiusMeters} onChange={(value) => update("geofenceRadiusMeters", value)} error={errors.geofenceRadiusMeters} />
+                </fieldset>
                 <DhritiSelectMenu label="IANA timezone" required value={values.timezone || null} onChange={(value) => update("timezone", value ?? "")} error={errors.timezone} placeholder="Select a timezone" options={TIMEZONE_OPTIONS.map((timezone) => ({ value: timezone, label: timezone }))} open={openField === "timezone"} onOpenChange={(open) => setOpenField(open ? "timezone" : null)} />
               </>
             )}
@@ -284,6 +314,9 @@ export function HrmsLocations({
         countryCode: values.countryCode,
         city: values.city.trim() || null,
         timezone: values.timezone,
+        geofenceLatitude: values.geofenceLatitude.trim() ? Number(values.geofenceLatitude) : null,
+        geofenceLongitude: values.geofenceLongitude.trim() ? Number(values.geofenceLongitude) : null,
+        geofenceRadiusMeters: values.geofenceRadiusMeters.trim() ? Number(values.geofenceRadiusMeters) : null,
       };
       if (item) await hrmsService.locations.update(organizationId, item.id, input);
       else await hrmsService.locations.create(organizationId, input);
@@ -382,6 +415,13 @@ export function HrmsLocations({
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-text-primary">{item.name}</p>
                     <p className="text-xs text-text-muted">{detail}</p>
+                    {masterDataType === "Locations" && (
+                      <p className="text-xs text-text-muted">
+                        {(item as HrmsLocation).geofenceRadiusMeters
+                          ? `Office fence: ${(item as HrmsLocation).geofenceRadiusMeters} m`
+                          : "Office fence not configured"}
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     {supportsToggle && (

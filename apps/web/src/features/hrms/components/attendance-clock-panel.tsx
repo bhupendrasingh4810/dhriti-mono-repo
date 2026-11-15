@@ -8,6 +8,9 @@ import { useMyShift } from "@/features/hrms/use-my-shift";
 import { formatShiftRange } from "@/features/hrms/shift-format";
 import { clockInOpensAt, formatInZone, nearestShiftStart } from "@/features/hrms/shift-window";
 import { useAppSettings } from "@/features/settings/use-app-settings";
+import type { AttendanceCapturePolicy, AttendanceWorkMode } from "@dhriti/types";
+import { DhritiSelectMenu } from "@dhriti/ui";
+import { captureSummary, collectAttendanceCapture } from "../attendance-capture";
 
 function formatDuration(ms: number) {
   const minutes = Math.max(0, Math.floor(ms / 60000));
@@ -26,10 +29,18 @@ export function AttendanceClockPanel({ onToast }: { onToast?: (message: string) 
   const shiftLabel = shiftLoading ? "Shift: …" : shift ? `Shift: ${shift.name} · ${formatShiftRange(shift)} (${shift.timeZone})` : "No shift assigned";
   const rules = useAppSettings("hrms");
   const [now, setNow] = useState<number | null>(null);
-  const [record, setRecord] = useState<HrmsAttendanceRecord | null>(null);
+  const [attendance, setAttendance] = useState<{
+    organizationId: string;
+    record: HrmsAttendanceRecord | null;
+    capturePolicy: AttendanceCapturePolicy | null;
+  } | null>(null);
+  const record = attendance?.organizationId === organizationId ? attendance?.record ?? null : null;
+  const capturePolicy = attendance?.organizationId === organizationId ? attendance?.capturePolicy ?? null : null;
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [workMode, setWorkMode] = useState<AttendanceWorkMode>("OFFICE");
+  const [modeOpen, setModeOpen] = useState(false);
 
   // Time is set after mount so server and client markup match (avoids hydration mismatch).
   useEffect(() => {
@@ -46,7 +57,11 @@ export function AttendanceClockPanel({ onToast }: { onToast?: (message: string) 
     let cancelled = false;
     hrmsService.attendanceSelf
       .today(organizationId, dayjs().format("YYYY-MM-DD"))
-      .then((result) => !cancelled && setRecord(result.record))
+      .then((result) => {
+        if (!cancelled) {
+          setAttendance({ organizationId, record: result.record, capturePolicy: result.capturePolicy });
+        }
+      })
       .catch((reason) => !cancelled && setError(reason instanceof Error ? reason.message : "Unable to load attendance."))
       .finally(() => !cancelled && setReady(true));
     return () => {
@@ -78,7 +93,12 @@ export function AttendanceClockPanel({ onToast }: { onToast?: (message: string) 
     setBusy(true);
     setError("");
     try {
-      setRecord(await action(organizationId));
+      const updated = await action(organizationId);
+      setAttendance((current) => ({
+        organizationId,
+        record: updated,
+        capturePolicy: current?.organizationId === organizationId ? current.capturePolicy : null,
+      }));
       if (message) onToast?.(message);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Something went wrong.");
@@ -86,9 +106,18 @@ export function AttendanceClockPanel({ onToast }: { onToast?: (message: string) 
       setBusy(false);
     }
   };
-  const clockIn = () =>
-    run((id) => hrmsService.attendanceSelf.clockIn(id, dayjs().format("YYYY-MM-DD")), "Clocked in");
-  const clockOut = () => run((id) => hrmsService.attendanceSelf.clockOut(id), "Clocked out");
+  const effectiveMode = clockInAt && record?.checkInCapture ? record.checkInCapture.mode : workMode;
+  const punch = (out: boolean) => run(async (id) => {
+    // Re-read policy immediately before capture; a stale page must not silently skip a newly enabled requirement.
+    const latest = await hrmsService.attendanceSelf.today(id, dayjs().format("YYYY-MM-DD"));
+    setAttendance({ organizationId: id, record: latest.record, capturePolicy: latest.capturePolicy });
+    const capture = await collectAttendanceCapture(effectiveMode, latest.capturePolicy.enabled);
+    return out
+      ? hrmsService.attendanceSelf.clockOut(id, capture)
+      : hrmsService.attendanceSelf.clockIn(id, dayjs().format("YYYY-MM-DD"), capture);
+  }, out ? "Clocked out" : "Clocked in");
+  const clockIn = () => punch(false);
+  const clockOut = () => punch(true);
   const toggleBreak = () =>
     run((id) => (onBreak ? hrmsService.attendanceSelf.endBreak(id) : hrmsService.attendanceSelf.startBreak(id)));
 
@@ -124,6 +153,29 @@ export function AttendanceClockPanel({ onToast }: { onToast?: (message: string) 
           <p className="font-semibold tabular-nums">{Math.floor(totalBreak / 60000)} min</p>
         </div>
       </div>
+      {!completed && ready && capturePolicy && (
+        <div className="space-y-2 rounded-md bg-surface p-3 text-text-primary">
+          <DhritiSelectMenu
+            label="Work mode"
+            value={effectiveMode}
+            options={[{ value: "OFFICE", label: "Office" }, { value: "REMOTE", label: "Remote" }, { value: "FIELD", label: "Field" }]}
+            onChange={(value) => {
+              if (value === "OFFICE" || value === "REMOTE" || value === "FIELD") setWorkMode(value);
+            }}
+            disabled={busy || Boolean(clockInAt && record?.checkInCapture)}
+            open={modeOpen}
+            onOpenChange={setModeOpen}
+          />
+          <p className="text-xs text-text-muted">
+            {capturePolicy.enabled
+              ? `GPS required at each punch (accuracy ≤ ${capturePolicy.maxAccuracyMeters} m). Office: ${capturePolicy.workLocation?.name ?? "no assigned location"}${capturePolicy.workLocation?.configured ? "" : " — fence not configured"}. Remote/field: GPS without office fence. Coordinates are retained with attendance.`
+              : "GPS enforcement is off. Your work mode and client-reported device/source are recorded; location is not requested."}
+          </p>
+        </div>
+      )}
+      {record?.checkInCapture && <p className="text-xs">In: {captureSummary(record.checkInCapture)}</p>}
+      {record?.checkOutCapture && <p className="text-xs">Out: {captureSummary(record.checkOutCapture)}</p>}
+      {busy && <p role="status" className="text-xs">Processing attendance. Allow location access if prompted.</p>}
       <div className="flex flex-wrap items-center gap-2">
         {clockInAt ? (
           <>

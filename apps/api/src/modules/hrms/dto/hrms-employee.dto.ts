@@ -29,7 +29,7 @@ const employeeSortFields = [
 ] as const;
 export type EmployeeSortField = (typeof employeeSortFields)[number];
 
-export class ListHrmsEmployeesDto {
+export class EmployeeTimelineQueryDto {
   @ApiPropertyOptional({ minimum: 1, default: 1 })
   @IsOptional()
   @Type(() => Number)
@@ -44,7 +44,9 @@ export class ListHrmsEmployeesDto {
   @Min(1)
   @Max(100)
   pageSize = 20;
+}
 
+export class ListHrmsEmployeesDto extends EmployeeTimelineQueryDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
@@ -125,8 +127,8 @@ export class UpdateHrmsEmployeeDto extends EmployeeLifecycleDto {
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() departmentId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() designationId?: string | null;
   @ApiPropertyOptional({ nullable: true }) @IsOptional() @IsUUID() reportingManagerId?: string | null;
-  @ApiPropertyOptional({ format: "date-time" }) @IsOptional() @IsDateString() startDate?: string;
-  @ApiPropertyOptional({ format: "date-time" }) @IsOptional() @IsDateString() endDate?: string;
+  @ApiPropertyOptional({ format: "date-time", nullable: true }) @IsOptional() @IsDateString() startDate?: string | null;
+  @ApiPropertyOptional({ format: "date-time", nullable: true }) @IsOptional() @IsDateString() endDate?: string | null;
 }
 
 /** Maximum rows accepted per bulk import; keeps validation and the import transaction bounded. */
@@ -171,9 +173,7 @@ export class EmployeeTemplateQueryDto {
 export class ExportHrmsEmployeesDto {
   @ApiProperty({ enum: employeeImportFormats }) @IsIn(employeeImportFormats) format!: EmployeeFileFormat;
   @ApiProperty({ enum: ["all", "selected", "filtered"] }) @IsIn(["all", "selected", "filtered"]) scope!:
-    | "all"
-    | "selected"
-    | "filtered";
+    "all" | "selected" | "filtered";
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   @IsArray()

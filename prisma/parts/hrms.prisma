@@ -15,6 +15,12 @@ model HrmsEmployee {
   biometricId    String?  @map("biometric_id") @db.VarChar(64)
   retirementDate DateTime? @map("retirement_date") @db.Date
   resignationDate DateTime? @map("resignation_date") @db.Date
+  /// Private tenant-local profile; not included in directory or bulk exports.
+  profileData Json @default("{}") @map("profile_data") @db.JsonB
+  profileVersion Int @default(0) @map("profile_version")
+  /// HR-controlled tracking only; dates never automatically change employment, access or payroll.
+  lifecycleData Json @default("{}") @map("lifecycle_data") @db.JsonB
+  lifecycleVersion Int @default(0) @map("lifecycle_version")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   deletedAt      DateTime?
@@ -40,6 +46,8 @@ model HrmsEmployee {
   trainingEnrollments HrmsTrainingEnrollment[]
   assignedAssets HrmsAsset[] @relation("HrmsAssetAssignee")
   benefitEnrollments HrmsBenefitEnrollment[]
+  documents HrmsEmployeeDocument[]
+  workWeekAssignments HrmsWorkWeekAssignment[]
 
   @@unique([organizationId, userId])
   @@unique([organizationId, employeeNumber])
@@ -51,6 +59,79 @@ model HrmsEmployee {
   @@map("hrms_employees")
 }
 
+/// Past schedule dates are preserved; today/future entries can be corrected.
+/// A null assignment rule follows the dated organization default until the next assignment.
+model HrmsWorkWeekRule {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name String @db.VarChar(120)
+  description String @default("") @db.VarChar(2000)
+  revision Int @default(1)
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  versions HrmsWorkWeekVersion[]
+  defaults HrmsWorkWeekDefault[]
+  assignments HrmsWorkWeekAssignment[]
+  @@unique([organizationId, name])
+  @@map("hrms_work_week_rules")
+}
+
+model HrmsWorkWeekVersion {
+  id String @id @default(uuid()) @db.Uuid
+  ruleId String @db.Uuid
+  effectiveFrom DateTime @db.Date
+  pattern Json @db.JsonB
+  rule HrmsWorkWeekRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  @@unique([ruleId, effectiveFrom])
+  @@map("hrms_work_week_versions")
+}
+
+model HrmsWorkWeekDefault {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  ruleId String @db.Uuid
+  effectiveFrom DateTime @db.Date
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  rule HrmsWorkWeekRule @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  @@unique([organizationId, effectiveFrom])
+  @@map("hrms_work_week_defaults")
+}
+
+model HrmsWorkWeekAssignment {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId String @db.Uuid
+  ruleId String? @db.Uuid
+  effectiveFrom DateTime @db.Date
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  rule HrmsWorkWeekRule? @relation(fields: [ruleId], references: [id], onDelete: Restrict)
+  @@unique([employeeId, effectiveFrom])
+  @@index([organizationId, effectiveFrom])
+  @@map("hrms_work_week_assignments")
+}
+
+/// HR-managed employee records. Archiving revokes future download URLs but retains the private file.
+model HrmsEmployeeDocument {
+  id             String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId     String @db.Uuid
+  fileId         String @unique @db.Uuid
+  title          String @db.VarChar(160)
+  category       String @db.VarChar(32)
+  uploadedById   String @db.Uuid
+  archivedAt     DateTime?
+  archivedById   String? @db.Uuid
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  employee HrmsEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  file StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId, employeeId, archivedAt, createdAt], map: "hrms_employee_documents_org_employee_archive_created_idx")
+  @@map("hrms_employee_documents")
+}
+
 model HrmsAttendanceRecord {
   id             String           @id @default(uuid()) @db.Uuid
   organizationId String           @db.Uuid
@@ -59,6 +140,9 @@ model HrmsAttendanceRecord {
   date           DateTime         @db.Date
   checkIn        DateTime?
   checkOut       DateTime?
+  // Original punch evidence is retained with attendance, independently of corrected check-in/out times.
+  checkInCapture Json?            @db.JsonB
+  checkOutCapture Json?           @db.JsonB
   status         AttendanceStatus @default(PRESENT)
   workHours      Float?
   // Completed break time; an in-progress break is tracked by breakStartedAt until it is ended or the user clocks out.
@@ -114,6 +198,8 @@ model HrmsLeaveRequest {
   startDate      DateTime    @db.Date
   endDate        DateTime    @db.Date
   totalDays      Float
+  /// New leave stores exact per-date units; historical leave remains unchanged.
+  dayAllocation Json? @db.JsonB
   reason         String?     @db.Text
   status         LeaveStatus @default(PENDING)
   // Set when the request was filed by someone else (apply-on-behalf).
@@ -153,6 +239,8 @@ model HrmsWorkflowDefinition {
   stages        Json                         @db.JsonB
   transitions   Json                         @db.JsonB
   templateKey   String?                      @db.VarChar(64)
+  /// Offboarding safety policy survives cloning and graph edits.
+  assetClearanceRequired Boolean @default(false)
   isTemplate    Boolean                      @default(false)
   isDefault     Boolean                      @default(false)
   createdByUserId String                    @db.Uuid
@@ -510,7 +598,22 @@ model HrmsAsset {
   name           String
   type           AssetType
   customCategory String?
-  serialNumber   String
+  serialNumber   String?
+  assetTag       String @default(uuid()) @db.VarChar(100)
+  categoryId     String? @db.Uuid
+  brand          String? @db.VarChar(120)
+  model          String? @db.VarChar(120)
+  specifications String? @db.Text
+  custodianEmployeeId String? @db.Uuid
+  purchaseDate   DateTime? @db.Date
+  purchaseCost   Decimal? @db.Decimal(18, 3)
+  currency       String? @db.VarChar(3)
+  vendor         String? @db.VarChar(200)
+  warrantyExpiresOn DateTime? @db.Date
+  expectedReturnDate DateTime? @db.Date
+  acknowledgedAt DateTime?
+  archivedAt     DateTime?
+  revision       Int @default(1)
   condition      AssetCondition @default(GOOD)
   status         AssetStatus @default(AVAILABLE)
   assignedEmployeeId String? @db.Uuid
@@ -522,11 +625,203 @@ model HrmsAsset {
 
   organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   assignedEmployee HrmsEmployee? @relation("HrmsAssetAssignee", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  category HrmsAssetCategory? @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  events HrmsAssetEvent[]
+  attachments HrmsAssetAttachment[]
+  requests HrmsAssetRequest[]
+  maintenance HrmsAssetMaintenance[]
+  accessories HrmsAssetAccessory[]
+  stockItems HrmsAssetStockItem[]
 
+  @@unique([organizationId, assetTag])
   @@unique([organizationId, serialNumber])
   @@unique([organizationId, legacyAssetId])
   @@index([organizationId, status])
   @@map("hrms_assets")
+}
+
+model HrmsAssetCategory {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name String @db.VarChar(100)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  assets HrmsAsset[]
+  @@unique([organizationId, name])
+  @@map("hrms_asset_categories")
+}
+
+/// Recorded custody events start at rollout; historical assignments are not reconstructed.
+model HrmsAssetEvent {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  assetId String @db.Uuid
+  action String @db.VarChar(32)
+  actorUserId String @db.Uuid
+  employeeId String? @db.Uuid
+  employeeName String?
+  condition String?
+  notes String @default("") @db.Text
+  expectedReturnDate DateTime? @db.Date
+  createdAt DateTime @default(now())
+  asset HrmsAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  @@index([organizationId, assetId, createdAt])
+  @@map("hrms_asset_events")
+}
+
+model HrmsAssetAttachment {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  assetId String @db.Uuid
+  fileId String @unique @db.Uuid
+  title String @db.VarChar(160)
+  kind String @db.VarChar(32)
+  createdAt DateTime @default(now())
+  archivedAt DateTime?
+  asset HrmsAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  file StoredFile @relation(fields: [fileId], references: [id], onDelete: Restrict)
+  @@index([organizationId, assetId])
+  @@map("hrms_asset_attachments")
+}
+
+model HrmsAssetRequest {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId String @db.Uuid
+  assetId String @db.Uuid
+  managerUserId String? @db.Uuid
+  reason String @db.Text
+  status String @default("PENDING") @db.VarChar(32)
+  revision Int @default(1)
+  decisionById String? @db.Uuid
+  decisionNote String? @db.Text
+  replacementAssetId String? @db.Uuid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  asset HrmsAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  @@index([organizationId, status])
+  @@index([organizationId, employeeId])
+  @@map("hrms_asset_requests")
+}
+
+model HrmsAssetMaintenance {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  assetId String @db.Uuid
+  fault String @db.Text
+  vendor String? @db.VarChar(200)
+  cost Decimal? @db.Decimal(18,3)
+  currency String? @db.VarChar(3)
+  status String @default("OPEN") @db.VarChar(32)
+  resolution String? @db.Text
+  revision Int @default(1)
+  openedById String @db.Uuid
+  createdAt DateTime @default(now())
+  closedAt DateTime?
+  asset HrmsAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  @@index([organizationId, status])
+  @@map("hrms_asset_maintenance")
+}
+
+model HrmsAssetAccessory {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  assetId String @db.Uuid
+  name String @db.VarChar(200)
+  quantity Int @default(1)
+  outstanding Int @default(0)
+  condition String @default("GOOD") @db.VarChar(16)
+  revision Int @default(1)
+  asset HrmsAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  @@index([organizationId, assetId])
+  @@map("hrms_asset_accessories")
+}
+
+model HrmsAssetClearanceOverride {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  employeeId String @db.Uuid
+  actorUserId String @db.Uuid
+  reason String @db.Text
+  /// Fingerprint of outstanding asset/accessory revisions; any custody change invalidates the override.
+  fingerprint String
+  createdAt DateTime @default(now())
+  @@index([organizationId, employeeId, createdAt])
+  @@map("hrms_asset_clearance_overrides")
+}
+
+model HrmsAssetImport {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  actorUserId String @db.Uuid
+  rows Json
+  createdAt DateTime @default(now())
+  appliedAt DateTime?
+  @@index([organizationId, actorUserId])
+  @@map("hrms_asset_imports")
+}
+
+model HrmsAssetStockCheck {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name String @db.VarChar(200)
+  status String @default("OPEN") @db.VarChar(16)
+  revision Int @default(1)
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  completedAt DateTime?
+  items HrmsAssetStockItem[]
+  @@index([organizationId, createdAt])
+  @@map("hrms_asset_stock_checks")
+}
+
+model HrmsAssetStockItem {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  checkId String @db.Uuid
+  assetId String @db.Uuid
+  expectedLocation String?
+  expectedHolderId String? @db.Uuid
+  observedLocation String?
+  result String @default("UNCHECKED") @db.VarChar(32)
+  note String? @db.Text
+  checkedById String? @db.Uuid
+  resolution String? @db.Text
+  resolvedById String? @db.Uuid
+  revision Int @default(1)
+  check HrmsAssetStockCheck @relation(fields: [checkId], references: [id], onDelete: Restrict)
+  asset HrmsAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  @@unique([checkId, assetId])
+  @@index([organizationId, checkId])
+  @@map("hrms_asset_stock_items")
+}
+
+model HrmsAssetProcurement {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  name String @db.VarChar(200)
+  quantity Int
+  estimatedCost Decimal @db.Decimal(18,3)
+  currency String @db.VarChar(3)
+  reason String @db.Text
+  status String @default("PENDING") @db.VarChar(32)
+  revision Int @default(1)
+  requestedById String @db.Uuid
+  decidedById String? @db.Uuid
+  decisionNote String? @db.Text
+  createdAt DateTime @default(now())
+  @@index([organizationId, status])
+  @@map("hrms_asset_procurement")
+}
+
+model HrmsAssetDepreciation {
+  organizationId String @id @db.Uuid
+  method String @default("DISABLED") @db.VarChar(32)
+  usefulLifeMonths Int?
+  residualPercent Decimal? @db.Decimal(6,3)
+  revision Int @default(1)
+  updatedAt DateTime @updatedAt
+  @@map("hrms_asset_depreciation")
 }
 
 model HrmsBenefitEnrollment {

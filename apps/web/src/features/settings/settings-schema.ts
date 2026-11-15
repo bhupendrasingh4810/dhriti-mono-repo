@@ -591,7 +591,7 @@ const hrms: AppSettingsConfig<"hrms"> = {
     {
       id: "hours",
       title: "Working week",
-      description: "Days shown on everyone's Pulse calendar. Daily hours come from each person's shift.",
+      description: "Organization-wide calendar days and the legacy HRMS fallback. Configure dated employee schedules under HRMS Settings > Work Week. Once rules exist, these days no longer change HRMS schedules. Daily hours come from each person's shift.",
       fields: [{ key: "workingDays", kind: "weekdays", label: "Working days" }],
     },
     {
@@ -647,6 +647,19 @@ const hrms: AppSettingsConfig<"hrms"> = {
       title: "Clock-in rules",
       description: "Relative to each employee's shift start.",
       fields: [
+        {
+          key: "attendanceGpsEnabled",
+          kind: "toggle",
+          label: "Require GPS for clock in and clock out",
+          description: "Office punches must be within the assigned location fence; remote and field punches require accurate GPS without an office fence. Coordinates are retained with attendance. Configure location fences before enabling.",
+        },
+        {
+          key: "attendanceGpsMaxAccuracyMeters",
+          kind: "number",
+          label: "Maximum GPS accuracy radius",
+          ...APP_SETTINGS_LIMITS.hrms.attendanceGpsMaxAccuracyMeters,
+          unit: "meters",
+        },
         {
           key: "attendanceClockInWindowMinutes",
           kind: "number",

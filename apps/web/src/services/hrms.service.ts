@@ -1,6 +1,32 @@
 import { pathSegment, tenantJsonRequest, tenantRequest } from "@/services/request.service";
 import type { ApiEntity } from "@/services/service-types";
+import type {
+  AttendanceCapture,
+  AttendanceCaptureInput,
+  AttendanceCapturePolicy,
+  WorkWeekPattern,
+  WorkWeekRule,
+  WorkWeekWorkspace,
+  WorkWeekAssignment,
+  AssignWorkWeekInput,
+  WorkWeekSchedule,
+  HrmsEmployeeProfileResponse,
+  HrmsEmployeeLifecycleResponse,
+  UpdateHrmsLifecycleInput,
+  HrmsEmployeeReadiness,
+  AssetCategory,
+  AssetRegisterInput,
+  AssetCustodyInput,
+  AssetCustodyEvent,
+  HrmsProfileFieldCatalog,
+  UpdateHrmsEmployeeProfileInput,
+  HrmsEmployeeTimelinePage,
+  HrmsEmployeeDocument,
+  HrmsEmployeeDocumentPage,
+  HrmsDocumentCategory,
+} from "@dhriti/types";
 const base = "/api/organization/hrms";
+type WorkWeekInput = { name: string; description: string; effectiveFrom: string; pattern: WorkWeekPattern };
 type Input = Record<string, unknown>;
 
 export interface HrmsEmployee extends ApiEntity {
@@ -15,6 +41,8 @@ export interface HrmsEmployee extends ApiEntity {
   startDate: string | null;
   endDate: string | null;
   biometricId: string | null;
+  retirementDate?: string | null;
+  resignationDate?: string | null;
   user: { id: string; name: string; email: string; avatarUrl: string | null };
   workLocation: { id: string; name: string; code: string | null } | null;
   shift: { id: string; name: string; startTime: string; endTime: string; timeZone: string } | null;
@@ -23,13 +51,7 @@ export interface HrmsEmployee extends ApiEntity {
   reportingManager: { id: string; employeeNumber: string; user: { name: string } } | null;
 }
 export type HrmsEmployeeSortField =
-  | "employeeNumber"
-  | "name"
-  | "status"
-  | "employmentType"
-  | "startDate"
-  | "department"
-  | "location";
+  "employeeNumber" | "name" | "status" | "employmentType" | "startDate" | "department" | "location";
 export interface HrmsEmployeeListQuery {
   page?: number;
   pageSize?: number;
@@ -139,6 +161,8 @@ export interface HrmsAttendanceRecord extends ApiEntity {
   date: string;
   checkIn: string | null;
   checkOut: string | null;
+  checkInCapture?: AttendanceCapture | null;
+  checkOutCapture?: AttendanceCapture | null;
   status: string;
   workHours: number | null;
   breakMinutes: number;
@@ -146,11 +170,7 @@ export interface HrmsAttendanceRecord extends ApiEntity {
   notes: string | null;
 }
 export type HrmsRegularizationType =
-  | "MISSED_CLOCK_IN"
-  | "MISSED_CLOCK_OUT"
-  | "LATE_ARRIVAL"
-  | "WORK_FROM_CLIENT_SITE"
-  | "OTHER";
+  "MISSED_CLOCK_IN" | "MISSED_CLOCK_OUT" | "LATE_ARRIVAL" | "WORK_FROM_CLIENT_SITE" | "OTHER";
 export type HrmsRegularizationStatus = "PENDING" | "APPROVED" | "REJECTED";
 export interface HrmsAttendanceRegularization extends ApiEntity {
   employeeId: string;
@@ -256,6 +276,9 @@ export interface HrmsLocation extends ApiEntity {
   countryCode: string;
   city: string | null;
   timezone: string;
+  geofenceLatitude: number | null;
+  geofenceLongitude: number | null;
+  geofenceRadiusMeters: number | null;
   isActive: boolean;
 }
 
@@ -335,7 +358,26 @@ export interface HrmsAsset extends ApiEntity {
   name: string;
   type: HrmsAssetType;
   customCategory: string | null;
-  serialNumber: string;
+  serialNumber: string | null;
+  assetTag: string;
+  categoryId: string | null;
+  category: AssetCategory | null;
+  brand: string | null;
+  model: string | null;
+  specifications: string | null;
+  custodianEmployeeId: string | null;
+  custodianEmployee?: { id: string; employeeNumber: string; user: { name: string } } | null;
+  purchaseDate: string | null;
+  purchaseCost: string | null;
+  currency: string | null;
+  vendor: string | null;
+  warrantyExpiresOn: string | null;
+  location: string | null;
+  notes: string | null;
+  expectedReturnDate: string | null;
+  acknowledgedAt: string | null;
+  archivedAt: string | null;
+  revision: number;
   condition: HrmsAssetCondition;
   status: HrmsAssetStatus;
   assignedEmployeeId: string | null;
@@ -374,6 +416,25 @@ const resource = (path: string) => ({
     tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/${path}`, "POST", input),
 });
 export const hrmsService = {
+  workWeeks: {
+    list: (organizationId: string) => tenantRequest<WorkWeekWorkspace>(organizationId, `${base}/work-weeks`),
+    create: (organizationId: string, input: WorkWeekInput) =>
+      tenantJsonRequest<WorkWeekRule, WorkWeekInput>(organizationId, `${base}/work-weeks`, "POST", input),
+    update: (organizationId: string, id: string, input: WorkWeekInput & { revision: number }) =>
+      tenantJsonRequest<void, WorkWeekInput & { revision: number }>(organizationId, `${base}/work-weeks/${pathSegment(id)}`, "PATCH", input),
+    remove: (organizationId: string, id: string) =>
+      tenantRequest<void>(organizationId, `${base}/work-weeks/${pathSegment(id)}`, { method: "DELETE" }),
+    setDefault: (organizationId: string, id: string, effectiveFrom: string) =>
+      tenantJsonRequest<void, { effectiveFrom: string }>(organizationId, `${base}/work-weeks/${pathSegment(id)}/default`, "POST", { effectiveFrom }),
+    assign: (organizationId: string, input: AssignWorkWeekInput) =>
+      tenantJsonRequest<void, typeof input>(organizationId, `${base}/work-weeks/assignments`, "POST", input),
+    assignments: (organizationId: string, employeeId: string) =>
+      tenantRequest<WorkWeekAssignment[]>(organizationId, `${base}/work-weeks/assignments/${pathSegment(employeeId)}`),
+    schedule: (organizationId: string, from: string, to: string, employeeId?: string) =>
+      tenantRequest<WorkWeekSchedule>(organizationId, `${base}/work-weeks/${employeeId ? "employee-schedule" : "me/schedule"}`, {
+        query: { from, to, ...(employeeId ? { employeeId } : {}) },
+      }),
+  },
   locations: {
     list: (organizationId: string) => tenantRequest<HrmsLocation[]>(organizationId, `${base}/locations`),
     create: (organizationId: string, input: Input) =>
@@ -446,10 +507,68 @@ export const hrmsService = {
   },
   employees: {
     ...resource("employees"),
-    list: (
-      organizationId: string,
-      query: HrmsEmployeeListQuery = {},
-    ) => tenantRequest<HrmsEmployeePage>(organizationId, `${base}/employees`, { query }),
+    lifecycle: (organizationId: string, employeeId: string) =>
+      tenantRequest<HrmsEmployeeLifecycleResponse>(organizationId, `${base}/employees/${pathSegment(employeeId)}/lifecycle`),
+    updateLifecycle: (organizationId: string, employeeId: string, input: UpdateHrmsLifecycleInput) =>
+      tenantJsonRequest<HrmsEmployeeLifecycleResponse, UpdateHrmsLifecycleInput>(
+        organizationId, `${base}/employees/${pathSegment(employeeId)}/lifecycle`, "PATCH", input),
+    readiness: (organizationId: string, employeeId: string) =>
+      tenantRequest<HrmsEmployeeReadiness>(organizationId, `${base}/employees/${pathSegment(employeeId)}/readiness`),
+    documents: {
+      library: (organizationId: string, page = 1, pageSize = 20) =>
+        tenantRequest<HrmsEmployeeDocumentPage>(organizationId, `${base}/documents`, { query: { page, pageSize } }),
+      list: (organizationId: string, employeeId: string, page = 1, pageSize = 20) =>
+        tenantRequest<HrmsEmployeeDocumentPage>(
+          organizationId, `${base}/employees/${pathSegment(employeeId)}/documents`, { query: { page, pageSize } },
+        ),
+      upload: (organizationId: string, employeeId: string, input: { title: string; category: HrmsDocumentCategory }, file: File) => {
+        const body = new FormData();
+        body.append("title", input.title);
+        body.append("category", input.category);
+        body.append("file", file);
+        return tenantRequest<HrmsEmployeeDocument>(
+          organizationId, `${base}/employees/${pathSegment(employeeId)}/documents`, { method: "POST", body },
+        );
+      },
+      download: (organizationId: string, employeeId: string, documentId: string) =>
+        tenantRequest<{ url: string; expiresIn: number }>(
+          organizationId, `${base}/employees/${pathSegment(employeeId)}/documents/${pathSegment(documentId)}/download`,
+        ),
+      archive: (organizationId: string, employeeId: string, documentId: string) =>
+        tenantRequest<void>(
+          organizationId, `${base}/employees/${pathSegment(employeeId)}/documents/${pathSegment(documentId)}/archive`,
+          { method: "POST" },
+        ),
+    },
+    timeline: (organizationId: string, employeeId: string, page = 1, pageSize = 20) =>
+      tenantRequest<HrmsEmployeeTimelinePage>(
+        organizationId,
+        `${base}/employees/${pathSegment(employeeId)}/timeline`,
+        { query: { page, pageSize } },
+      ),
+    profileFields: (organizationId: string) =>
+      tenantRequest<HrmsProfileFieldCatalog>(organizationId, `${base}/employees/profile-fields`),
+    updateProfileFields: (organizationId: string, input: HrmsProfileFieldCatalog) =>
+      tenantJsonRequest<HrmsProfileFieldCatalog, HrmsProfileFieldCatalog>(
+        organizationId,
+        `${base}/employees/profile-fields`,
+        "PATCH",
+        input,
+      ),
+    profile: (organizationId: string, employeeId: string) =>
+      tenantRequest<HrmsEmployeeProfileResponse>(
+        organizationId,
+        `${base}/employees/${pathSegment(employeeId)}/profile`,
+      ),
+    updateProfile: (organizationId: string, employeeId: string, input: UpdateHrmsEmployeeProfileInput) =>
+      tenantJsonRequest<HrmsEmployeeProfileResponse, UpdateHrmsEmployeeProfileInput>(
+        organizationId,
+        `${base}/employees/${pathSegment(employeeId)}/profile`,
+        "PATCH",
+        input,
+      ),
+    list: (organizationId: string, query: HrmsEmployeeListQuery = {}) =>
+      tenantRequest<HrmsEmployeePage>(organizationId, `${base}/employees`, { query }),
     options: (organizationId: string) =>
       tenantRequest<HrmsEmployeeOptions>(organizationId, `${base}/employees/options`),
     myStartDate: (organizationId: string) =>
@@ -481,7 +600,11 @@ export const hrmsService = {
         rows,
       }),
     downloadTemplate: (organizationId: string, format: HrmsEmployeeFileFormat) =>
-      downloadFile(organizationId, `${base}/employees/import/template?format=${format}`, `employee-import-template.${format}`),
+      downloadFile(
+        organizationId,
+        `${base}/employees/import/template?format=${format}`,
+        `employee-import-template.${format}`,
+      ),
     export: (
       organizationId: string,
       input: {
@@ -509,17 +632,20 @@ export const hrmsService = {
   },
   attendanceSelf: {
     today: (organizationId: string, date: string) =>
-      tenantRequest<{ employeeId: string; record: HrmsAttendanceRecord | null }>(
+      tenantRequest<{ employeeId: string; record: HrmsAttendanceRecord | null; capturePolicy: AttendanceCapturePolicy }>(
         organizationId,
         `${base}/attendance/me/today`,
         { query: { date } },
       ),
     records: (organizationId: string, query: { from?: string; to?: string } = {}) =>
       tenantRequest<HrmsAttendanceRecord[]>(organizationId, `${base}/attendance/me/records`, { query }),
-    clockIn: (organizationId: string, date: string) =>
-      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/clock-in`, "POST", { date }),
-    clockOut: (organizationId: string) =>
-      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/clock-out`, "POST", {}),
+    clockIn: (organizationId: string, date: string, capture?: AttendanceCaptureInput) =>
+      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/clock-in`, "POST", {
+        date,
+        ...(capture ? { capture } : {}),
+      }),
+    clockOut: (organizationId: string, capture?: AttendanceCaptureInput) =>
+      tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/clock-out`, "POST", capture ? { capture } : {}),
     startBreak: (organizationId: string) =>
       tenantJsonRequest<HrmsAttendanceRecord, Input>(organizationId, `${base}/attendance/me/break/start`, "POST", {}),
     endBreak: (organizationId: string) =>
@@ -575,23 +701,41 @@ export const hrmsService = {
       tenantRequest<void>(organizationId, `${base}/holiday-calendars/${pathSegment(calendarId)}`, { method: "DELETE" }),
   },
   assets: {
+    employees: (organizationId: string, query: Record<string, string | number>) =>
+      tenantRequest<{ items: { id: string; employeeNumber: string; user: { name: string } }[]; total: number }>(
+        organizationId, `${base}/assets/employees`, { query }),
+    categories: (organizationId: string) => tenantRequest<AssetCategory[]>(organizationId, `${base}/assets/categories`),
+    saveCategory: (organizationId: string, input: { name: string; isActive?: boolean }, id?: string) =>
+      tenantJsonRequest<AssetCategory, typeof input>(organizationId, `${base}/assets/categories${id ? `/${pathSegment(id)}` : ""}`, id ? "PATCH" : "POST", input),
+    history: (organizationId: string, assetId: string, page = 1) =>
+      tenantRequest<{ items: AssetCustodyEvent[]; total: number; page: number; pageSize: number }>(
+        organizationId, `${base}/assets/${pathSegment(assetId)}/history`, { query: { page } }),
+    issue: (organizationId: string, assetId: string, input: AssetCustodyInput) =>
+      tenantJsonRequest<HrmsAsset, typeof input>(organizationId, `${base}/assets/${pathSegment(assetId)}/issue`, "POST", input),
+    returnAsset: (organizationId: string, assetId: string, input: AssetCustodyInput) =>
+      tenantJsonRequest<HrmsAsset, typeof input>(organizationId, `${base}/assets/${pathSegment(assetId)}/return`, "POST", input),
+    mine: (organizationId: string, page = 1, pageSize = 20) =>
+      tenantRequest<{ items: Pick<HrmsAsset, "id" | "assetTag" | "name" | "serialNumber" | "condition" | "expectedReturnDate" | "acknowledgedAt" | "revision">[]; total: number }>(
+        organizationId, `${base}/assets/mine`, { query: { page, pageSize } }),
+    acknowledge: (organizationId: string, assetId: string, revision: number) =>
+      tenantJsonRequest<void, { revision: number }>(organizationId, `${base}/assets/${pathSegment(assetId)}/acknowledge`, "POST", { revision }),
+    clearance: (organizationId: string, employeeId: string) =>
+      tenantRequest<{ clear: boolean; fingerprint: string; override: { actorUserId: string; reason: string; createdAt: string } | null; outstanding: Pick<HrmsAsset, "id" | "assetTag" | "name" | "status" | "expectedReturnDate">[]; scope: "ASSETS_ONLY" }>(
+        organizationId, `${base}/assets/clearance/${pathSegment(employeeId)}`),
+    export: (organizationId: string, query: Record<string, string | undefined>) =>
+      tenantRequest<{ csv: string; count: number }>(organizationId, `${base}/assets/export`, { query }),
     list: (organizationId: string, query: Record<string, string | number | undefined> = {}) =>
       tenantRequest<HrmsAssetPage>(organizationId, `${base}/assets`, {
         query: Object.fromEntries(Object.entries(query).filter(([, value]) => value !== undefined && value !== "")),
       }),
-    create: (organizationId: string, input: Input) =>
-      tenantJsonRequest<HrmsAsset, Input>(organizationId, `${base}/assets`, "POST", input),
-    update: (organizationId: string, assetId: string, input: Input) =>
-      tenantJsonRequest<HrmsAsset, Input>(organizationId, `${base}/assets/${pathSegment(assetId)}`, "PATCH", input),
-    remove: (organizationId: string, assetId: string) =>
-      tenantRequest<void>(organizationId, `${base}/assets/${pathSegment(assetId)}`, { method: "DELETE" }),
-    assign: (organizationId: string, assetId: string, employeeId: string) =>
-      tenantJsonRequest<ApiEntity, { employeeId: string }>(
-        organizationId,
-        `${base}/assets/${pathSegment(assetId)}/assignment`,
-        "PATCH",
-        { employeeId },
-      ),
+    create: (organizationId: string, input: AssetRegisterInput) =>
+      tenantJsonRequest<HrmsAsset, AssetRegisterInput>(organizationId, `${base}/assets`, "POST", input),
+    update: (organizationId: string, assetId: string, input: AssetRegisterInput & { revision: number }) =>
+      tenantJsonRequest<HrmsAsset, typeof input>(organizationId, `${base}/assets/${pathSegment(assetId)}`, "PATCH", input),
+    remove: (organizationId: string, assetId: string, revision: number) =>
+      tenantRequest<void>(organizationId, `${base}/assets/${pathSegment(assetId)}`, {
+        method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ revision }),
+      }),
   },
   benefits: resource("benefits"),
   leave: {
@@ -599,13 +743,19 @@ export const hrmsService = {
     saveType: (organizationId: string, input: Input) =>
       tenantJsonRequest<HrmsLeaveType, Input>(organizationId, `${base}/leave/types`, "PUT", input),
     removeType: (organizationId: string, typeId: string) =>
-      tenantRequest<{ deactivated: boolean }>(organizationId, `${base}/leave/types/${pathSegment(typeId)}`, { method: "DELETE" }),
-    balances: (organizationId: string) => tenantRequest<HrmsLeaveBalance[]>(organizationId, `${base}/leave/me/balances`),
-    myRequests: (organizationId: string) => tenantRequest<HrmsLeaveCenterRequest[]>(organizationId, `${base}/leave/me/requests`),
-    myCompOff: (organizationId: string) => tenantRequest<HrmsCompOffRequest[]>(organizationId, `${base}/leave/me/comp-off`),
+      tenantRequest<{ deactivated: boolean }>(organizationId, `${base}/leave/types/${pathSegment(typeId)}`, {
+        method: "DELETE",
+      }),
+    balances: (organizationId: string) =>
+      tenantRequest<HrmsLeaveBalance[]>(organizationId, `${base}/leave/me/balances`),
+    myRequests: (organizationId: string) =>
+      tenantRequest<HrmsLeaveCenterRequest[]>(organizationId, `${base}/leave/me/requests`),
+    myCompOff: (organizationId: string) =>
+      tenantRequest<HrmsCompOffRequest[]>(organizationId, `${base}/leave/me/comp-off`),
     team: (organizationId: string, from: string, to: string) =>
       tenantRequest<HrmsTeamLeave[]>(organizationId, `${base}/leave/team`, { query: { from, to } }),
-    requests: (organizationId: string) => tenantRequest<HrmsLeaveCenterRequest[]>(organizationId, `${base}/leave/requests`),
+    requests: (organizationId: string) =>
+      tenantRequest<HrmsLeaveCenterRequest[]>(organizationId, `${base}/leave/requests`),
     apply: (organizationId: string, input: Input, onBehalf = false) =>
       tenantJsonRequest<HrmsLeaveCenterRequest, Input>(
         organizationId,
@@ -616,16 +766,28 @@ export const hrmsService = {
     cancel: (organizationId: string, id: string) =>
       tenantRequest<ApiEntity>(organizationId, `${base}/leave/requests/${pathSegment(id)}/cancel`, { method: "POST" }),
     reply: (organizationId: string, id: string, reply: string) =>
-      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/reply`, "POST", { reply }),
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/reply`, "POST", {
+        reply,
+      }),
     decide: (organizationId: string, id: string, status: "APPROVED" | "REJECTED", reason?: string) =>
-      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/decision`, "POST", {
-        status,
-        reason,
-      }),
+      tenantJsonRequest<ApiEntity, Input>(
+        organizationId,
+        `${base}/leave/requests/${pathSegment(id)}/decision`,
+        "POST",
+        {
+          status,
+          reason,
+        },
+      ),
     requestInfo: (organizationId: string, id: string, note: string) =>
-      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/requests/${pathSegment(id)}/request-info`, "POST", {
-        note,
-      }),
+      tenantJsonRequest<ApiEntity, Input>(
+        organizationId,
+        `${base}/leave/requests/${pathSegment(id)}/request-info`,
+        "POST",
+        {
+          note,
+        },
+      ),
     compOff: (organizationId: string) => tenantRequest<HrmsCompOffRequest[]>(organizationId, `${base}/leave/comp-off`),
     applyCompOff: (organizationId: string, input: Input, onBehalf = false) =>
       tenantJsonRequest<HrmsCompOffRequest, Input>(
@@ -637,16 +799,28 @@ export const hrmsService = {
     cancelCompOff: (organizationId: string, id: string) =>
       tenantRequest<ApiEntity>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/cancel`, { method: "POST" }),
     replyCompOff: (organizationId: string, id: string, reply: string) =>
-      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/reply`, "POST", { reply }),
+      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/reply`, "POST", {
+        reply,
+      }),
     decideCompOff: (organizationId: string, id: string, status: "APPROVED" | "REJECTED", reason?: string) =>
-      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/decision`, "POST", {
-        status,
-        reason,
-      }),
+      tenantJsonRequest<ApiEntity, Input>(
+        organizationId,
+        `${base}/leave/comp-off/${pathSegment(id)}/decision`,
+        "POST",
+        {
+          status,
+          reason,
+        },
+      ),
     requestCompOffInfo: (organizationId: string, id: string, note: string) =>
-      tenantJsonRequest<ApiEntity, Input>(organizationId, `${base}/leave/comp-off/${pathSegment(id)}/request-info`, "POST", {
-        note,
-      }),
+      tenantJsonRequest<ApiEntity, Input>(
+        organizationId,
+        `${base}/leave/comp-off/${pathSegment(id)}/request-info`,
+        "POST",
+        {
+          note,
+        },
+      ),
   },
   leaveRequests: {
     ...resource("leave-requests"),

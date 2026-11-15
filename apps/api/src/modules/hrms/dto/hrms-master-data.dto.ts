@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional, IntersectionType } from "@nestjs/swagger";
 import {
   IsBoolean,
   IsOptional,
@@ -9,7 +9,25 @@ import {
   MaxLength,
   MinLength,
   ValidateIf,
+  IsNumber,
+  IsInt,
+  Min,
+  Max,
 } from "class-validator";
+
+class GeofenceDto {
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional() @IsNumber() @Min(-90) @Max(90)
+  geofenceLatitude?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional() @IsNumber() @Min(-180) @Max(180)
+  geofenceLongitude?: number | null;
+
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional() @IsInt() @Min(1) @Max(100000)
+  geofenceRadiusMeters?: number | null;
+}
 
 class MasterDataDto {
   @ApiProperty()
@@ -53,7 +71,7 @@ class UpdateMasterDataDto {
   isActive?: boolean;
 }
 
-export class CreateHrmsLocationDto extends MasterDataDto {
+export class CreateHrmsLocationDto extends IntersectionType(MasterDataDto, GeofenceDto) {
   @ApiProperty({ example: "IN" })
   @IsString()
   @Matches(/^[A-Za-z]{2}$/, { message: "countryCode must be an ISO 3166-1 alpha-2 code" })
@@ -72,7 +90,7 @@ export class CreateHrmsLocationDto extends MasterDataDto {
   timezone!: string;
 }
 
-export class UpdateHrmsLocationDto extends UpdateMasterDataDto {
+export class UpdateHrmsLocationDto extends IntersectionType(UpdateMasterDataDto, GeofenceDto) {
   @ApiPropertyOptional({ example: "IN" })
   @IsOptional()
   @IsString()

@@ -29,6 +29,7 @@ import { TenantGuard } from "../../../common/guards/tenant.guard";
 import {
   CreateHrmsEmployeeDto,
   EmployeeTemplateQueryDto,
+  EmployeeTimelineQueryDto,
   ExportHrmsEmployeesDto,
   ImportEmployeesDto,
   ListHrmsEmployeesDto,
@@ -36,8 +37,9 @@ import {
 } from "../dto/hrms-employee.dto";
 import { EMPLOYEE_IMPORT_MAX_BYTES, HrmsEmployeeImportService } from "../services/hrms-employee-import.service";
 import { HrmsEmployeeService } from "../services/hrms-employee.service";
+import { HrmsEmployeeFoundationService } from "../services/hrms-employee-foundation.service";
 
-const WORKFORCE = { entitlement: "hrms.enabled", permission: "hrms.employee.manage" };
+const WORKFORCE = { entitlement: "hrms.enabled", permission: "hrms.workforce.manage" };
 
 interface UploadedMultipartFile {
   buffer: Buffer;
@@ -57,6 +59,7 @@ export class HrmsEmployeeController {
   constructor(
     private readonly employees: HrmsEmployeeService,
     private readonly imports: HrmsEmployeeImportService,
+    private readonly foundations: HrmsEmployeeFoundationService,
   ) {}
 
   @Get()
@@ -81,6 +84,23 @@ export class HrmsEmployeeController {
   @RequireAccess(WORKFORCE)
   options(@CurrentOrganization() organization: OrganizationContext) {
     return this.employees.options(organization.organizationId);
+  }
+
+  @Get("profile-fields")
+  @Header("Cache-Control", "no-store")
+  @RequireAccess(WORKFORCE)
+  profileFields(@CurrentOrganization() organization: OrganizationContext) {
+    return this.employees.profileFields(organization.organizationId);
+  }
+
+  @Patch("profile-fields")
+  @RequireAccess(WORKFORCE)
+  updateProfileFields(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() input: unknown,
+  ) {
+    return this.employees.updateProfileFields(organization.organizationId, user.userId, input);
   }
 
   @Get("org-chart")
@@ -148,6 +168,60 @@ export class HrmsEmployeeController {
     @Param("employeeId", ParseUUIDPipe) employeeId: string,
   ) {
     return this.employees.get(organization.organizationId, employeeId);
+  }
+
+  @Get(":employeeId/profile")
+  @Header("Cache-Control", "no-store")
+  @RequireAccess(WORKFORCE)
+  profile(
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("employeeId", ParseUUIDPipe) employeeId: string,
+  ) {
+    return this.employees.profile(organization.organizationId, employeeId);
+  }
+
+  @Get(":employeeId/readiness")
+  @Header("Cache-Control", "no-store")
+  @RequireAccess(WORKFORCE)
+  readiness(@CurrentOrganization() organization: OrganizationContext, @Param("employeeId", ParseUUIDPipe) employeeId: string) {
+    return this.foundations.readiness(organization.organizationId, employeeId);
+  }
+
+  @Get(":employeeId/lifecycle")
+  @Header("Cache-Control", "no-store")
+  @RequireAccess(WORKFORCE)
+  lifecycle(@CurrentOrganization() organization: OrganizationContext, @Param("employeeId", ParseUUIDPipe) employeeId: string) {
+    return this.foundations.lifecycle(organization.organizationId, employeeId);
+  }
+
+  @Patch(":employeeId/lifecycle")
+  @RequireAccess(WORKFORCE)
+  updateLifecycle(@CurrentOrganization() organization: OrganizationContext, @CurrentUser() user: AuthenticatedUser,
+    @Param("employeeId", ParseUUIDPipe) employeeId: string, @Body() input: unknown) {
+    return this.foundations.updateLifecycle(organization.organizationId, employeeId, user.userId, input);
+  }
+
+  @Get(":employeeId/timeline")
+  @Header("Cache-Control", "no-store")
+  @RequireAccess(WORKFORCE)
+  timeline(
+    @CurrentOrganization() organization: OrganizationContext,
+    @Param("employeeId", ParseUUIDPipe) employeeId: string,
+    @Query() query: EmployeeTimelineQueryDto,
+  ) {
+    return this.employees.timeline(organization.organizationId, employeeId, query);
+  }
+
+  /** Shared schema validates the unknown body; profile values never enter audit metadata. */
+  @Patch(":employeeId/profile")
+  @RequireAccess(WORKFORCE)
+  updateProfile(
+    @CurrentOrganization() organization: OrganizationContext,
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("employeeId", ParseUUIDPipe) employeeId: string,
+    @Body() input: unknown,
+  ) {
+    return this.employees.updateProfile(organization.organizationId, employeeId, user.userId, input);
   }
 
   @Post()

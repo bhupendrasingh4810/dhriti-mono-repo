@@ -1,0 +1,43 @@
+export type AssetCategory = { id: string; name: string; isActive: boolean };
+export type AssetRegisterInput = {
+  name: string;
+  assetTag: string;
+  serialNumber?: string | null;
+  type: "LAPTOP" | "PHONE" | "MONITOR" | "KEYBOARD" | "MOUSE" | "HEADPHONES" | "FURNITURE" | "OTHER";
+  customCategory?: string | null;
+  categoryId?: string | null;
+  condition?: "NEW" | "GOOD" | "FAIR";
+  status?: "AVAILABLE" | "ASSIGNED" | "MAINTENANCE" | "UNFIT";
+  assignedEmployeeId?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  specifications?: string | null;
+  location?: string | null;
+  custodianEmployeeId?: string | null;
+  purchaseDate?: string | null;
+  purchaseCost?: string | null;
+  currency?: string | null;
+  vendor?: string | null;
+  warrantyExpiresOn?: string | null;
+  notes?: string | null;
+};
+export type AssetCustodyInput = {
+  revision: number;
+  condition: "NEW" | "GOOD" | "FAIR";
+  notes: string;
+  employeeId?: string;
+  expectedReturnDate?: string | null;
+  status?: "AVAILABLE" | "MAINTENANCE" | "UNFIT";
+};
+export type AssetCustodyEvent = {
+  id: string;
+  action: string;
+  actorUserId: string;
+  actorName: string | null;
+  employeeId: string | null;
+  employeeName: string | null;
+  condition: string | null;
+  notes: string;
+  expectedReturnDate: string | null;
+  createdAt: string;
+};

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { AttendanceRegularizationStatus } from "@prisma/client";
 
@@ -9,6 +9,7 @@ import { AccessGuard } from "../../../common/guards/access.guard";
 import { TenantGuard } from "../../../common/guards/tenant.guard";
 import {
   ClockInDto,
+  AttendancePunchDto,
   CreateAttendanceRegularizationDto,
   DecideAttendanceRegularizationDto,
 } from "../dto/hrms-attendance.dto";
@@ -33,12 +34,14 @@ export class HrmsAttendanceSelfController {
   ) {}
 
   @Get("me/today")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
   today(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Query("date") date: string) {
     return this.clock.today(org.organizationId, user.userId, date);
   }
 
   @Get("me/records")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
   records(
     @CurrentOrganization() org: OrganizationContext,
@@ -50,30 +53,35 @@ export class HrmsAttendanceSelfController {
   }
 
   @Post("me/clock-in")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
   clockIn(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Body() dto: ClockInDto) {
-    return this.clock.clockIn(org.organizationId, user.userId, dto.date);
+    return this.clock.clockIn(org.organizationId, user.userId, dto.date, dto.capture);
   }
 
   @Post("me/clock-out")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
-  clockOut(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
-    return this.clock.clockOut(org.organizationId, user.userId);
+  clockOut(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser, @Body() dto: AttendancePunchDto) {
+    return this.clock.clockOut(org.organizationId, user.userId, dto.capture);
   }
 
   @Post("me/break/start")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
   startBreak(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
     return this.clock.startBreak(org.organizationId, user.userId);
   }
 
   @Post("me/break/end")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
   endBreak(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
     return this.clock.endBreak(org.organizationId, user.userId);
   }
 
   @Get("me/regularizations")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(selfService)
   myRegularizations(@CurrentOrganization() org: OrganizationContext, @CurrentUser() user: AuthenticatedUser) {
     return this.regularizations.listMine(org.organizationId, user.userId);
@@ -90,6 +98,7 @@ export class HrmsAttendanceSelfController {
   }
 
   @Get("regularizations")
+  @Header("Cache-Control", "no-store")
   @RequireAccess(manage)
   listRegularizations(
     @CurrentOrganization() org: OrganizationContext,

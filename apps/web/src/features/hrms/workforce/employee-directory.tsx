@@ -441,9 +441,11 @@ export function EmployeeDirectory({
       {form && options && (
         <EmployeeForm employee={form.employee} options={options} onClose={() => setForm(null)} onSubmit={save} />
       )}
-      {profile && !form && (
+      {profile && organizationId && !form && (
         <EmployeeProfileDrawer
+          key={`${organizationId}:${profile.id}`}
           employee={profile}
+          organizationId={organizationId}
           onClose={() => setProfile(null)}
           onEdit={() => void openForm(profile)}
         />

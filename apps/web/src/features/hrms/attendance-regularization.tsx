@@ -7,6 +7,7 @@ import { DhritiSelectMenu } from "@dhriti/ui";
 import { TimeField } from "./components/date-fields";
 import { Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
 import { regularizationStatusLabels, regularizationTypeLabels, regularizationTypes } from "./attendance-data";
+import { captureSummary } from "./attendance-capture";
 import { isOvernightShift } from "./shift-format";
 import { useMyShift } from "./use-my-shift";
 import type {
@@ -283,7 +284,10 @@ export function RegularizationDetailDialog({
             {row("Clock out", timeLabel(record?.checkOut ?? null))}
             {row("Status", record?.status ?? "No record")}
             {row("Work hours", hoursLabel(record?.workHours))}
+            {row("Original clock-in capture", captureSummary(record?.checkInCapture))}
+            {row("Original clock-out capture", captureSummary(record?.checkOutCapture))}
           </dl>
+          <p className="text-xs text-text-muted">Capture evidence belongs to the original punch, not a subsequently corrected time. Device/source labels are client-reported.</p>
         </section>
         <section className="space-y-2 rounded-md border border-border p-3">
           <h3 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Requested</h3>

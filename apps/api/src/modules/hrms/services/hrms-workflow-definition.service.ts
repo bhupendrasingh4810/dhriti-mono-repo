@@ -114,6 +114,7 @@ export class HrmsWorkflowDefinitionService {
         description: source.description,
         stages: source.stages as Prisma.InputJsonValue,
         transitions: source.transitions as Prisma.InputJsonValue,
+        assetClearanceRequired: source.assetClearanceRequired || source.templateKey === "offboarding",
         status: "DRAFT",
         createdByUserId: actorUserId,
         updatedByUserId: actorUserId,

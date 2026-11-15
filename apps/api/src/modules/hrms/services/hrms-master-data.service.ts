@@ -29,6 +29,7 @@ export class HrmsMasterDataService {
   }
 
   async createLocation(organizationId: string, actorUserId: string, input: CreateHrmsLocationDto) {
+    this.validateGeofence(input);
     const location = await this.prisma.hrmsLocation
       .create({
         data: {
@@ -39,6 +40,9 @@ export class HrmsMasterDataService {
           city: this.clean(input.city),
           timezone: input.timezone.trim(),
           isActive: input.isActive ?? true,
+          geofenceLatitude: input.geofenceLatitude,
+          geofenceLongitude: input.geofenceLongitude,
+          geofenceRadiusMeters: input.geofenceRadiusMeters,
         },
       })
       .catch((error: unknown) =>
@@ -49,7 +53,12 @@ export class HrmsMasterDataService {
   }
 
   async updateLocation(organizationId: string, locationId: string, actorUserId: string, input: UpdateHrmsLocationDto) {
-    await this.requireLocation(organizationId, locationId);
+    const existing = await this.requireLocation(organizationId, locationId);
+    this.validateGeofence({
+      geofenceLatitude: input.geofenceLatitude !== undefined ? input.geofenceLatitude : existing.geofenceLatitude,
+      geofenceLongitude: input.geofenceLongitude !== undefined ? input.geofenceLongitude : existing.geofenceLongitude,
+      geofenceRadiusMeters: input.geofenceRadiusMeters !== undefined ? input.geofenceRadiusMeters : existing.geofenceRadiusMeters,
+    });
     const location = await this.prisma.hrmsLocation
       .update({
         where: { id: locationId },
@@ -60,6 +69,9 @@ export class HrmsMasterDataService {
           ...(input.city !== undefined ? { city: this.clean(input.city) } : {}),
           ...(input.timezone !== undefined ? { timezone: input.timezone.trim() } : {}),
           ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
+          ...(input.geofenceLatitude !== undefined ? { geofenceLatitude: input.geofenceLatitude } : {}),
+          ...(input.geofenceLongitude !== undefined ? { geofenceLongitude: input.geofenceLongitude } : {}),
+          ...(input.geofenceRadiusMeters !== undefined ? { geofenceRadiusMeters: input.geofenceRadiusMeters } : {}),
         },
       })
       .catch((error: unknown) =>
@@ -82,8 +94,25 @@ export class HrmsMasterDataService {
         HttpStatus.CONFLICT,
       );
     }
+
     await this.prisma.hrmsLocation.delete({ where: { id: locationId } });
     await this.record("location", "deleted", organizationId, actorUserId, locationId, "HrmsLocation");
+  }
+
+  private validateGeofence(input: {
+    geofenceLatitude?: number | null;
+    geofenceLongitude?: number | null;
+    geofenceRadiusMeters?: number | null;
+  }) {
+    const values = [input.geofenceLatitude, input.geofenceLongitude, input.geofenceRadiusMeters];
+    const defined = values.filter((value) => value !== null && value !== undefined).length;
+    if (defined > 0 && defined < values.length) {
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "A geofence requires latitude, longitude and radius together; clear all three to remove it.",
+        HttpStatus.BAD_REQUEST,
+      );
+    }
   }
 
   listDesignations(organizationId: string) {
@@ -337,7 +366,10 @@ export class HrmsMasterDataService {
 
   private async requireLocation(organizationId: string, id: string) {
     return this.require(
-      this.prisma.hrmsLocation.findFirst({ where: { id, organizationId }, select: { id: true } }),
+      this.prisma.hrmsLocation.findFirst({
+        where: { id, organizationId },
+        select: { id: true, geofenceLatitude: true, geofenceLongitude: true, geofenceRadiusMeters: true },
+      }),
       ErrorCode.HRMS_LOCATION_NOT_FOUND,
       "Location",
     );

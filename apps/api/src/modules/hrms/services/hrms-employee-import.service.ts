@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Readable } from "node:stream";
 
 import { HttpStatus, Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import ExcelJS from "exceljs";
 
 import { AppError } from "../../../common/errors/app-error";
@@ -107,7 +108,11 @@ export class HrmsEmployeeImportService {
     }
     const extension = file.originalname.toLowerCase().split(".").pop();
     if (extension !== "csv" && extension !== "xlsx") {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "Only .csv and .xlsx files are supported", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "Only .csv and .xlsx files are supported",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const table = await this.readTable(file.buffer, extension).catch(() => {
       throw new AppError(ErrorCode.VALIDATION_FAILED, "The file could not be read", HttpStatus.BAD_REQUEST);
@@ -115,7 +120,11 @@ export class HrmsEmployeeImportService {
     const [headerRow, ...body] = table;
     const headers = (headerRow ?? []).map((value) => value.replace(/\s*\*$/, "").trim());
     if (headers.every((header) => !header)) {
-      throw new AppError(ErrorCode.VALIDATION_FAILED, "The first row must contain column headings", HttpStatus.BAD_REQUEST);
+      throw new AppError(
+        ErrorCode.VALIDATION_FAILED,
+        "The first row must contain column headings",
+        HttpStatus.BAD_REQUEST,
+      );
     }
     const dataRows = body
       .map((values, index) => ({ rowNumber: index + 2, values }))
@@ -132,9 +141,13 @@ export class HrmsEmployeeImportService {
     const claimed = new Set<number>();
     for (const field of EMPLOYEE_IMPORT_FIELDS) {
       const wanted = [normalizeHeader(field.label), ...field.aliases];
-      const index = normalizedHeaders.findIndex((header, position) => !claimed.has(position) && wanted.includes(header));
+      const index = normalizedHeaders.findIndex(
+        (header, position) => !claimed.has(position) && wanted.includes(header),
+      );
       suggestedMapping[field.key] = index >= 0 ? index : null;
-      if (index >= 0) {claimed.add(index);}
+      if (index >= 0) {
+        claimed.add(index);
+      }
     }
     return {
       format: extension,
@@ -154,41 +167,62 @@ export class HrmsEmployeeImportService {
   /** Re-validates server-side (the client result is never trusted) and inserts every valid row atomically. */
   async importRows(organizationId: string, actorUserId: string, rows: ImportEmployeeRowDto[]) {
     const { results, accepted } = await this.evaluate(organizationId, rows);
-    const ids = new Map(accepted.map((row) => [row.employeeNumber, randomUUID()]));
+    const records = accepted.map((row) => ({ ...row, id: randomUUID() }));
+    const ids = new Map(records.map((row) => [row.employeeNumber, row.id]));
     const existing = accepted.some((row) => row.managerNumber)
       ? await this.prisma.hrmsEmployee.findMany({
-          where: { organizationId, deletedAt: null, employeeNumber: { in: accepted.flatMap((r) => (r.managerNumber ? [r.managerNumber] : [])) } },
+          where: {
+            organizationId,
+            deletedAt: null,
+            employeeNumber: { in: accepted.flatMap((r) => (r.managerNumber ? [r.managerNumber] : [])) },
+          },
           select: { id: true, employeeNumber: true },
         })
       : [];
     const existingIds = new Map(existing.map((employee) => [employee.employeeNumber, employee.id]));
     if (accepted.length > 0) {
       // A single INSERT lets rows reference managers created by the same statement.
-      await this.prisma.hrmsEmployee
-        .createMany({
-          data: accepted.map((row) => ({
-            id: ids.get(row.employeeNumber)!,
-            organizationId,
-            userId: row.userId,
-            employeeNumber: row.employeeNumber,
-            status: row.status,
-            employmentType: row.employmentType,
-            workLocationId: row.workLocationId,
-            departmentId: row.departmentId,
-            designationId: row.designationId,
-            reportingManagerId: row.managerNumber
-              ? (ids.get(row.managerNumber) ?? existingIds.get(row.managerNumber) ?? null)
-              : null,
-            startDate: row.startDate,
-            biometricId: row.biometricId,
-          })),
+      await this.prisma
+        .$transaction(async (tx) => {
+          const created = await tx.hrmsEmployee.createMany({
+            data: records.map((row) => ({
+              id: row.id,
+              organizationId,
+              userId: row.userId,
+              employeeNumber: row.employeeNumber,
+              status: row.status,
+              employmentType: row.employmentType,
+              workLocationId: row.workLocationId,
+              departmentId: row.departmentId,
+              designationId: row.designationId,
+              reportingManagerId: row.managerNumber
+                ? (ids.get(row.managerNumber) ?? existingIds.get(row.managerNumber) ?? null)
+                : null,
+              startDate: row.startDate,
+              biometricId: row.biometricId,
+            })),
+          });
+          // One per-employee event keeps bulk-imported employees visible in their own career timeline.
+          await tx.auditLog.createMany({
+            data: records.map((row) => ({
+              action: "hrms.employee.imported",
+              organizationId,
+              actorUserId,
+              resourceType: "HrmsEmployee",
+              resourceId: row.id,
+            })),
+          });
+          return created;
         })
-        .catch(() => {
-          throw new AppError(
-            ErrorCode.EMPLOYEE_ALREADY_EXISTS,
-            "Employees changed while importing; validate the file again",
-            HttpStatus.CONFLICT,
-          );
+        .catch((error: unknown) => {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            throw new AppError(
+              ErrorCode.EMPLOYEE_ALREADY_EXISTS,
+              "Employees changed while importing; validate the file again",
+              HttpStatus.CONFLICT,
+            );
+          }
+          throw error;
         });
       await this.audit.record({
         action: "hrms.employee.imported",
@@ -237,7 +271,9 @@ export class HrmsEmployeeImportService {
       employee.workLocation?.name ?? "",
       employee.department?.name ?? "",
       employee.designation?.name ?? "",
-      employee.reportingManager ? `${employee.reportingManager.user.name} (${employee.reportingManager.employeeNumber})` : "",
+      employee.reportingManager
+        ? `${employee.reportingManager.user.name} (${employee.reportingManager.employeeNumber})`
+        : "",
       employee.startDate ? employee.startDate.toISOString().slice(0, 10) : "",
     ]);
     return this.writeFile(format, "Workforce", headers, rows, "workforce-roster");
@@ -251,9 +287,17 @@ export class HrmsEmployeeImportService {
       }),
       this.prisma.hrmsEmployee.findMany({
         where: { organizationId, deletedAt: null },
-        select: { id: true, userId: true, employeeNumber: true, reportingManager: { select: { employeeNumber: true } } },
+        select: {
+          id: true,
+          userId: true,
+          employeeNumber: true,
+          reportingManager: { select: { employeeNumber: true } },
+        },
       }),
-      this.prisma.hrmsLocation.findMany({ where: { organizationId, isActive: true }, select: { id: true, name: true, code: true } }),
+      this.prisma.hrmsLocation.findMany({
+        where: { organizationId, isActive: true },
+        select: { id: true, name: true, code: true },
+      }),
       this.prisma.organizationDepartment.findMany({
         where: { organizationId, deletedAt: null, isActive: true },
         select: { id: true, name: true, code: true },
@@ -262,13 +306,18 @@ export class HrmsEmployeeImportService {
         where: { organizationId, isActive: true },
         select: { id: true, name: true, code: true, departmentId: true },
       }),
-      this.prisma.hrmsEmploymentType.findMany({ where: { organizationId, isActive: true }, select: { name: true, code: true } }),
+      this.prisma.hrmsEmploymentType.findMany({
+        where: { organizationId, isActive: true },
+        select: { name: true, code: true },
+      }),
     ]);
     const byNameOrCode = <T extends { name: string; code: string | null }>(items: T[]) => {
       const map = new Map<string, T>();
       for (const item of items) {
         map.set(lookupKey(item.name), item);
-        if (item.code) {map.set(lookupKey(item.code), item);}
+        if (item.code) {
+          map.set(lookupKey(item.code), item);
+        }
       }
       return map;
     };
@@ -291,36 +340,58 @@ export class HrmsEmployeeImportService {
       const email = lookupKey(clean(row.email));
       const employeeNumber = clean(row.employeeNumber);
       let userId: string | undefined;
-      if (!email) {fail(row.rowNumber, "Work email is required");}
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {fail(row.rowNumber, "Work email is not valid");}
-      else if (!memberByEmail.has(email)) {fail(row.rowNumber, "No active organization member has this email");}
-      else {
+      if (!email) {
+        fail(row.rowNumber, "Work email is required");
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        fail(row.rowNumber, "Work email is not valid");
+      } else if (!memberByEmail.has(email)) {
+        fail(row.rowNumber, "No active organization member has this email");
+      } else {
         userId = memberByEmail.get(email);
-        if (employeeUserIds.has(userId!)) {fail(row.rowNumber, "This member is already an employee");}
-        else if (seenEmails.has(email)) {fail(row.rowNumber, "Duplicate email in file");}
+        if (employeeUserIds.has(userId!)) {
+          fail(row.rowNumber, "This member is already an employee");
+        } else if (seenEmails.has(email)) {
+          fail(row.rowNumber, "Duplicate email in file");
+        }
         seenEmails.add(email);
       }
-      if (!employeeNumber) {fail(row.rowNumber, "Employee number is required");}
-      else if (employeeNumbers.has(employeeNumber)) {fail(row.rowNumber, "Employee number already exists");}
-      else if (seenNumbers.has(employeeNumber)) {fail(row.rowNumber, "Duplicate employee number in file");}
+      if (!employeeNumber) {
+        fail(row.rowNumber, "Employee number is required");
+      } else if (employeeNumbers.has(employeeNumber)) {
+        fail(row.rowNumber, "Employee number already exists");
+      } else if (seenNumbers.has(employeeNumber)) {
+        fail(row.rowNumber, "Duplicate employee number in file");
+      }
       seenNumbers.add(employeeNumber);
 
-      const status = clean(row.status) ? clean(row.status).toUpperCase().replace(/[\s-]+/g, "_") : "ACTIVE";
+      const status = clean(row.status)
+        ? clean(row.status)
+            .toUpperCase()
+            .replace(/[\s-]+/g, "_")
+        : "ACTIVE";
       if (!(EMPLOYEE_STATUSES as readonly string[]).includes(status)) {
         fail(row.rowNumber, `Status must be one of ${EMPLOYEE_STATUSES.join(", ")}`);
       }
       const typeName = clean(row.employmentType);
       const type = typeName ? typeMap.get(lookupKey(typeName)) : undefined;
-      if (typeName && !type) {fail(row.rowNumber, `Employment type "${typeName}" is not configured`);}
+      if (typeName && !type) {
+        fail(row.rowNumber, `Employment type "${typeName}" is not configured`);
+      }
       const locationName = clean(row.workLocation);
       const location = locationName ? locationMap.get(lookupKey(locationName)) : undefined;
-      if (locationName && !location) {fail(row.rowNumber, `Work location "${locationName}" is not configured`);}
+      if (locationName && !location) {
+        fail(row.rowNumber, `Work location "${locationName}" is not configured`);
+      }
       const departmentName = clean(row.department);
       const department = departmentName ? departmentMap.get(lookupKey(departmentName)) : undefined;
-      if (departmentName && !department) {fail(row.rowNumber, `Department "${departmentName}" is not configured`);}
+      if (departmentName && !department) {
+        fail(row.rowNumber, `Department "${departmentName}" is not configured`);
+      }
       const designationName = clean(row.designation);
       const designation = designationName ? designationMap.get(lookupKey(designationName)) : undefined;
-      if (designationName && !designation) {fail(row.rowNumber, `Designation "${designationName}" is not configured`);}
+      if (designationName && !designation) {
+        fail(row.rowNumber, `Designation "${designationName}" is not configured`);
+      }
       if (designation?.departmentId && department && designation.departmentId !== department.id) {
         fail(row.rowNumber, "Designation belongs to a different department");
       }
@@ -358,7 +429,9 @@ export class HrmsEmployeeImportService {
       changed = false;
       const acceptedNumbers = new Set([...normalized.values()].map((row) => row.employeeNumber));
       for (const row of [...normalized.values()]) {
-        if (!row.managerNumber) {continue;}
+        if (!row.managerNumber) {
+          continue;
+        }
         if (row.managerNumber === row.employeeNumber) {
           fail(row.rowNumber, "An employee cannot report to themselves");
         } else if (!employeeNumbers.has(row.managerNumber) && !acceptedNumbers.has(row.managerNumber)) {
@@ -373,7 +446,9 @@ export class HrmsEmployeeImportService {
     const managerOf = new Map<string, string | null>(
       employees.map((employee) => [employee.employeeNumber, employee.reportingManager?.employeeNumber ?? null]),
     );
-    for (const row of normalized.values()) {managerOf.set(row.employeeNumber, row.managerNumber);}
+    for (const row of normalized.values()) {
+      managerOf.set(row.employeeNumber, row.managerNumber);
+    }
     for (const row of [...normalized.values()]) {
       const visited = new Set<string>([row.employeeNumber]);
       let cursor = row.managerNumber;
@@ -400,13 +475,17 @@ export class HrmsEmployeeImportService {
     const workbook = new ExcelJS.Workbook();
     if (extension === "xlsx") {
       // XLSX is a zip container; reject anything else before handing it to the parser.
-      if (buffer.subarray(0, 2).toString("latin1") !== "PK") {throw new Error("Not an XLSX file");}
+      if (buffer.subarray(0, 2).toString("latin1") !== "PK") {
+        throw new Error("Not an XLSX file");
+      }
       await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
     } else {
       await workbook.csv.read(Readable.from(buffer));
     }
     const sheet = workbook.worksheets[0];
-    if (!sheet) {return [];}
+    if (!sheet) {
+      return [];
+    }
     const table: string[][] = [];
     const width = sheet.columnCount;
     sheet.eachRow({ includeEmpty: true }, (row) => {
@@ -425,7 +504,9 @@ export class HrmsEmployeeImportService {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet(sheetName);
     sheet.addRow(headers);
-    for (const row of rows) {sheet.addRow(row.map(safeCell));}
+    for (const row of rows) {
+      sheet.addRow(row.map(safeCell));
+    }
     if (format === "xlsx") {
       sheet.getRow(1).font = { bold: true };
       sheet.columns.forEach((column) => (column.width = 24));

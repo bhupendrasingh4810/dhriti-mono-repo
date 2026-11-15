@@ -466,6 +466,10 @@ model StoredFile {
   checksumSha256 String
   createdAt      DateTime  @default(now())
   deletedAt      DateTime?
+  /// Private files are reachable only through their owning feature's authorized routes.
+  accessScope    String @default("ORGANIZATION") @map("access_scope") @db.VarChar(40)
+  employeeDocument HrmsEmployeeDocument?
+  assetAttachment HrmsAssetAttachment?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   uploadedBy   User         @relation(fields: [uploadedById], references: [id], onDelete: Restrict)

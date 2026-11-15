@@ -238,6 +238,8 @@ model HrmsOrganizationSettings {
 
   // Shift-relative attendance rules (minutes are relative to the employee's shift start).
   attendanceClockInWindowMinutes Int     @default(30)
+  attendanceGpsEnabled          Boolean @default(false)
+  attendanceGpsMaxAccuracyMeters Int    @default(100)
   attendanceLateAfterMinutes     Int     @default(60)
   missedClockInAlertEnabled      Boolean @default(true)
   missedClockInAlertMinutes      Int     @default(25)

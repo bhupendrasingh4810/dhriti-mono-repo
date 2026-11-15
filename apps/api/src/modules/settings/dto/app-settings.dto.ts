@@ -462,6 +462,12 @@ export class UpdateHrmsSettingsDto {
   @Min(APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes.min)
   @Max(APP_SETTINGS_LIMITS.hrms.attendanceClockInWindowMinutes.max)
   attendanceClockInWindowMinutes?: number;
+
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() attendanceGpsEnabled?: boolean;
+  @ApiPropertyOptional() @IsOptional() @IsInt()
+  @Min(APP_SETTINGS_LIMITS.hrms.attendanceGpsMaxAccuracyMeters.min)
+  @Max(APP_SETTINGS_LIMITS.hrms.attendanceGpsMaxAccuracyMeters.max)
+  attendanceGpsMaxAccuracyMeters?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt()
   @Min(APP_SETTINGS_LIMITS.hrms.attendanceLateAfterMinutes.min)
   @Max(APP_SETTINGS_LIMITS.hrms.attendanceLateAfterMinutes.max)

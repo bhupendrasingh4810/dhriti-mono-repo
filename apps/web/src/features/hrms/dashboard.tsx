@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { MyAssets } from "./assets";
 
 import { HrmsStatCard, type HrmsStat } from "./components/hrms-stat-card";
 import { TeamLeaveCalendar } from "./components/team-leave-calendar";
@@ -789,8 +791,11 @@ function LegacyDashboardContent({ role, onToast }: { role: Role; onToast: (messa
 }
 
 export function HrmsDashboard({ role, onToast }: { role: Role; onToast: (message: string) => void }) {
+  const { user } = useAuth();
+  const organizationId = user?.organization?.id;
   return (
     <>
+      {organizationId && <div className="mb-5 grid items-start gap-4 lg:grid-cols-2"><MyAssets key={organizationId} organizationId={organizationId} /></div>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {roleStats[role].map((item) => (
           <HrmsStatCard key={item.label} item={item} />

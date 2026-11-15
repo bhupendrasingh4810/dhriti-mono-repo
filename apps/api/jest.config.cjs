@@ -11,6 +11,11 @@ module.exports = {
         tsconfig: {
           module: "commonjs",
           moduleResolution: "node",
+          // The legacy test compiler needs type paths for validation's native package imports.
+          paths: {
+            "#hrms-profile": ["../../packages/validation/src/hrms-profile.ts"],
+            "#hrms-profile-fields": ["../../packages/validation/src/hrms-profile-fields.ts"],
+          },
           target: "ES2022",
           strict: true,
           esModuleInterop: true,

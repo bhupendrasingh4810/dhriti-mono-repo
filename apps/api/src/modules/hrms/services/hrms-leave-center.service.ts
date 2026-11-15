@@ -8,6 +8,7 @@ import { AuditService } from "../../audit/audit.service";
 import { enqueueNotification } from "../../notification/notification-events";
 import { AppSettingsService } from "../../settings/app-settings.service";
 import { resolveAppSettings, settingsPolicyError } from "../../settings/settings.defaults";
+import { resolveWorkWeek, workWeekLeaveAllocation } from "../work-week";
 import type {
   ApplyHrmsCompOffDto,
   ApplyHrmsLeaveDto,
@@ -280,9 +281,6 @@ export class HrmsLeaveCenterService {
     }
     const policy = await resolveAppSettings(this.settings, "hrms", organizationId);
     const halfDayOk = policy.allowHalfDayLeave && type.allowHalfDay;
-    if (!halfDayOk && !Number.isInteger(input.totalDays)) {
-      throw settingsPolicyError("Half-day leave is not allowed for this leave type", HttpStatus.BAD_REQUEST);
-    }
     if (policy.maxLeaveRequestDays !== null && input.totalDays > policy.maxLeaveRequestDays) {
       throw settingsPolicyError(`Leave requests are limited to ${policy.maxLeaveRequestDays} days`, HttpStatus.BAD_REQUEST);
     }
@@ -323,7 +321,7 @@ export class HrmsLeaveCenterService {
     let attachment: { id: string; originalName: string; sizeBytes: number } | null = null;
     if (input.attachmentFileId) {
       attachment = await this.prisma.storedFile.findFirst({
-        where: { id: input.attachmentFileId, organizationId, uploadedById: actorUserId, deletedAt: null },
+        where: { id: input.attachmentFileId, organizationId, uploadedById: actorUserId, deletedAt: null, accessScope: "ORGANIZATION" },
         select: { id: true, originalName: true, sizeBytes: true },
       });
       if (attachment && attachment.sizeBytes > ATTACHMENT_MAX_BYTES) {
@@ -334,6 +332,8 @@ export class HrmsLeaveCenterService {
       }
     }
     const record = await this.prisma.$transaction(async (tx) => {
+      const schedule = await resolveWorkWeek(tx, organizationId, target.id, input.startDate, input.endDate, policy.workingDays);
+      const dayAllocation = workWeekLeaveAllocation(schedule, input.totalDays, halfDayOk);
       const leave = await tx.hrmsLeaveRequest.create({
         data: {
           organizationId,
@@ -343,6 +343,7 @@ export class HrmsLeaveCenterService {
           startDate: start,
           endDate: end,
           totalDays: input.totalDays,
+          dayAllocation,
           reason: clean(input.reason),
           requestedByUserId: actorUserId,
           attachmentFileId: attachment?.id ?? null,

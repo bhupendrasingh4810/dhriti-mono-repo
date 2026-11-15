@@ -271,7 +271,7 @@ Employment fields are rejected on the self-service profile endpoint.
 
 HR uses the existing `/organization/hrms/employees` create and
 `/organization/hrms/employees/:employeeId` update endpoints, protected by
-`hrms.employee.manage` and the HRMS entitlement. Employee number maps to
+`hrms.workforce.manage` and the HRMS entitlement. Employee number maps to
 `employeeCode`, `startDate` to `dateOfJoining`, `status` to `employmentStatus`,
 and `resignationDate` to `dateOfResignation` on the personal profile response.
 Both HR endpoints additionally accept `biometricId`, `retirementDate`, and
@@ -280,7 +280,7 @@ use `YYYY-MM-DD`, may be cleared with `null`, and cannot precede joining.
 HR changes retain the existing organization scoping and audit records.
 
 The Workforce page additionally uses, all under `/organization/hrms/employees` and
-protected by `hrms.employee.manage`: `GET options` (form data), `GET org-chart`,
+protected by `hrms.workforce.manage`: `GET options` (form data), `GET org-chart`,
 `GET import/template?format=csv|xlsx`, `POST import/parse` (multipart `file`, csv/xlsx,
 10 MB, 5,000 rows), `POST import/validate`, `POST import` (re-validates; invalid rows
 are skipped and reported) and `POST export` (`scope`: `all|selected|filtered`,

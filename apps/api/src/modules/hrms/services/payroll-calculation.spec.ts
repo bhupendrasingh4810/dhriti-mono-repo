@@ -87,6 +87,19 @@ describe("payroll calculation", () => {
       });
       expect(result.lines).toEqual(calculateSalary("30000", revision.components, 2).lines);
     });
+    it("uses saved per-date work-week leave allocations, including off days and half days", () => {
+        const result = calculateCalendarSalary({
+          ...input,
+          unpaidLeave: [{
+            startDate: new Date("2026-11-06"), endDate: new Date("2026-11-08"), totalDays: 1.5,
+            dayAllocation: [
+              { date: "2026-11-06", units: 1 }, { date: "2026-11-07", units: 0.5 }, { date: "2026-11-08", units: 0 },
+            ],
+          }],
+        });
+        expect(result.proration.unpaidDays).toBe(1.5);
+        expect(result.gross).toBe("28500.00");
+      });
     it.each([0, 2, 3])("allocates split periods with exact monthly component totals at precision %s", (precision) => {
       for (const frequency of ["WEEKLY", "BIWEEKLY", "SEMIMONTHLY"]) {
         const periods = payrollCalendar(

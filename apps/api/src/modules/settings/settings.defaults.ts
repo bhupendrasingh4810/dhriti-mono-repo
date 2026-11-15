@@ -105,6 +105,8 @@ export const DEFAULT_APP_SETTINGS: { [K in AppSettingsKey]: SettingsColumns<AppS
     defaultPayrollCurrency: "USD",
     maxTrainingParticipants: null,
     attendanceClockInWindowMinutes: 30,
+    attendanceGpsEnabled: false,
+    attendanceGpsMaxAccuracyMeters: 100,
     attendanceLateAfterMinutes: 60,
     missedClockInAlertEnabled: true,
     missedClockInAlertMinutes: 25,

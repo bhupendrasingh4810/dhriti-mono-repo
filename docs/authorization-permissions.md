@@ -117,7 +117,7 @@ provides this tenant-specific visibility decision; API action permissions remain
 
 | Area | Permission keys |
 |---|---|
-| Employees and workforce directory (list, create, import/export, org chart) | `hrms.employee.read`, `hrms.employee.manage` |
+| Employees and workforce directory (list, create, import/export, org chart) | `hrms.employee.read`, `hrms.workforce.manage` |
 | Attendance | `hrms.attendance.read`, `hrms.attendance.manage` |
 | Leave | `hrms.leave.read`, `hrms.leave.manage`, `hrms.leave.approve` |
 | Performance | `hrms.performance.read`, `hrms.performance.manage` |

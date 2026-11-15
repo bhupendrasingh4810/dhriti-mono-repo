@@ -20,6 +20,8 @@ import { useAppSettingsState } from "@/features/settings/use-app-settings";
 import { hrmsService, type HrmsAttendanceRecord, type HrmsAttendanceRegularization } from "@/services/hrms.service";
 import { DateField, DateRangeField } from "./components/date-fields";
 import { Badge, Button, Card, CardTitle, Icon } from "./components/ui-primitives";
+import { captureSummary } from "./attendance-capture";
+import { useWorkWeekSchedule } from "./use-work-week-schedule";
 
 type RangeMode = "week" | "month" | "custom";
 type SortField = "date" | "workMinutes" | "status";
@@ -118,6 +120,7 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
       setLoadError(reason instanceof Error ? reason.message : "Unable to load attendance.");
     }
   }, [organizationId, start, end]);
+  const schedule = useWorkWeekSchedule(organizationId, start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"));
   const reloadRequests = useCallback(async () => {
     if (!organizationId) return;
     try {
@@ -138,14 +141,14 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
   }, [reloadRequests]);
 
   const rows = useMemo(() => {
-    const days = buildAttendanceRange(start, end, records, workingDays ?? [1, 2, 3, 4, 5]);
+    const days = schedule.days ? buildAttendanceRange(start, end, records, workingDays ?? [1, 2, 3, 4, 5], schedule.days) : [];
     const direction = order === "asc" ? 1 : -1;
     return days.sort((a, b) => {
       if (sortBy === "workMinutes") return direction * (a.workMinutes - b.workMinutes);
       if (sortBy === "status") return direction * a.status.localeCompare(b.status);
       return direction * (a.date.valueOf() - b.date.valueOf());
     });
-  }, [start, end, records, workingDays, sortBy, order]);
+  }, [start, end, records, workingDays, sortBy, order, schedule.days]);
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const current = Math.min(page, pages);
@@ -214,6 +217,7 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
     { label: "Date", field: "date" },
     { label: "Clock in" },
     { label: "Clock out" },
+    { label: "Capture" },
     { label: "Work hours", field: "workMinutes" },
     { label: "Status", field: "status" },
     { label: "" },
@@ -246,6 +250,8 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
             {loadError}
           </p>
         )}
+        {tab === logTab && schedule.loading && <p role="status" className="mb-3 text-sm text-text-muted">Loading applicable work week…</p>}
+        {tab === logTab && schedule.error && <p role="alert" className="mb-3 text-sm text-error">{schedule.error}<button type="button" className="ml-2 cursor-pointer underline" onClick={schedule.retry}>Retry schedule</button></p>}
         {tab === requestsTab ? (
           <RegularizationList
             requests={approvals}
@@ -356,6 +362,7 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
                 <tbody className="divide-y divide-border">
                   {visible.map((row) => {
                     const request = requestByDay.get(row.key);
+                    const attendance = records.find((record) => record.date.slice(0, 10) === row.key);
                     const canRegularize =
                       request?.status !== "PENDING" &&
                       request?.status !== "APPROVED" &&
@@ -367,9 +374,14 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
                         <td className="px-5 py-4 text-sm font-semibold">{row.date.format("ddd, D MMM YYYY")}</td>
                         <td className="px-5 py-4 text-sm">{row.clockIn}</td>
                         <td className="px-5 py-4 text-sm">{row.clockOut}</td>
+                        <td className="px-5 py-4 text-xs text-text-secondary">
+                          <p>In: {captureSummary(attendance?.checkInCapture)}</p>
+                          <p>Out: {captureSummary(attendance?.checkOutCapture)}</p>
+                        </td>
                         <td className="px-5 py-4 text-sm">{formatWorkMinutes(row.workMinutes)}</td>
                         <td className="px-5 py-4">
                           <Badge tone={tone[row.status]}>{row.status}</Badge>
+                          {row.scheduledUnits === 0.5 && <p className="mt-1 text-xs text-text-muted">Half-day schedule</p>}
                         </td>
                         <td className="space-x-3 px-5 py-4 text-right">
                           {request && (

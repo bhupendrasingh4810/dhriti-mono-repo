@@ -82,7 +82,7 @@ const tabs = [
 
 /**
  * Workforce shell shared by the /hrms/employees/* routes (one route per tab).
- * Restricted to admins and members holding `hrms.employee.manage`.
+ * Restricted to admins and members holding `hrms.workforce.manage`.
  */
 export function HrmsWorkforceShell({ children }: { children: ReactNode }) {
   const { can, loading } = usePermissions();
@@ -97,7 +97,7 @@ export function HrmsWorkforceShell({ children }: { children: ReactNode }) {
       </p>
     );
   }
-  if (!can("hrms.employee.manage")) {
+  if (!can("hrms.workforce.manage")) {
     return (
       <Card className="mx-auto mt-10 max-w-xl p-8 text-center">
         <h2 className="font-display text-lg font-bold text-text-primary">Workforce is restricted</h2>

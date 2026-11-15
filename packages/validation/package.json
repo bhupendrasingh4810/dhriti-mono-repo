@@ -4,6 +4,13 @@
   "private": true,
   "main": "./src/index.ts",
   "types": "./src/index.ts",
+  "imports": {
+    "#hrms-profile": "./src/hrms-profile.ts",
+    "#hrms-profile-fields": "./src/hrms-profile-fields.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
   "dependencies": {
     "zod": "^3.23.8"
   }

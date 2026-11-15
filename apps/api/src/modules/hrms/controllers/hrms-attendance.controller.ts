@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Header, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 
 import { RequireAccess } from "../../../common/decorators/access.decorator";
@@ -17,6 +17,7 @@ export class HrmsAttendanceController {
   constructor(private readonly attendance: HrmsAttendanceService) {}
 
   @Get()
+  @Header("Cache-Control", "no-store")
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.attendance.read" })
   list(
     @CurrentOrganization() organization: OrganizationContext,
@@ -28,6 +29,7 @@ export class HrmsAttendanceController {
   }
 
   @Post()
+  @Header("Cache-Control", "no-store")
   @RequireAccess({ entitlement: "hrms.enabled", permission: "hrms.attendance.manage" })
   upsert(
     @CurrentOrganization() organization: OrganizationContext,

@@ -160,6 +160,7 @@ export class OrganizationService {
             data: {
               organizationId: organization.id,
               templateKey: template.key,
+              assetClearanceRequired: template.key === "offboarding",
               name: template.name,
               stages: template.stages as Prisma.InputJsonValue,
               transitions: template.transitions as Prisma.InputJsonValue,

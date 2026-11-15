@@ -1,4 +1,5 @@
 import dayjs, { type Dayjs } from "dayjs";
+import type { WorkWeekScheduleDay } from "@dhriti/types";
 
 import type {
   HrmsAttendanceRecord,
@@ -28,6 +29,7 @@ export interface AttendanceDay {
   clockOut: string;
   workMinutes: number;
   status: AttendanceStatus;
+  scheduledUnits?: number;
 }
 
 export const regularizationTypeLabels: Record<HrmsRegularizationType, string> = {
@@ -68,13 +70,16 @@ export function buildAttendanceRange(
   end: Dayjs,
   records: HrmsAttendanceRecord[],
   workingDays: number[],
+  schedule?: WorkWeekScheduleDay[],
 ): AttendanceDay[] {
   const byDate = new Map(records.map((record) => [recordKey(record), record]));
   const days: AttendanceDay[] = [];
+  const scheduleByDate = new Map(schedule?.map((day) => [day.date, day]));
   for (let cursor = start.startOf("day"); !cursor.isAfter(end, "day"); cursor = cursor.add(1, "day")) {
     const key = cursor.format("YYYY-MM-DD");
     const record = byDate.get(key);
-    const base = { key, date: cursor };
+    const scheduled = scheduleByDate.get(key);
+    const base = { key, date: cursor, ...(scheduled ? { scheduledUnits: scheduled.units } : {}) };
     if (record) {
       const open = Boolean(record.checkIn && !record.checkOut);
       days.push({
@@ -87,7 +92,7 @@ export function buildAttendanceRange(
       continue;
     }
     const empty = { ...base, clockIn: "—", clockOut: "—", workMinutes: 0 };
-    if (!workingDays.includes(cursor.day() || 7)) days.push({ ...empty, status: "Weekly off" });
+    if (scheduled ? scheduled.units === 0 : !workingDays.includes(cursor.day() || 7)) days.push({ ...empty, status: "Weekly off" });
     else if (cursor.isAfter(dayjs(), "day")) days.push({ ...empty, status: "Upcoming" });
     else if (cursor.isSame(dayjs(), "day")) days.push({ ...empty, status: "Not clocked in" });
     else days.push({ ...empty, status: "Absent" });

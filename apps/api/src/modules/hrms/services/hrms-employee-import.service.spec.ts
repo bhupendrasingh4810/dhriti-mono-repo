@@ -8,7 +8,6 @@ const members = [
 
 function makeService() {
   const prisma = {
-    $transaction: jest.fn(async (queries: unknown[]) => Promise.all(queries)),
     organizationMember: { findMany: jest.fn().mockResolvedValue(members) },
     hrmsEmployee: {
       findMany: jest.fn().mockResolvedValue([{ id: "e0", userId: "u9", employeeNumber: "EMP-0", reportingManager: null }]),
@@ -18,9 +17,12 @@ function makeService() {
     organizationDepartment: { findMany: jest.fn().mockResolvedValue([{ id: "d1", name: "Engineering", code: null }]) },
     hrmsDesignation: { findMany: jest.fn().mockResolvedValue([{ id: "g1", name: "Engineer", code: null, departmentId: "d1" }]) },
     hrmsEmploymentType: { findMany: jest.fn().mockResolvedValue([{ name: "Full-time", code: "FT" }]) },
+    auditLog: { createMany: jest.fn() },
   };
+  const client = { ...prisma, $transaction: jest.fn(async (queries: unknown[] | ((tx: typeof prisma) => unknown)) =>
+    Array.isArray(queries) ? Promise.all(queries) : queries(prisma)) };
   const audit = { record: jest.fn() };
-  return { prisma, audit, service: new HrmsEmployeeImportService(prisma as never, audit as never) };
+  return { prisma: client, audit, service: new HrmsEmployeeImportService(client as never, audit as never) };
 }
 
 describe("HrmsEmployeeImportService", () => {
@@ -75,6 +77,12 @@ describe("HrmsEmployeeImportService", () => {
     expect(outcome).toMatchObject({ created: 2, skipped: 1 });
     const data = prisma.hrmsEmployee.createMany.mock.calls[0]?.[0].data as Array<{ id: string; reportingManagerId: string | null }>;
     expect(data[1]?.reportingManagerId).toBe(data[0]?.id);
+    expect(prisma.auditLog.createMany).toHaveBeenCalledWith({
+      data: data.map((employee) => ({
+        organizationId: "org-a", actorUserId: "actor", resourceType: "HrmsEmployee",
+        resourceId: employee.id, action: "hrms.employee.imported",
+      })),
+    });
     expect(audit.record).toHaveBeenCalledWith(expect.objectContaining({ action: "hrms.employee.imported" }));
   });
 
@@ -94,5 +102,14 @@ describe("HrmsEmployeeImportService", () => {
       },
     ]);
     expect(file.buffer.toString()).toContain("'=HYPERLINK(1)");
+  });
+
+  it("does not report successful imports when their career history cannot be saved", async () => {
+    const { service, prisma, audit } = makeService();
+    prisma.auditLog.createMany.mockRejectedValue(new Error("History unavailable"));
+    await expect(service.importRows("org-a", "actor", [
+      { rowNumber: 2, email: "aarav@acme.test", employeeNumber: "EMP-1" },
+    ])).rejects.toThrow("History unavailable");
+    expect(audit.record).not.toHaveBeenCalled();
   });
 });

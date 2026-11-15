@@ -1,4 +1,12 @@
 import { Module } from "@nestjs/common";
+import { HrmsWorkWeekController } from "./controllers/hrms-work-week.controller";
+import { HrmsWorkWeekService } from "./services/hrms-work-week.service";
+import { FileModule } from "../file/file.module";
+import {
+  HrmsEmployeeDocumentController,
+  HrmsDocumentLibraryController,
+} from "./controllers/hrms-employee-document.controller";
+import { HrmsEmployeeDocumentService } from "./services/hrms-employee-document.service";
 
 import { HrmsEmployeeController } from "./controllers/hrms-employee.controller";
 import { HrmsAttendanceController } from "./controllers/hrms-attendance.controller";
@@ -11,11 +19,15 @@ import { HrmsPerformanceReviewController } from "./controllers/hrms-performance-
 import { HrmsPayrollController } from "./controllers/hrms-payroll.controller";
 import { HrmsTrainingController } from "./controllers/hrms-training.controller";
 import { HrmsAssetController } from "./controllers/hrms-asset.controller";
+import { HrmsAssetOperationsController } from "./controllers/hrms-asset-operations.controller";
+import { HrmsAssetOperationsService } from "./services/hrms-asset-operations.service";
+import { HrmsAssetEvidenceService } from "./services/hrms-asset-evidence.service";
 import { HrmsBenefitController } from "./controllers/hrms-benefit.controller";
 import { HrmsMasterDataController } from "./controllers/hrms-master-data.controller";
 import { HrmsWorkflowDefinitionController } from "./controllers/hrms-workflow-definition.controller";
 import { HrmsWorkflowInstanceController } from "./controllers/hrms-workflow-instance.controller";
 import { HrmsEmployeeService } from "./services/hrms-employee.service";
+import { HrmsEmployeeFoundationService } from "./services/hrms-employee-foundation.service";
 import { HrmsEmployeeImportService } from "./services/hrms-employee-import.service";
 import { HrmsAttendanceService } from "./services/hrms-attendance.service";
 import { HrmsAttendanceClockService } from "./services/hrms-attendance-clock.service";
@@ -36,7 +48,11 @@ import { HrmsWorkflowDefinitionService } from "./services/hrms-workflow-definiti
 import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.service";
 
 @Module({
+  imports: [FileModule],
   controllers: [
+    HrmsWorkWeekController,
+    HrmsDocumentLibraryController,
+    HrmsEmployeeDocumentController,
     HrmsEmployeeController,
     HrmsAttendanceController,
     HrmsAttendanceSelfController,
@@ -48,12 +64,16 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsPayrollController,
     HrmsTrainingController,
     HrmsAssetController,
+    HrmsAssetOperationsController,
     HrmsBenefitController,
     HrmsMasterDataController,
     HrmsWorkflowDefinitionController,
     HrmsWorkflowInstanceController,
   ],
   providers: [
+    HrmsEmployeeFoundationService,
+    HrmsWorkWeekService,
+    HrmsEmployeeDocumentService,
     HrmsPayrollWorkspaceService,
     HrmsEmployeeService,
     HrmsEmployeeImportService,
@@ -69,6 +89,8 @@ import { HrmsWorkflowInstanceService } from "./services/hrms-workflow-instance.s
     HrmsPayrollService,
     HrmsTrainingService,
     HrmsAssetService,
+    HrmsAssetOperationsService,
+    HrmsAssetEvidenceService,
     HrmsBenefitService,
     HrmsMasterDataService,
     HrmsWorkflowDefinitionService,

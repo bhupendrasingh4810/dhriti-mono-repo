@@ -16,6 +16,7 @@ import {
 import { filesService } from "@/services/files.service";
 import { DateField } from "./components/date-fields";
 import { Avatar, Badge, Button, Icon } from "./components/ui-primitives";
+import { useWorkWeekSchedule } from "./use-work-week-schedule";
 
 export const errorText = (error: unknown) => (error instanceof Error ? error.message : "Unable to complete this request.");
 
@@ -92,7 +93,7 @@ function EmployeePicker({
 /** Working days (per the HRMS working-week setting) in the inclusive range; half-day counts 0.5 on a single day. */
 export function countLeaveDays(from: Dayjs, to: Dayjs, workingDays: number[], halfDay: boolean) {
   if (to.isBefore(from, "day")) return 0;
-  if (halfDay && from.isSame(to, "day")) return 0.5;
+  if (halfDay && from.isSame(to, "day")) return workingDays.includes(from.day() || 7) ? 0.5 : 0;
   let total = 0;
   for (let day = from; !day.isAfter(to, "day"); day = day.add(1, "day")) {
     if (workingDays.includes(day.day() === 0 ? 7 : day.day())) total += 1;
@@ -170,7 +171,6 @@ function checkAttachment(file: File) {
 /** Right-hand drawer for applying leave; the optional employee picker appears only when on-behalf filing is enabled. */
 export function ApplyLeaveDialog({
   balances,
-  workingDays,
   halfDayAllowed,
   employees,
   initialDate,
@@ -205,17 +205,18 @@ export function ApplyLeaveDialog({
     setFile(next);
   };
   const selected = balances.find((balance) => balance.typeId === typeId);
+  const schedule = useWorkWeekSchedule(organizationId, from.format("YYYY-MM-DD"), to.format("YYYY-MM-DD"), employeeId || undefined);
   const sameDay = from.isSame(to, "day");
-  const canHalfDay = halfDayAllowed && !!selected?.allowHalfDay && sameDay;
+  const canHalfDay = halfDayAllowed && !!selected?.allowHalfDay && sameDay && schedule.days?.[0]?.units === 1;
   const days = useMemo(
-    () => countLeaveDays(from, to, workingDays, canHalfDay && halfDay),
-    [from, to, workingDays, canHalfDay, halfDay],
+    () => canHalfDay && halfDay ? 0.5 : (schedule.days?.reduce((sum, day) => sum + day.units, 0) ?? 0),
+    [schedule.days, canHalfDay, halfDay],
   );
   const rangeInvalid = to.isBefore(from, "day") || days <= 0;
 
   const submit = async () => {
     setAttempted(true);
-    if (!typeId || !reason.trim() || rangeInvalid || fileError || !organizationId) return;
+    if (!typeId || !reason.trim() || rangeInvalid || fileError || !organizationId || !schedule.days || schedule.error) return;
     setSaving(true);
     setApiError("");
     try {
@@ -242,7 +243,7 @@ export function ApplyLeaveDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={() => void submit()} disabled={saving}>{saving ? "Submitting…" : "Submit request"}</Button>
+          <Button onClick={() => void submit()} disabled={saving || schedule.loading || !!schedule.error}>{saving ? "Submitting…" : "Submit request"}</Button>
         </>
       }
     >
@@ -280,7 +281,9 @@ export function ApplyLeaveDialog({
             />
             <DateField labelOutside label="To date" value={to} minDate={from} onChange={setTo} />
           </div>
-          {attempted && rangeInvalid && <p className="-mt-3 text-xs text-error">Choose a valid range that includes at least one working day.</p>}
+          {schedule.loading && <p role="status" className="text-sm text-text-muted">Loading applicable work week…</p>}
+          {schedule.error && <p role="alert" className="text-sm text-error">{schedule.error}<button type="button" className="ml-2 cursor-pointer underline" onClick={schedule.retry}>Retry schedule</button></p>}
+          {attempted && rangeInvalid && !schedule.loading && <p className="-mt-3 text-xs text-error">Choose a valid range that includes at least one working day.</p>}
           <label className={`flex items-center gap-3 rounded-md border border-border p-3 ${canHalfDay ? "cursor-pointer" : "opacity-50"}`}>
             <input type="checkbox" disabled={!canHalfDay} checked={canHalfDay && halfDay} onChange={(event) => setHalfDay(event.target.checked)} />
             <span>
@@ -291,7 +294,7 @@ export function ApplyLeaveDialog({
             </span>
           </label>
           <p className="text-sm text-text-secondary">
-            Total: <span className="font-semibold text-text-primary">{days} day(s)</span>
+            Total: <span className="font-semibold text-text-primary">{schedule.days ? `${days} day(s)` : "Awaiting schedule"}</span>
           </p>
           <label className="block">
             <span className="mb-1.5 block text-sm font-semibold">

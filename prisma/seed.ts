@@ -1403,6 +1403,7 @@ async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUse
       where: { organizationId_templateKey: { organizationId, templateKey: template.key } },
       update: {
         name: template.name,
+        assetClearanceRequired: template.key === "offboarding",
         stages: inputJson(template.stages),
         transitions: inputJson(template.transitions),
         status: "ACTIVE",
@@ -1413,6 +1414,7 @@ async function seedDefaultHrmsWorkflowTemplates(organizationId: string, ownerUse
       create: {
         organizationId,
         templateKey: template.key,
+        assetClearanceRequired: template.key === "offboarding",
         name: template.name,
         stages: inputJson(template.stages),
         transitions: inputJson(template.transitions),

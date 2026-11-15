@@ -117,7 +117,7 @@ export type CalendarSalaryRevision = {
   profileId: string;
   components: SalaryComponentDto[];
 };
-export type PayrollLeave = { id?: string; startDate: Date; endDate: Date; totalDays: number };
+export type PayrollLeave = { id?: string; startDate: Date; endDate: Date; totalDays: number; dayAllocation?: unknown };
 
 /**
  * Calendar policy includes weekends/holidays and the joining/leaving dates.
@@ -157,6 +157,37 @@ export function calculateCalendarSalary(input: {
       continue;
     }
     const span = to - from + 1;
+    if (leave.dayAllocation !== null && leave.dayAllocation !== undefined) {
+      if (!Array.isArray(leave.dayAllocation) || leave.dayAllocation.length !== span) {
+        throw new Error("Unpaid leave has invalid calendar-date allocation");
+      }
+      const allocated = new Map<number, number>();
+      for (const entry of leave.dayAllocation) {
+        if (typeof entry !== "object" || entry === null || typeof entry.date !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(entry.date) || ![0, 0.5, 1].includes(entry.units)) {
+          throw new Error("Unpaid leave has invalid calendar-date allocation");
+        }
+        const date = new Date(`${entry.date}T00:00:00Z`);
+        const day = dayNumber(date);
+        if (!Number.isFinite(day) || date.toISOString().slice(0, 10) !== entry.date || day < from || day > to || allocated.has(day)) {
+          throw new Error("Unpaid leave has invalid calendar-date allocation");
+        }
+        allocated.set(day, entry.units);
+      }
+      if ([...allocated.values()].reduce((sum, units) => sum + units, 0) !== leave.totalDays) {
+        throw new Error("Unpaid leave allocation does not match total days");
+      }
+      for (const [day, units] of allocated) {
+        if (day < employmentFirst || day > employmentLast || units === 0) {
+          continue;
+        }
+        if (unpaidByDay.has(day)) {
+          throw new Error("Overlapping unpaid leave must be resolved before payroll");
+        }
+        unpaidByDay.set(day, units);
+      }
+      continue;
+    }
     if (span < 1 || (leave.totalDays !== span && !(span === 1 && leave.totalDays === 0.5))) {
       throw new Error(
         "Unpaid leave needs explicit calendar-date allocation: use full calendar ranges or single half-days",

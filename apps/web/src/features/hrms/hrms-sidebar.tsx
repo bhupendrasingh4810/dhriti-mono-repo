@@ -41,7 +41,8 @@ export function HrmsSidebar() {
   const basePath = `/${organizationSlug}/hrms`;
   const { can } = usePermissions();
   const visibleItems = items.filter((item) => {
-    if (item.href === "employees") return can("hrms.employee.manage");
+    if (item.href === "employees") return can("hrms.workforce.manage");
+    if (item.href === "assets") return can("hrms.asset.manage");
     // The settings API requires organization.settings.manage, so hide the entry without it.
     if (item.href === "settings") return can("organization.settings.manage");
     return true;
@@ -67,7 +68,7 @@ export function HrmsSidebar() {
               )}
               <Link
                 href={href}
-                className={`mb-1 flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                className={`mb-1 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
                   active
                     ? "bg-on-brand-border text-text-inverse"
                     : "text-on-brand-muted hover:bg-on-brand-hover hover:text-text-inverse"

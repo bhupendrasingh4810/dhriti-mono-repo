@@ -11,6 +11,7 @@ import type {
   ListHrmsWorkflowInstancesDto,
 } from "../dto/hrms-workflow-definition.dto";
 import type { WorkflowStage, WorkflowTransition } from "../workflow-contract";
+import { assertAssetClearance } from "../asset-clearance";
 
 @Injectable()
 export class HrmsWorkflowInstanceService {
@@ -57,6 +58,7 @@ export class HrmsWorkflowInstanceService {
         const stages = version.stages as unknown as WorkflowStage[];
         const start = this.startStage(stages, version.transitions as unknown as WorkflowTransition[]);
         const snapshot = {
+          assetClearanceRequired: definition.assetClearanceRequired || definition.templateKey === "offboarding",
           definitionId: definition.id,
           version: version.version,
           name: version.name,
@@ -115,6 +117,7 @@ export class HrmsWorkflowInstanceService {
           throw new AppError(ErrorCode.VALIDATION_FAILED, "Workflow instance is no longer active", HttpStatus.CONFLICT);
         }
         const snapshot = instance.definitionSnapshot as unknown as {
+          assetClearanceRequired?: boolean;
           stages: WorkflowStage[];
           transitions: WorkflowTransition[];
         };
@@ -168,6 +171,45 @@ export class HrmsWorkflowInstanceService {
           },
         });
         if (dto.action !== "REJECT") {
+          const offboarding =
+            snapshot.assetClearanceRequired ||
+            snapshot.stages.some((entry) => entry.id.startsWith("offboarding-")) ||
+            (instance.context &&
+              typeof instance.context === "object" &&
+              !Array.isArray(instance.context) &&
+              instance.context.workflowType === "EMPLOYEE_OFFBOARDING");
+          if (offboarding) {
+            const employeeId =
+              instance.context && typeof instance.context === "object" && !Array.isArray(instance.context)
+                ? instance.context.employeeId
+                : null;
+            if (typeof employeeId !== "string" || !/^[0-9a-f-]{36}$/i.test(employeeId)) {
+              throw new AppError(
+                ErrorCode.VALIDATION_FAILED,
+                "Offboarding requires a valid employeeId in workflow context.",
+                HttpStatus.BAD_REQUEST,
+              );
+            }
+            const employee = await tx.hrmsEmployee.findFirst({
+              where: { id: employeeId, organizationId },
+              select: { id: true },
+            });
+            if (!employee)
+              {throw new AppError(ErrorCode.VALIDATION_FAILED, "Offboarding employee not found.", HttpStatus.NOT_FOUND);}
+            // The snapshotted policy survives renamed stages; terminal-bound transitions always require clearance.
+            if (
+              stage.id.includes("offboarding-2") ||
+              stage.name.toLowerCase().includes("clearance") ||
+              snapshot.transitions.some(
+                (transition) =>
+                  transition.from === stage.id &&
+                  snapshot.stages.some((entry) => entry.id === transition.to && entry.isTerminal),
+              ) ||
+              stage.isTerminal
+            ) {
+              await assertAssetClearance(tx, organizationId, employeeId);
+            }
+          }
           const approvals = await tx.hrmsWorkflowAssignment.count({
             where: { instanceId, stageId: stage.id, status: { in: ["APPROVED", "COMPLETED"] } },
           });

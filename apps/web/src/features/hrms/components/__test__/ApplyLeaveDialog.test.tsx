@@ -8,7 +8,7 @@ vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({ user: { organization: { id: "org-1" } } }),
 }));
 vi.mock("@/services/hrms.service", () => ({
-  hrmsService: { leave: { apply: vi.fn() } },
+  hrmsService: { leave: { apply: vi.fn() }, workWeeks: { schedule: vi.fn() } },
 }));
 vi.mock("../../components/date-fields", () => ({
   DateField: ({ label, value }: { label: string; value: dayjs.Dayjs }) => (
@@ -49,7 +49,12 @@ function setup(balances: HrmsLeaveBalance[] = [balance()]) {
   );
   return { onDone };
 }
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(hrmsService.workWeeks.schedule).mockResolvedValue({
+    days: [{ date: "2026-11-16", units: 1, kind: "WORKING", ruleId: null, ruleName: null, versionId: null }],
+  });
+});
 afterEach(cleanup);
 
 describe("Apply Leave shared selection", () => {
@@ -73,8 +78,9 @@ describe("Apply Leave shared selection", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
-  it("shows required validation directly under the selection and clears it on selection", () => {
+  it("shows required validation directly under the selection and clears it on selection", async () => {
     setup();
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit request" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Submit request" }));
     const trigger = screen.getByRole("button", { name: "Leave type" });
     const message = screen.getByText("Select a leave type.");
@@ -88,12 +94,13 @@ describe("Apply Leave shared selection", () => {
     expect(hrmsService.leave.apply).not.toHaveBeenCalled();
   });
 
-  it("resets half-day selection when changing the leave type", () => {
+  it("resets half-day selection when changing the leave type", async () => {
     setup([balance(), balance({ typeId: "sick", name: "Sick leave", available: 5 })]);
     const trigger = screen.getByRole("button", { name: "Leave type" });
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("option", { name: "Annual leave · 12 days" }));
     const halfDay = screen.getByRole("checkbox");
+    await waitFor(() => expect(halfDay).toBeEnabled());
     fireEvent.click(halfDay);
     expect(halfDay).toBeChecked();
     fireEvent.click(trigger);
@@ -122,6 +129,7 @@ describe("Apply Leave shared selection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Leave type" }));
     fireEvent.click(screen.getByRole("option", { name: "Annual leave · 12 days" }));
     fireEvent.change(screen.getByRole("textbox", { name: /Reason/ }), { target: { value: "Family visit" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Submit request" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Submit request" }));
     await waitFor(() => expect(onDone).toHaveBeenCalledWith("Leave request submitted for approval"));
     expect(hrmsService.leave.apply).toHaveBeenCalledWith(

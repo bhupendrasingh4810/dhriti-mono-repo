@@ -536,6 +536,14 @@ group are supported with calendar-day proration. Backdated revisions affecting l
 are not calculated. There is no general edit/delete workflow for saved profiles,
 structures, or salary history: use new structures and effective-dated assignments.
 
+New leave requests save dated work-week units (working = 1, half-day = 0.5,
+weekly off = 0) in `dayAllocation`. Calendar payroll uses this saved allocation
+for unpaid leave, including multi-day ranges spanning off days; later work-week
+edits never recalculate submitted leave. Old leave without allocation retains
+its legacy calculation. Work-week rules do not change the calendar-day salary
+proration denominator or existing payroll snapshots. See
+[work-week rules](./hrms-workflows.md#work-week-rules).
+
 ### 4. Reimbursements: record and approve an expense
 
 Open **Reimbursements -> Add reimbursement**:

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
-import { HttpStatus, Injectable } from "@nestjs/common";
+import { HttpStatus, Injectable, Logger } from "@nestjs/common";
 import type { StoredFile } from "@prisma/client";
 
 import { PrismaService } from "../../database/prisma.service";
@@ -30,8 +30,17 @@ export interface UploadedFileInput {
   data: Buffer;
 }
 
+export type FileAccessScope = "ORGANIZATION" | "HRMS_EMPLOYEE_DOCUMENT" | "HRMS_ASSET_DOCUMENT";
+interface FileContext {
+  ipAddress?: string;
+  userAgent?: string;
+  /** Server-only scope; never bind this to a generic file API request body. */
+  accessScope?: FileAccessScope;
+}
+
 @Injectable()
 export class FileService {
+  private readonly logger = new Logger(FileService.name);
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
@@ -43,30 +52,45 @@ export class FileService {
     organizationId: string,
     uploaderUserId: string,
     file: UploadedFileInput,
-    context: { ipAddress?: string; userAgent?: string } = {},
+    context: FileContext = {},
   ): Promise<StoredFile> {
     this.validate(file);
 
     const objectKey = `${organizationId}/${randomUUID()}/${this.sanitizeFileName(file.originalName)}`;
 
-    await this.storage.upload({
-      objectKey,
-      body: file.data,
-      contentType: file.contentType,
-    });
-
-    const stored = await this.prisma.storedFile.create({
-      data: {
-        organizationId,
-        uploadedById: uploaderUserId,
-        bucket: this.config.s3.bucket,
+    try {
+      await this.storage.upload({
         objectKey,
-        originalName: file.originalName,
+        body: file.data,
         contentType: file.contentType,
-        sizeBytes: file.data.byteLength,
-        checksumSha256: createHash("sha256").update(file.data).digest("hex"),
-      },
-    });
+      });
+    } catch (error: unknown) {
+      this.logger.error("File storage upload failed", error instanceof Error ? error.stack : String(error));
+      throw new AppError(
+        ErrorCode.FILE_STORAGE_UNAVAILABLE,
+        "Document storage is unavailable. Please retry or contact your administrator.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
+
+    const stored = await this.prisma.storedFile
+      .create({
+        data: {
+          organizationId,
+          uploadedById: uploaderUserId,
+          bucket: this.config.s3.bucket,
+          objectKey,
+          originalName: file.originalName,
+          contentType: file.contentType,
+          sizeBytes: file.data.byteLength,
+          checksumSha256: createHash("sha256").update(file.data).digest("hex"),
+          accessScope: context.accessScope ?? "ORGANIZATION",
+        },
+      })
+      .catch(async (error: unknown) => {
+        await this.cleanupObject(objectKey);
+        throw error;
+      });
 
     await this.audit.record({
       action: "file.uploaded",
@@ -74,7 +98,10 @@ export class FileService {
       actorUserId: uploaderUserId,
       resourceType: "StoredFile",
       resourceId: stored.id,
-      metadata: { originalName: file.originalName, sizeBytes: stored.sizeBytes },
+      metadata:
+        context.accessScope && context.accessScope !== "ORGANIZATION"
+          ? { sizeBytes: stored.sizeBytes }
+          : { originalName: file.originalName, sizeBytes: stored.sizeBytes },
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
@@ -86,10 +113,20 @@ export class FileService {
     organizationId: string,
     fileId: string,
     actorUserId: string,
-    context: { ipAddress?: string; userAgent?: string } = {},
+    context: FileContext = {},
   ): Promise<{ url: string; expiresIn: number }> {
-    const file = await this.getFile(organizationId, fileId);
-    const url = await this.storage.presignDownload(file.objectKey, file.originalName);
+    const file = await this.getFile(organizationId, fileId, context.accessScope);
+    let url: string;
+    try {
+      url = await this.storage.presignDownload(file.objectKey, file.originalName);
+    } catch (error: unknown) {
+      this.logger.error("File storage download link failed", error instanceof Error ? error.stack : String(error));
+      throw new AppError(
+        ErrorCode.FILE_STORAGE_UNAVAILABLE,
+        "Document download is unavailable. Please retry or contact your administrator.",
+        HttpStatus.SERVICE_UNAVAILABLE,
+      );
+    }
     await this.audit.record({
       action: "file.downloaded",
       organizationId,
@@ -104,14 +141,19 @@ export class FileService {
 
   async listFiles(organizationId: string, limit = 100): Promise<StoredFile[]> {
     return this.prisma.storedFile.findMany({
-      where: { organizationId, deletedAt: null },
+      where: { organizationId, deletedAt: null, accessScope: "ORGANIZATION" },
       orderBy: { createdAt: "desc" },
       take: Math.min(limit, 500),
     });
   }
 
-  async delete(organizationId: string, fileId: string, actorUserId: string): Promise<void> {
-    const file = await this.getFile(organizationId, fileId);
+  async delete(
+    organizationId: string,
+    fileId: string,
+    actorUserId: string,
+    accessScope: FileAccessScope = "ORGANIZATION",
+  ): Promise<void> {
+    const file = await this.getFile(organizationId, fileId, accessScope);
     if (file.uploadedById !== actorUserId) {
       throw new AppError(ErrorCode.FORBIDDEN, "Only the uploader can delete this file", HttpStatus.FORBIDDEN);
     }
@@ -121,12 +163,7 @@ export class FileService {
       data: { deletedAt: new Date() },
     });
 
-    // Best-effort object cleanup; metadata removal already succeeded.
-    try {
-      await this.storage.delete(file.objectKey);
-    } catch {
-      // Object deletion is retried by lifecycle rules; do not fail the request.
-    }
+    await this.cleanupObject(file.objectKey);
 
     await this.audit.record({
       action: "file.deleted",
@@ -137,14 +174,26 @@ export class FileService {
     });
   }
 
-  private async getFile(organizationId: string, fileId: string): Promise<StoredFile> {
+  private async getFile(
+    organizationId: string,
+    fileId: string,
+    accessScope: FileAccessScope = "ORGANIZATION",
+  ): Promise<StoredFile> {
     const file = await this.prisma.storedFile.findFirst({
-      where: { id: fileId, organizationId, deletedAt: null },
+      where: { id: fileId, organizationId, deletedAt: null, accessScope },
     });
     if (!file) {
       throw new AppError(ErrorCode.FILE_NOT_FOUND, "File not found", HttpStatus.NOT_FOUND);
     }
     return file;
+  }
+
+  private async cleanupObject(objectKey: string): Promise<void> {
+    try {
+      await this.storage.delete(objectKey);
+    } catch (error: unknown) {
+      this.logger.error("Object cleanup failed; storage lifecycle cleanup is required", error);
+    }
   }
 
   private validate(file: UploadedFileInput): void {

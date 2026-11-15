@@ -4,7 +4,7 @@ import { HrmsAttendanceRegularizationService } from "./hrms-attendance-regulariz
 
 const day = new Date("2026-11-13");
 
-const rules = { attendanceClockInWindowMinutes: 30, attendanceLateAfterMinutes: 60 };
+const rules = { attendanceClockInWindowMinutes: 30, attendanceLateAfterMinutes: 60, attendanceGpsEnabled: false, attendanceGpsMaxAccuracyMeters: 100 };
 const settings = { get: jest.fn().mockResolvedValue(rules) };
 
 function build(shift: { startTime: string; timeZone: string } | null = null) {
@@ -38,6 +38,39 @@ function build(shift: { startTime: string; timeZone: string } | null = null) {
 }
 
 describe("attendance clock", () => {
+  afterEach(() => {
+    settings.get.mockResolvedValue(rules);
+    jest.useRealTimers();
+  });
+
+  it("validates and persists GPS on both punches and exposes policy with attendance", async () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-11-13T09:00:00Z"));
+    const { prisma } = build();
+    settings.get.mockResolvedValue({ ...rules, attendanceGpsEnabled: true });
+    const capture = {
+      mode: "REMOTE" as const, source: "NATIVE" as const, device: "PHONE" as const,
+      position: { latitude: 0, longitude: 0, accuracy: 10, capturedAt: new Date().toISOString() },
+    };
+    const service = new HrmsAttendanceClockService(prisma as never, settings as never);
+    await expect(service.clockIn("org", "user", "2026-11-13")).rejects.toMatchObject({ status: 400 });
+    expect(prisma.hrmsAttendanceRecord.upsert).not.toHaveBeenCalled();
+    expect(await service.clockIn("org", "user", "2026-11-13", capture)).toMatchObject({
+      checkInCapture: { mode: "REMOTE", source: "NATIVE", validation: "GPS_ACCEPTED" },
+    });
+    await expect(service.clockOut("org", "user")).rejects.toMatchObject({ status: 400 });
+    await expect(service.clockOut("org", "user", { ...capture, mode: "FIELD" })).rejects.toThrow("same work mode");
+    expect(prisma.hrmsAttendanceRecord.update).not.toHaveBeenCalled();
+    expect(await service.clockOut("org", "user", capture)).toMatchObject({
+      checkInCapture: { mode: "REMOTE" }, checkOutCapture: { mode: "REMOTE", validation: "GPS_ACCEPTED" },
+    });
+    expect(await service.today("org", "user", "2026-11-13")).toMatchObject({
+      capturePolicy: { enabled: true, maxAccuracyMeters: 100, workLocation: null },
+    });
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), { isolationLevel: "Serializable" });
+    expect(prisma.hrmsEmployee.findFirst).toHaveBeenCalledWith(expect.objectContaining({
+      where: { organizationId: "org", userId: "user", status: "ACTIVE", deletedAt: null },
+    }));
+  });
   it("computes net work hours minus breaks", () => {
     expect(computeWorkHours(new Date("2026-11-13T09:00:00Z"), new Date("2026-11-13T18:00:00Z"), 60)).toBe(8);
   });

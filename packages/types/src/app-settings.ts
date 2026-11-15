@@ -121,6 +121,8 @@ export type HrmsOrganizationSettings = {
   maxTrainingParticipants: number | null;
   /** Clock in/out opens this many minutes before the employee's shift starts. */
   attendanceClockInWindowMinutes: number;
+  attendanceGpsEnabled: boolean;
+  attendanceGpsMaxAccuracyMeters: number;
   /** Clocking in more than this many minutes after shift start is recorded as LATE. */
   attendanceLateAfterMinutes: number;
   missedClockInAlertEnabled: boolean;
