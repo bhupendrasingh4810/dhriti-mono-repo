@@ -145,6 +145,18 @@ export async function resetPassword(input: ResetPasswordInput): Promise<void> {
   );
 }
 
+export async function changePassword(input: { currentPassword: string; newPassword: string }): Promise<void> {
+  await apiRequest<void>(
+    "/api/auth/change-password",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+    "Unable to reset your temporary password.",
+  );
+}
+
 export async function uploadProfilePhoto(file: File): Promise<AuthUserResponse> {
   const formData = new FormData();
   formData.append("file", file);

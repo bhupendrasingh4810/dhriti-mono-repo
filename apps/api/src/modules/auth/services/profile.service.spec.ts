@@ -83,6 +83,7 @@ describe("ProfileService", () => {
     expect(profile).toMatchObject({
       prefix: "Ms.",
       name: "Aditi Sharma",
+      hasHrmsProfile: true,
       employeeCode: "EMP-42",
       dateOfBirth: "1995-06-15",
       gender: "Female",
@@ -112,6 +113,7 @@ describe("ProfileService", () => {
     prisma.user.findUnique.mockResolvedValue({ ...makeUser(), profile: null, hrmsProfile: null });
     prisma.hrmsEmployee.findFirst.mockResolvedValue(null);
     const profile = await service.getProfile("profile-user");
+    expect(profile.hasHrmsProfile).toBe(false);
     for (const key of [
       "prefix",
       "dateOfBirth",

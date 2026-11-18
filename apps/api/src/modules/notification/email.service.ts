@@ -24,7 +24,7 @@ export class EmailService {
 
   constructor(private readonly config: ApiConfigService) {}
 
-  async send(message: EmailMessage, options: { requireConfigured?: boolean } = {}): Promise<void> {
+  async send(message: EmailMessage, options: { requireConfigured?: boolean; sensitive?: boolean } = {}): Promise<void> {
     const brevo = this.config.brevo;
     if (!brevo) {
       if (options.requireConfigured) {
@@ -50,10 +50,36 @@ export class EmailService {
     } catch (error) {
       this.logger.error(
         `Brevo failed to send email to=${message.to}`,
-        error instanceof Error ? error.stack : undefined,
+        options.sensitive ? undefined : error instanceof Error ? error.stack : undefined,
       );
       throw error;
     }
+  }
+
+  async sendTemporaryPasswordEmail(email: string, name: string, temporaryPassword: string): Promise<void> {
+    const loginUrl = `${this.config.webAppUrl}/login`;
+    const escapeHtml = (value: string) =>
+      value.replace(/[&<>"']/g, (character) => {
+        const entities: Record<string, string> = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;",
+        };
+        return entities[character] ?? character;
+      });
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    await this.send(
+      {
+        to: [{ email }],
+        subject: "Your Dhriti account is ready",
+        text: `Hi ${name}, your Dhriti account is ready. Sign in with ${email} and this temporary password: ${temporaryPassword}. You will be required to reset it before continuing: ${loginUrl}`,
+        html: `<p>Hi ${safeName},</p><p>Your Dhriti account is ready. Sign in with <strong>${safeEmail}</strong> and this temporary password:</p><p><strong>${temporaryPassword}</strong></p><p>You will be required to reset your password before continuing.</p><p><a href="${loginUrl}">Sign in to Dhriti</a></p>`,
+      },
+      { requireConfigured: true, sensitive: true },
+    );
   }
 
   async sendVerificationEmail(email: string, name: string, otp: string, verificationUrl: string): Promise<void> {

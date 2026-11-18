@@ -19,6 +19,7 @@ export interface AuthTokensResponse {
   refreshToken: string;
   refreshTokenExpiresIn: number;
   sessionId: string;
+  mustResetPassword: boolean;
   user: AuthUserResponse;
 }
 

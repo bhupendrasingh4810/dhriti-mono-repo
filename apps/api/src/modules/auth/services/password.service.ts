@@ -82,7 +82,7 @@ export class PasswordService {
     await this.prisma.userAuth.upsert({
       where: { userId: record.userId },
       create: { userId: record.userId, passwordHash },
-      update: { passwordHash, failedLoginAttempts: 0, lockedUntil: null },
+      update: { passwordHash, failedLoginAttempts: 0, lockedUntil: null, mustResetPassword: false },
     });
     await this.prisma.user.update({
       where: { id: record.userId },
@@ -132,8 +132,11 @@ export class PasswordService {
     }
 
     const passwordHash = await bcrypt.hash(newPassword, this.config.bcryptRounds);
-    await this.prisma.userAuth.update({ where: { userId: user.id }, data: { passwordHash } });
-    await this.sessions.revokeAllUserSessions(user.id, current.sessionId);
+    await this.prisma.userAuth.update({
+      where: { userId: user.id },
+      data: { passwordHash, mustResetPassword: false, lastPasswordChange: new Date() },
+    });
+    await this.sessions.revokeAllUserSessions(user.id, user.auth.mustResetPassword ? undefined : current.sessionId);
   }
 
   /**

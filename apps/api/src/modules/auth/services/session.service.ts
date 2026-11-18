@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { ConflictException, Injectable, Logger } from "@nestjs/common";
 import type { UserSession } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
@@ -169,11 +169,16 @@ export class SessionService {
    * Revokes a specific session.
    * @param sessionId The ID of the session to revoke.
    */
-  async revokeSession(sessionId: string): Promise<void> {
-    await this.prisma.userSession.updateMany({
-      where: { id: sessionId, revokedAt: null },
+  async revokeSession(sessionId: string, options: { rejectRotated?: boolean } = {}): Promise<void> {
+    // Admin snapshots may become stale during refresh rotation. Never claim to revoke an already-replaced session.
+    // Previously revoked, unrotated rows remain retryable after a failed Redis eviction.
+    const result = await this.prisma.userSession.updateMany({
+      where: { id: sessionId, ...(options.rejectRotated ? { rotatedAt: null } : { revokedAt: null }) },
       data: { revokedAt: new Date() },
     });
+    if (options.rejectRotated && !result.count) {
+      throw new ConflictException("Session was replaced or removed; refresh the session list before revoking");
+    }
     await this.redis.delete(sessionKey(sessionId));
     await this.redis.raw.publish(SESSION_REVOCATION_CHANNEL, sessionId);
   }

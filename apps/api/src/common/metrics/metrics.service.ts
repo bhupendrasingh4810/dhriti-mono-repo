@@ -45,6 +45,15 @@ export class MetricsService {
   private redisEvictedKeys = 0;
   private wsConnections = 0;
   private wsMessages = 0;
+  private wsInitialized = false;
+
+  websocketInitialized(): void {
+    this.wsInitialized = true;
+  }
+
+  isWebsocketInitialized(): boolean {
+    return this.wsInitialized;
+  }
 
   recordHttpRequest(method: string, route: string, status: number, durationMs: number): void {
     const key = `${method}|${route}|${status}`;

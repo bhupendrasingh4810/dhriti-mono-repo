@@ -2,6 +2,7 @@
 @import "../src/theme/globals.css";
 @source "../src";
 @source "../stories";
+@source "../../../apps/web/src/features/control/role-management";
 
 body {
   font-family: var(--font-sans);

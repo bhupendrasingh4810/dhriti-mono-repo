@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextRequest, NextResponse } from "next/server";
+import { trustedClientIpHeaders } from "./client-ip.server";
 
 function backendUrl(request: NextRequest, path: string[]): URL {
   const baseUrl = process.env.BACKEND_URL;
@@ -16,12 +17,21 @@ function backendUrl(request: NextRequest, path: string[]): URL {
 export async function proxyBackendRequest(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   try {
     const { path } = await context.params;
-    const headers = new Headers();
+    const headers = new Headers(trustedClientIpHeaders(request.headers));
     const accessToken = request.cookies.get("access_token")?.value;
     const authorization = request.headers.get("authorization");
     const organizationId = request.headers.get("x-organization-id");
     const contentType = request.headers.get("content-type");
     const idempotencyKey = request.headers.get("idempotency-key");
+    // Cookie-to-bearer forwarding must not turn a cross-site form submission into an authenticated mutation.
+    if (
+      accessToken &&
+      !authorization &&
+      !["GET", "HEAD", "OPTIONS"].includes(request.method) &&
+      request.headers.get("origin") !== request.nextUrl.origin
+    ) {
+      return NextResponse.json({ error: { message: "A same-origin request is required." } }, { status: 403 });
+    }
 
     if (authorization) {
       headers.set("authorization", authorization);

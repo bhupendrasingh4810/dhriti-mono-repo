@@ -264,7 +264,13 @@ databaseTests("Durable notification platform", () => {
     const membership = await prisma.organizationMember.findUniqueOrThrow({
       where: { organizationId_userId: { organizationId, userId } },
     });
-    const control = new OrganizationService(prisma as never, { lockoutDurationMinutes: 60 } as never, audit as never, {} as never);
+    const control = new OrganizationService(
+      prisma as never,
+      { lockoutDurationMinutes: 60 } as never,
+      audit as never,
+      {} as never,
+      {} as never,
+    );
     await control.updateMemberRole(organizationId, membership.id, actorId, "ADMIN");
     const events = await prisma.notificationOutbox.findMany({ where: { organizationId } });
     expect(events.map((event) => event.type).sort()).toEqual([
@@ -285,6 +291,7 @@ databaseTests("Durable notification platform", () => {
       {
         assertWithinLimit: jest.fn().mockResolvedValue(undefined),
       } as never,
+      {} as never,
     );
     await control.addMember(organizationId, actorId, `${newMemberId}@example.test`, "ADMIN");
     expect(

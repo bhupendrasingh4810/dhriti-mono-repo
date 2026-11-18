@@ -1,4 +1,4 @@
-import { UnauthorizedException } from "@nestjs/common";
+import { ForbiddenException, UnauthorizedException } from "@nestjs/common";
 
 import { AuthGuard } from "./auth.guard";
 
@@ -29,9 +29,42 @@ describe("AuthGuard cookie origin protection", () => {
   it("allows bearer-authenticated mutations without an origin header", async () => {
     jwt.verifyAsync.mockResolvedValue({ sub: "user-1", sid: "session-1", org: null, email: "user@example.test" });
     sessions.isSessionActive.mockResolvedValue(true);
-    const request = { method: "POST", headers: { authorization: "Bearer token" }, cookies: {} };
+    const request = { method: "POST", headers: { authorization: "Bearer test-access-token" }, cookies: {} };
     const guard = new AuthGuard(jwt as never, reflector as never, config as never, sessions as never);
 
     await expect(guard.canActivate(context(request) as never)).resolves.toBe(true);
+  });
+
+  it("allows a temporary-password session to change password but blocks other protected routes", async () => {
+    jwt.verifyAsync.mockResolvedValue({
+      sub: "user-1",
+      sid: "session-1",
+      org: null,
+      email: "user@example.test",
+      mustResetPassword: true,
+    });
+    sessions.isSessionActive.mockResolvedValue(true);
+    const guard = new AuthGuard(jwt as never, reflector as never, config as never, sessions as never);
+
+    await expect(
+      guard.canActivate(
+        context({
+          method: "POST",
+          path: "/api/auth/change-password",
+          headers: { authorization: "Bearer test-access-token" },
+          cookies: {},
+        }) as never,
+      ),
+    ).resolves.toBe(true);
+    await expect(
+      guard.canActivate(
+        context({
+          method: "GET",
+          path: "/api/organization",
+          headers: { authorization: "Bearer test-access-token" },
+          cookies: {},
+        }) as never,
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

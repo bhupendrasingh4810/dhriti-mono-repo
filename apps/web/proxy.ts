@@ -107,6 +107,13 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Temporary-password sessions must be able to reach reset instead of bouncing back home.
+  if (user?.mustResetPassword) {
+    return pathname === "/reset-password"
+      ? NextResponse.next()
+      : NextResponse.redirect(new URL("/reset-password?required=true", request.url));
+  }
+
   if (isAuthRoute(pathname)) {
     if (user && organization) {
       return NextResponse.redirect(new URL(`/${organization.slug}/home`, request.url));

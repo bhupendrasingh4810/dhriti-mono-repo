@@ -57,11 +57,7 @@ export async function assignDefaultPermissionGroupPermissions(
   }
 }
 
-/**
- * Assigns the Members default group, replacing any active organization group.
- * The database partial unique index makes this invariant durable; the ordered
- * updates make the operation repeatable during member activation.
- */
+/** Ensures the default Members group is present without removing any other group assignments. */
 export async function assignDefaultUserPermissionGroups(
   transaction: Prisma.TransactionClient,
   organizationId: string,
@@ -79,11 +75,16 @@ export async function assignDefaultUserPermissionGroups(
     select: { id: true },
   });
   const group = groups[0];
-  if (!group) {return;}
-  await transaction.organizationPermissionGroupAssignment.updateMany({
-    where: { organizationId, userId, revokedAt: null },
-    data: { revokedAt: new Date() },
+  if (!group) {
+    return;
+  }
+  const existing = await transaction.organizationPermissionGroupAssignment.findFirst({
+    where: { organizationId, permissionGroupId: group.id, userId, revokedAt: null },
+    select: { id: true },
   });
+  if (existing) {
+    return;
+  }
   await transaction.organizationPermissionGroupAssignment.create({
     data: {
       organizationId,

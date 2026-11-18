@@ -3,27 +3,39 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthLayout from "../../../components/auth/AuthLayout";
 import { useAlert } from "@/components/shared/alert";
-import { resetPassword } from "@/services/auth.service";
+import { changePassword, resetPassword } from "@/services/auth.service";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showAlert } = useAlert();
   const token = searchParams.get("token");
+  const isRequiredReset = searchParams.get("required") === "true";
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) {
+    if (!isRequiredReset && !token) {
       showAlert({ message: "Password reset link is invalid or incomplete.", variant: "error" });
+      return;
+    }
+    if (isRequiredReset && password !== confirmPassword) {
+      showAlert({ message: "Passwords do not match.", variant: "error" });
+      return;
+    }
+    if (isRequiredReset && !currentPassword) {
+      showAlert({ message: "Enter the temporary password from your email.", variant: "error" });
       return;
     }
 
     setLoading(true);
     try {
-      await resetPassword({ token, newPassword: password });
+      if (isRequiredReset) await changePassword({ currentPassword, newPassword: password });
+      else await resetPassword({ token: token!, newPassword: password });
       showAlert({ message: "Your password has been reset. Please sign in.", variant: "success" });
       router.replace("/login");
     } catch (error) {
@@ -37,8 +49,29 @@ function ResetPasswordForm() {
   };
 
   return (
-    <AuthLayout title="Reset your password" subtitle="Choose a new password for your account" illustration="reset">
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <AuthLayout
+      title={isRequiredReset ? "Set a new password" : "Reset your password"}
+      subtitle={
+        isRequiredReset
+          ? "Your temporary password must be replaced before continuing."
+          : "Choose a new password for your account"
+      }
+      illustration="reset"
+    >
+      <form noValidate onSubmit={handleSubmit} className="space-y-5">
+        {isRequiredReset ? (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Temporary Password</label>
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm"
+            />
+          </div>
+        ) : null}
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">New Password</label>
           <div className="relative">
@@ -90,6 +123,19 @@ function ResetPasswordForm() {
             </button>
           </div>
         </div>
+        {isRequiredReset ? (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm New Password</label>
+            <input
+              type="password"
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              className="w-full px-4 py-2.5 rounded-[10px] border border-slate-200 bg-white text-slate-900 text-sm"
+            />
+          </div>
+        ) : null}
 
         <button
           type="submit"

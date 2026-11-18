@@ -8,6 +8,7 @@ import { useMobileNav } from "@/contexts/mobile-nav-context";
 import { useAuth } from "@/hooks/use-auth";
 import type { AppView } from "@/types/app.types";
 import { useVisibleNavItems, getNavHref } from "./sidebar";
+import { NavigationSkeleton } from "./navigation-skeleton";
 
 function useEscape(active: boolean, onClose: () => void) {
   useEffect(() => {
@@ -22,7 +23,7 @@ function useEscape(active: boolean, onClose: () => void) {
 export function MobileNavOverlays({ activeView, organizationSlug }: { activeView: AppView; organizationSlug: string }) {
   const { appsOpen, menuOpen, setAppsOpen, setMenuOpen, setDrawerEl } = useMobileNav();
   const { user } = useAuth();
-  const { items, error } = useVisibleNavItems();
+  const { items, error, isLoading } = useVisibleNavItems();
   const closeApps = () => setAppsOpen(false);
   const closeMenu = () => setMenuOpen(false);
   const appsCloseRef = useRef<HTMLButtonElement>(null);
@@ -61,26 +62,34 @@ export function MobileNavOverlays({ activeView, organizationSlug }: { activeView
                 <X aria-hidden="true" size={18} />
               </button>
             </div>
-            {error && <p role="alert" className="mb-3 text-xs text-error">{error}</p>}
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {items.map((item) => {
-                const active = item.id === activeView;
-                return (
-                  <Link
-                    key={item.id}
-                    href={getNavHref(item, organizationSlug, user?.isPlatformUser)}
-                    onClick={closeApps}
-                    aria-current={active ? "page" : undefined}
-                    className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl px-2 py-3 text-xs font-semibold ${
-                      active ? "bg-brand/10 text-brand" : "text-text-secondary hover:bg-surface-raised"
-                    }`}
-                  >
-                    {item.icon}
-                    <span>{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
+            {error && (
+              <p role="alert" className="mb-3 text-xs text-error">
+                {error}
+              </p>
+            )}
+            {isLoading ? (
+              <NavigationSkeleton grid />
+            ) : (
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {items.map((item) => {
+                  const active = item.id === activeView;
+                  return (
+                    <Link
+                      key={item.id}
+                      href={getNavHref(item, organizationSlug, user?.isPlatformUser)}
+                      onClick={closeApps}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-xl px-2 py-3 text-xs font-semibold ${
+                        active ? "bg-brand/10 text-brand" : "text-text-secondary hover:bg-surface-raised"
+                      }`}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

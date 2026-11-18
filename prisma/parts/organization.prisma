@@ -122,6 +122,7 @@ model Organization {
   noteFolders NoteFolder[]
   noteRecords  Note[]
   noteViewOrders NoteViewOrder[]
+  oidc OrganizationOidc?
 
   @@index([primaryEmail])
   @@index([billingGstin])

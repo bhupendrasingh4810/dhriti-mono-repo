@@ -237,6 +237,7 @@ export interface HrmsLeaveCenterRequest extends ApiEntity {
   startDate: string;
   endDate: string;
   totalDays: number;
+  dayAllocation?: { date: string; units: number }[] | null;
   reason: string | null;
   status: HrmsRequestStatus;
   rejectionReason: string | null;

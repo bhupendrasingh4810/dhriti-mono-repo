@@ -1,4 +1,5 @@
 export type { PersonalProfileDetails, EmploymentProfileDetails, UpdatePersonalProfileInput } from "./profile";
+export type { SystemHealthStatus, SystemHealthService, SystemHealthResource, SystemHealthSnapshot } from "./system-health";
 export type { AssetCategory, AssetRegisterInput, AssetCustodyInput, AssetCustodyEvent } from "./hrms-assets";
 export type {
   WorkWeekDay, WorkWeekPattern, WorkWeekRule, WorkWeekVersion, WorkWeekDefault,

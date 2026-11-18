@@ -109,4 +109,5 @@ export interface UserProfileResponse extends PersonalProfileDetails, EmploymentP
   lastLoginAt: string | null;
   createdAt: string;
   isPlatformUser: boolean;
+  hasHrmsProfile: boolean;
 }

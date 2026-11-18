@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable, Logger } from "@nestjs/common";
+import { HttpStatus, Injectable, Logger, UnauthorizedException } from "@nestjs/common";
 import * as bcrypt from "bcryptjs";
 import { UserRole, type OAuthProvider, type User, type UserAuth, type UserProfile } from "@prisma/client";
 
@@ -428,6 +428,50 @@ export class AuthService {
   // Internals
   // ------------------------------------------------------------------
 
+  /** OIDC is member-only and tenant-bound; local MFA requirements must also be satisfied by the provider. */
+  async loginWithSso(
+    userId: string,
+    organizationId: string,
+    providerMfa: boolean,
+    context: SessionContext,
+    configurationVersion: number,
+  ): Promise<AuthTokensResponse> {
+    const user = await this.requireUser(userId);
+    this.assertNotLocked(user);
+    const member = await this.prisma.organizationMember.findFirst({
+      where: {
+        userId,
+        organizationId,
+        status: "ACTIVE",
+        deletedAt: null,
+        organization: {
+          deletedAt: null,
+          suspendedAt: null,
+          archivedAt: null,
+          oidc: { enabled: true, version: configurationVersion },
+        },
+      },
+      include: { organization: { include: { settings: true } } },
+    });
+    if (!member || user.deletedAt || user.status !== "ACTIVE") {
+      throw new UnauthorizedException("SSO member access unavailable");
+    }
+    if ((user.auth?.mfaEnabled || member.organization.settings?.mfaEnforced) && !providerMfa) {
+      throw new UnauthorizedException("Your identity provider must verify MFA before SSO sign-in");
+    }
+    const organization = { id: member.organization.id, name: member.organization.name, slug: member.organization.slug };
+    const session = await this.sessions.createSession(user.id, organizationId, context);
+    await this.audit.record({
+      action: "auth.sso.logged_in",
+      actorUserId: userId,
+      organizationId,
+      resourceType: "Session",
+      resourceId: session.sessionId,
+      ipAddress: context.ipAddress,
+    });
+    return this.buildTokenResponse(user, session, organizationId, organization);
+  }
+
   /**
    * Issues authentication tokens for the specified user.
    * @param userId The ID of the user.
@@ -466,7 +510,7 @@ export class AuthService {
    * @returns The authentication tokens and related information for the user.
    */
   private async buildTokenResponse(
-    user: User,
+    user: UserWithRelations,
     session: { sessionId: string; refreshToken: string; expiresAt: Date },
     organizationId: string | null,
     organization: OrganizationResponse | null,
@@ -476,6 +520,7 @@ export class AuthService {
       sessionId: session.sessionId,
       organizationId,
       email: user.email,
+      mustResetPassword: user.auth?.mustResetPassword ?? false,
     });
 
     return {
@@ -484,6 +529,7 @@ export class AuthService {
       refreshToken: session.refreshToken,
       refreshTokenExpiresIn: Math.floor((session.expiresAt.getTime() - Date.now()) / 1000),
       sessionId: session.sessionId,
+      mustResetPassword: user.auth?.mustResetPassword ?? false,
       user: {
         id: user.id,
         email: user.email,

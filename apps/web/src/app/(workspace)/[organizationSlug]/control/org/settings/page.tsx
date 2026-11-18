@@ -2,6 +2,7 @@
 
 import { useEffect, useEffectEvent, useState } from "react";
 import { useParams } from "next/navigation";
+import { DhritiButton, DhritiEmailField, DhritiSelectMenu, DhritiTextField } from "@dhriti/ui";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
 import { controlOrganizationService } from "@/services/control.service";
 import { OrganizationBankAccounts } from "@/features/settings/OrganizationBankAccounts";
@@ -14,6 +15,7 @@ export default function OrgSettings() {
   const [orgEmail, setOrgEmail] = useState("admin@acme.com");
   const [orgWebsite, setOrgWebsite] = useState("https://acme.com");
   const [timezone, setTimezone] = useState("America/New_York");
+  const [timezoneMenuOpen, setTimezoneMenuOpen] = useState(false);
   const [showDelete, setShowDelete] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -77,101 +79,48 @@ export default function OrgSettings() {
             >
               A
             </div>
-            <button
-              onClick={() => addToast("Logo upload coming soon", "info")}
-              style={{
-                padding: "7px 14px",
-                borderRadius: 7,
-                border: "1px solid #e2e8f0",
-                backgroundColor: "white",
-                cursor: "pointer",
-                fontSize: 12,
-                color: "#475569",
-                fontWeight: 500,
-              }}
-            >
+            <DhritiButton variant="secondary" size="sm" onClick={() => addToast("Logo upload coming soon", "info")}>
               Upload Logo
-            </button>
+            </DhritiButton>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             {[
-              { label: "Organization Name", value: orgName, setter: setOrgName },
-              { label: "URL Slug", value: orgSlug, setter: setOrgSlug },
-              { label: "Contact Email", value: orgEmail, setter: setOrgEmail },
-              { label: "Website", value: orgWebsite, setter: setOrgWebsite },
-            ].map((field) => (
-              <div key={field.label}>
-                <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
-                  {field.label}
-                </label>
-                <input
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.setter(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "9px 12px",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: 8,
-                    fontSize: 13,
-                    outline: "none",
-                    boxSizing: "border-box",
-                  }}
-                />
-              </div>
-            ))}
-            <div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
-                Timezone
-              </label>
-              <select
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "9px 12px",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 8,
-                  fontSize: 13,
-                  cursor: "pointer",
-                  backgroundColor: "white",
-                }}
-              >
-                {[
-                  "America/New_York",
-                  "America/Chicago",
-                  "America/Los_Angeles",
-                  "Europe/London",
-                  "Europe/Berlin",
-                  "Asia/Tokyo",
-                  "Asia/Kolkata",
-                ].map((tz) => (
-                  <option key={tz} value={tz}>
-                    {tz}
-                  </option>
-                ))}
-              </select>
-            </div>
+              { label: "Organization Name", value: orgName, setter: setOrgName, kind: "text" },
+              { label: "URL Slug", value: orgSlug, setter: setOrgSlug, kind: "text" },
+              { label: "Contact Email", value: orgEmail, setter: setOrgEmail, kind: "email" },
+              { label: "Website", value: orgWebsite, setter: setOrgWebsite, kind: "text" },
+            ].map((field) =>
+              field.kind === "email" ? (
+                <DhritiEmailField key={field.label} label={field.label} value={field.value} onChange={field.setter} />
+              ) : (
+                <DhritiTextField key={field.label} label={field.label} value={field.value} onChange={field.setter} />
+              ),
+            )}
+            <DhritiSelectMenu
+              label="Timezone"
+              value={timezone}
+              onChange={(value) => {
+                if (value !== null) setTimezone(value);
+              }}
+              open={timezoneMenuOpen}
+              onOpenChange={setTimezoneMenuOpen}
+              options={[
+                "America/New_York",
+                "America/Chicago",
+                "America/Los_Angeles",
+                "Europe/London",
+                "Europe/Berlin",
+                "Asia/Tokyo",
+                "Asia/Kolkata",
+              ].map((tz) => ({ value: tz, label: tz }))}
+            />
           </div>
 
           <div style={{ marginTop: 20, display: "flex", justifyContent: "flex-end" }}>
-            <button
-              disabled={isSaving}
-              onClick={() => void saveSettings()}
-              style={{
-                padding: "9px 24px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor: "#036c5f",
-                color: "white",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
+            <DhritiButton loading={isSaving} onClick={() => void saveSettings()}>
               Save Changes
-            </button>
+            </DhritiButton>
           </div>
         </div>
 
@@ -209,27 +158,14 @@ export default function OrgSettings() {
               </div>
               <div style={{ fontSize: 13, color: "#64748b", marginTop: 4 }}>420 / 500 seats used · $8,400/mo</div>
             </div>
-            <button
-              onClick={() => addToast("Billing portal opened", "info")}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 8,
-                border: "none",
-                backgroundColor: "#036c5f",
-                color: "white",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
+            <DhritiButton size="sm" onClick={() => addToast("Billing portal opened", "info")}>
               Manage Billing
-            </button>
+            </DhritiButton>
           </div>
         </div>
 
         {/* Danger zone */}
         <div style={{ backgroundColor: "white", borderRadius: 12, border: "1px solid #fecaca", padding: 24 }}>
-          {/* <h2 style={{ fontSize: 15, fontWeight: 700, color: "#dc2626", margin: "0 0 12px" }}>Danger Zone</h2> */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#0f172a" }}>Delete Organization</div>
@@ -237,21 +173,9 @@ export default function OrgSettings() {
                 Permanently delete this organization and all its data. This cannot be undone.
               </div>
             </div>
-            <button
-              onClick={() => setShowDelete(true)}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 8,
-                border: "1px solid #dc2626",
-                backgroundColor: "white",
-                color: "#dc2626",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-            >
+            <DhritiButton variant="danger" size="sm" onClick={() => setShowDelete(true)}>
               Delete Organization
-            </button>
+            </DhritiButton>
           </div>
         </div>
       </div>
@@ -282,59 +206,34 @@ export default function OrgSettings() {
               This will permanently delete <strong>Acme Corporation</strong> and all data. Type <strong>DELETE</strong>{" "}
               to confirm.
             </p>
-            <input
-              type="text"
+            <DhritiTextField
+              label="Type DELETE to confirm"
               value={deleteConfirm}
-              onChange={(e) => setDeleteConfirm(e.target.value)}
+              onChange={setDeleteConfirm}
               placeholder="DELETE"
-              style={{
-                width: "100%",
-                padding: "9px 12px",
-                border: "1px solid #e2e8f0",
-                borderRadius: 8,
-                fontSize: 13,
-                outline: "none",
-                boxSizing: "border-box",
-                marginBottom: 16,
-              }}
             />
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+              <DhritiButton
+                variant="secondary"
+                size="sm"
                 onClick={() => {
                   setShowDelete(false);
                   setDeleteConfirm("");
                 }}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: 8,
-                  border: "1px solid #e2e8f0",
-                  backgroundColor: "white",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  color: "#475569",
-                }}
               >
                 Cancel
-              </button>
-              <button
+              </DhritiButton>
+              <DhritiButton
+                variant="danger"
+                size="sm"
                 disabled={deleteConfirm !== "DELETE"}
                 onClick={() => {
                   addToast("Organization deletion requested", "error");
                   setShowDelete(false);
                 }}
-                style={{
-                  padding: "9px 18px",
-                  borderRadius: 8,
-                  border: "none",
-                  backgroundColor: deleteConfirm === "DELETE" ? "#dc2626" : "#fca5a5",
-                  color: "white",
-                  cursor: deleteConfirm === "DELETE" ? "pointer" : "not-allowed",
-                  fontSize: 13,
-                  fontWeight: 600,
-                }}
               >
                 Delete Organization
-              </button>
+              </DhritiButton>
             </div>
           </div>
         </div>

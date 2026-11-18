@@ -1,6 +1,13 @@
 import { MetricsService } from "./metrics.service";
 
 describe("MetricsService", () => {
+  it("reports WebSocket readiness only after gateway initialization, independently of connection count", () => {
+    const metrics = new MetricsService();
+    expect(metrics.isWebsocketInitialized()).toBe(false);
+    metrics.websocketInitialized();
+    expect(metrics.isWebsocketInitialized()).toBe(true);
+    expect(metrics.snapshot().websocket.connections).toBe(0);
+  });
   it("returns HTTP, Redis, and WebSocket values for the platform dashboard", () => {
     const metrics = new MetricsService();
 

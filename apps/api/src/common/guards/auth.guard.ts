@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, UnauthorizedException } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import { JwtService } from "@nestjs/jwt";
 import type { Request } from "express";
@@ -13,6 +13,7 @@ export interface AccessTokenPayload {
   sid: string;
   org: string | null;
   email: string;
+  mustResetPassword?: boolean;
   iat?: number;
   exp?: number;
 }
@@ -66,6 +67,18 @@ export class AuthGuard implements CanActivate {
       throw new UnauthorizedException({
         code: "SESSION_REVOKED",
         message: "Session is no longer active",
+      });
+    }
+
+    // Temporary-password sessions may only change their password or end the session.
+    if (
+      payload.mustResetPassword &&
+      !request.path.endsWith("/auth/change-password") &&
+      !request.path.endsWith("/auth/logout")
+    ) {
+      throw new ForbiddenException({
+        code: "PASSWORD_RESET_REQUIRED",
+        message: "Reset your temporary password before continuing",
       });
     }
 

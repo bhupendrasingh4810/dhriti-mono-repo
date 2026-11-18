@@ -1,66 +1,94 @@
 "use client";
 
-import { useState } from "react";
+import { DhritiButton } from "@dhriti/ui";
+import type { SystemHealthStatus } from "@dhriti/types";
 import { useToast, ToastContainer } from "@/components/shared/Toast";
+import { HealthReportExport } from "@/features/control/system-health/health-report-export";
+import { useSystemHealth } from "@/features/control/system-health/use-system-health";
+import { SystemHealthSkeletonValue } from "@/features/control/system-health/system-health-skeleton";
 
-interface Service {
-  name: string;
-  status: "operational" | "degraded" | "outage";
-  uptime: string;
-  latency: string;
-  lastCheck: string;
-}
-
-const statusColors: Record<Service["status"], { bg: string; color: string; dot: string }> = {
-  operational: { bg: "#dcfce7", color: "#166534", dot: "#22c55e" },
-  degraded: { bg: "#fef9c3", color: "#92400e", dot: "#f59e0b" },
-  outage: { bg: "#fee2e2", color: "#991b1b", dot: "#dc2626" },
+const statusColors: Record<SystemHealthStatus, { text: string; dot: string }> = {
+  operational: { text: "text-success", dot: "bg-success" },
+  degraded: { text: "text-warning", dot: "bg-warning" },
+  outage: { text: "text-error", dot: "bg-error" },
+  unavailable: { text: "text-text-muted", dot: "bg-text-muted" },
 };
 
-const services: Service[] = [
-  { name: "API Gateway", status: "degraded", uptime: "99.94%", latency: "847ms", lastCheck: "30s ago" },
-  { name: "Auth Service", status: "operational", uptime: "100%", latency: "12ms", lastCheck: "30s ago" },
-  { name: "Database (Primary)", status: "operational", uptime: "99.99%", latency: "4ms", lastCheck: "30s ago" },
-  { name: "Database (Replica)", status: "operational", uptime: "99.99%", latency: "6ms", lastCheck: "30s ago" },
-  { name: "Redis Cache", status: "degraded", uptime: "99.80%", latency: "22ms", lastCheck: "30s ago" },
-  { name: "File Storage (S3)", status: "operational", uptime: "100%", latency: "38ms", lastCheck: "30s ago" },
-  { name: "Email Service", status: "operational", uptime: "99.97%", latency: "210ms", lastCheck: "30s ago" },
-  { name: "WebSocket Server", status: "operational", uptime: "99.95%", latency: "8ms", lastCheck: "30s ago" },
-  { name: "Search (Elasticsearch)", status: "operational", uptime: "99.92%", latency: "55ms", lastCheck: "30s ago" },
-  { name: "CDN", status: "operational", uptime: "100%", latency: "15ms", lastCheck: "30s ago" },
+const serviceRows = [
+  { id: "api", name: "API Gateway" },
+  { id: "auth", name: "Auth Service" },
+  { id: "database", name: "Database (Primary)" },
+  { id: "replica", name: "Database (Replica)" },
+  { id: "redis", name: "Redis Cache" },
+  { id: "storage", name: "File Storage (S3)" },
+  { id: "email", name: "Email Service" },
+  { id: "websocket", name: "WebSocket Server" },
+  { id: "search", name: "Search (Elasticsearch)" },
+  { id: "cdn", name: "CDN" },
 ];
 
 const resourceMetrics = [
-  { label: "CPU Usage", value: 68, unit: "%", color: "#036c5f" },
-  { label: "Memory", value: 74, unit: "%", color: "#2563eb" },
-  { label: "Disk I/O", value: 42, unit: "%", color: "#7c3aed" },
-  { label: "Network", value: 31, unit: "%", color: "#d97706" },
+  { id: "cpu", label: "CPU Usage", text: "text-brand", bar: "bg-brand" },
+  { id: "memory", label: "Memory", text: "text-info", bar: "bg-info" },
+  { id: "disk", label: "Disk I/O", text: "text-metric-storage", bar: "bg-metric-storage" },
+  { id: "network", label: "Network", text: "text-warning", bar: "bg-warning" },
 ];
 
 export default function SystemHealth() {
   const { toasts, addToast, removeToast } = useToast();
-
-  const operational = services.filter((s) => s.status === "operational").length;
-  const degraded = services.filter((s) => s.status === "degraded").length;
-  const outage = services.filter((s) => s.status === "outage").length;
+  const { snapshot, error, retry, refreshing, initialLoading } = useSystemHealth();
 
   return (
-    <div>
+    <div aria-busy={initialLoading}>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>System Health</h1>
-        <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
-          Real-time infrastructure status and performance metrics
+      {initialLoading && (
+        <p role="status" aria-label="Loading System Health" className="sr-only">
+          Loading System Health
         </p>
+      )}
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 flex items-center justify-between gap-3 rounded-md border border-error p-3 text-sm text-error"
+        >
+          <span>
+            {snapshot ? "Refresh failed. Showing the last successful readings. " : "Unable to load System Health. "}
+            {error}
+          </span>
+          <DhritiButton variant="secondary" onClick={retry} disabled={refreshing}>
+            Retry
+          </DhritiButton>
+        </div>
+      )}
+
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#0f172a", margin: 0 }}>System Health</h1>
+          <p style={{ fontSize: 13, color: "#64748b", margin: "4px 0 0" }}>
+            Infrastructure status and performance metrics
+          </p>
+          <p className="mt-1 text-xs text-text-secondary">
+            Sampled:{" "}
+            {snapshot ? (
+              <time dateTime={snapshot.timestamp}>{new Date(snapshot.timestamp).toLocaleString()}</time>
+            ) : initialLoading ? (
+              <SystemHealthSkeletonValue wide />
+            ) : (
+              "Unavailable"
+            )}
+          </p>
+        </div>
+        <DhritiButton variant="secondary" disabled={refreshing} aria-busy={refreshing} onClick={retry}>
+          Refresh
+        </DhritiButton>
       </div>
 
       {/* Status summary */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         {[
-          { label: "Operational", count: operational, color: "#166534", bg: "#dcfce7" },
-          { label: "Degraded", count: degraded, color: "#92400e", bg: "#fef9c3" },
-          { label: "Outage", count: outage, color: "#991b1b", bg: "#fee2e2" },
+          { label: "Operational", count: snapshot?.summary.operational, color: "#166534", bg: "#dcfce7" },
+          { label: "Degraded", count: snapshot?.summary.degraded, color: "#92400e", bg: "#fef9c3" },
+          { label: "Outage", count: snapshot?.summary.outage, color: "#991b1b", bg: "#fee2e2" },
         ].map((item) => (
           <div
             key={item.label}
@@ -68,7 +96,9 @@ export default function SystemHealth() {
           >
             <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500, marginBottom: 8 }}>{item.label}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 32, fontWeight: 700, color: item.color }}>{item.count}</span>
+              <span style={{ fontSize: 32, fontWeight: 700, color: item.color }}>
+                {initialLoading ? <SystemHealthSkeletonValue /> : (item.count ?? "—")}
+              </span>
               <span
                 style={{
                   fontSize: 12,
@@ -98,7 +128,12 @@ export default function SystemHealth() {
           }}
         >
           <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9" }}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: 0 }}>Service Status</h2>
+            <h2
+              style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: 0 }}
+              title="Sampled availability over the last 24 hours or since this API instance started; not an SLA. Unavailable checks are excluded from the three status counts."
+            >
+              Service Status
+            </h2>
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -122,33 +157,65 @@ export default function SystemHealth() {
               </tr>
             </thead>
             <tbody>
-              {services.map((svc) => {
-                const sc = statusColors[svc.status];
+              {serviceRows.map((row) => {
+                const svc = snapshot?.services.find((service) => service.id === row.id);
+                const sc = statusColors[svc?.status ?? "unavailable"];
                 return (
-                  <tr key={svc.name} style={{ borderTop: "1px solid #f1f5f9" }}>
+                  <tr key={row.id} title={svc?.detail} style={{ borderTop: "1px solid #f1f5f9" }}>
                     <td style={{ padding: "12px 16px", fontSize: 13, fontWeight: 500, color: "#0f172a" }}>
-                      {svc.name}
+                      {row.name}
                     </td>
                     <td style={{ padding: "12px 16px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <div style={{ width: 7, height: 7, borderRadius: "50%", backgroundColor: sc.dot }} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: sc.color, textTransform: "capitalize" }}>
-                          {svc.status}
-                        </span>
-                      </div>
+                      {initialLoading ? (
+                        <SystemHealthSkeletonValue wide />
+                      ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <div className={`size-2 rounded-full ${sc.dot}`} />
+                          <span className={`text-xs font-semibold capitalize ${sc.text}`}>
+                            {svc?.status ?? "unavailable"}
+                          </span>
+                        </div>
+                      )}
                     </td>
-                    <td style={{ padding: "12px 16px", fontSize: 13, color: "#475569" }}>{svc.uptime}</td>
+                    <td
+                      title={`Sampled availability; ${svc?.samples ?? 0} checks. Degraded samples count as available.`}
+                      style={{ padding: "12px 16px", fontSize: 13, color: "#475569" }}
+                    >
+                      {initialLoading ? (
+                        <SystemHealthSkeletonValue />
+                      ) : svc?.uptimePercent == null ? (
+                        "—"
+                      ) : (
+                        `${svc.uptimePercent}%`
+                      )}
+                    </td>
                     <td
                       style={{
                         padding: "12px 16px",
                         fontSize: 13,
-                        color: svc.latency > "100ms" ? "#d97706" : "#475569",
                         fontFamily: "monospace",
                       }}
+                      className={(svc?.latencyMs ?? 0) > 100 ? "text-warning" : "text-text-secondary"}
                     >
-                      {svc.latency}
+                      {initialLoading ? (
+                        <SystemHealthSkeletonValue />
+                      ) : svc?.latencyMs == null ? (
+                        "—"
+                      ) : (
+                        `${svc.latencyMs}ms`
+                      )}
                     </td>
-                    <td style={{ padding: "12px 16px", fontSize: 12, color: "#94a3b8" }}>{svc.lastCheck}</td>
+                    <td style={{ padding: "12px 16px", fontSize: 12, color: "#94a3b8" }}>
+                      {initialLoading ? (
+                        <SystemHealthSkeletonValue />
+                      ) : svc ? (
+                        <time dateTime={svc.checkedAt} title={new Date(svc.checkedAt).toLocaleString()}>
+                          {new Date(svc.checkedAt).toLocaleTimeString()}
+                        </time>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -167,50 +234,56 @@ export default function SystemHealth() {
           }}
         >
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", margin: "0 0 20px" }}>Resource Usage</h2>
-          {resourceMetrics.map((rm) => (
-            <div key={rm.label} style={{ marginBottom: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                <span style={{ fontSize: 13, color: "#475569", fontWeight: 500 }}>{rm.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: rm.color }}>
-                  {rm.value}
-                  {rm.unit}
-                </span>
+          {resourceMetrics.map((rm) => {
+            const reading = snapshot?.resources.find((resource) => resource.id === rm.id);
+            return (
+              <div key={rm.label} title={reading?.detail} style={{ marginBottom: 20 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span style={{ fontSize: 13, color: "#475569", fontWeight: 500 }}>{rm.label}</span>
+                  <span className={`text-sm font-bold ${rm.text}`}>
+                    {initialLoading ? (
+                      <SystemHealthSkeletonValue />
+                    ) : reading?.value == null ? (
+                      "—"
+                    ) : (
+                      `${reading.value}%`
+                    )}
+                  </span>
+                </div>
+                <div style={{ height: 10, backgroundColor: "#f1f5f9", borderRadius: 5 }}>
+                  <div
+                    style={{
+                      height: "100%",
+                      width: initialLoading ? "100%" : `${reading?.value ?? 0}%`,
+                      borderRadius: 5,
+                      opacity: 0.85,
+                    }}
+                    className={initialLoading ? "w-full bg-surface-raised motion-safe:animate-pulse" : rm.bar}
+                  />
+                </div>
               </div>
-              <div style={{ height: 10, backgroundColor: "#f1f5f9", borderRadius: 5 }}>
-                <div
-                  style={{
-                    height: "100%",
-                    width: `${rm.value}%`,
-                    borderRadius: 5,
-                    backgroundColor: rm.color,
-                    opacity: 0.85,
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
           <div style={{ marginTop: 20, padding: 14, backgroundColor: "#f8fafc", borderRadius: 10 }}>
             <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500, marginBottom: 4 }}>Active Connections</div>
-            <div style={{ fontSize: 22, fontWeight: 700, color: "#0f172a" }}>4,821</div>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>+124 in last 5m</div>
+            <div title={snapshot?.connections.detail} style={{ fontSize: 22, fontWeight: 700, color: "#0f172a" }}>
+              {initialLoading ? (
+                <SystemHealthSkeletonValue wide />
+              ) : (
+                (snapshot?.connections.active.toLocaleString() ?? "—")
+              )}
+            </div>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
+              {initialLoading ? (
+                <SystemHealthSkeletonValue wide />
+              ) : snapshot?.connections.changeLast5m == null ? (
+                "5m comparison unavailable"
+              ) : (
+                `${snapshot.connections.changeLast5m >= 0 ? "+" : ""}${snapshot.connections.changeLast5m} in last 5m`
+              )}
+            </div>
           </div>
-          <button
-            onClick={() => addToast("Health report generated", "success")}
-            style={{
-              marginTop: 16,
-              width: "100%",
-              padding: "9px",
-              borderRadius: 8,
-              border: "1px solid #e2e8f0",
-              backgroundColor: "white",
-              cursor: "pointer",
-              fontSize: 13,
-              color: "#475569",
-              fontWeight: 500,
-            }}
-          >
-            Download Health Report
-          </button>
+          <HealthReportExport disabled={!snapshot} notify={addToast} />
         </div>
       </div>
     </div>

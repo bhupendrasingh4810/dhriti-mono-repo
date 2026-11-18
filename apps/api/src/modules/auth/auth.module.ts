@@ -1,6 +1,5 @@
 import { Module, type Provider } from "@nestjs/common";
 import { ProfileService } from "./services/profile.service";
-import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 import { LoginController } from "./controllers/login.controller";
 import { OAuthController } from "./controllers/oauth.controller";
@@ -12,14 +11,17 @@ import { RegistrationController } from "./controllers/registration.controller";
 import { ApiConfigService } from "../../config/config.service";
 
 import { AuthService } from "./services/auth.service";
-import { TokenService } from "./services/token.service";
-import { SessionService } from "./services/session.service";
+import { SessionModule } from "./session.module";
 import { MfaService } from "./services/mfa.service";
 import { GoogleStrategy } from "./strategies/google.strategy";
 import { GithubStrategy } from "./strategies/github.strategy";
 import { PasswordService } from "./services/password.service";
 import { PublicAuthRateLimitGuard } from "../../common/guards/public-auth-rate-limit.guard";
 import { AuditModule } from "../audit/audit.module";
+import { SecurityModule } from "../control/platform/security/security.module";
+import { OidcService } from "./services/oidc.service";
+import { OidcProviderService } from "./services/oidc-provider.service";
+import { OidcController } from "./controllers/oidc.controller";
 
 /**
  * OAuth strategies are instantiated only when the provider's credentials are
@@ -39,7 +41,7 @@ const conditionalStrategyProviders: Provider[] = [
 ];
 
 @Module({
-  imports: [PassportModule.register({}), JwtModule.register({}), AuditModule],
+  imports: [PassportModule.register({}), SessionModule, AuditModule, SecurityModule],
   controllers: [
     RegistrationController,
     LoginController,
@@ -47,17 +49,18 @@ const conditionalStrategyProviders: Provider[] = [
     PasswordController,
     ProfileController,
     MfaController,
+    OidcController,
   ],
   providers: [
     AuthService,
-    TokenService,
-    SessionService,
+    OidcService,
+    OidcProviderService,
     MfaService,
     PasswordService,
     ProfileService,
     PublicAuthRateLimitGuard,
     ...conditionalStrategyProviders,
   ],
-  exports: [AuthService, SessionService, TokenService, MfaService, JwtModule],
+  exports: [AuthService, SessionModule, MfaService],
 })
 export class AuthModule {}

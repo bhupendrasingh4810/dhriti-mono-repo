@@ -24,7 +24,11 @@ export class OrganizationPermissionGroupService {
         permissions: { include: { permission: true } },
         assignments: {
           where: { revokedAt: null },
-          include: { user: { select: { id: true, name: true, email: true, avatarUrl: true, profile: { select: { jobTitle: true } } } } },
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, avatarUrl: true, profile: { select: { jobTitle: true } } },
+            },
+          },
         },
         _count: { select: { assignments: { where: { revokedAt: null } } } },
       },
@@ -121,9 +125,24 @@ export class OrganizationPermissionGroupService {
         where: { organizationId, permissionGroupId: groupId, revokedAt: null },
         data: { revokedAt: new Date() },
       });
-      if (assignments.length > 0) {
+      const usersWithMembersGroup = assignments.length
+        ? await transaction.organizationPermissionGroupAssignment.findMany({
+            where: {
+              organizationId,
+              permissionGroupId: membersGroup.id,
+              userId: { in: assignments.map(({ userId }) => userId) },
+              revokedAt: null,
+            },
+            select: { userId: true },
+          })
+        : [];
+      const existingMemberIds = new Set(usersWithMembersGroup.map(({ userId }) => userId));
+      const usersNeedingMembersGroup = [...new Set(assignments.map(({ userId }) => userId))].filter(
+        (userId) => !existingMemberIds.has(userId),
+      );
+      if (usersNeedingMembersGroup.length > 0) {
         await transaction.organizationPermissionGroupAssignment.createMany({
-          data: assignments.map(({ userId }) => ({
+          data: usersNeedingMembersGroup.map((userId) => ({
             organizationId,
             permissionGroupId: membersGroup.id,
             userId,
@@ -160,7 +179,10 @@ export class OrganizationPermissionGroupService {
     if (!permission) {
       throw new AppError(ErrorCode.PERMISSION_NOT_FOUND, "Assignable permission not found", HttpStatus.NOT_FOUND);
     }
-    if (permission.productKey && !(await this.entitlements.hasFeature(organizationId, `${permission.productKey}.enabled`))) {
+    if (
+      permission.productKey &&
+      !(await this.entitlements.hasFeature(organizationId, `${permission.productKey}.enabled`))
+    ) {
       throw new AppError(
         ErrorCode.FEATURE_NOT_ENTITLED,
         `Organization is not entitled to ${permission.productKey}`,
@@ -212,10 +234,11 @@ export class OrganizationPermissionGroupService {
     await this.requireGroup(organizationId, groupId);
     await this.assertMember(organizationId, userId);
     const scopeType = input.scopeType ?? "ORGANIZATION";
+    // Replace this group's prior scope only; membership in other groups is independent.
     await this.validateScope(organizationId, scopeType, input.departmentId, input.teamId, input.flowProjectId);
     const assignment = await this.prisma.$transaction(async (transaction) => {
       await transaction.organizationPermissionGroupAssignment.updateMany({
-        where: { organizationId, userId, revokedAt: null },
+        where: { organizationId, permissionGroupId: groupId, userId, revokedAt: null },
         data: { revokedAt: new Date() },
       });
       return transaction.organizationPermissionGroupAssignment.create({

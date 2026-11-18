@@ -71,8 +71,34 @@ export class ApiConfigService {
     return this.config.get("SECRETS_ENCRYPTION_KEY", { infer: true });
   }
 
+  get oidcAllowedIssuers(): string[] {
+    return this.config
+      .get("OIDC_ALLOWED_ISSUERS", { infer: true })
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
   get refreshTokenTtlDays(): number {
     return this.config.get("REFRESH_TOKEN_TTL_DAYS", { infer: true });
+  }
+
+  /** Outbound destinations are operator-controlled, never URLs supplied by an API caller. */
+  get securityIntegrations() {
+    return {
+      emails: [
+        ...new Set(
+          this.config
+            .get("SECURITY_ALERT_EMAILS", { infer: true })
+            .split(",")
+            .map((value) => value.trim())
+            .filter(Boolean),
+        ),
+      ],
+      webhookUrl: this.config.get("SECURITY_WEBHOOK_URL", { infer: true }),
+      webhookSecret: this.config.get("SECURITY_WEBHOOK_SECRET", { infer: true }),
+      ingestToken: this.config.get("SECURITY_INGEST_TOKEN", { infer: true }),
+    };
   }
 
   get bcryptRounds(): number {

@@ -1,5 +1,6 @@
 import { jsonRequest, pathSegment, tenantJsonRequest, tenantRequest } from "@/services/request.service";
 import type { ApiEntity } from "@/services/service-types";
+import type { SystemHealthSnapshot } from "@dhriti/types";
 type Input = Record<string, unknown>;
 export interface PlatformOrganization extends ApiEntity {
   name: string;
@@ -64,6 +65,98 @@ export interface PlatformAuditLog {
   createdAt: string;
   actor: { id: string; name: string; email: string } | null;
   organization: { id: string; name: string; slug: string } | null;
+}
+
+export interface PlatformSecurityEvent {
+  id: string;
+  severity: "critical" | "high" | "medium" | "low";
+  type: string;
+  description: string;
+  ipAddress: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  source: string;
+  externalId: string | null;
+}
+export interface SecurityEventFilters {
+  severity?: PlatformSecurityEvent["severity"];
+  status?: "open" | "resolved";
+  ipAddress?: string;
+  from?: string;
+  to?: string;
+}
+export interface SecurityEventDetail {
+  event: PlatformSecurityEvent;
+  timeline: {
+    id: string;
+    action: string;
+    createdAt: string;
+    actorUserId: string | null;
+    metadata: Record<string, unknown> | null;
+  }[];
+  hasMoreTimeline: boolean;
+}
+export interface SecuritySession {
+  id: string;
+  organizationId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  expiresAt: string;
+  current: boolean;
+  user: { id: string; name: string | null; email: string };
+}
+export interface SecurityCompliance {
+  id: string;
+  name: string;
+  slug: string;
+  mfaEnforced: boolean;
+  activeMembers: number;
+  mfaEnabledMembers: number;
+  mfaGap: number;
+  ssoStatus: "not_configured" | "disabled" | "configured" | "verified";
+  lastVerifiedAt: string | null;
+}
+export interface SecurityDelivery {
+  id: string;
+  eventId: string;
+  channel: string;
+  attempts: number;
+  deliveredAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  availableAt: string;
+}
+export interface PlatformSecurityOverview {
+  activeThreats: number;
+  blockedIps: number;
+  mfaAdoption: number;
+  ssoOrgs: number;
+  mfaStatus: { enforced: number; optional: number; none: number; total: number };
+}
+export interface SecurityPage<T> {
+  items: T[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+export interface PlatformBlockedIp {
+  ipAddress: string;
+  createdAt: string;
+  reason: string;
+  expiresAt: string | null;
+}
+export interface ConfigureOrganizationOidcInput {
+  issuer: string;
+  clientId: string;
+  clientSecret: string;
+  enabled: boolean;
+}
+export interface OrganizationOidcConfiguration {
+  organizationId: string;
+  issuer: string;
+  clientId: string;
+  enabled: boolean;
+  lastVerifiedAt: string | null;
+  updatedAt: string;
 }
 
 export interface ListPlatformAuditLogsQuery {
@@ -297,6 +390,54 @@ export const controlPlatformService = {
   lockUser: (userId: string) =>
     tenantRequest<void>("", `${platform}/users/${pathSegment(userId)}/lock`, { method: "POST" }),
   listRoles: () => tenantRequest<ControlPlatformRole[]>("", `${platform}/roles`),
+  securityOverview: () => tenantRequest<PlatformSecurityOverview>("", `${platform}/security/overview`),
+  systemHealth: (signal?: AbortSignal) =>
+    tenantRequest<SystemHealthSnapshot>("", `${platform}/system-health`, { signal, cache: "no-store" }),
+  systemHealthReport: (signal?: AbortSignal) =>
+    tenantRequest<SystemHealthSnapshot>("", `${platform}/system-health/report`, { signal, cache: "no-store" }),
+  organizationOidc: (id: string) =>
+    tenantRequest<{ configuration: OrganizationOidcConfiguration | null; redirectUri: string }>(
+      "",
+      `${platform}/security/organizations/${pathSegment(id)}/oidc`,
+    ),
+  configureOrganizationOidc: (id: string, input: ConfigureOrganizationOidcInput) =>
+    jsonRequest<OrganizationOidcConfiguration, ConfigureOrganizationOidcInput>(
+      `${platform}/security/organizations/${pathSegment(id)}/oidc`,
+      "PUT",
+      input,
+    ),
+  securityEvents: (page = 1, limit = 20, filters: SecurityEventFilters = {}) =>
+    tenantRequest<SecurityPage<PlatformSecurityEvent>>("", `${platform}/security/events`, {
+      query: { page, limit, ...filters },
+    }),
+  securityEvent: (id: string) =>
+    tenantRequest<SecurityEventDetail>("", `${platform}/security/events/${pathSegment(id)}`),
+  securitySessions: (page = 1, limit = 20, search = "") =>
+    tenantRequest<SecurityPage<SecuritySession>>("", `${platform}/security/sessions`, {
+      query: { page, limit, search: search || undefined },
+    }),
+  revokeSecuritySession: (id: string, reason: string) =>
+    jsonRequest<void, { reason: string }>(`${platform}/security/sessions/${pathSegment(id)}/revoke`, "POST", {
+      reason,
+    }),
+  securityCompliance: (page = 1, limit = 20) =>
+    tenantRequest<SecurityPage<SecurityCompliance>>("", `${platform}/security/compliance`, { query: { page, limit } }),
+  securityIntegrationStatus: () =>
+    tenantRequest<{ email: boolean; webhook: boolean; ingestion: boolean }>("", `${platform}/security/integrations`),
+  securityDeliveries: (page = 1, limit = 20) =>
+    tenantRequest<SecurityPage<SecurityDelivery>>("", `${platform}/security/deliveries`, { query: { page, limit } }),
+  blockedIps: (page = 1, limit = 20) =>
+    tenantRequest<SecurityPage<PlatformBlockedIp>>("", `${platform}/security/blocked-ips`, { query: { page, limit } }),
+  resolveSecurityEvent: (id: string) =>
+    tenantRequest<void>("", `${platform}/security/events/${pathSegment(id)}/resolve`, { method: "POST" }),
+  blockIp: (ipAddress: string, reason: string, expiresAt?: string) =>
+    jsonRequest<void, { ipAddress: string; reason: string; expiresAt?: string }>(
+      `${platform}/security/blocked-ips`,
+      "POST",
+      { ipAddress, reason, expiresAt },
+    ),
+  unblockIp: (ip: string) =>
+    tenantRequest<void>("", `${platform}/security/blocked-ips/${pathSegment(ip)}`, { method: "DELETE" }),
   listRolePermissions: () => tenantRequest<ControlRolePermission[]>("", `${platform}/roles/permissions`),
   listPermissions: () => tenantRequest<ControlRolePermission[]>("", `${platform}/permissions`),
   createPermission: (input: ControlPermissionInput) =>
@@ -315,6 +456,8 @@ export const controlPlatformService = {
     tenantRequest<void>("", `${platform}/roles/${pathSegment(roleId)}/permissions/${pathSegment(permissionId)}`, {
       method: "PUT",
     }),
+  retrySecurityDelivery: (id: string) =>
+    tenantRequest<void>("", `${platform}/security/deliveries/${pathSegment(id)}/retry`, { method: "POST" }),
   removeRolePermission: (roleId: string, permissionId: string) =>
     tenantRequest<void>("", `${platform}/roles/${pathSegment(roleId)}/permissions/${pathSegment(permissionId)}`, {
       method: "DELETE",

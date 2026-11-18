@@ -14,6 +14,51 @@ Dhriti reusable UI package built on top of MUI and `@dhriti/theme`.
 import { DhritiButton, TaskCard, MessageBubble } from "@dhriti/ui";
 ```
 
+## PDF preview
+
+Import `PdfPreviewDialog` from `@dhriti/ui` for a controlled, responsive PDF
+preview with Dhriti download/close controls:
+
+```tsx
+<PdfPreviewDialog
+  open={previewOpen}
+  onClose={closePreview}
+  src={pdfUrl}
+  title="Atlas planning report"
+  documentTitle="Atlas quarterly plan PDF"
+  onDownload={downloadPreviewedPdf}
+/>
+```
+
+The caller supplies a trusted PDF URL (`null` for no
+document) and owns generation, authentication, download behavior, error
+notifications, focus restoration, and object URL creation/revocation. Use the
+same document for preview and download; keep its URL alive until the dialog
+closes or unmounts. While open, a lazy-loaded local PDF.js worker reads the URL
+and renders pages to canvas; there is no browser PDF toolbar, CDN, or external
+conversion service. Prefer authenticated blob URLs for protected documents;
+remote URLs must permit CORS. Allow same-origin workers in deployment CSP.
+No download happens automatically.
+`loading`, `error`, empty sources, `downloading` and `downloadDisabled` control
+feedback and prevent downloads when unavailable. The themed toolbar provides
+previous/next pages, 50%-200% zoom relative to available width, and Fit width.
+Page/zoom reset for a new URL; in-flight rendering is cancelled when replaced or
+closed. Rendering/load errors appear inline and leave the original download
+action available. The current page's extracted text is exposed to screen readers;
+the canvas preview does not support text selection, annotations, or embedded forms.
+Labels, description, accessible document title, dialog width and mobile fullscreen
+behavior are configurable. Storybook covers ready, loading, downloading,
+disabled, error, invalid PDF, empty, long-content and responsive states.
+
+## Cards
+
+`DhritiCard` is a composable surface with `default`, `success`, `warning`,
+`danger`, and `info` variants plus `sm`, `md`, and `lg` padding. Compose its
+children to fit the content instead of coupling card structure to a product.
+`DhritiEmptyCard` provides a centered empty state with a required title and
+optional description, icon, and action. Both accept standard div attributes and
+use theme semantic tokens.
+
 ## Breadcrumb
 
 `DhritiBreadcrumb` renders an accessible navigation landmark and ordered trail.

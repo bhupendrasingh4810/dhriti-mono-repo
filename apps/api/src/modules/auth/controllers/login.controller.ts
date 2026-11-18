@@ -11,11 +11,16 @@ import type { SessionContext } from "../services/session.service";
 import { LoginDto } from "../dto/login.dto";
 import { MfaRecoveryLoginDto, MfaVerifyLoginDto, RefreshTokenDto } from "../dto/token.dto";
 import type { AuthTokensResponse, LoginResponse } from "../dto/auth-response.dto";
+import { SecurityService } from "../../control/platform/security/security.service";
+import { AppError } from "../../../common/errors/app-error";
 
 @ApiTags("auth")
 @Controller("auth")
 export class LoginController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly security: SecurityService,
+  ) {}
 
   @Public()
   @UseGuards(PublicAuthRateLimitGuard)
@@ -27,7 +32,14 @@ export class LoginController {
   @ApiResponse({ status: 403, description: "Email not verified / suspended" })
   @ApiResponse({ status: 429, description: "Account locked" })
   async login(@Body() dto: LoginDto, @Ip() ip: string, @Req() request: Request): Promise<LoginResponse> {
-    return this.auth.login(dto, this.sessionContext(ip, request));
+    try {
+      return await this.auth.login(dto, this.sessionContext(ip, request));
+    } catch (error) {
+      if (error instanceof AppError && error.getStatus() === HttpStatus.UNAUTHORIZED) {
+        await this.security.failedLogin(ip);
+      }
+      throw error;
+    }
   }
 
   @Public()

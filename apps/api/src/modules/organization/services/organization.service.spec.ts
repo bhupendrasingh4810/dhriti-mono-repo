@@ -1,5 +1,6 @@
 import { AppError } from "../../../common/errors/app-error";
 import { OrganizationService } from "./organization.service";
+import * as bcrypt from "bcryptjs";
 
 describe("OrganizationService membership lifecycle", () => {
   const activeOwner = {
@@ -21,7 +22,13 @@ describe("OrganizationService membership lifecycle", () => {
     const audit = { record: jest.fn().mockResolvedValue(undefined) };
     const entitlements = {};
     return {
-      service: new OrganizationService(prisma as never, { lockoutDurationMinutes: 60 } as never, audit as never, entitlements as never),
+      service: new OrganizationService(
+        prisma as never,
+        { lockoutDurationMinutes: 60 } as never,
+        audit as never,
+        entitlements as never,
+        { sendTemporaryPasswordEmail: jest.fn().mockResolvedValue(undefined) } as never,
+      ),
       audit,
     };
   }
@@ -69,7 +76,10 @@ describe("OrganizationService membership lifecycle", () => {
       organization: { create: jest.fn().mockResolvedValue(organization) },
       organizationMember: { findFirst: jest.fn().mockResolvedValue(null) },
       onBoardingProfile: { upsert: jest.fn().mockResolvedValue({}) },
-      permission: { findUnique: jest.fn().mockResolvedValue({ id: "manage-permission" }), findMany: jest.fn().mockResolvedValue([]) },
+      permission: {
+        findUnique: jest.fn().mockResolvedValue({ id: "manage-permission" }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
       organizationPermissionGroup: {
         createMany: jest.fn().mockResolvedValue({ count: 3 }),
         findMany: jest.fn().mockResolvedValue([]),
@@ -86,7 +96,13 @@ describe("OrganizationService membership lifecycle", () => {
         callback(transaction),
       ),
     };
-    const service = new OrganizationService(prisma as never, { lockoutDurationMinutes: 60 } as never, {} as never, {} as never);
+    const service = new OrganizationService(
+      prisma as never,
+      { lockoutDurationMinutes: 60 } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
 
     await expect(service.createOrganization("owner-1", { name: " Northwind ", slug: "northwind" })).resolves.toEqual(
       organization,
@@ -109,5 +125,61 @@ describe("OrganizationService membership lifecycle", () => {
         assignedByUserId: "owner-1",
       },
     });
+  });
+
+  it("creates a member account with a temporary password that must be reset", async () => {
+    const newUser = {
+      id: "new-user",
+      email: "jane@example.test",
+      name: "Jane Doe",
+      avatarUrl: null,
+      status: "ACTIVE",
+      role: "EMPLOYEE",
+    };
+    const membership = { id: "member-new", organizationId: "org-a", userId: newUser.id, user: newUser };
+    const transaction = {
+      user: {
+        create: jest.fn().mockResolvedValue(newUser),
+      },
+      organizationMember: {
+        create: jest.fn().mockResolvedValue(membership),
+      },
+      organizationPermissionGroup: {
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+      notificationOutbox: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue(null) },
+      organizationMember: { count: jest.fn().mockResolvedValue(0) },
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
+    };
+    const email = { sendTemporaryPasswordEmail: jest.fn().mockResolvedValue(undefined) };
+    const service = new OrganizationService(
+      prisma as never,
+      { bcryptRounds: 4 } as never,
+      { record: jest.fn().mockResolvedValue(undefined) } as never,
+      { assertWithinLimit: jest.fn().mockResolvedValue(undefined) } as never,
+      email as never,
+    );
+
+    await expect(service.addMember("org-a", "owner-a", newUser.email, "ADMIN", newUser.name)).resolves.toBe(membership);
+
+    const createData = transaction.user.create.mock.calls[0][0].data;
+    expect(createData).toMatchObject({
+      email: newUser.email,
+      name: newUser.name,
+      role: "EMPLOYEE",
+      auth: { create: { emailVerifiedAt: expect.any(Date), mustResetPassword: true } },
+    });
+    const [sentEmail, sentName, temporaryPassword] = email.sendTemporaryPasswordEmail.mock.calls[0];
+    expect([sentEmail, sentName]).toEqual([newUser.email, newUser.name]);
+    expect(temporaryPassword).toMatch(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,72}$/);
+    expect(await bcrypt.compare(temporaryPassword, createData.auth.create.passwordHash)).toBe(true);
+    expect(JSON.stringify(createData)).not.toContain(temporaryPassword);
   });
 });

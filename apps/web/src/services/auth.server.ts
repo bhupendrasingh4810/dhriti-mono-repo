@@ -29,6 +29,18 @@ export const authService = {
 
   resetPassword: (body: JsonBody) => jsonRequest("/auth/reset-password", body),
 
+  changePassword: (accessToken: string, body: JsonBody) =>
+    apiServiceRequest("/auth/change-password", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    }),
+
   refresh: (refreshToken: string) =>
     jsonRequest("/auth/refresh", {
       refreshToken,

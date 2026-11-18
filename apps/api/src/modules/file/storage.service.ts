@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
-import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 import { ApiConfigService } from "../../config/config.service";
@@ -30,6 +30,11 @@ export class StorageService implements OnModuleDestroy {
 
   onModuleDestroy(): void {
     this.client.destroy();
+  }
+
+  /** Read-only bucket reachability check; never uploads an object or generates a download. */
+  async checkHealth(signal: AbortSignal): Promise<void> {
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }), { abortSignal: signal });
   }
 
   async upload(params: { objectKey: string; body: Buffer; contentType: string }): Promise<void> {

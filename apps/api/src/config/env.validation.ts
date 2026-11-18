@@ -23,6 +23,11 @@ export const envSchema = z
     JWT_MFA_SECRET: z.string().min(32),
     JWT_MFA_TTL_SECONDS: z.coerce.number().int().positive().default(300),
     SECRETS_ENCRYPTION_KEY: z.string().optional(),
+    OIDC_ALLOWED_ISSUERS: z.string().default(""),
+    SECURITY_ALERT_EMAILS: z.string().default(""),
+    SECURITY_WEBHOOK_URL: z.preprocess(emptyStringToUndefined, z.string().url().optional()),
+    SECURITY_WEBHOOK_SECRET: z.preprocess(emptyStringToUndefined, z.string().min(32).optional()),
+    SECURITY_INGEST_TOKEN: z.preprocess(emptyStringToUndefined, z.string().min(32).optional()),
 
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().default(7),
     BCRYPT_ROUNDS: z.coerce.number().int().min(12).default(12),
@@ -95,6 +100,40 @@ export const envSchema = z
     BILLING_WEBHOOK_RETRY_BATCH_SIZE: z.coerce.number().int().positive().max(1000).default(100),
   })
   .superRefine((env, ctx) => {
+    for (const email of env.SECURITY_ALERT_EMAILS.split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)) {
+      if (!z.string().email().safeParse(email).success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "SECURITY_ALERT_EMAILS must contain valid email addresses",
+        });
+      }
+    }
+    if (env.SECURITY_ALERT_EMAILS.trim() && !env.BREVO_API_KEY) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Security email alerts require Brevo configuration" });
+    }
+    if (Boolean(env.SECURITY_WEBHOOK_URL) !== Boolean(env.SECURITY_WEBHOOK_SECRET)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "SECURITY_WEBHOOK_URL and SECURITY_WEBHOOK_SECRET must be configured together",
+      });
+    }
+    if (env.SECURITY_INGEST_TOKEN && env.SECURITY_INGEST_TOKEN === env.SECURITY_WEBHOOK_SECRET) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Security ingestion and outbound signing credentials must be distinct",
+      });
+    }
+    if (env.SECURITY_WEBHOOK_URL) {
+      const url = new URL(env.SECURITY_WEBHOOK_URL);
+      if (url.protocol !== "https:" || url.username || url.password || url.hash) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Security webhook must use HTTPS without credentials or fragments",
+        });
+      }
+    }
     const providers: Array<[string, Array<string | undefined>]> = [
       ["GOOGLE", [env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, env.GOOGLE_CALLBACK_URL]],
       ["GITHUB", [env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET, env.GITHUB_CALLBACK_URL]],

@@ -66,6 +66,7 @@ export class ConnectGateway implements OnGatewayInit, OnGatewayConnection, OnGat
     this.publisher.bind(this.server);
     await this.adapterLifecycle.attach(this.server);
     this.sessionRevocations.bind(this.server as unknown as Namespace);
+    this.metrics.websocketInitialized();
   }
 
   async handleConnection(socket: Socket): Promise<void> {

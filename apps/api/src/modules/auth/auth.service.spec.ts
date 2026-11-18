@@ -21,6 +21,7 @@ function makeAuth(overrides: Partial<UserAuth> = {}): UserAuth {
     mfaBackupCodesUsed: 0,
     failedLoginAttempts: 0,
     lockedUntil: null,
+    mustResetPassword: false,
     lastPasswordChange: null,
     passwordExpiresAt: null,
     lastLoginAt: null,
@@ -153,6 +154,50 @@ function makeSut(prisma: PrismaMock) {
 
 const loginDto = { email: "jane@acme.com", password: "Sup3rSecure!" };
 
+describe("tenant-bound SSO sessions", () => {
+  it("uses the SSO organization rather than the member's default organization", async () => {
+    const prisma = makePrismaMock();
+    prisma.user.findUnique.mockResolvedValue(makeUser());
+    prisma.organizationMember.findFirst.mockResolvedValue({
+      organization: { id: "sso-org", name: "SSO tenant", slug: "sso-tenant", settings: { mfaEnforced: false } },
+    });
+    const { service, sessions } = makeSut(prisma);
+    const response = await service.loginWithSso("user-1", "sso-org", false, {}, 1);
+    expect(sessions.createSession).toHaveBeenCalledWith("user-1", "sso-org", {});
+    expect(response.user.organization?.id).toBe("sso-org");
+  });
+
+  it.each(["local-mfa", "org-mfa", "suspended", "non-member", "locked"])(
+    "rejects SSO for %s without creating a session",
+    async (scenario) => {
+      const prisma = makePrismaMock();
+      const user = makeUser({
+        ...(scenario === "local-mfa" ? { mfaEnabled: true } : {}),
+        ...(scenario === "locked" ? { lockedUntil: new Date(Date.now() + 60000) } : {}),
+      });
+      if (scenario === "suspended") {
+        user.status = "SUSPENDED";
+      }
+      prisma.user.findUnique.mockResolvedValue(user);
+      prisma.organizationMember.findFirst.mockResolvedValue(
+        scenario === "non-member"
+          ? null
+          : {
+              organization: {
+                id: "org",
+                name: "Tenant",
+                slug: "tenant",
+                settings: { mfaEnforced: scenario === "org-mfa" },
+              },
+            },
+      );
+      const { service, sessions } = makeSut(prisma);
+      await expect(service.loginWithSso("user-1", "org", false, {}, 1)).rejects.toThrow();
+      expect(sessions.createSession).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("AuthService.register", () => {
   it("creates a user and sends a verification email", async () => {
     const prisma = makePrismaMock();
@@ -203,6 +248,18 @@ describe("AuthService.register", () => {
 });
 
 describe("AuthService.login", () => {
+  it("reports when a temporary password must be reset", async () => {
+    const prisma = makePrismaMock();
+    prisma.user.findUnique.mockResolvedValue(makeUser({ mustResetPassword: true }));
+    prisma.user.update.mockResolvedValue(makeUser({ mustResetPassword: true }));
+    prisma.organizationMember.findFirst.mockResolvedValue({
+      organization: { id: "org-1", name: "Acme" },
+    });
+    const { service } = makeSut(prisma);
+
+    await expect(service.login(loginDto, {})).resolves.toMatchObject({ mustResetPassword: true });
+  });
+
   it("returns tokens for valid verified credentials", async () => {
     const prisma = makePrismaMock();
     prisma.user.findUnique.mockResolvedValue(makeUser());

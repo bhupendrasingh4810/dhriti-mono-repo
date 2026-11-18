@@ -9,7 +9,7 @@ export const organizationManagementService = {
   updateActive: (organizationId: string, input: { name: string }) =>
     tenantJsonRequest<ApiEntity, typeof input>(organizationId, org, "PATCH", input),
   listMembers: (organizationId: string) => tenantRequest<ApiEntity[]>(organizationId, `${org}/members`),
-  addMember: (organizationId: string, input: { email: string; role: string }) =>
+  addMember: (organizationId: string, input: { name: string; email: string; role: string }) =>
     tenantJsonRequest<ApiEntity, typeof input>(organizationId, `${org}/members`, "POST", input),
   updateMemberRole: (organizationId: string, memberId: string, role: string) =>
     tenantJsonRequest<ApiEntity, { role: string }>(organizationId, memberPath(memberId), "PATCH", { role }),

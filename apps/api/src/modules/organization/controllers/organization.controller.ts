@@ -11,12 +11,7 @@ import { OrganizationService, type MemberWithUser } from "../services/organizati
 import { SessionService } from "../../auth/services/session.service";
 import { CreateOrganizationDto, UpdateOrganizationBillingDto, UpdateOrganizationDto } from "../dto/organization.dto";
 import { CreateAddressDto, UpdateAddressDto } from "../dto/address.dto";
-import {
-  InviteMemberDto,
-  TransferOwnershipDto,
-  UpdateMemberLifecycleDto,
-  UpdateMemberRoleDto,
-} from "../dto/member.dto";
+import { AddMemberDto, TransferOwnershipDto, UpdateMemberLifecycleDto, UpdateMemberRoleDto } from "../dto/member.dto";
 import { CreateGroupDto, UpdateGroupDto } from "../dto/invitation.dto";
 
 @ApiTags("organizations")
@@ -136,16 +131,16 @@ export class OrganizationController {
   @Post("organization/members")
   @UseGuards(TenantGuard, AccessGuard)
   @RequirePermission("organization.members.invite")
-  @ApiOperation({ summary: "Add an existing user to the organization" })
+  @ApiOperation({ summary: "Add an existing user or create an account for the organization" })
   @ApiResponse({ status: 201 })
   @ApiResponse({ status: 404, description: "User not found" })
   @ApiResponse({ status: 409, description: "Already a member" })
   async addMember(
     @CurrentOrganization() organization: OrganizationContext,
     @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: InviteMemberDto,
+    @Body() dto: AddMemberDto,
   ): Promise<MemberWithUser> {
-    return this.organizations.addMember(organization.organizationId, user.userId, dto.email, dto.role);
+    return this.organizations.addMember(organization.organizationId, user.userId, dto.email, dto.role, dto.name);
   }
 
   @Patch("organization/members/:memberId")

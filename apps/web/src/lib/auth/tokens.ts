@@ -10,6 +10,7 @@ export interface JWTPayload {
   user: User;
   iat: number;
   exp: number;
+  mustResetPassword?: boolean;
 }
 
 /**

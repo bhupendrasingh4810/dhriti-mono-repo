@@ -1,5 +1,7 @@
 import { HttpStatus, Injectable } from "@nestjs/common";
-import { OrganizationSystemPermissionGroupRole } from "@prisma/client";
+import * as bcrypt from "bcryptjs";
+import { randomBytes } from "node:crypto";
+import { OrganizationSystemPermissionGroupRole, UserRole } from "@prisma/client";
 import type {
   Address,
   EnabledProduct,
@@ -8,7 +10,6 @@ import type {
   OrganizationMember,
   Prisma,
   User,
-  UserRole,
 } from "@prisma/client";
 
 import { PrismaService } from "../../../database/prisma.service";
@@ -25,6 +26,7 @@ import { assertUserHasNoOtherActiveOrganizationMembership } from "./organization
 import { enqueueNotification } from "../../notification/notification-events";
 import { defaultHrmsWorkflowTemplates } from "../../hrms/default-workflow-templates";
 import { DEFAULT_HRMS_SHIFTS } from "../../hrms/default-shifts";
+import { EmailService } from "../../notification/email.service";
 
 const DEFAULT_PERMISSION_GROUPS = [
   { name: "Administrators", systemRole: OrganizationSystemPermissionGroupRole.ADMINISTRATORS },
@@ -72,6 +74,7 @@ export class OrganizationService {
     private readonly config: ApiConfigService,
     private readonly audit: AuditService,
     private readonly entitlements: EntitlementService,
+    private readonly email: EmailService,
   ) {}
 
   // ---------------- Organizations ----------------
@@ -151,7 +154,12 @@ export class OrganizationService {
         },
       });
       await transaction.hrmsShift.createMany({
-        data: DEFAULT_HRMS_SHIFTS.map((shift, sortOrder) => ({ ...shift, timeZone: organization.timezone, organizationId: organization.id, sortOrder })),
+        data: DEFAULT_HRMS_SHIFTS.map((shift, sortOrder) => ({
+          ...shift,
+          timeZone: organization.timezone,
+          organizationId: organization.id,
+          sortOrder,
+        })),
       });
       // Templates are organization-local so cloning never crosses a tenant boundary.
       await Promise.all(
@@ -337,22 +345,43 @@ export class OrganizationService {
     });
   }
 
-  async addMember(organizationId: string, actorUserId: string, email: string, role: UserRole): Promise<MemberWithUser> {
+  async addMember(
+    organizationId: string,
+    actorUserId: string,
+    email: string,
+    role: UserRole,
+    name?: string,
+  ): Promise<MemberWithUser> {
     const user = await this.prisma.user.findUnique({
       where: { email: email.toLowerCase() },
+      include: { auth: true },
     });
     if (!user || user.deletedAt) {
-      throw new AppError(
-        ErrorCode.USER_NOT_FOUND,
-        "No active user with this email; they must register first",
-        HttpStatus.NOT_FOUND,
-      );
+      if (!name?.trim()) {
+        throw new AppError(
+          ErrorCode.VALIDATION_FAILED,
+          "Name is required to create a new account",
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return this.createOrganizationMemberAccount(organizationId, actorUserId, email, name.trim());
     }
 
     const existing = await this.prisma.organizationMember.findUnique({
       where: { organizationId_userId: { organizationId, userId: user.id } },
+      include: { user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } } },
     });
     if (existing && !existing.deletedAt) {
+      if (user.auth?.mustResetPassword) {
+        const temporaryPassword = this.generateTemporaryPassword();
+        const passwordHash = await bcrypt.hash(temporaryPassword, this.config.bcryptRounds);
+        await this.email.sendTemporaryPasswordEmail(user.email, user.name, temporaryPassword);
+        await this.prisma.userAuth.update({
+          where: { userId: user.id },
+          data: { passwordHash, mustResetPassword: true },
+        });
+        return existing as MemberWithUser;
+      }
       throw new AppError(
         ErrorCode.MEMBER_ALREADY_EXISTS,
         "This user is already a member of the organization",
@@ -360,12 +389,10 @@ export class OrganizationService {
       );
     }
 
-    if (!existing) {
-      const memberCount = await this.prisma.organizationMember.count({
-        where: { organizationId, status: "ACTIVE", deletedAt: null },
-      });
-      await this.entitlements.assertWithinLimit(organizationId, "organization.members.max", memberCount + 1);
-    }
+    const memberCount = await this.prisma.organizationMember.count({
+      where: { organizationId, status: "ACTIVE", deletedAt: null },
+    });
+    await this.entitlements.assertWithinLimit(organizationId, "organization.members.max", memberCount + 1);
 
     const membership = await this.prisma.$transaction(async (transaction) => {
       await assertUserHasNoOtherActiveOrganizationMembership(transaction, user.id, organizationId);
@@ -400,6 +427,67 @@ export class OrganizationService {
       metadata: { userId: user.id },
     });
     return membership;
+  }
+
+  /** Creates an account with an emailed password that must be changed before API access. */
+  private async createOrganizationMemberAccount(
+    organizationId: string,
+    actorUserId: string,
+    emailAddress: string,
+    name: string,
+  ): Promise<MemberWithUser> {
+    const email = emailAddress.trim().toLowerCase();
+    const temporaryPassword = this.generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, this.config.bcryptRounds);
+    const memberCount = await this.prisma.organizationMember.count({
+      where: { organizationId, status: "ACTIVE", deletedAt: null },
+    });
+    await this.entitlements.assertWithinLimit(organizationId, "organization.members.max", memberCount + 1);
+
+    const membership = await this.prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.create({
+        data: {
+          email,
+          name,
+          status: "ACTIVE",
+          role: UserRole.EMPLOYEE,
+          auth: { create: { passwordHash, emailVerifiedAt: new Date(), mustResetPassword: true } },
+        },
+      });
+      const member = await transaction.organizationMember.create({
+        data: { organizationId, userId: user.id, status: "ACTIVE", joinedAt: new Date() },
+        include: {
+          user: { select: { id: true, email: true, name: true, avatarUrl: true, status: true, role: true } },
+        },
+      });
+      await assignDefaultUserPermissionGroups(transaction, organizationId, user.id, actorUserId);
+      await enqueueNotification(transaction, {
+        organizationId,
+        actorId: actorUserId,
+        sourceType: "control",
+        sourceId: member.id,
+        type: "CONTROL_MEMBERSHIP",
+        recipientIds: [user.id],
+        title: "Your organization membership is active",
+        path: "home",
+      });
+      return member;
+    });
+
+    await this.audit.record({
+      action: "iam.member.activated",
+      organizationId,
+      actorUserId,
+      resourceType: "OrganizationMember",
+      resourceId: membership.id,
+      metadata: { userId: membership.userId, accountCreated: true },
+    });
+    await this.email.sendTemporaryPasswordEmail(email, name, temporaryPassword);
+    return membership;
+  }
+
+  private generateTemporaryPassword(): string {
+    return `${randomBytes(24).toString("base64url")}Aa1!`;
   }
 
   async updateMemberRole(

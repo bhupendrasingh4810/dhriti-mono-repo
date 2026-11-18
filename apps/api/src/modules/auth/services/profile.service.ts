@@ -203,6 +203,7 @@ export class ProfileService {
       lastLoginAt: user.auth?.lastLoginAt ? user.auth.lastLoginAt.toISOString() : null,
       createdAt: user.createdAt.toISOString(),
       isPlatformUser: user.isPlatformUser,
+      hasHrmsProfile: user.hrmsProfile !== null,
       prefix: user.profile?.prefix ?? null,
       workEmail: user.profile?.workEmail ?? null,
       alternateEmail: user.profile?.alternateEmail ?? null,

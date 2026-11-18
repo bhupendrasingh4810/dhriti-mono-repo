@@ -1,4 +1,5 @@
 import { SessionService } from "./session.service";
+import { ConflictException } from "@nestjs/common";
 
 function makeService() {
   const prisma = {
@@ -83,7 +84,9 @@ describe("SessionService.rotateSession", () => {
         findUnique: jest.fn().mockResolvedValue(previousSession),
         updateMany: jest.fn().mockResolvedValue({ count: 2 }),
       },
-      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction)),
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
     };
     const pipeline = {
       sadd: jest.fn().mockReturnThis(),
@@ -105,13 +108,38 @@ describe("SessionService.rotateSession", () => {
       hashToken: jest.fn((token: string) => `hash-${token}`),
       generateOpaqueToken: jest.fn().mockReturnValue("next"),
     };
-    const service = new SessionService(prisma as never, redis as never, tokens as never, { refreshTokenTtlDays: 7 } as never);
+    const service = new SessionService(
+      prisma as never,
+      redis as never,
+      tokens as never,
+      { refreshTokenTtlDays: 7 } as never,
+    );
 
     return { service, prisma, transaction, redis, tokens };
   }
 
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(now);
+  });
+
+  describe("SessionService security administration revocation", () => {
+    it("atomically rejects stale, rotated session snapshots instead of reporting a false revocation", async () => {
+      const { service, prisma, redis } = makeService();
+      prisma.userSession.updateMany.mockResolvedValue({ count: 0 });
+      await expect(service.revokeSession("old-session", { rejectRotated: true })).rejects.toThrow(ConflictException);
+      expect(prisma.userSession.updateMany).toHaveBeenCalledWith({
+        where: { id: "old-session", rotatedAt: null },
+        data: { revokedAt: expect.any(Date) },
+      });
+      expect(redis.delete).not.toHaveBeenCalled();
+    });
+    it("evicts and publishes an unrotated session even when retrying a prior DB revocation", async () => {
+      const { service, prisma, redis } = makeService();
+      prisma.userSession.updateMany.mockResolvedValue({ count: 1 });
+      await service.revokeSession("session", { rejectRotated: true });
+      expect(redis.delete).toHaveBeenCalledWith("auth:session:session");
+      expect(redis.raw.publish).toHaveBeenCalledWith("auth:session-revoked", "session");
+    });
   });
 
   afterEach(() => {
@@ -121,7 +149,9 @@ describe("SessionService.rotateSession", () => {
   it("atomically revokes the previous session and creates a successor session", async () => {
     const { service, prisma, transaction, redis, tokens } = makeRotationService();
 
-    await expect(service.rotateSession("current", { ipAddress: "127.0.0.2", userAgent: "next-agent" })).resolves.toEqual({
+    await expect(
+      service.rotateSession("current", { ipAddress: "127.0.0.2", userAgent: "next-agent" }),
+    ).resolves.toEqual({
       sessionId: "session-2",
       refreshToken: "next",
       expiresAt: previousSession.expiresAt,

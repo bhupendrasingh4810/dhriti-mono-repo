@@ -118,6 +118,7 @@ model UserAuth {
   mfaBackupCodesUsed    Int         @default(0)
   failedLoginAttempts   Int         @default(0)
   lockedUntil           DateTime?
+  mustResetPassword     Boolean     @default(false) @map("must_reset_password")
   lastPasswordChange    DateTime?   @map("last_password_change")
   passwordExpiresAt     DateTime?   @map("password_expires_at")
   
@@ -433,6 +434,86 @@ model TeamMember {
   @@index([userId])
   @@index([teamId, role])
   @@map("team_members")
+}
+
+enum SecuritySeverity {
+  critical
+  high
+  medium
+  low
+}
+
+model SecurityEvent {
+  id          String @id @default(uuid()) @db.Uuid
+  severity    SecuritySeverity
+  type        String
+  description String
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+  resolvedById String? @db.Uuid
+  source      String @default("dhriti")
+  externalId  String?
+  deliveries SecurityAlertDelivery[]
+
+  @@unique([source, externalId])
+  @@index([resolvedAt, createdAt])
+  @@index([createdAt, id])
+  @@map("security_events")
+}
+
+model BlockedIp {
+  ipAddress String @id
+  createdAt DateTime @default(now())
+  createdById String @db.Uuid
+  reason String @default("Legacy block")
+  expiresAt DateTime?
+  @@index([expiresAt])
+  @@map("blocked_ips")
+}
+
+/// Durable, at-least-once delivery. A short token lease prevents concurrent workers from finalizing another claim.
+model SecurityAlertDelivery {
+  id String @id @default(uuid()) @db.Uuid
+  eventId String @db.Uuid
+  channel String
+  destination String
+  attempts Int @default(0)
+  availableAt DateTime @default(now())
+  leaseUntil DateTime?
+  leaseToken String? @db.Uuid
+  deliveredAt DateTime?
+  lastError String?
+  createdAt DateTime @default(now())
+  event SecurityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  @@unique([eventId, channel, destination])
+  @@index([deliveredAt, availableAt])
+  @@map("security_alert_deliveries")
+}
+
+model OrganizationOidc {
+  organizationId String @id @db.Uuid
+  issuer String
+  clientId String
+  clientSecretEncrypted String
+  enabled Boolean @default(false)
+  version Int @default(1)
+  lastVerifiedAt DateTime?
+  updatedAt DateTime @updatedAt
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  identities OrganizationOidcIdentity[]
+  @@map("organization_oidc")
+}
+
+/// A verified email links only the first login; subsequent logins require the same issuer subject.
+model OrganizationOidcIdentity {
+  organizationId String @db.Uuid
+  subject String
+  userId String @db.Uuid
+  configuration OrganizationOidc @relation(fields: [organizationId], references: [organizationId], onDelete: Cascade)
+  @@id([organizationId, subject])
+  @@unique([organizationId, userId])
+  @@map("organization_oidc_identities")
 }
 
 model AuditLog {

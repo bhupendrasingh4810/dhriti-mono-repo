@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
 
     const tokens = await loginResponse.json();
     const { user } = tokens;
-    const response = NextResponse.json({ user });
+    const response = NextResponse.json({ user, mustResetPassword: Boolean(tokens.mustResetPassword) });
     setAuthCookies(response, {
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,

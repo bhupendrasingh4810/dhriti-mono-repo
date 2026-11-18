@@ -1,12 +1,12 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { type Dayjs } from "dayjs";
 
-import { buildAttendanceRange, formatWorkMinutes, type AttendanceDay, type AttendanceStatus } from "./attendance-data";
+import { approvedLeaveByDate, buildAttendanceRange, formatWorkMinutes, type AttendanceDay, type AttendanceStatus } from "./attendance-data";
 import {
   Pagination,
   RegularizationDetailDialog,
@@ -32,6 +32,7 @@ const tone: Record<AttendanceStatus, "success" | "warning" | "danger" | "info" |
   Present: "success",
   Late: "warning",
   Absent: "danger",
+  "Half-day absent": "danger",
   Working: "info",
   "Not clocked in": "neutral",
   "Half day": "warning",
@@ -48,6 +49,8 @@ const tone: Record<AttendanceStatus, "success" | "warning" | "danger" | "info" |
  * HRMS attendance API; managers (hrms.attendance.manage) also get a Regularization requests tab where a View dialog
  * approves or rejects with a reason; approving updates the attendance record, so the log is reloaded after each decision.
  * Days with a request show a status badge (opening the request details) instead of a Regularize button.
+ * Approved leave is read alongside attendance; full coverage suppresses absence/regularization,
+ * while half-day leave keeps the remaining scheduled half subject to attendance.
  */
 export function HrmsAttendance({ onToast }: { onToast: (message: string) => void }) {
   const { user } = useAuth();
@@ -78,6 +81,9 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
   const [page, setPage] = useState(1);
   const [target, setTarget] = useState<AttendanceDay | null>(null);
   const [records, setRecords] = useState<HrmsAttendanceRecord[]>([]);
+  const [leaveByDate, setLeaveByDate] = useState<ReadonlyMap<string, number>>(new Map());
+  const [loadedRange, setLoadedRange] = useState("");
+  const recordsRequest = useRef(0);
   const [requests, setRequests] = useState<HrmsAttendanceRegularization[]>([]);
   const [viewing, setViewing] = useState<HrmsAttendanceRegularization | null>(null);
   const [approvals, setApprovals] = useState<HrmsAttendanceRegularization[]>([]);
@@ -105,21 +111,35 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
     return clamp(from, to.isBefore(from) ? from : to);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `today` is stable for the day
   }, [mode, anchor, from, to, joinDate]);
+  const rangeKey = `${organizationId}:${start.format("YYYY-MM-DD")}:${end.format("YYYY-MM-DD")}`;
 
   const reloadRecords = useCallback(async () => {
     if (!organizationId) return;
+    const requestId = ++recordsRequest.current;
+    setLoadedRange("");
     try {
-      setRecords(
-        await hrmsService.attendanceSelf.records(organizationId, {
+      // Fetch both together: missing leave data must never produce a false absence.
+      const [attendance, leave] = await Promise.all([
+        hrmsService.attendanceSelf.records(organizationId, {
           from: start.format("YYYY-MM-DD"),
           to: end.format("YYYY-MM-DD"),
         }),
-      );
+        hrmsService.leave.myRequests(organizationId),
+      ]);
+      const overlappingLeave = leave.filter((request) =>
+        request.startDate.slice(0, 10) <= end.format("YYYY-MM-DD") &&
+        request.endDate.slice(0, 10) >= start.format("YYYY-MM-DD"));
+      const approvedLeave = approvedLeaveByDate(overlappingLeave);
+      if (requestId !== recordsRequest.current) return;
+      setLeaveByDate(approvedLeave);
+      setRecords(attendance);
+      setLoadedRange(rangeKey);
       setLoadError("");
     } catch (reason) {
+      if (requestId !== recordsRequest.current) return;
       setLoadError(reason instanceof Error ? reason.message : "Unable to load attendance.");
     }
-  }, [organizationId, start, end]);
+  }, [organizationId, start, end, rangeKey]);
   const schedule = useWorkWeekSchedule(organizationId, start.format("YYYY-MM-DD"), end.format("YYYY-MM-DD"));
   const reloadRequests = useCallback(async () => {
     if (!organizationId) return;
@@ -141,14 +161,14 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
   }, [reloadRequests]);
 
   const rows = useMemo(() => {
-    const days = schedule.days ? buildAttendanceRange(start, end, records, workingDays ?? [1, 2, 3, 4, 5], schedule.days) : [];
+    const days = schedule.days && loadedRange === rangeKey ? buildAttendanceRange(start, end, records, workingDays ?? [1, 2, 3, 4, 5], schedule.days, leaveByDate) : [];
     const direction = order === "asc" ? 1 : -1;
     return days.sort((a, b) => {
       if (sortBy === "workMinutes") return direction * (a.workMinutes - b.workMinutes);
       if (sortBy === "status") return direction * a.status.localeCompare(b.status);
       return direction * (a.date.valueOf() - b.date.valueOf());
     });
-  }, [start, end, records, workingDays, sortBy, order, schedule.days]);
+  }, [start, end, records, workingDays, sortBy, order, schedule.days, loadedRange, rangeKey, leaveByDate]);
 
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
   const current = Math.min(page, pages);
@@ -175,8 +195,8 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
 
   const exportCsv = () => {
     const lines = [
-      ["Date", "Clock in", "Clock out", "Work hours", "Status"],
-      ...rows.map((row) => [row.key, row.clockIn, row.clockOut, formatWorkMinutes(row.workMinutes), row.status]),
+      ["Date", "Clock in", "Clock out", "Work hours", "Status", "Approved leave (days)"],
+      ...rows.map((row) => [row.key, row.clockIn, row.clockOut, formatWorkMinutes(row.workMinutes), row.status, row.leaveUnits ?? 0]),
     ];
     const url = URL.createObjectURL(new Blob([lines.map((line) => line.join(",")).join("\n")], { type: "text/csv" }));
     const link = document.createElement("a");
@@ -381,6 +401,11 @@ export function HrmsAttendance({ onToast }: { onToast: (message: string) => void
                         <td className="px-5 py-4 text-sm">{formatWorkMinutes(row.workMinutes)}</td>
                         <td className="px-5 py-4">
                           <Badge tone={tone[row.status]}>{row.status}</Badge>
+                          {row.leaveUnits === 0.5 && (
+                            <p className="mt-1 text-xs text-text-muted">
+                              Half-day approved leave{row.status === "Half-day absent" ? "; absent for remaining half" : ""}
+                            </p>
+                          )}
                           {row.scheduledUnits === 0.5 && <p className="mt-1 text-xs text-text-muted">Half-day schedule</p>}
                         </td>
                         <td className="space-x-3 px-5 py-4 text-right">

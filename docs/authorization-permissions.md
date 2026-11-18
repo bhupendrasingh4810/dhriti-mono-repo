@@ -118,6 +118,7 @@ provides this tenant-specific visibility decision; API action permissions remain
 | Area | Permission keys |
 |---|---|
 | Employees and workforce directory (list, create, import/export, org chart) | `hrms.employee.read`, `hrms.workforce.manage` |
+| HRMS settings | `hrms.settings.manage` |
 | Attendance | `hrms.attendance.read`, `hrms.attendance.manage` |
 | Leave | `hrms.leave.read`, `hrms.leave.manage`, `hrms.leave.approve` |
 | Performance | `hrms.performance.read`, `hrms.performance.manage` |
@@ -130,6 +131,7 @@ provides this tenant-specific visibility decision; API action permissions remain
 ## Permission Groups
 
 Organization creation generates `admins`, `users`, and `guest` system groups for Connect, Flow, HRMS, Pulse, Atlas, and Cadence. A group receives authority only after its permissions are assigned and the group is assigned to a member.
+Members may hold multiple active permission groups in one organization; effective permissions are the union of permissions granted by those groups.
 
 Use the following baseline policy when populating group permissions:
 

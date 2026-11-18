@@ -15,7 +15,9 @@ describe("OrganizationPermissionGroupService", () => {
       },
       permission: { findFirst: jest.fn() },
       organizationMember: { findFirst: jest.fn().mockResolvedValue({ id: "member-a" }) },
-      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) => callback(transaction)),
+      $transaction: jest.fn(async (callback: (client: typeof transaction) => Promise<unknown>) =>
+        callback(transaction),
+      ),
     };
     const entitlements = { hasFeature: jest.fn() };
     return {
@@ -36,16 +38,20 @@ describe("OrganizationPermissionGroupService", () => {
     prisma.permission.findFirst.mockResolvedValue({ id: "permission-a", productKey: "flow" });
     entitlements.hasFeature.mockResolvedValue(false);
 
-    await expect(service.attachPermission("org-a", "group-a", "permission-a", "actor-a")).rejects.toBeInstanceOf(AppError);
+    await expect(service.attachPermission("org-a", "group-a", "permission-a", "actor-a")).rejects.toBeInstanceOf(
+      AppError,
+    );
     expect(entitlements.hasFeature).toHaveBeenCalledWith("org-a", "flow.enabled");
   });
 
-  it("replaces every active group assignment before assigning the selected group", async () => {
+  it("preserves other permission groups when assigning a group to a member", async () => {
     const { service, transaction } = makeService();
 
-    await expect(service.assign("org-a", "group-a", "user-a", "actor-a", {})).resolves.toEqual({ id: "assignment-new" });
+    await expect(service.assign("org-a", "group-a", "user-a", "actor-a", {})).resolves.toEqual({
+      id: "assignment-new",
+    });
     expect(transaction.organizationPermissionGroupAssignment.updateMany).toHaveBeenCalledWith({
-      where: { organizationId: "org-a", userId: "user-a", revokedAt: null },
+      where: { organizationId: "org-a", permissionGroupId: "group-a", userId: "user-a", revokedAt: null },
       data: { revokedAt: expect.any(Date) },
     });
     expect(transaction.organizationPermissionGroupAssignment.create).toHaveBeenCalledWith({

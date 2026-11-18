@@ -20,6 +20,7 @@ export interface AuthUserResponse {
   avatarUrl: string | null;
   organization: OrganizationResponse | null;
   isPlatformUser: boolean;
+  hasHrmsProfile?: boolean;
 }
 
 export interface AuthTokensResponse {
@@ -33,6 +34,7 @@ export interface AuthTokensResponse {
 
 export interface LoginResponse {
   user: AuthUserResponse;
+  mustResetPassword?: boolean;
 }
 
 export interface CurrentUserResponse {

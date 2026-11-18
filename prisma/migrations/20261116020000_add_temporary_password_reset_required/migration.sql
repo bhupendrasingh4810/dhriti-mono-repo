@@ -1,0 +1,2 @@
+ALTER TABLE "user_auth"
+ADD COLUMN "must_reset_password" BOOLEAN NOT NULL DEFAULT false;

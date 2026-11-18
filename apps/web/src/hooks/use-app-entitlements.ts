@@ -18,9 +18,12 @@ function load(organizationId: string) {
     request = Promise.all([
       tenantRequest<Feature[]>(organizationId, `${base}/entitlements`),
       tenantRequest<{ isOrganizationAdministrator: boolean }>(organizationId, `${base}/control-access`),
-    ]).then(([features, access]) => ({
-      features, isOrganizationAdministrator: access.isOrganizationAdministrator,
-    })).finally(() => pending.delete(organizationId));
+    ])
+      .then(([features, access]) => ({
+        features,
+        isOrganizationAdministrator: access.isOrganizationAdministrator,
+      }))
+      .finally(() => pending.delete(organizationId));
     pending.set(organizationId, request);
   }
   return request;
@@ -68,6 +71,8 @@ export function useAppEntitlements() {
 
   const current = state?.organizationId === organizationId ? state : null;
   return {
+    // Background refreshes keep the current navigation visible; tenant changes do not.
+    isLoading: Boolean(organizationId) && !current,
     isEnabled: (key: string) => current?.features.some((feature) => feature.key === key && feature.enabled) ?? false,
     error: current?.error ?? "",
     isOrganizationAdministrator: current?.isOrganizationAdministrator === true,

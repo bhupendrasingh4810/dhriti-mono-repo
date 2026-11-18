@@ -6,6 +6,7 @@ interface Toast {
   message: string;
   position?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top-center" | "bottom-center";
 }
+type ToastPosition = NonNullable<Toast["position"]>;
 
 const variantStyles: Record<Toast["variant"], { bg: string; icon: string; color: string }> = {
   success: { bg: "#059669", icon: "✓", color: "white" },
@@ -25,13 +26,34 @@ export function useToast() {
   return { toasts, addToast, removeToast };
 }
 
-export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) {
+export function ToastContainer({
+  toasts,
+  onRemove,
+  position = "bottom-right",
+}: {
+  toasts: Toast[];
+  onRemove: (id: string) => void;
+  position?: ToastPosition;
+}) {
+  const horizontal = position.endsWith("center")
+    ? { left: "50%", transform: "translateX(-50%)" }
+    : position.endsWith("right")
+      ? { right: 24 }
+      : { left: 24 };
+  const vertical = position.startsWith("top") ? { top: 24 } : { bottom: 24 };
+  const animationName = position.endsWith("center")
+    ? position.startsWith("top")
+      ? "slideInTop"
+      : "slideInBottom"
+    : position.endsWith("right")
+      ? "slideInRight"
+      : "slideInLeft";
   return (
     <div
       style={{
         position: "fixed",
-        bottom: 24,
-        right: 24,
+        ...vertical,
+        ...horizontal,
         zIndex: 9999,
         display: "flex",
         flexDirection: "column",
@@ -54,11 +76,13 @@ export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove
               boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
               minWidth: 280,
               maxWidth: 400,
-              animation: "slideInRight 0.3s ease",
+              animation: `${animationName} 0.3s ease`,
             }}
           >
             <span style={{ fontSize: 16, fontWeight: "bold" }}>{s.icon}</span>
-            <span style={{ flex: 1, fontSize: 14 }}>{toast.message}</span>
+            <span className="toast-message" style={{ flex: 1, fontSize: 14 }}>
+              {toast.message}
+            </span>
             <button
               onClick={() => onRemove(toast.id)}
               style={{
@@ -77,9 +101,24 @@ export function ToastContainer({ toasts, onRemove }: { toasts: Toast[]; onRemove
         );
       })}
       <style>{`
+        .toast-message::first-letter {
+          text-transform: uppercase;
+        }
         @keyframes slideInRight {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-100%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideInTop {
+          from { transform: translateY(-100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideInBottom {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
         }
       `}</style>
     </div>

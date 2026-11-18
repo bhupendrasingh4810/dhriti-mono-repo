@@ -6,6 +6,7 @@ import { login } from "@/services/auth.service";
 import AuthLayout from "../../../components/auth/AuthLayout";
 import { GoogleOAuthButton } from "@/components/shared/oauth/GoogleOAuthButton";
 import { GitHubOAuthButton } from "@/components/shared/oauth/GitHubOAuthButton";
+import { DhritiTextField } from "@dhriti/ui";
 
 export type Page = "login" | "signup" | "reset-password" | "verify-email" | "dashboard";
 
@@ -26,6 +27,8 @@ function LoginForm() {
   const [formFieldValidity, setFormFieldValidity] = useState({ email: null as string | null, password: true });
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ssoOrganization, setSsoOrganization] = useState("");
+  const [ssoError, setSsoError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,6 +47,11 @@ function LoginForm() {
 
     try {
       const data = await login({ email, password });
+      if (data.mustResetPassword) {
+        router.replace("/reset-password?required=true");
+        router.refresh();
+        return;
+      }
       const callbackUrl = searchParams.get("callbackUrl");
       const organizationSlug = data.user?.organization?.slug;
       const isOrganizationCallback =
@@ -237,6 +245,36 @@ function LoginForm() {
         <div className="grid grid-cols-2 gap-3">
           <GoogleOAuthButton />
           <GitHubOAuthButton />
+        </div>
+        <div className="space-y-2 border-t border-border pt-4">
+          <DhritiTextField
+            label="Organization workspace for SSO"
+            value={ssoOrganization}
+            onChange={(value) => {
+              setSsoOrganization(value);
+              setSsoError("");
+            }}
+            placeholder="your-workspace"
+            error={ssoError}
+          />
+          {searchParams.get("ssoError") && (
+            <p role="alert" className="text-sm text-error">
+              SSO sign-in could not be completed. Check your workspace, membership and identity-provider MFA, or contact
+              your administrator.
+            </p>
+          )}
+          <a
+            href={`/api/auth/sso/start?organization=${encodeURIComponent(ssoOrganization.trim())}`}
+            className="inline-flex min-h-10 w-full cursor-pointer items-center justify-center rounded-md border border-border bg-surface px-4 py-2 text-sm font-semibold text-text-primary hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand"
+            onClick={(event) => {
+              if (!/^[a-zA-Z0-9-]{1,120}$/.test(ssoOrganization.trim())) {
+                event.preventDefault();
+                setSsoError("Enter a valid organization workspace.");
+              }
+            }}
+          >
+            Sign in with SSO
+          </a>
         </div>
 
         <p className="text-center text-sm text-slate-500 pt-2">

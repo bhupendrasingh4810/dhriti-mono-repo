@@ -33,6 +33,8 @@ import { HrmsModule } from "./modules/hrms/hrms.module";
 import { JobsModule } from "./jobs/jobs.module";
 import { NotesModule } from "./modules/notes/notes.module";
 import { SettingsModule } from "./modules/settings/settings.module";
+import { SecurityModule } from "./modules/control/platform/security/security.module";
+import { IpBlockGuard } from "./modules/control/platform/security/ip-block.guard";
 
 @Module({
   imports: [
@@ -45,6 +47,7 @@ import { SettingsModule } from "./modules/settings/settings.module";
     JobsModule,
     NotesModule,
     SettingsModule,
+    SecurityModule,
     MetricsModule,
     NotificationModule,
     AuditModule,
@@ -66,6 +69,7 @@ import { SettingsModule } from "./modules/settings/settings.module";
     WebsocketModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: IpBlockGuard },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
     { provide: APP_INTERCEPTOR, useClass: MetricsInterceptor },
     { provide: APP_GUARD, useClass: AuthGuard },

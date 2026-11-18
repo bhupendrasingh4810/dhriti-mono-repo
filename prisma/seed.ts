@@ -238,6 +238,7 @@ async function seedData(): Promise<void> {
     "hrms.employee.read",
     "hrms.employee.manage",
     "hrms.workforce.manage",
+    "hrms.settings.manage",
     "hrms.attendance.read",
     "hrms.attendance.manage",
     "hrms.leave.read",
@@ -553,19 +554,26 @@ async function seedData(): Promise<void> {
     });
     const administratorIds = new Set([tenant.owner.id, tenant.administrator.id]);
     for (const administratorId of administratorIds) {
-      await prisma.organizationPermissionGroupAssignment.updateMany({
-        where: { organizationId, userId: administratorId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
-      await prisma.organizationPermissionGroupAssignment.create({
-        data: {
+      const existingAssignment = await prisma.organizationPermissionGroupAssignment.findFirst({
+        where: {
           organizationId,
           permissionGroupId: administratorGroup.id,
           userId: administratorId,
-          scopeType: "ORGANIZATION",
-          assignedByUserId: tenant.owner.id,
+          revokedAt: null,
         },
+        select: { id: true },
       });
+      if (!existingAssignment) {
+        await prisma.organizationPermissionGroupAssignment.create({
+          data: {
+            organizationId,
+            permissionGroupId: administratorGroup.id,
+            userId: administratorId,
+            scopeType: "ORGANIZATION",
+            assignedByUserId: tenant.owner.id,
+          },
+        });
+      }
     }
     for (const [index, user] of tenant.users.entries()) {
       if (!administratorIds.has(user.id)) {
@@ -1829,8 +1837,8 @@ async function validateSeed(
           permissionGroup: { isSystem: true, isActive: true, deletedAt: null, systemRole: expectedSystemRole },
         },
       });
-      if (activeGroupAssignments !== 1)
-        throw new Error(`Expected one active ${expectedSystemRole} assignment for ${user.email}`);
+      if (activeGroupAssignments < 1)
+        throw new Error(`Expected an active ${expectedSystemRole} assignment for ${user.email}`);
     }
     const seededEmployeeCount = await prisma.hrmsEmployee.count({
       where: { organizationId: organization.id, userId: { in: users.map(({ id }) => id) } },

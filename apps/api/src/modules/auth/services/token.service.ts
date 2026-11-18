@@ -30,12 +30,14 @@ export class TokenService {
     sessionId: string;
     organizationId: string | null;
     email: string;
+    mustResetPassword?: boolean;
   }): Promise<string> {
     const payload: AccessTokenPayload = {
       sub: params.userId,
       sid: params.sessionId,
       org: params.organizationId,
       email: params.email,
+      mustResetPassword: params.mustResetPassword,
     };
     return this.jwtService.signAsync(payload, {
       secret: this.config.jwtAccessSecret,
